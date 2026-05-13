@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0f1e">
-<title>السلاسل — Clock In</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<title>Al-Salasil — Driver Check-In</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -15,101 +16,120 @@
   --blue:#3b82f6;--green:#10b981;--red:#ef4444;--amber:#f59e0b;
   --text:#f0f4ff;--muted:#64748b;--muted2:#94a3b8;
 }
-html,body{min-height:100vh;background:var(--bg);font-family:'Cairo',sans-serif;color:var(--text);overflow-x:hidden}
+html,body{min-height:100vh;background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,0.1) 0%,transparent 60%)}
 
-body::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,0.12) 0%,transparent 60%);
-}
-
-.app{min-height:100vh;display:flex;flex-direction:column;position:relative;z-index:1;padding:env(safe-area-inset-top,20px) 0 env(safe-area-inset-bottom,20px)}
+/* APP */
+.app{min-height:100vh;display:flex;flex-direction:column;position:relative;z-index:1;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,20px)}
 
 /* HEADER */
 .header{padding:20px 24px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
-.logo{width:42px;height:42px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:12px;display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 20px rgba(59,130,246,0.3)}
-.logo svg{width:22px;height:22px;fill:#fff}
-.logo-text h1{font-size:18px;font-weight:900;line-height:1}
+.logo{width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:13px;display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 24px rgba(59,130,246,0.35)}
+.logo svg{width:24px;height:24px;fill:#fff}
+.logo-text h1{font-size:18px;font-weight:900;letter-spacing:-.3px}
 .logo-text p{font-size:11px;color:var(--muted2);margin-top:1px}
 
-/* DRIVER SELECT */
-.select-section{padding:20px 24px}
-.section-label{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
-.driver-select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;color:var(--text);font-family:'Cairo',sans-serif;font-size:15px;font-weight:600;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer}
-.driver-select:focus{border-color:var(--blue)}
-.driver-select option{background:var(--card);color:var(--text)}
-.select-wrap{position:relative}
-.select-wrap::after{content:'▼';position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:11px;pointer-events:none}
+/* SCREENS */
+.screen{display:none;flex-direction:column;flex:1;padding:24px}
+.screen.active{display:flex}
 
-/* STATUS CARD */
-.status-card{margin:0 24px 20px;background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden}
-.status-header{padding:14px 16px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
-.status-header .sh-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:pulse 2s infinite}
-.status-header .sh-title{font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
-.status-body{padding:16px}
-.status-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.status-row:last-child{margin:0}
-.sr-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0}
-.sr-label{font-size:11px;color:var(--muted);flex:0 0 80px}
-.sr-val{font-size:13px;font-weight:700;color:var(--text);flex:1}
-.sr-val.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+/* ===== LOGIN SCREEN ===== */
+.login-hero{text-align:center;padding:32px 0 28px}
+.login-hero .lh-icon{font-size:52px;margin-bottom:12px}
+.login-hero h2{font-size:24px;font-weight:900;margin-bottom:6px;letter-spacing:-.3px}
+.login-hero p{font-size:14px;color:var(--muted2);line-height:1.5}
+
+.phone-input-wrap{position:relative;margin-bottom:16px}
+.phone-prefix{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:15px;font-weight:700;color:var(--muted2);font-family:'JetBrains Mono',monospace;pointer-events:none}
+.phone-input{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px 60px 16px 16px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;outline:none;letter-spacing:2px;transition:all .2s;text-align:left;direction:ltr}
+.phone-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,0.15)}
+.phone-input::placeholder{color:var(--muted);letter-spacing:1px;font-size:16px}
+
+.verify-btn{width:100%;padding:16px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border:none;border-radius:14px;color:#fff;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;letter-spacing:.3px}
+.verify-btn:active{transform:scale(.98)}
+.verify-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.error-msg{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:12px 14px;font-size:13px;color:#f87171;display:none;align-items:center;gap:8px;margin-bottom:12px}
+.error-msg.show{display:flex}
+
+.hint{text-align:center;font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}
+.hint strong{color:var(--muted2)}
+
+/* ===== HOME SCREEN ===== */
+.driver-hero{background:linear-gradient(135deg,#1a2848,#0f1a30);border:1px solid rgba(59,130,246,0.2);border-radius:20px;padding:20px;margin-bottom:20px;position:relative;overflow:hidden}
+.driver-hero::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)}
+.dh-greeting{font-size:12px;color:var(--muted2);margin-bottom:4px}
+.dh-name{font-size:22px;font-weight:900;letter-spacing:-.3px;margin-bottom:6px}
+.dh-badges{display:flex;gap:6px;flex-wrap:wrap}
+.dh-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
+.dh-id{background:rgba(59,130,246,0.12);color:#60a5fa;font-family:'JetBrains Mono',monospace}
+.dh-partner{color:#fff}
+
+/* STATUS */
+.status-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:16px}
+.sc-head{padding:12px 16px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sc-dot{width:7px;height:7px;border-radius:50%;animation:sdpulse 2s infinite}
+@keyframes sdpulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sc-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px}
+.sc-body{padding:14px 16px}
+.sc-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sc-row:last-child{margin:0}
+.sc-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+.sc-label{font-size:11px;color:var(--muted);flex:0 0 80px}
+.sc-val{font-size:13px;font-weight:600;flex:1}
+.sc-val.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
 
 /* LOCATION */
-.location-card{margin:0 24px 20px;background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden}
-.map-preview{height:140px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.map-preview::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(59,130,246,0.1) 0%,transparent 70%)}
-.map-dot{width:16px;height:16px;background:var(--blue);border-radius:50%;box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 0 8px rgba(59,130,246,0.1);animation:locPulse 2s infinite}
-@keyframes locPulse{0%,100%{box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 0 8px rgba(59,130,246,0.1)}50%{box-shadow:0 0 0 8px rgba(59,130,246,0.15),0 0 0 16px rgba(59,130,246,0.05)}}
-.map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.05) 1px,transparent 1px);background-size:30px 30px}
-.loc-info{padding:12px 16px;font-size:11px;color:var(--muted2);display:flex;align-items:center;gap:6px}
-.loc-info span{font-size:11px;color:var(--muted2)}
-#loc-coords{font-family:'JetBrains Mono',monospace;font-size:11px}
+.loc-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:16px}
+.loc-map{height:130px;background:var(--card2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.loc-map .map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.05) 1px,transparent 1px);background-size:28px 28px}
+.loc-dot{width:14px;height:14px;background:var(--blue);border-radius:50%;box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 0 8px rgba(59,130,246,0.08);animation:locpulse 2s infinite;position:relative;z-index:1}
+@keyframes locpulse{0%,100%{box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 0 8px rgba(59,130,246,0.08)}50%{box-shadow:0 0 0 8px rgba(59,130,246,0.15),0 0 0 16px rgba(59,130,246,0.04)}}
+.loc-info{padding:10px 14px;font-size:11px;color:var(--muted2);display:flex;align-items:center;gap:6px}
+.loc-coords{font-family:'JetBrains Mono',monospace;font-size:10px}
 
-/* MAIN BUTTON */
-.btn-wrap{padding:0 24px 20px}
-.clock-btn{
-  width:100%;padding:18px;border:none;border-radius:18px;
-  font-family:'Cairo',sans-serif;font-size:17px;font-weight:900;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
-  transition:all .2s;position:relative;overflow:hidden;
-}
+/* CLOCK BUTTON */
+.clock-btn{width:100%;padding:18px;border:none;border-radius:18px;font-family:'Inter',sans-serif;font-size:17px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;margin-bottom:14px;letter-spacing:.3px}
 .clock-btn.in{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 8px 24px rgba(16,185,129,0.35)}
 .clock-btn.out{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 8px 24px rgba(239,68,68,0.35)}
-.clock-btn:active{transform:scale(0.97)}
-.clock-btn .btn-icon{font-size:22px}
-.clock-btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
-.clock-btn:active::after{background:rgba(255,255,255,0.1)}
+.clock-btn:active{transform:scale(.97)}
 .clock-btn:disabled{opacity:.5;cursor:not-allowed}
 
 /* HISTORY */
-.history{padding:0 24px 24px}
-.history h3{font-size:13px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
-.hist-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px}
-.hist-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.hist-info{flex:1}
-.hist-action{font-size:13px;font-weight:700}
-.hist-time{font-size:11px;color:var(--muted);margin-top:1px;font-family:'JetBrains Mono',monospace}
-.hist-loc{font-size:10px;color:var(--muted2);margin-top:2px}
+.hist-section h3{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.hist-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:6px}
+.hi-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.hi-info{flex:1}
+.hi-action{font-size:12px;font-weight:700}
+.hi-time{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.hi-loc{font-size:10px;color:var(--muted2);margin-top:1px}
+
+/* LOGOUT */
+.logout-btn{width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;transition:all .15s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* LOADING */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(10,15,30,0.85);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.loading-overlay.show{display:flex}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--muted2);font-weight:500}
 
 /* TOAST */
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 20px;font-size:13px;font-weight:700;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--card);border:1px solid var(--border);border-radius:14px;padding:11px 18px;font-size:13px;font-weight:600;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:7px;box-shadow:0 8px 30px rgba(0,0,0,.5);white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.s{border-color:var(--green);color:var(--green)}
 .toast.e{border-color:var(--red);color:var(--red)}
 
-/* LOADING */
-.loading-overlay{display:none;position:fixed;inset:0;background:rgba(10,15,30,0.8);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:16px}
-.loading-overlay.show{display:flex}
-.spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-
-/* NO DRIVER */
-.no-driver{text-align:center;padding:40px 24px;opacity:.4}
-.no-driver .nd-icon{font-size:48px;margin-bottom:12px}
+/* NUMPAD */
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.np-btn{padding:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;border:none}
+.np-btn:active{background:var(--card2);transform:scale(.94)}
+.np-btn.del{font-size:16px;color:var(--muted2)}
+.np-btn.empty{background:transparent;cursor:default}
 </style>
 </head>
 <body>
-
 <div class="app">
 
   <!-- HEADER -->
@@ -118,80 +138,124 @@ body::before{
       <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
     </div>
     <div class="logo-text">
-      <h1>السلاسل</h1>
-      <p>نظام تسجيل الحضور</p>
+      <h1>Al-Salasil</h1>
+      <p>Driver Attendance System</p>
     </div>
   </div>
 
-  <!-- DRIVER SELECT -->
-  <div class="select-section">
-    <div class="section-label">اختر اسمك</div>
-    <div class="select-wrap">
-      <select class="driver-select" id="driverSel" onchange="onDriverChange()">
-        <option value="">— اختر السائق —</option>
-      </select>
+  <!-- LOGIN SCREEN -->
+  <div class="screen active" id="screen-login">
+    <div class="login-hero">
+      <div class="lh-icon">📱</div>
+      <h2>Verify Your Identity</h2>
+      <p>Enter your registered phone number<br>to access the system</p>
     </div>
-  </div>
 
-  <!-- STATUS -->
-  <div class="status-card" id="statusCard" style="display:none">
-    <div class="status-header">
-      <div class="sh-dot" id="statusDot"></div>
-      <div class="sh-title" id="statusTitle">الحالة الحالية</div>
+    <div class="error-msg" id="errorMsg">
+      <span>⛔</span>
+      <span id="errorText">Phone number not found</span>
     </div>
-    <div class="status-body">
-      <div class="status-row">
-        <span class="sr-icon">👤</span>
-        <span class="sr-label">السائق</span>
-        <span class="sr-val" id="st-name">—</span>
-      </div>
-      <div class="status-row">
-        <span class="sr-icon">🤝</span>
-        <span class="sr-label">الشريك</span>
-        <span class="sr-val" id="st-partner">—</span>
-      </div>
-      <div class="status-row">
-        <span class="sr-icon">⏰</span>
-        <span class="sr-label">آخر تسجيل</span>
-        <span class="sr-val mono" id="st-last">—</span>
-      </div>
-      <div class="status-row">
-        <span class="sr-icon">📍</span>
-        <span class="sr-label">الموقع</span>
-        <span class="sr-val" id="st-loc">جاري التحديد...</span>
-      </div>
-    </div>
-  </div>
 
-  <!-- LOCATION -->
-  <div class="location-card" id="locCard" style="display:none">
-    <div class="map-preview">
-      <div class="map-grid"></div>
-      <div class="map-dot"></div>
+    <!-- PHONE DISPLAY -->
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px;min-height:64px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Phone Number</div>
+      <div id="phoneDisplay" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--text);letter-spacing:3px">_ _ _ _ _ _ _ _ _</div>
     </div>
-    <div class="loc-info">
-      📍 <span id="loc-coords">جاري تحديد الموقع...</span>
-    </div>
-  </div>
 
-  <!-- MAIN BUTTON -->
-  <div class="btn-wrap" id="btnWrap" style="display:none">
-    <button class="clock-btn in" id="clockBtn" onclick="doClock()">
-      <span class="btn-icon" id="btnIcon">✅</span>
-      <span id="btnText">Clock In — تسجيل الدخول</span>
+    <!-- NUMPAD -->
+    <div class="numpad" id="numpad">
+      <button class="np-btn" onclick="npPress('1')">1</button>
+      <button class="np-btn" onclick="npPress('2')">2</button>
+      <button class="np-btn" onclick="npPress('3')">3</button>
+      <button class="np-btn" onclick="npPress('4')">4</button>
+      <button class="np-btn" onclick="npPress('5')">5</button>
+      <button class="np-btn" onclick="npPress('6')">6</button>
+      <button class="np-btn" onclick="npPress('7')">7</button>
+      <button class="np-btn" onclick="npPress('8')">8</button>
+      <button class="np-btn" onclick="npPress('9')">9</button>
+      <button class="np-btn empty"></button>
+      <button class="np-btn" onclick="npPress('0')">0</button>
+      <button class="np-btn del" onclick="npDel()">⌫</button>
+    </div>
+
+    <button class="verify-btn" id="verifyBtn" onclick="verifyPhone()" style="margin-top:16px" disabled>
+      <span>🔍</span> Verify & Continue
     </button>
+
+    <p class="hint">
+      <strong>How it works:</strong> Enter your SIM number registered<br>
+      in the Al-Salasil system to sign in
+    </p>
   </div>
 
-  <!-- NO DRIVER STATE -->
-  <div class="no-driver" id="noDriver">
-    <div class="nd-icon">👆</div>
-    <p>اختر اسمك من القائمة أعلاه</p>
-  </div>
+  <!-- HOME SCREEN -->
+  <div class="screen" id="screen-home">
 
-  <!-- HISTORY -->
-  <div class="history" id="histSection" style="display:none">
-    <h3>آخر التسجيلات اليوم</h3>
-    <div id="histList"></div>
+    <!-- DRIVER HERO -->
+    <div class="driver-hero">
+      <div class="dh-greeting">Welcome back 👋</div>
+      <div class="dh-name" id="dh-name">—</div>
+      <div class="dh-badges">
+        <span class="dh-badge dh-id" id="dh-id">—</span>
+        <span class="dh-badge dh-partner" id="dh-partner">—</span>
+      </div>
+    </div>
+
+    <!-- STATUS CARD -->
+    <div class="status-card">
+      <div class="sc-head">
+        <div class="sc-dot" id="sc-dot" style="background:var(--muted)"></div>
+        <div class="sc-title" id="sc-title">Current Status</div>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-icon">⏰</span>
+          <span class="sc-label">Last Action</span>
+          <span class="sc-val mono" id="sc-last">No records today</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-icon">📍</span>
+          <span class="sc-label">Location</span>
+          <span class="sc-val" id="sc-loc" style="font-size:11px">Detecting...</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-icon">🚗</span>
+          <span class="sc-label">Vehicle</span>
+          <span class="sc-val mono" id="sc-car" style="font-size:11px">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOCATION MAP -->
+    <div class="loc-card">
+      <div class="loc-map">
+        <div class="map-grid"></div>
+        <div class="loc-dot"></div>
+      </div>
+      <div class="loc-info">
+        📍 <span class="loc-coords" id="loc-coords">Getting your location...</span>
+      </div>
+    </div>
+
+    <!-- CLOCK BUTTON -->
+    <button class="clock-btn in" id="clockBtn" onclick="doClock()">
+      <span id="btn-icon">✅</span>
+      <span id="btn-text">Clock In — Start Shift</span>
+    </button>
+
+    <!-- HISTORY -->
+    <div class="hist-section">
+      <h3>Today's Records</h3>
+      <div id="histList">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No records yet today</div>
+      </div>
+    </div>
+
+    <!-- LOGOUT -->
+    <button class="logout-btn" onclick="logout()">
+      <span>🚪</span> Sign Out
+    </button>
+
   </div>
 
 </div>
@@ -199,7 +263,7 @@ body::before{
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
-  <div style="font-size:13px;color:var(--muted2)" id="loadingText">جاري التسجيل...</div>
+  <div class="loading-text" id="loadingText">Processing...</div>
 </div>
 
 <!-- TOAST -->
@@ -207,89 +271,184 @@ body::before{
 
 <script>
 // ============================================================
-// CONFIG — Supabase
+// CONFIG
 // ============================================================
 const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 
 // ============================================================
-// DRIVERS DATA
+// DRIVERS DATABASE
 // ============================================================
 const DRIVERS = [
-  {id:'SA1001', name:'ASHRAF MOHAMED',           partner:'Keeta'},
-  {id:'SA1002', name:'Anik Rudra paul',           partner:'Keeta'},
-  {id:'SA1003', name:'PHIROJ HUSEN ANSARI',       partner:'Keeta'},
-  {id:'SA1004', name:'RAJ KUMAR BK',              partner:'Keeta'},
-  {id:'SA1005', name:'Heshmat Ali',               partner:'Keeta'},
-  {id:'SA1006', name:'Saddam Ansari',             partner:'Keeta'},
-  {id:'SA1007', name:'Shabir Alam',               partner:'Keeta'},
-  {id:'SA1008', name:'Vishnu Arjun Rathod',       partner:'Keeta'},
-  {id:'SA1009', name:'Ghulam Sarwar',             partner:'Keeta'},
-  {id:'SA1010', name:'Swarup Nath',               partner:'Keeta'},
-  {id:'SA1011', name:'SAKAR CHAUDHARY',           partner:'Keeta'},
-  {id:'SA1012', name:'peterclever anyanwuocha',   partner:'Keeta'},
-  {id:'SA1013', name:'DANIEL AKPAH',              partner:'Keeta'},
-  {id:'SA1014', name:'MARK OTENG KONADU',         partner:'Keeta'},
-  {id:'SA1015', name:'Kalashdeep Singh',          partner:'Caboria'},
-  {id:'SA1016', name:'SANTOSH PRASAD SAH KANU',  partner:'Caboria'},
-  {id:'SA1017', name:'RAMIT KUMAR SINGH',         partner:'Caboria'},
-  {id:'SA1018', name:'SHUSHIL SAH',               partner:'Caboria'},
-  {id:'SA1019', name:'SHYAM SUNDAR PRASAD',       partner:'HOMY'},
-  {id:'SA1020', name:'ANAND KUMAR CHAUDARY',      partner:'iMile'},
-  {id:'SA1021', name:'RAMIT KUMAR SIGH',          partner:'iMile'},
-  {id:'SA1022', name:'DANISH PARYA',              partner:'HOMY'},
-  {id:'SA1023', name:'NISHAN CHAUDHARY',          partner:'iMile'},
-  {id:'SA1024', name:'CHANDRA DEV YADAV',         partner:'iMile'},
-  {id:'SA1025', name:'IRSHAD MIYA',               partner:'iMile'},
-  {id:'SA1026', name:'Rphael Selvester',          partner:'Caboria'},
-  {id:'SA1027', name:'Prince ugwueze',            partner:'Caboria'},
-  {id:'SA1028', name:'Promise Chikelitem',        partner:'HOMY'},
-  {id:'SA1029', name:'Chika nwaogwugwu',          partner:'HOMY'},
-  {id:'SA1030', name:'okechukuw michael',         partner:'HOMY'},
-  {id:'SA1031', name:'mohamed osama',             partner:'Caboria'},
-  {id:'SA1032', name:'Emmanuel chidiebere',       partner:'HOMY'},
-  {id:'SA1033', name:'Samson Nwachukwu Akanezie', partner:'HOMY'},
-  {id:'SA1034', name:'aaron hussaini timoty',     partner:'HOMY'},
-  {id:'SA1035', name:'Bartholomew Kaku Niamh',   partner:''},
-  {id:'SA1036', name:'sylvester kopu',            partner:''},
+  {id:'SA1001',name:'ASHRAF MOHAMED',       car:'/ 23 / 72401',sim:'94041969',  partner:'Keeta'},
+  {id:'SA1002',name:'Anik Rudra paul',       car:'/ 23 / 72248',sim:'92295624',  partner:'Keeta'},
+  {id:'SA1003',name:'PHIROJ HUSEN ANSARI',   car:'/ 23 / 72394',sim:'97383174',  partner:'Keeta'},
+  {id:'SA1004',name:'RAJ KUMAR BK',          car:'/ 23 / 72355',sim:'96723948',  partner:'Keeta'},
+  {id:'SA1005',name:'Heshmat Ali',           car:'/ 23 / 72033',sim:'97218562',  partner:'Keeta'},
+  {id:'SA1006',name:'Saddam Ansari',         car:'/ 23 / 72498',sim:'97203583',  partner:'Keeta'},
+  {id:'SA1007',name:'Shabir Alam',           car:'/ 23 / 72029',sim:'94776046',  partner:'Keeta'},
+  {id:'SA1008',name:'Vishnu Arjun Rathod',   car:'/ 23 / 72374',sim:'99135709',  partner:'Keeta'},
+  {id:'SA1009',name:'Ghulam Sarwar',         car:'/ 23 / 72410',sim:'97423156',  partner:'Keeta'},
+  {id:'SA1010',name:'Swarup Nath',           car:'/ 23 / 72003',sim:'94178569',  partner:'Keeta'},
+  {id:'SA1011',name:'SAKAR CHAUDHARY',       car:'/ 23 / 72282',sim:'94906127',  partner:'Keeta'},
+  {id:'SA1012',name:'peterclever anyanwuocha',car:'/ 23 / 72229',sim:'99014613', partner:'Keeta'},
+  {id:'SA1013',name:'DANIEL AKPAH',          car:'/ 23 / 72304',sim:'97369568',  partner:'Keeta'},
+  {id:'SA1014',name:'MARK OTENG KONADU',     car:'/ 23 / 72408',sim:'94915969',  partner:'Keeta'},
+  {id:'SA1015',name:'Kalashdeep Singh',      car:'/ 23 / 72385',sim:'97316601',  partner:'Caboria'},
+  {id:'SA1016',name:'SANTOSH PRASAD SAH KANU',car:'/ 23 / 72389',sim:'97153272', partner:'Caboria'},
+  {id:'SA1017',name:'RAMIT KUMAR SINGH',     car:'/ 23 / 15150',sim:'97527196',  partner:'Caboria'},
+  {id:'SA1018',name:'SHUSHIL SAH',           car:'/ 23 / 72012',sim:'96670189',  partner:'Caboria'},
+  {id:'SA1019',name:'SHYAM SUNDAR PRASAD',   car:'/ 23 / 72276',sim:'98851697',  partner:'HOMY'},
+  {id:'SA1020',name:'ANAND KUMAR CHAUDARY',  car:'/ 23 / 72182',sim:'96918953',  partner:'iMile'},
+  {id:'SA1021',name:'RAMIT KUMAR SIGH',      car:'',            sim:'97527196',  partner:'iMile'},
+  {id:'SA1022',name:'DANISH PARYA',          car:'/ 23 / 72272',sim:'94731656',  partner:'HOMY'},
+  {id:'SA1023',name:'NISHAN CHAUDHARY',      car:'/ 23 / 72323',sim:'98073978',  partner:'iMile'},
+  {id:'SA1024',name:'CHANDRA DEV YADAV',     car:'/ 23 / 72417',sim:'96693149',  partner:'iMile'},
+  {id:'SA1025',name:'IRSHAD MIYA',           car:'/ 23 / 72461',sim:'96015075',  partner:'iMile'},
+  {id:'SA1026',name:'Rphael Selvester',      car:'/ 23 / 72235',sim:'97326245',  partner:'Caboria'},
+  {id:'SA1027',name:'Prince ugwueze',        car:'/ 23 / 72078',sim:'94951086',  partner:'Caboria'},
+  {id:'SA1028',name:'Promise Chikelitem',    car:'/ 23 / 72311',sim:'97647976',  partner:'HOMY'},
+  {id:'SA1029',name:'Chika nwaogwugwu',      car:'/ 23 / 72438',sim:'97526391',  partner:'HOMY'},
+  {id:'SA1030',name:'okechukuw michael',     car:'/ 23 / 72120',sim:'94743827',  partner:'HOMY'},
+  {id:'SA1031',name:'mohamed osama',         car:'/ 23 / 72319',sim:'96959682',  partner:'Caboria'},
+  {id:'SA1032',name:'Emmanuel chidiebere',   car:'/ 23 / 72243',sim:'94051757',  partner:'HOMY'},
+  {id:'SA1033',name:'Samson Nwachukwu Akanezie',car:'/ 23 / 72090',sim:'96061964',partner:'HOMY'},
+  {id:'SA1034',name:'aaron hussaini timoty', car:'/ 23 / 72085',sim:'98074472',  partner:'HOMY'},
+  {id:'SA1035',name:'Bartholomew Kaku Niamh',car:'/ 23/89295',  sim:'94164875',  partner:''},
+  {id:'SA1036',name:'sylvester kopu',        car:'/23 /89034',  sim:'96964047',  partner:''},
 ];
+
+const PARTNER_COLORS = {
+  'Keeta':'#3b82f6','Caboria':'#10b981','HOMY':'#f59e0b','iMile':'#a855f7',''  :'#64748b'
+};
 
 // ============================================================
 // STATE
 // ============================================================
-let currentDriver = null;
-let currentLat    = null;
-let currentLng    = null;
-let currentAcc    = null;
-let isClockIn     = true; // true = next action is clock in
-let todayRecords  = [];
+let currentDriver  = null;
+let currentLat     = null;
+let currentLng     = null;
+let currentAcc     = null;
+let isClockIn      = true;
+let todayRecords   = [];
+let phoneInput     = '';
 
 // ============================================================
-// INIT
+// NUMPAD
 // ============================================================
-window.onload = function(){
-  // Populate driver select
-  const sel = document.getElementById('driverSel');
-  DRIVERS.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d.id;
-    opt.textContent = d.name + ' (' + d.id + ')';
-    sel.appendChild(opt);
+function npPress(digit) {
+  if(phoneInput.length >= 9) return;
+  phoneInput += digit;
+  updatePhoneDisplay();
+}
+
+function npDel() {
+  phoneInput = phoneInput.slice(0, -1);
+  updatePhoneDisplay();
+  hideError();
+}
+
+function updatePhoneDisplay() {
+  const el = document.getElementById('phoneDisplay');
+  const btn = document.getElementById('verifyBtn');
+  const padded = phoneInput.padEnd(9, '_');
+  const formatted = padded.split('').join(' ');
+  el.textContent = formatted;
+  btn.disabled = phoneInput.length < 7;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  document.getElementById('errorText').textContent = msg;
+  el.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('errorMsg').classList.remove('show');
+}
+
+// ============================================================
+// VERIFY PHONE
+// ============================================================
+function verifyPhone() {
+  hideError();
+  const phone = phoneInput.trim();
+  if(phone.length < 7) { showError('Please enter a valid phone number'); return; }
+
+  showLoading(true, 'Verifying identity...');
+
+  // Search in drivers database
+  const driver = DRIVERS.find(d => {
+    const dSim = (d.sim||'').replace(/[^0-9]/g,'');
+    const inputClean = phone.replace(/[^0-9]/g,'');
+    return dSim === inputClean ||
+           dSim.endsWith(inputClean) ||
+           inputClean.endsWith(dSim);
   });
 
-  // Start getting location
-  startLocation();
+  setTimeout(() => {
+    showLoading(false);
+    if(!driver) {
+      showError('❌ Phone number not registered in Al-Salasil system');
+      // Shake numpad
+      const np = document.getElementById('numpad');
+      np.style.animation = 'none';
+      np.offsetHeight;
+      np.style.animation = 'shake .4s ease';
+      return;
+    }
+    // SUCCESS
+    currentDriver = driver;
+    localStorage.setItem('salasil_driver', JSON.stringify(driver));
+    loginSuccess(driver);
+  }, 800);
+}
 
-  // Update clock every second
-  setInterval(updateClock, 1000);
+function loginSuccess(driver) {
+  // Update UI
+  document.getElementById('dh-name').textContent    = driver.name;
+  document.getElementById('dh-id').textContent      = driver.id;
+  const par = driver.partner || 'No Partner';
+  const parEl = document.getElementById('dh-partner');
+  parEl.textContent = par;
+  parEl.style.background = (PARTNER_COLORS[driver.partner]||'#64748b') + '33';
+  parEl.style.color = PARTNER_COLORS[driver.partner] || '#64748b';
+  document.getElementById('sc-car').textContent = driver.car || 'Not assigned';
+
+  // Show home screen
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-home').classList.add('active');
+
+  // Start location
+  startLocation();
+  loadTodayRecords();
+
+  toast('Welcome, ' + driver.name.split(' ')[0] + '! 👋', 's');
+}
+
+// ============================================================
+// AUTO LOGIN
+// ============================================================
+window.onload = function() {
+  // Check saved session
+  const saved = localStorage.getItem('salasil_driver');
+  if(saved) {
+    try {
+      const driver = JSON.parse(saved);
+      currentDriver = driver;
+      loginSuccess(driver);
+      return;
+    } catch(e) {}
+  }
+  updatePhoneDisplay();
 };
 
 // ============================================================
 // LOCATION
 // ============================================================
-function startLocation(){
-  if(!navigator.geolocation){
-    document.getElementById('loc-coords').textContent = 'الموقع غير متاح';
+function startLocation() {
+  if(!navigator.geolocation) {
+    document.getElementById('loc-coords').textContent = 'Location not available';
     return;
   }
   navigator.geolocation.watchPosition(
@@ -299,217 +458,145 @@ function startLocation(){
       currentAcc = pos.coords.accuracy;
       const coords = currentLat.toFixed(5) + ', ' + currentLng.toFixed(5);
       document.getElementById('loc-coords').textContent = coords + ' (±' + Math.round(currentAcc) + 'm)';
-      document.getElementById('st-loc').textContent = coords;
+      document.getElementById('sc-loc').textContent = coords;
     },
     err => {
-      document.getElementById('loc-coords').textContent = 'تعذر تحديد الموقع';
-      document.getElementById('st-loc').textContent = 'غير متاح';
+      document.getElementById('loc-coords').textContent = 'Unable to get location';
+      document.getElementById('sc-loc').textContent = 'Unavailable';
     },
-    {enableHighAccuracy: true, maximumAge: 10000, timeout: 15000}
+    {enableHighAccuracy:true, maximumAge:10000, timeout:15000}
   );
-}
-
-function updateClock(){
-  // Nothing to update here for now
-}
-
-// ============================================================
-// DRIVER CHANGE
-// ============================================================
-async function onDriverChange(){
-  const sel = document.getElementById('driverSel');
-  const id  = sel.value;
-
-  if(!id){
-    document.getElementById('statusCard').style.display = 'none';
-    document.getElementById('locCard').style.display    = 'none';
-    document.getElementById('btnWrap').style.display    = 'none';
-    document.getElementById('histSection').style.display= 'none';
-    document.getElementById('noDriver').style.display   = 'block';
-    return;
-  }
-
-  currentDriver = DRIVERS.find(d => d.id === id);
-  document.getElementById('noDriver').style.display    = 'none';
-  document.getElementById('statusCard').style.display  = 'block';
-  document.getElementById('locCard').style.display     = 'block';
-  document.getElementById('btnWrap').style.display     = 'block';
-  document.getElementById('histSection').style.display = 'block';
-
-  document.getElementById('st-name').textContent    = currentDriver.name;
-  document.getElementById('st-partner').textContent = currentDriver.partner || '—';
-
-  await loadTodayRecords();
 }
 
 // ============================================================
 // LOAD TODAY RECORDS
 // ============================================================
-async function loadTodayRecords(){
+async function loadTodayRecords() {
   if(!currentDriver) return;
-
   const today = new Date().toISOString().split('T')[0];
-  const url = SUPA_URL + '/rest/v1/clockin?driver_id=eq.' + currentDriver.id
-    + '&created_at=gte.' + today + 'T00:00:00'
-    + '&order=created_at.desc&limit=10';
-
+  const url   = SUPA_URL + '/rest/v1/clockin?driver_id=eq.' + currentDriver.id
+    + '&created_at=gte.' + today + 'T00:00:00&order=created_at.desc&limit=10';
   try {
     const res = await fetch(url, {
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY
-      }
+      headers: {'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY}
     });
     todayRecords = await res.json();
-    updateUI();
-  } catch(e) {
-    console.error('Error loading records:', e);
-  }
+    updateHomeUI();
+  } catch(e) { console.error(e); }
 }
 
 // ============================================================
-// UPDATE UI BASED ON RECORDS
+// UPDATE UI
 // ============================================================
-function updateUI(){
-  // Determine if clocked in or out
-  if(todayRecords.length > 0){
+function updateHomeUI() {
+  if(todayRecords.length > 0) {
     const last = todayRecords[0];
-    isClockIn = last.action === 'clock_out';
-
-    const lastTime = new Date(last.created_at);
-    const timeStr = lastTime.toLocaleTimeString('ar-KW', {hour:'2-digit', minute:'2-digit'});
-    document.getElementById('st-last').textContent = (last.action === 'clock_in' ? '🟢 دخول' : '🔴 خروج') + ' — ' + timeStr;
-
-    // Status dot color
-    const dot = document.getElementById('statusDot');
-    dot.style.background = last.action === 'clock_in' ? 'var(--green)' : 'var(--red)';
-    document.getElementById('statusTitle').textContent = last.action === 'clock_in' ? 'مسجل الدخول' : 'مسجل الخروج';
+    isClockIn  = last.action === 'clock_out';
+    const t    = new Date(last.created_at);
+    const ts   = t.toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('sc-last').textContent = (last.action==='clock_in'?'🟢 Clock In':'🔴 Clock Out') + ' — ' + ts;
+    document.getElementById('sc-dot').style.background = last.action==='clock_in' ? 'var(--green)' : 'var(--red)';
+    document.getElementById('sc-title').textContent = last.action==='clock_in' ? 'Currently Working' : 'Shift Ended';
   } else {
     isClockIn = true;
-    document.getElementById('st-last').textContent = 'لم يتم التسجيل بعد';
-    document.getElementById('statusDot').style.background = 'var(--muted)';
-    document.getElementById('statusTitle').textContent = 'لم يتم التسجيل';
+    document.getElementById('sc-last').textContent = 'No records today';
+    document.getElementById('sc-dot').style.background = 'var(--muted)';
+    document.getElementById('sc-title').textContent = 'Not Started';
   }
 
-  // Update button
-  const btn  = document.getElementById('clockBtn');
-  const icon = document.getElementById('btnIcon');
-  const text = document.getElementById('btnText');
-
-  if(isClockIn){
-    btn.className = 'clock-btn in';
-    icon.textContent = '✅';
-    text.textContent = 'Clock In — تسجيل الدخول';
+  const btn = document.getElementById('clockBtn');
+  if(isClockIn) {
+    btn.className='clock-btn in';
+    document.getElementById('btn-icon').textContent='✅';
+    document.getElementById('btn-text').textContent='Clock In — Start Shift';
   } else {
-    btn.className = 'clock-btn out';
-    icon.textContent = '🔴';
-    text.textContent = 'Clock Out — تسجيل الخروج';
+    btn.className='clock-btn out';
+    document.getElementById('btn-icon').textContent='🔴';
+    document.getElementById('btn-text').textContent='Clock Out — End Shift';
   }
 
-  // Update history
-  const histList = document.getElementById('histList');
-  if(todayRecords.length === 0){
-    histList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">لا توجد تسجيلات اليوم</div>';
+  // History
+  const el = document.getElementById('histList');
+  if(!todayRecords.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No records yet today</div>';
     return;
   }
-
-  histList.innerHTML = todayRecords.map(r => {
-    const t = new Date(r.created_at);
-    const timeStr = t.toLocaleTimeString('ar-KW', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    const isIn = r.action === 'clock_in';
-    const locStr = r.latitude ? r.latitude.toFixed(4) + ', ' + r.longitude.toFixed(4) : 'الموقع غير متاح';
-    return `
-      <div class="hist-item">
-        <div class="hist-dot" style="background:${isIn?'var(--green)':'var(--red)'}"></div>
-        <div class="hist-info">
-          <div class="hist-action" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'🟢 Clock In — دخول':'🔴 Clock Out — خروج'}</div>
-          <div class="hist-time">${timeStr}</div>
-          <div class="hist-loc">📍 ${locStr}</div>
-        </div>
-      </div>`;
+  el.innerHTML = todayRecords.map(r => {
+    const t   = new Date(r.created_at);
+    const ts  = t.toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const isIn= r.action==='clock_in';
+    const loc = r.latitude ? r.latitude.toFixed(4)+', '+r.longitude.toFixed(4) : 'Location unavailable';
+    return `<div class="hist-item">
+      <div class="hi-dot" style="background:${isIn?'var(--green)':'var(--red)'}"></div>
+      <div class="hi-info">
+        <div class="hi-action" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'🟢 Clock In — Started':'🔴 Clock Out — Ended'}</div>
+        <div class="hi-time">${ts}</div>
+        <div class="hi-loc">📍 ${loc}</div>
+      </div>
+    </div>`;
   }).join('');
 }
 
 // ============================================================
-// DO CLOCK IN/OUT
+// CLOCK IN/OUT
 // ============================================================
-async function doClock(){
-  if(!currentDriver){
-    toast('يرجى اختيار اسمك أولاً', 'e');
-    return;
-  }
-
-  showLoading(true, isClockIn ? 'جاري تسجيل الدخول...' : 'جاري تسجيل الخروج...');
-
-  // Get location
-  let lat = currentLat, lng = currentLng, acc = currentAcc;
-
-  if(!lat){
-    // Try to get location now
-    try {
-      const pos = await new Promise((res, rej) => {
-        navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true, timeout:10000});
-      });
-      lat = pos.coords.latitude;
-      lng = pos.coords.longitude;
-      acc = pos.coords.accuracy;
-    } catch(e) {
-      // Continue without location
-    }
-  }
-
+async function doClock() {
+  if(!currentDriver) return;
   const action = isClockIn ? 'clock_in' : 'clock_out';
-  const now = new Date();
+  showLoading(true, isClockIn ? 'Recording Clock In...' : 'Recording Clock Out...');
+
+  let lat = currentLat, lng = currentLng, acc = currentAcc;
+  if(!lat) {
+    try {
+      const pos = await new Promise((res,rej) => navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:10000}));
+      lat = pos.coords.latitude; lng = pos.coords.longitude; acc = pos.coords.accuracy;
+    } catch(e) {}
+  }
 
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/clockin', {
-      method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        driver_id:   currentDriver.id,
-        driver_name: currentDriver.name,
-        partner:     currentDriver.partner,
-        action:      action,
-        latitude:    lat,
-        longitude:   lng,
-        accuracy:    acc
-      })
+      method:'POST',
+      headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({driver_id:currentDriver.id,driver_name:currentDriver.name,partner:currentDriver.partner,action,latitude:lat,longitude:lng,accuracy:acc})
     });
-
     showLoading(false);
-
-    if(res.ok || res.status === 201){
-      const actionAr = isClockIn ? 'تم تسجيل الدخول ✅' : 'تم تسجيل الخروج 🔴';
-      toast(actionAr, 's');
+    if(res.ok||res.status===201) {
+      toast(isClockIn?'✅ Clock In recorded!':'🔴 Clock Out recorded!','s');
       await loadTodayRecords();
     } else {
-      toast('حدث خطأ، يرجى المحاولة مرة أخرى', 'e');
+      toast('Error — please try again','e');
     }
   } catch(e) {
     showLoading(false);
-    toast('تعذر الاتصال بالسيرفر', 'e');
+    toast('Connection error','e');
   }
+}
+
+// ============================================================
+// LOGOUT
+// ============================================================
+function logout() {
+  if(!confirm('Sign out of your account?')) return;
+  localStorage.removeItem('salasil_driver');
+  currentDriver = null; todayRecords = []; phoneInput = '';
+  document.getElementById('screen-home').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  updatePhoneDisplay();
+  toast('Signed out successfully','s');
 }
 
 // ============================================================
 // HELPERS
 // ============================================================
-function showLoading(show, text){
-  const ov = document.getElementById('loadingOverlay');
-  ov.classList.toggle('show', show);
+function showLoading(show, text) {
+  document.getElementById('loadingOverlay').classList.toggle('show',show);
   if(text) document.getElementById('loadingText').textContent = text;
 }
 
-function toast(msg, type='s'){
+function toast(msg, type='s') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast ' + type + ' show';
-  setTimeout(() => el.classList.remove('show'), 3000);
+  el.textContent = msg; el.className='toast '+type+' show';
+  setTimeout(()=>el.classList.remove('show'),3000);
 }
 </script>
 </body>
