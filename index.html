@@ -127,6 +127,74 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .np-btn:active{background:var(--card2);transform:scale(.94)}
 .np-btn.del{font-size:16px;color:var(--muted2)}
 .np-btn.empty{background:transparent;cursor:default}
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(17,24,39,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .15s;padding:8px 4px;border:none;background:transparent}
+.bn-item svg{width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:2;transition:all .15s}
+.bn-item span{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+.bn-item.on svg{stroke:var(--blue)}
+.bn-item.on span{color:var(--blue)}
+.bn-item .bn-badge{position:absolute;top:6px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1.5px solid var(--bg)}
+
+/* ===== SCHEDULE SCREEN ===== */
+.shift-day{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px}
+.sd-date{text-align:center;flex:0 0 44px}
+.sd-day{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.sd-num{font-size:18px;font-weight:900}
+.sd-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
+.sd-icon{font-size:20px;flex:0 0 28px;text-align:center}
+.sd-info{flex:1}
+.sd-type{font-size:13px;font-weight:700}
+.sd-time{font-size:11px;color:var(--muted2);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.sd-today-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(59,130,246,0.15);color:#60a5fa;flex-shrink:0}
+.late-warning{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}
+.late-warning .lw-icon{font-size:20px;flex-shrink:0}
+.late-warning .lw-text{font-size:12px;color:var(--amber);line-height:1.5}
+.late-warning strong{font-weight:700}
+
+/* ===== SALARY SCREEN ===== */
+.sal-hero{background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2);border-radius:18px;padding:20px;text-align:center;margin-bottom:16px}
+.sh-label{font-size:11px;color:var(--muted2);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.sh-amount{font-size:40px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--green);line-height:1}
+.sh-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.sal-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px}
+.sal-row .sr-l{font-size:12px;color:var(--muted2)}
+.sal-row .sr-r{font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* ===== NOTIFICATIONS ===== */
+.notif-item{display:flex;gap:12px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;position:relative}
+.notif-item.unread{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)}
+.notif-item.unread::after{content:'';position:absolute;top:14px;left:14px;width:7px;height:7px;background:var(--blue);border-radius:50%}
+.ni-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex-shrink:0}
+.ni-content{flex:1;min-width:0;padding-left:4px}
+.ni-title{font-size:13px;font-weight:700;margin-bottom:3px}
+.ni-body{font-size:11px;color:var(--muted2);line-height:1.5}
+.ni-time{font-size:10px;color:var(--muted);margin-top:4px}
+.empty-state{text-align:center;padding:40px 20px;opacity:.35}
+.empty-state .es-icon{font-size:44px;margin-bottom:10px}
+.empty-state p{font-size:13px;color:var(--muted)}
+
+/* LATE DEDUCTION MODAL */
+.late-modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);z-index:300;align-items:center;justify-content:center;padding:24px}
+.late-modal-ov.show{display:flex}
+.late-modal{background:var(--card);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px;width:100%;max-width:360px;animation:lmup .25s ease}
+@keyframes lmup{from{opacity:0;transform:translateY(20px)}}
+.lm-icon{font-size:44px;text-align:center;margin-bottom:12px}
+.lm-title{font-size:18px;font-weight:900;text-align:center;margin-bottom:6px}
+.lm-sub{font-size:13px;color:var(--muted2);text-align:center;margin-bottom:16px;line-height:1.5}
+.lm-detail{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:14px;margin-bottom:16px}
+.lm-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px}
+.lm-row:last-child{margin:0;padding-top:8px;border-top:1px solid rgba(245,158,11,0.15);font-size:14px;font-weight:900}
+.lm-row .lr-l{color:var(--muted2)}
+.lm-row .lr-r{font-family:'JetBrains Mono',monospace;font-weight:700}
+.lm-btns{display:flex;gap:10px}
+.lm-btn{flex:1;padding:13px;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.lm-btn.confirm{background:var(--amber);color:#000}
+.lm-btn.dismiss{background:var(--card2);color:var(--muted2);border:1px solid var(--border)}
+
+/* SAFE AREA PADDING FOR BOTTOM NAV */
+.screen{padding-bottom:80px}
 </style>
 </head>
 <body>
@@ -256,6 +324,88 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
       <span>🚪</span> Sign Out
     </button>
 
+  </div>
+
+  <!-- SCHEDULE SCREEN -->
+  <div class="screen" id="screen-sched" style="padding:20px 20px 80px">
+    <div style="font-size:18px;font-weight:900;margin-bottom:4px">My Schedule</div>
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:16px" id="sched-week-label">This Week</div>
+    <div class="late-warning">
+      <div class="lw-icon">⚠️</div>
+      <div class="lw-text">
+        <strong>Late Policy:</strong> Any delay of <strong>30 minutes or more</strong> from your scheduled start time will result in an automatic <strong>half-day deduction</strong> from your salary.
+      </div>
+    </div>
+    <div id="schedList"></div>
+  </div>
+
+  <!-- SALARY SCREEN -->
+  <div class="screen" id="screen-salary" style="padding:20px 20px 80px">
+    <div style="font-size:18px;font-weight:900;margin-bottom:4px">My Salary</div>
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:16px" id="sal-month-label">May 2026</div>
+    <div class="sal-hero">
+      <div class="sh-label">Net Salary</div>
+      <div class="sh-amount" id="app-sal-net">— KD</div>
+      <div class="sh-sub" id="app-sal-sub">Loading...</div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Summary</div>
+      <div class="sal-row"><span class="sr-l">Base Salary</span><span class="sr-r" id="app-sal-base" style="color:var(--green)">— KD</span></div>
+      <div class="sal-row"><span class="sr-l">Total Deductions</span><span class="sr-r" id="app-sal-ded" style="color:var(--red)">— KD</span></div>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Deduction Details</div>
+      <div id="app-ded-list"></div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS SCREEN -->
+  <div class="screen" id="screen-notif" style="padding:20px 20px 80px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:900">Notifications</div>
+      <button onclick="clearNotifs()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif">Mark all read</button>
+    </div>
+    <div id="notifList"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottomNav" style="display:none">
+    <button class="bn-item on" id="bn-home" onclick="switchScreen('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="bn-item" id="bn-sched" onclick="switchScreen('sched')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Schedule</span>
+    </button>
+    <button class="bn-item" id="bn-salary" onclick="switchScreen('salary')">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Salary</span>
+    </button>
+    <button class="bn-item" id="bn-notif" onclick="switchScreen('notif')" style="position:relative">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>Alerts</span>
+      <div class="bn-badge" id="notif-badge" style="display:none"></div>
+    </button>
+  </nav>
+
+  <!-- LATE DEDUCTION MODAL -->
+  <div class="late-modal-ov" id="lateModal">
+    <div class="late-modal">
+      <div class="lm-icon">⏰</div>
+      <div class="lm-title">Late Arrival Detected</div>
+      <div class="lm-sub">You clocked in <strong id="lm-late-mins">0</strong> minutes late. A half-day deduction will be applied.</div>
+      <div class="lm-detail">
+        <div class="lm-row"><span class="lr-l">Scheduled Start</span><span class="lr-r" id="lm-sched-time">—</span></div>
+        <div class="lm-row"><span class="lr-l">Clock In Time</span><span class="lr-r" id="lm-actual-time">—</span></div>
+        <div class="lm-row"><span class="lr-l">Delay</span><span class="lr-r" style="color:var(--amber)" id="lm-delay">—</span></div>
+        <div class="lm-row"><span class="lr-l">Deduction</span><span class="lr-r" style="color:var(--red)" id="lm-amount">— KD</span></div>
+      </div>
+      <div class="lm-btns">
+        <button class="lm-btn dismiss" onclick="dismissLateModal()">Dismiss</button>
+        <button class="lm-btn confirm" onclick="confirmLateDeduction()">✓ Confirm Deduction</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -419,9 +569,16 @@ function loginSuccess(driver) {
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-home').classList.add('active');
 
-  // Start location
+  // Start location + show bottom nav
   startLocation();
   loadTodayRecords();
+  loadNotifications();
+  document.getElementById('bottomNav').style.display = 'flex';
+  // Hide non-home screens
+  ['sched','salary','notif'].forEach(s=>{
+    const el=document.getElementById('screen-'+s);
+    if(el) el.style.display='none';
+  });
 
   toast('Welcome, ' + driver.name.split(' ')[0] + '! 👋', 's');
 }
@@ -561,8 +718,24 @@ async function doClock() {
     });
     showLoading(false);
     if(res.ok||res.status===201) {
-      toast(isClockIn?'✅ Clock In recorded!':'🔴 Clock Out recorded!','s');
+      const actionMsg = isClockIn?'✅ Clock In recorded!':'🔴 Clock Out recorded!';
+      toast(actionMsg,'s');
+
+      // Add notification
+      addNotification({
+        type:'attendance',
+        title: isClockIn ? '✅ Clock In Recorded' : '🔴 Clock Out Recorded',
+        body: isClockIn ? 'You clocked in at ' + new Date().toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'}) : 'Your shift has ended',
+        time: new Date().toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'}),
+        unread: true
+      });
+
       await loadTodayRecords();
+
+      // Check late arrival on clock in
+      if(isClockIn) {
+        await checkLateArrival(new Date());
+      }
     } else {
       toast('Error — please try again','e');
     }
@@ -578,7 +751,14 @@ async function doClock() {
 function logout() {
   if(!confirm('Sign out of your account?')) return;
   localStorage.removeItem('salasil_driver');
-  currentDriver = null; todayRecords = []; phoneInput = '';
+  currentDriver = null; todayRecords = []; phoneInput = ''; notifications = [];
+  // Hide bottom nav
+  document.getElementById('bottomNav').style.display = 'none';
+  // Hide all screens
+  ['sched','salary','notif'].forEach(s=>{
+    const el=document.getElementById('screen-'+s);
+    if(el) el.style.display='none';
+  });
   document.getElementById('screen-home').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
   updatePhoneDisplay();
@@ -598,6 +778,309 @@ function toast(msg, type='s') {
   el.textContent = msg; el.className='toast '+type+' show';
   setTimeout(()=>el.classList.remove('show'),3000);
 }
+
+// ============================================================
+// SCREEN NAVIGATION
+// ============================================================
+let currentScreen = 'home';
+let notifications = [];
+let pendingLateDeduction = null;
+
+function switchScreen(screen) {
+  ['home','sched','salary','notif'].forEach(s => {
+    const el = document.getElementById('screen-' + (s==='home'?'home':s));
+    if(el) el.classList.remove('active');
+    const bn = document.getElementById('bn-' + s);
+    if(bn) bn.classList.remove('on');
+  });
+  document.getElementById('screen-home').classList.toggle('active', screen==='home');
+  const scEl = document.getElementById('screen-' + screen);
+  if(scEl && screen !== 'home') scEl.style.display = 'block';
+
+  // Hide all non-home screens first
+  ['sched','salary','notif'].forEach(s => {
+    const el = document.getElementById('screen-' + s);
+    if(el) el.style.display = s===screen ? 'block' : 'none';
+  });
+
+  document.getElementById('bn-' + screen)?.classList.add('on');
+  currentScreen = screen;
+
+  if(screen==='sched')   renderScheduleScreen();
+  if(screen==='salary')  renderSalaryScreen();
+  if(screen==='notif')   renderNotifsScreen();
+}
+
+// ============================================================
+// SCHEDULE SCREEN
+// ============================================================
+async function renderScheduleScreen() {
+  const el = document.getElementById('schedList');
+  if(!currentDriver) return;
+
+  const today = new Date();
+  const days  = Array.from({length:7}, (_,i) => {
+    const d = new Date(today); d.setDate(today.getDate() - today.getDay() + i); return d;
+  });
+
+  const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const todayStr = today.toISOString().split('T')[0];
+
+  document.getElementById('sched-week-label').textContent =
+    MONTHS_EN[days[0].getMonth()] + ' ' + days[0].getDate() + ' — ' +
+    MONTHS_EN[days[6].getMonth()] + ' ' + days[6].getDate() + ', ' + days[6].getFullYear();
+
+  // Fetch schedule from Supabase
+  const url = SUPA_URL + '/rest/v1/schedules?driver_id=eq.' + currentDriver.id +
+    '&date=gte.' + days[0].toISOString().split('T')[0] +
+    '&date=lte.' + days[6].toISOString().split('T')[0];
+  let schedData = {};
+  try {
+    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    const data = await res.json();
+    data.forEach(s => { schedData[s.date] = s; });
+  } catch(e) {}
+
+  const SHIFTS = {
+    'work':    {icon:'✅', label:'Working',      color:'#10b981'},
+    'morning': {icon:'🌅', label:'Morning Shift', color:'#3b82f6'},
+    'evening': {icon:'🌙', label:'Evening Shift', color:'#a855f7'},
+    'off':     {icon:'🔴', label:'Day Off',       color:'#ef4444'},
+    'holiday': {icon:'🌴', label:'Holiday',       color:'#f59e0b'},
+  };
+
+  el.innerHTML = days.map(d => {
+    const ds    = d.toISOString().split('T')[0];
+    const isT   = ds === todayStr;
+    const sched = schedData[ds];
+    const sh    = sched ? SHIFTS[sched.shift_type] || SHIFTS.work : null;
+    const isWk  = d.getDay() === 5 || d.getDay() === 6;
+
+    return `<div class="shift-day" style="${isT?'border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.04)':''}">
+      <div class="sd-date">
+        <div class="sd-day">${DAYS_EN[d.getDay()]}</div>
+        <div class="sd-num" style="color:${isT?'var(--blue)':'var(--text)'}">${d.getDate()}</div>
+      </div>
+      <div class="sd-divider"></div>
+      <div class="sd-icon">${sh ? sh.icon : (isWk ? '⬜' : '—')}</div>
+      <div class="sd-info">
+        <div class="sd-type" style="color:${sh?sh.color:'var(--muted)'}">${sh ? sh.label : (isWk?'Weekend':'Not Set')}</div>
+        ${sched&&sched.shift_start ? '<div class="sd-time">'+sched.shift_start+' → '+sched.shift_end+'</div>' : ''}
+      </div>
+      ${isT ? '<div class="sd-today-badge">Today</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// CHECK LATE ON CLOCK IN
+// ============================================================
+async function checkLateArrival(clockInTime) {
+  if(!currentDriver) return;
+  const todayStr = clockInTime.toISOString().split('T')[0];
+
+  try {
+    const url = SUPA_URL + '/rest/v1/schedules?driver_id=eq.' + currentDriver.id + '&date=eq.' + todayStr;
+    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    const data = await res.json();
+
+    if(!data.length || !data[0].shift_start) return;
+
+    const sched = data[0];
+    const parts = sched.shift_start.split(':');
+    const schedTime = new Date(clockInTime);
+    schedTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+
+    const diffMins = Math.floor((clockInTime - schedTime) / 60000);
+
+    if(diffMins >= 30) {
+      // Show late deduction modal
+      const sal = await getSalaryFromSupabase();
+      const base = sal ? sal.base : 0;
+      const amount = base > 0 ? (base / 26) * 0.5 : 0;
+
+      pendingLateDeduction = {
+        driverId: currentDriver.id,
+        reason: 'Late Arrival — تأخر عن العمل',
+        days: 0.5,
+        amount: amount,
+        date: todayStr,
+        month: clockInTime.getMonth() + 1,
+        year: clockInTime.getFullYear(),
+        lateMinutes: diffMins,
+        schedStart: sched.shift_start,
+        actualTime: clockInTime.toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'})
+      };
+
+      document.getElementById('lm-late-mins').textContent = diffMins;
+      document.getElementById('lm-sched-time').textContent = sched.shift_start;
+      document.getElementById('lm-actual-time').textContent = pendingLateDeduction.actualTime;
+      document.getElementById('lm-delay').textContent = diffMins + ' minutes';
+      document.getElementById('lm-amount').textContent = amount.toFixed(3) + ' KD';
+      document.getElementById('lateModal').classList.add('show');
+    }
+  } catch(e) { console.error(e); }
+}
+
+function dismissLateModal() {
+  document.getElementById('lateModal').classList.remove('show');
+  pendingLateDeduction = null;
+  toast('Noted — no deduction applied', 's');
+}
+
+async function confirmLateDeduction() {
+  if(!pendingLateDeduction) return;
+  document.getElementById('lateModal').classList.remove('show');
+
+  const ded = pendingLateDeduction;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/deductions', {
+      method: 'POST',
+      headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({
+        driver_id: ded.driverId,
+        reason: ded.reason,
+        amount: ded.amount,
+        days: ded.days,
+        date: ded.date,
+        month: ded.month,
+        year: ded.year
+      })
+    });
+
+    // Add notification
+    addNotification({
+      type: 'deduction',
+      title: '⚠️ Half-Day Deduction Applied',
+      body: 'Late arrival by ' + ded.lateMinutes + ' min. Deduction: ' + ded.amount.toFixed(3) + ' KD\nالسبب: تأخر عن الدوام — ' + ded.amount.toFixed(3) + ' د.ك',
+      time: new Date().toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'}),
+      unread: true
+    });
+
+    toast('⚠️ Half-day deduction: ' + ded.amount.toFixed(3) + ' KD', 'e');
+  } catch(e) {
+    toast('Error saving deduction', 'e');
+  }
+  pendingLateDeduction = null;
+}
+
+// ============================================================
+// SALARY SCREEN
+// ============================================================
+async function getSalaryFromSupabase() {
+  if(!currentDriver) return null;
+  try {
+    const url = SUPA_URL + '/rest/v1/drivers?id=eq.' + currentDriver.id;
+    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    const data = await res.json();
+    return data.length ? data[0] : null;
+  } catch(e) { return null; }
+}
+
+async function renderSalaryScreen() {
+  const now = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('sal-month-label').textContent = months[now.getMonth()] + ' ' + now.getFullYear();
+
+  try {
+    // Get base salary
+    const drvData = await getSalaryFromSupabase();
+    const base = drvData ? (parseFloat(drvData.salary_base)||0) : 0;
+
+    // Get deductions
+    const url = SUPA_URL + '/rest/v1/deductions?driver_id=eq.' + currentDriver.id +
+      '&month=eq.' + (now.getMonth()+1) + '&year=eq.' + now.getFullYear();
+    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    const deds = await res.json();
+    const totalDed = deds.reduce((s,d) => s+parseFloat(d.amount||0), 0);
+    const net = base - totalDed;
+
+    document.getElementById('app-sal-net').textContent  = net.toFixed(3) + ' KD';
+    document.getElementById('app-sal-base').textContent = base.toFixed(3) + ' KD';
+    document.getElementById('app-sal-ded').textContent  = '-' + totalDed.toFixed(3) + ' KD';
+    document.getElementById('app-sal-sub').textContent  = months[now.getMonth()] + ' ' + now.getFullYear();
+
+    const dedEl = document.getElementById('app-ded-list');
+    if(!deds.length) {
+      dedEl.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div><p>No deductions this month</p></div>';
+    } else {
+      dedEl.innerHTML = deds.map(d => `
+        <div class="sal-row">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)">${d.reason}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">${d.days===0.5?'Half Day':''+d.days+' Days'} • ${d.date}</div>
+          </div>
+          <span class="sr-r" style="color:var(--red)">-${parseFloat(d.amount).toFixed(3)}</span>
+        </div>`).join('');
+    }
+  } catch(e) {
+    document.getElementById('app-sal-net').textContent = 'Connection Error';
+  }
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function addNotification(notif) {
+  notif.id = Date.now();
+  notifications.unshift(notif);
+  try { localStorage.setItem('salasil_notifs_' + currentDriver?.id, JSON.stringify(notifications.slice(0,50))); } catch(e){}
+  updateNotifBadge();
+}
+
+function loadNotifications() {
+  if(!currentDriver) return;
+  try {
+    const saved = localStorage.getItem('salasil_notifs_' + currentDriver.id);
+    if(saved) notifications = JSON.parse(saved);
+  } catch(e) {}
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const unread = notifications.filter(n=>n.unread).length;
+  const badge = document.getElementById('notif-badge');
+  if(badge) badge.style.display = unread > 0 ? 'block' : 'none';
+}
+
+function clearNotifs() {
+  notifications = notifications.map(n => ({...n, unread:false}));
+  try { localStorage.setItem('salasil_notifs_' + currentDriver?.id, JSON.stringify(notifications)); } catch(e){}
+  updateNotifBadge();
+  renderNotifsScreen();
+}
+
+function renderNotifsScreen() {
+  const el = document.getElementById('notifList');
+  notifications.forEach(n => { n.unread = false; });
+  updateNotifBadge();
+
+  if(!notifications.length) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">🔔</div><p>No notifications yet</p></div>';
+    return;
+  }
+
+  const ICONS = {
+    deduction: {bg:'rgba(239,68,68,0.12)', emoji:'💸'},
+    schedule:  {bg:'rgba(59,130,246,0.12)', emoji:'📅'},
+    attendance:{bg:'rgba(16,185,129,0.12)', emoji:'✅'},
+  };
+
+  el.innerHTML = notifications.map(n => {
+    const ic = ICONS[n.type] || {bg:'rgba(100,116,139,0.12)', emoji:'🔔'};
+    return `<div class="notif-item ${n.unread?'unread':''}">
+      <div class="ni-icon" style="background:${ic.bg}">${ic.emoji}</div>
+      <div class="ni-content">
+        <div class="ni-title">${n.title}</div>
+        <div class="ni-body">${n.body}</div>
+        <div class="ni-time">${n.time}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
 </script>
 </body>
 </html>
