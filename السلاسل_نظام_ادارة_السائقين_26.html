@@ -1,0 +1,3079 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>السلاسل - نظام إدارة السائقين</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--s1:#161b22;--s2:#21262d;--br:#30363d;
+  --blue:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;
+  --text:#e6edf3;--muted:#7d8590;--muted2:#8b949e;
+  --r:10px;--r2:14px;
+}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+.app{display:grid;grid-template-rows:56px 1fr;height:100vh}
+
+/* TOP */
+.top{background:var(--s1);border-bottom:1px solid var(--br);display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:15px;margin-left:auto}
+.logo-ic{width:32px;height:32px;background:var(--blue);border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+.logo sub{font-size:10px;color:var(--muted);font-weight:400;display:block;line-height:1}
+.top-stats{display:flex;gap:20px;margin-right:auto}
+.ts{text-align:center;min-width:44px}
+.ts-n{font-size:17px;font-weight:900;font-family:'JetBrains Mono',monospace}
+.ts-l{font-size:9px;color:var(--muted)}
+.top-btns{display:flex;gap:6px}
+.tbtn{padding:6px 11px;border-radius:8px;background:var(--s2);border:1px solid var(--br);color:var(--text);font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap}
+.tbtn:hover{border-color:var(--blue);color:var(--blue)}
+.saved-msg{font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px;opacity:0;transition:opacity .3s;white-space:nowrap}
+.saved-msg.show{opacity:1}
+
+/* BODY */
+.body{display:grid;grid-template-columns:290px 1fr;overflow:hidden}
+
+/* SIDEBAR */
+.sb{background:var(--s1);border-left:1px solid var(--br);display:flex;flex-direction:column;overflow:hidden}
+.sb-search{padding:10px;border-bottom:1px solid var(--br)}
+.srch-wrap{position:relative}
+.srch-wrap i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+.srch{width:100%;background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:7px 10px 7px 32px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;outline:none}
+.srch:focus{border-color:var(--blue)}
+.sb-filters{display:flex;gap:5px;padding:7px 10px;border-bottom:1px solid var(--br);flex-wrap:wrap}
+.ftab{padding:3px 9px;border-radius:20px;font-size:11px;cursor:pointer;background:var(--s2);border:1px solid var(--br);color:var(--muted2);font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap}
+.ftab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.sb-list{flex:1;overflow-y:auto;padding:7px}
+.sb-list::-webkit-scrollbar{width:3px}
+.sb-list::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
+.dc{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:var(--r);border:1px solid transparent;cursor:pointer;transition:all .15s;margin-bottom:3px}
+.dc:hover{background:var(--s2);border-color:var(--br)}
+.dc.on{background:rgba(59,130,246,0.1);border-color:var(--blue)}
+.av{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:900;flex-shrink:0;color:#fff}
+.di{flex:1;min-width:0}
+.dn{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc2{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.dc3{font-size:11px;color:var(--amber);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bdg{font-size:9px;padding:2px 6px;border-radius:20px;font-weight:700;letter-spacing:.3px;flex-shrink:0}
+.sb-add{padding:9px;border-top:1px solid var(--br)}
+.add-btn{width:100%;padding:9px;background:var(--blue);border:none;border-radius:var(--r);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+.add-btn:hover{background:#2563eb}
+
+/* MAIN */
+.main{overflow-y:auto;padding:20px;background:var(--bg)}
+.main::-webkit-scrollbar{width:3px}
+.main::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;opacity:.35;text-align:center}
+.empty-state i{font-size:44px}
+.empty-state h2{font-size:17px;font-weight:700}
+.empty-state p{font-size:12px;color:var(--muted)}
+
+/* DETAIL */
+.dh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.dh-l{display:flex;align-items:center;gap:12px}
+.big-av{width:58px;height:58px;border-radius:13px;display:grid;place-items:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0}
+.dh-name{font-size:19px;font-weight:900}
+.dh-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px}
+.id-chip{font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(59,130,246,0.12);color:#60a5fa;padding:2px 7px;border-radius:5px}
+.exp-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.xok{background:rgba(16,185,129,0.15);color:#34d399}
+.xwarn{background:rgba(245,158,11,0.15);color:#fbbf24}
+.xbad{background:rgba(239,68,68,0.15);color:#f87171}
+.dh-r{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.btn{padding:7px 13px;border-radius:var(--r);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.btn-e{background:var(--s2);color:var(--text);border:1px solid var(--br)}
+.btn-e:hover{border-color:var(--blue);color:var(--blue)}
+.btn-s{background:var(--green);color:#fff}
+.btn-s:hover{background:#059669}
+.btn-c{background:var(--s2);color:var(--muted2);border:1px solid var(--br)}
+.btn-d{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.btn-d:hover{background:var(--red);color:#fff}
+.edit-bar{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:var(--r);padding:8px 13px;margin-bottom:14px;font-size:12px;color:#60a5fa;display:flex;align-items:center;gap:7px;font-weight:600}
+.pulse{animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* INFO GRID */
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:12px}
+.isec{background:var(--s1);border:1px solid var(--br);border-radius:var(--r2);overflow:hidden}
+.isec-h{padding:9px 13px;background:var(--s2);border-bottom:1px solid var(--br);font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:6px}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.irows{padding:3px 0}
+.irow{display:flex;align-items:center;gap:7px;padding:7px 13px;border-bottom:1px solid rgba(48,54,61,0.4)}
+.irow:last-child{border-bottom:none}
+.iico{font-size:14px;width:18px;text-align:center;flex-shrink:0;color:var(--muted2)}
+.ilbl{font-size:11px;color:var(--muted);flex:0 0 105px}
+.ival{font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0}
+.ival.ok{color:var(--green)} .ival.bad{color:var(--red)} .ival.warn{color:var(--amber)}
+.ival.mono{font-family:'JetBrains Mono',monospace;font-size:11px}
+.fin{width:100%;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.4);border-radius:6px;padding:4px 8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;font-weight:600;outline:none}
+.fin:focus{border-color:var(--blue);background:rgba(59,130,246,0.12)}
+.fsel{width:100%;background:var(--s2);border:1px solid rgba(59,130,246,0.4);border-radius:6px;padding:4px 8px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer;outline:none}
+.fsel option{background:var(--s2)}
+
+/* DOCS */
+.dsec{background:var(--s1);border:1px solid var(--br);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:9px;padding:11px}
+.dcard{background:var(--s2);border:1px solid var(--br);border-radius:10px;padding:11px 9px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.dcard:hover{border-color:var(--blue)}
+.dcard i{font-size:22px;margin-bottom:5px;color:var(--muted2);display:block}
+.dcard .dnm{font-size:10px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dcard .ddt{font-size:9px;color:var(--muted)}
+.drm{position:absolute;top:4px;left:4px;width:17px;height:17px;background:var(--red);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:9px;color:#fff;border:none;cursor:pointer}
+.dcard:hover .drm{display:flex}
+.dadd{background:transparent;border:1.5px dashed var(--br);border-radius:10px;padding:11px 9px;text-align:center;cursor:pointer;transition:all .15s;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.dadd:hover{border-color:var(--blue);color:var(--blue)}
+.dadd i{font-size:20px}
+.dadd span{font-size:10px}
+
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;align-items:center;justify-content:center;padding:16px}
+.ov.on{display:flex}
+.modal{background:var(--s1);border:1px solid var(--br);border-radius:16px;padding:22px;width:100%;max-width:500px;max-height:88vh;overflow-y:auto;animation:up .2s ease}
+.modal.wide{max-width:580px}
+@keyframes up{from{opacity:0;transform:translateY(16px)}}
+.modal h2{font-size:15px;font-weight:900;margin-bottom:16px;display:flex;align-items:center;gap:7px}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.fg label{font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.fg input,.fg select{background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--blue)}
+.fg select option{background:var(--s2)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+.macts{display:flex;gap:7px;justify-content:flex-end;margin-top:14px}
+
+/* PARTNER CARD */
+.pcard{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:12px 14px;display:flex;align-items:center;gap:11px;margin-bottom:7px}
+.pav{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:900;flex-shrink:0;color:#fff}
+.pinfo{flex:1}
+.pname{font-size:13px;font-weight:700}
+.pcnt{font-size:11px;color:var(--muted);margin-top:1px}
+.pdel{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2);border-radius:7px;padding:4px 9px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;transition:all .15s}
+.pdel:hover{background:var(--red);color:#fff}
+.pdel:disabled{opacity:.3;cursor:not-allowed}
+.clrs{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.clr{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.clr.on{border-color:#fff;transform:scale(1.2)}
+
+/* TOAST */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--s1);border:1px solid var(--br);border-radius:10px;padding:9px 16px;font-size:12px;font-weight:600;z-index:999;transition:transform .25s ease;display:flex;align-items:center;gap:5px;white-space:nowrap;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.s{border-color:var(--green);color:var(--green)}
+.toast.e{border-color:var(--red);color:var(--red)}
+.nores{text-align:center;padding:28px 14px;color:var(--muted)}
+.nores i{font-size:28px;margin-bottom:7px;display:block}
+
+/* ===== SALARY MODULE ===== */
+.sal-modal .modal{max-width:640px}
+.sal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.sal-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.sal-card{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:12px 14px}
+.sal-card .sc-n{font-size:20px;font-weight:900;font-family:'JetBrains Mono',monospace;margin-bottom:2px}
+.sal-card .sc-l{font-size:10px;color:var(--muted)}
+.ded-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--s2);border:1px solid var(--br);border-radius:var(--r);margin-bottom:6px}
+.ded-reason{flex:1;font-size:12px;font-weight:600}
+.ded-amt{font-size:13px;font-weight:900;color:var(--red);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.ded-date{font-size:10px;color:var(--muted);white-space:nowrap}
+.ded-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;transition:color .15s}
+.ded-del:hover{color:var(--red)}
+.ded-wa{background:transparent;border:none;color:#25d366;cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px}
+.ded-sms{background:transparent;border:none;color:var(--blue);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px}
+.net-salary{background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.3);border-radius:var(--r2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.net-salary .ns-l{font-size:12px;color:var(--muted2);font-weight:600}
+.net-salary .ns-n{font-size:24px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--green)}
+.sal-btn{background:rgba(16,185,129,0.12);color:var(--green);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:5px 11px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap}
+.sal-btn:hover{background:var(--green);color:#fff}
+.add-ded-form{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:14px;margin-top:10px}
+.add-ded-form .form-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.month-sel{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.month-sel select{background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;cursor:pointer}
+.month-sel select:focus{border-color:var(--blue)}
+.irow-sal{display:flex;align-items:center;gap:7px;padding:7px 13px;border-bottom:1px solid rgba(48,54,61,0.4)}
+.irow-sal:last-child{border-bottom:none}
+
+/* ===== SCHEDULE MODULE ===== */
+.sch-week-header{display:grid;grid-template-columns:150px repeat(7,1fr);gap:3px;margin-bottom:3px}
+.sch-day-head{text-align:center;padding:6px 3px;border-radius:7px;font-size:11px;font-weight:700;background:var(--surface2);color:var(--muted2)}
+.sch-day-head.today{background:rgba(59,130,246,0.2);color:var(--blue)}
+.sch-row{display:grid;grid-template-columns:150px repeat(7,1fr);gap:3px;margin-bottom:3px;align-items:center}
+.sch-driver-cell{font-size:11px;font-weight:600;padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.sch-cell{border-radius:7px;min-height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted)}
+.sch-cell:hover{filter:brightness(1.2);transform:scale(1.04)}
+.sch-cell .cell-inner{font-size:9px;font-weight:700;text-align:center;line-height:1.3;padding:2px}
+.sch-cell .shift-t{font-size:8px;opacity:.8;display:block}
+.sch-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.sch-nav h3{font-size:14px;font-weight:900;flex:1;margin:0}
+.sch-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted2)}
+.leg-dot{width:9px;height:9px;border-radius:2px}
+.sch-fbar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.sch-ftab{padding:3px 9px;border-radius:20px;font-size:11px;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--muted2);font-family:'Cairo',sans-serif;transition:all .15s}
+.sch-ftab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.broadcast-panel{background:rgba(37,211,102,0.06);border:1px solid rgba(37,211,102,0.2);border-radius:14px;padding:12px 14px;margin-top:10px}
+.wa-group-btn{background:rgba(37,211,102,0.12);color:#25d366;border:1px solid rgba(37,211,102,0.3);border-radius:8px;padding:7px 13px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s}
+.wa-group-btn:hover{background:#25d366;color:#fff}
+.wa-group-btn.blue{background:rgba(59,130,246,0.12);color:var(--blue);border-color:rgba(59,130,246,0.3)}
+.wa-group-btn.blue:hover{background:var(--blue);color:#fff}
+
+/* ===== TIME PICKER MODAL ===== */
+.time-modal{max-width:400px}
+.time-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.time-field{display:flex;flex-direction:column;gap:5px}
+.time-field label{font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.time-field input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;outline:none;text-align:center}
+.time-field input:focus{border-color:var(--accent)}
+.shift-quick{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sq-btn{padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted2);font-family:'Cairo',sans-serif;transition:all .15s}
+.sq-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cell-time{font-size:8px;opacity:.85;display:block;margin-top:1px}
+
+/* SCHEDULE IMAGE EXPORT */
+#sch-export-canvas{display:none}
+.export-btn-grp{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+/* ===== DASHBOARD MODULE ===== */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;flex-direction:column;gap:6px;transition:all .15s;cursor:pointer}
+.dash-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.dash-card .dc-icon{font-size:24px;margin-bottom:4px}
+.dash-card .dc-num{font-size:28px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1}
+.dash-card .dc-lbl{font-size:11px;color:var(--muted);font-weight:600}
+.dash-card .dc-sub{font-size:10px;color:var(--muted2);margin-top:2px}
+.alerts-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.alert-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);border:1px solid}
+.alert-item.warn{background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.3);color:var(--amber)}
+.alert-item.danger{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3);color:var(--red)}
+.alert-item.info{background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.25);color:#60a5fa}
+.alert-item i{font-size:18px;flex-shrink:0}
+.alert-item .at{font-size:12px;font-weight:700}
+.alert-item .as{font-size:11px;opacity:.8;margin-top:2px}
+.partner-breakdown{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px}
+.pb-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:14px;display:flex;align-items:center;gap:12px}
+.pb-ico{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}
+.pb-info .pb-name{font-size:13px;font-weight:700}
+.pb-info .pb-num{font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1.1}
+.pb-info .pb-lbl{font-size:10px;color:var(--muted)}
+
+/* ===== ATTENDANCE MODULE ===== */
+.att-day-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.att-date-nav{display:flex;align-items:center;gap:8px}
+.att-date-label{font-size:14px;font-weight:900;min-width:140px;text-align:center}
+.att-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;transition:all .15s}
+.att-row:hover{border-color:var(--accent)}
+.att-av{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0}
+.att-info{flex:1;min-width:0}
+.att-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-sub{font-size:10px;color:var(--muted)}
+.att-btns{display:flex;gap:5px;flex-shrink:0}
+.att-btn{padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap}
+.att-btn.present{background:rgba(16,185,129,0.1);color:var(--green);border-color:rgba(16,185,129,0.3)}
+.att-btn.present.on{background:var(--green);color:#fff;border-color:var(--green)}
+.att-btn.late{background:rgba(245,158,11,0.1);color:var(--amber);border-color:rgba(245,158,11,0.3)}
+.att-btn.late.on{background:var(--amber);color:#fff;border-color:var(--amber)}
+.att-btn.absent{background:rgba(239,68,68,0.1);color:var(--red);border-color:rgba(239,68,68,0.3)}
+.att-btn.absent.on{background:var(--red);color:#fff;border-color:var(--red)}
+.att-note{background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted2);font-family:'Cairo',sans-serif;font-size:11px;outline:none;width:100px;padding:2px 4px}
+.att-note:focus{border-color:var(--accent);color:var(--text)}
+.att-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.att-sum-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center}
+.att-sum-n{font-size:20px;font-weight:900;font-family:'JetBrains Mono',monospace}
+.att-sum-l{font-size:10px;color:var(--muted)}
+
+/* ===== VIOLATIONS MODULE ===== */
+.vio-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px}
+.vio-av{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0}
+.vio-info{flex:1;min-width:0}
+.vio-name{font-size:12px;font-weight:700}
+.vio-detail{font-size:10px;color:var(--muted);margin-top:2px}
+.vio-amt{font-size:14px;font-weight:900;color:var(--red);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.vio-date{font-size:10px;color:var(--muted);text-align:left;white-space:nowrap}
+.vio-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 5px;border-radius:4px;transition:color .15s}
+.vio-del:hover{color:var(--red)}
+.vio-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.nav-tab{padding:7px 14px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--muted2);font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.nav-tab:hover{border-color:var(--accent);color:var(--accent)}
+.nav-tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ===== CLOCKIN LIVE MODULE ===== */
+.live-badge-top{display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;color:var(--green)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:livepulse 1.5s infinite}
+@keyframes livepulse{0%,100%{opacity:1}50%{opacity:.3}}
+.clockin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:14px}
+.ci-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .15s;cursor:pointer}
+.ci-card:hover{border-color:var(--accent)}
+.ci-card.in{border-right:3px solid var(--green)}
+.ci-card.out{border-right:3px solid var(--red)}
+.ci-av{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0}
+.ci-info{flex:1;min-width:0}
+.ci-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.ci-status{text-align:left;flex-shrink:0}
+.ci-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;display:block;text-align:center}
+.ci-badge.in{background:rgba(16,185,129,0.15);color:#34d399}
+.ci-badge.out{background:rgba(239,68,68,0.12);color:#f87171}
+.ci-time{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;text-align:left}
+.map-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;padding:20px}
+.map-modal-overlay.on{display:flex}
+.map-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;width:100%;max-width:600px;height:400px;display:flex;flex-direction:column}
+.map-modal-head{padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.map-modal-head .mmh-name{font-size:13px;font-weight:700;flex:1}
+.map-modal iframe{flex:1;border:none}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<div class="top">
+  <div class="logo">
+    <div class="logo-ic"><i class="ti ti-car" style="font-size:17px;color:#fff"></i></div>
+    <div>السلاسل<sub>نظام إدارة السائقين</sub></div>
+  </div>
+  <div style="display:flex;gap:6px;margin-right:8px">
+    <button class="nav-tab on" id="nav-drivers" onclick="setMainView('drivers')"><i class="ti ti-users"></i> السائقون</button>
+    <button class="nav-tab" id="nav-dash" onclick="setMainView('dash')"><i class="ti ti-dashboard"></i> لوحة التحكم</button>
+    <button class="nav-tab" id="nav-att" onclick="setMainView('att')"><i class="ti ti-calendar-check"></i> الحضور</button>
+    <button class="nav-tab" id="nav-vio" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> المخالفات</button>
+    <button class="nav-tab" id="nav-clockin" onclick="setMainView('clockin')"><i class="ti ti-map-pin" style="color:#10b981"></i> <span style="color:#10b981">حضور مباشر</span></button>
+  </div>
+  <div class="top-stats">
+    <div class="ts"><div class="ts-n" id="st-total" style="color:var(--blue)">0</div><div class="ts-l">إجمالي</div></div>
+    <div id="st-partners" style="display:flex;gap:20px"></div>
+    <div class="ts"><div class="ts-n" id="st-exp" style="color:var(--amber)">0</div><div class="ts-l">رخصة قريبة</div></div>
+  </div>
+  <div class="top-btns">
+    <button class="tbtn" onclick="openScheduleModal()" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)"><i class="ti ti-calendar-week"></i> الجدول</button>
+    <button class="tbtn" onclick="syncDriversToSupabase()" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)" title="مزامنة بيانات السائقين مع التطبيق"><i class="ti ti-arrows-exchange"></i> مزامنة App</button>
+    <button class="tbtn" onclick="manualSaveFile()" style="color:#fbbf24;border-color:rgba(251,191,36,0.35)"><i class="ti ti-device-floppy"></i> حفظ الملف</button>
+    <button class="tbtn" onclick="openPartnersModal()"><i class="ti ti-building"></i> الشركاء</button>
+    <button class="tbtn" onclick="exportSalaryExcel()" style="color:var(--green);border-color:rgba(16,185,129,0.4)"><i class="ti ti-table-export"></i> شيت الرواتب</button>
+    <button class="tbtn" onclick="doExport()"><i class="ti ti-download"></i> تصدير</button>
+    <button class="tbtn" onclick="document.getElementById('impFile').click()"><i class="ti ti-upload"></i> استيراد</button>
+  </div>
+  <div class="saved-msg" id="savedMsg"><i class="ti ti-cloud-check"></i> تم الحفظ</div>
+  <input type="file" id="impFile" accept=".json" style="display:none" onchange="doImport(this)">
+</div>
+
+<div class="body">
+  <!-- SIDEBAR -->
+  <div class="sb">
+    <div class="sb-search">
+      <div class="srch-wrap">
+        <i class="ti ti-search"></i>
+        <input class="srch" id="srchBox" placeholder="ابحث بالاسم أو رقم السيارة..." oninput="onSearch()">
+      </div>
+    </div>
+    <div class="sb-filters" id="filterBar"></div>
+    <div class="sb-list" id="driverList"></div>
+    <div class="sb-add">
+      <button class="add-btn" onclick="openAddModal()"><i class="ti ti-plus"></i> إضافة سائق جديد</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainArea">
+    <div class="empty-state">
+      <i class="ti ti-steering-wheel"></i>
+      <h2>اختر سائقاً من القائمة</h2>
+      <p>أو ابحث عن اسم أو رقم سيارة</p>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD VIEW -->
+<div id="view-dash" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="dash-content"></div>
+</div>
+
+<!-- ATTENDANCE VIEW -->
+<div id="view-att" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="att-content"></div>
+</div>
+
+<!-- VIOLATIONS VIEW -->
+<div id="view-vio" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="vio-content"></div>
+</div>
+
+<!-- CLOCKIN LIVE VIEW -->
+<div id="view-clockin" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="clockin-content"></div>
+</div>
+
+<!-- MAP MODAL -->
+<div class="map-modal-overlay" id="mapModal" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="map-modal">
+    <div class="map-modal-head">
+      <div>
+        <div class="mmh-name" id="mmh-name">—</div>
+        <div style="font-size:10px;color:var(--muted)" id="mmh-action">—</div>
+      </div>
+      <button class="btn btn-cancel" onclick="document.getElementById('mapModal').classList.remove('on')" style="font-size:11px">إغلاق</button>
+    </div>
+    <iframe id="map-iframe" src="" allowfullscreen loading="lazy"></iframe>
+  </div>
+</div>
+
+</div>
+
+<!-- ADD MODAL -->
+<div class="ov" id="addModal" onclick="if(event.target===this)closeModal('addModal')">
+  <div class="modal">
+    <h2><i class="ti ti-user-plus" style="color:var(--blue)"></i> إضافة سائق جديد</h2>
+    <div class="fgrid">
+      <div class="fg full"><label>اسم السائق</label><input id="a_name" placeholder="الاسم الكامل"></div>
+      <div class="fg"><label>كود الموظف</label><input id="a_id" placeholder="SA1037"></div>
+      <div class="fg"><label>رقم السيارة</label><input id="a_car" placeholder="/ 23 / XXXXX"></div>
+      <div class="fg"><label>رقم الهاتف / SIM</label><input id="a_sim" placeholder="9XXXXXXXX"></div>
+      <div class="fg"><label>الجنسية</label><input id="a_nat" placeholder="EGYPT / INDIA ..."></div>
+      <div class="fg"><label>العمر</label><input id="a_age" type="number" placeholder="30"></div>
+      <div class="fg"><label>الرقم المدني</label><input id="a_civil" placeholder="290XXXXXXXXX"></div>
+      <div class="fg"><label>انتهاء الرخصة</label><input id="a_lic" type="date"></div>
+      <div class="fg"><label>الشريك</label><select id="a_par"></select></div>
+      <div class="fg"><label>البطاقة الصحية</label>
+        <select id="a_health"><option value="available">متاحة</option><option value="">غير متاحة</option></select>
+      </div>
+      <div class="fg"><label>بطاقة البترول</label><input id="a_pet" placeholder="7005XXXXXXX"></div>
+      <div class="fg"><label>رقم الجهاز</label><input id="a_dev" placeholder="10HF9FFXXXX"></div>
+      <div class="fg full"><label>تاريخ الانضمام</label><input id="a_start" type="date"></div>
+      <div class="fg full"><label>الراتب الأساسي (د.ك / شهر)</label><input id="a_salary" type="number" placeholder="0.000" step="0.001"></div>
+    </div>
+    <div class="macts">
+      <button class="btn btn-c" onclick="closeModal('addModal')">إلغاء</button>
+      <button class="btn btn-s" onclick="addDriver()"><i class="ti ti-device-floppy"></i> حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- PARTNERS MODAL -->
+<div class="ov" id="partnersModal" onclick="if(event.target===this)closeModal('partnersModal')">
+  <div class="modal wide">
+    <h2><i class="ti ti-building" style="color:var(--blue)"></i> إدارة الشركاء</h2>
+    <div id="partnersList"></div>
+    <div style="background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:14px;margin-top:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">إضافة شريك جديد</div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="fg" style="flex:1;min-width:120px;margin:0"><label>الاسم</label><input id="p_name" placeholder="اسم الشريك..."></div>
+        <div class="fg" style="margin:0">
+          <label>اللون</label>
+          <div class="clrs" id="colorPicker"></div>
+        </div>
+        <button class="btn btn-s" onclick="addPartner()" style="margin-bottom:1px"><i class="ti ti-plus"></i> إضافة</button>
+      </div>
+    </div>
+    <div class="macts">
+      <button class="btn btn-c" onclick="closeModal('partnersModal')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- SALARY MODAL -->
+<div class="ov" id="salaryModal" onclick="if(event.target===this)closeModal('salaryModal')">
+  <div class="modal" style="max-width:620px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0"><i class="ti ti-coin" style="color:var(--green)"></i> <span id="sal-dname">الراتب والخصومات</span></h2>
+      <div class="month-sel">
+        <select id="sal-month" onchange="renderSalaryModal()"></select>
+        <select id="sal-year" onchange="renderSalaryModal()"></select>
+      </div>
+    </div>
+
+    <!-- SALARY SETTING -->
+    <div style="display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:10px 14px;margin-bottom:14px">
+      <i class="ti ti-wallet" style="color:var(--green);font-size:18px"></i>
+      <span style="font-size:12px;color:var(--muted);flex:0 0 auto">الراتب الأساسي:</span>
+      <input id="sal-base-input" type="number" placeholder="0" style="flex:1;background:transparent;border:none;border-bottom:1px dashed var(--br);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:900;outline:none;padding:2px 4px;text-align:left" oninput="updateBaseSalary()">
+      <span style="font-size:12px;color:var(--muted)">د.ك / شهر</span>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="sal-summary">
+      <div class="sal-card">
+        <div class="sc-n" style="color:var(--green)" id="sal-s-base">0</div>
+        <div class="sc-l">الراتب الأساسي</div>
+      </div>
+      <div class="sal-card">
+        <div class="sc-n" style="color:var(--red)" id="sal-s-ded">0</div>
+        <div class="sc-l">إجمالي الخصومات</div>
+      </div>
+      <div class="sal-card">
+        <div class="sc-n" style="color:var(--amber)" id="sal-s-count">0</div>
+        <div class="sc-l">عدد الخصومات</div>
+      </div>
+    </div>
+
+    <!-- DEDUCTIONS LIST -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">الخصومات هذا الشهر</div>
+    <div id="ded-list" style="max-height:200px;overflow-y:auto"></div>
+
+    <!-- NET SALARY -->
+    <div class="net-salary">
+      <div>
+        <div class="ns-l">صافي الراتب</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px" id="sal-month-label"></div>
+      </div>
+      <div class="ns-n" id="sal-s-net">0 د.ك</div>
+    </div>
+
+    <!-- ADD DEDUCTION -->
+    <div class="add-ded-form">
+      <div class="form-title">➕ إضافة خصم جديد</div>
+      <div class="fgrid">
+        <div class="fg full"><label>سبب الخصم / Reason</label><input id="ded-reason" placeholder="مثال: غياب، تأخر، مخالفة..."></div>
+        <div class="fg">
+          <label>عدد الأيام / Days</label>
+          <select id="ded-days" onchange="calcDedAmount()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;width:100%">
+            <option value="0.5">نصف يوم — Half Day</option>
+            <option value="1">يوم كامل — Full Day</option>
+            <option value="1.5">يوم ونصف — 1.5 Days</option>
+            <option value="2">يومان — 2 Days</option>
+            <option value="2.5">يومان ونصف — 2.5 Days</option>
+            <option value="3">3 أيام — 3 Days</option>
+            <option value="4">4 أيام — 4 Days</option>
+            <option value="5">5 أيام — 5 Days</option>
+            <option value="custom">مخصص — Custom</option>
+          </select>
+        </div>
+        <div class="fg" id="ded-custom-wrap" style="display:none">
+          <label>أيام مخصصة / Custom Days</label>
+          <input id="ded-custom-days" type="number" placeholder="0.5" step="0.5" min="0.5" onchange="calcDedAmount()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;width:100%">
+        </div>
+        <div class="fg"><label>التاريخ / Date</label><input id="ded-date" type="date"></div>
+      </div>
+      <div id="ded-calc-preview" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px 14px;margin-top:10px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+          <div>
+            <div style="font-size:10px;color:var(--muted)">الراتب الأساسي</div>
+            <div id="calc-base" style="font-size:13px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--green)">— KD</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted)">الأيام</div>
+            <div id="calc-days" style="font-size:13px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--amber)">0.5</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted)">مبلغ الخصم</div>
+            <div id="calc-amount" style="font-size:16px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--red)">— KD</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted2);margin-top:6px;text-align:center">الراتب ÷ 26 يوم عمل × عدد الأيام</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+        <button class="btn btn-s" onclick="addDeduction()"><i class="ti ti-plus"></i> إضافة الخصم</button>
+      </div>
+    </div>
+
+    <div class="macts">
+      <button class="btn btn-c" onclick="closeModal('salaryModal')">إغلاق</button>
+      <button class="btn btn-e" onclick="exportSalaryReport()"><i class="ti ti-download"></i> تصدير التقرير</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="docFile" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display:none" onchange="onDocUpload()">
+
+<script>
+// ==========================================
+// INITIAL DATA — 36 سائق
+// ==========================================
+const INIT_DRIVERS = [
+  {id:'SA1001',name:'ASHRAF MOHAMED',car:'/ 23 / 72401',petrol:'7005430001001644977',sim:'94041969',device:'10HF9FF5310009C',nationality:'EGYPT',age:28,startDate:'2025-12-23',civil:'298092402529',license:'2026-01-26',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1002',name:'Anik Rudra paul',car:'/ 23 / 72248',petrol:'7005430001001644994',sim:'92295624',device:'10hf9ff5450009c',nationality:'INDIA',age:31,startDate:'2025-12-10',civil:'294081606149',license:'2031-01-15',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1003',name:'PHIROJ HUSEN ANSARI',car:'/ 23 / 72394',petrol:'7005430001001644996',sim:'97383174',device:'10hf9ff5670009c',nationality:'NEPAL',age:28,startDate:'2025-12-20',civil:'297091704846',license:'2031-01-15',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1004',name:'RAJ KUMAR BK',car:'/ 23 / 72355',petrol:'7005430001001645001',sim:'96723948',device:'10hf9ff5d0009c',nationality:'NEPAL',age:30,startDate:'2025-12-20',civil:'295082705637',license:'2031-01-15',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1005',name:'Heshmat Ali',car:'/ 23 / 72033',petrol:'7005430001001644991',sim:'97218562',device:'10HF9FF4UP0009C',nationality:'INDIA',age:29,startDate:'2025-12-23',civil:'296101205449',license:'2031-01-15',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1006',name:'Saddam Ansari',car:'/ 23 / 72498',petrol:'7005430001001644978',sim:'97203583',device:'10HFF52R0009C',nationality:'INDIA',age:29,startDate:'2025-12-23',civil:'296122505993',license:'2031-01-15',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1007',name:'Shabir Alam',car:'/ 23 / 72029',petrol:'7005430001001645008',sim:'94776046',device:'10HF9DFHCN0009A',nationality:'INDIA',age:35,startDate:'2025-12-23',civil:'290030109385',license:'2031-01-15',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1008',name:'Vishnu Arjun Rathod',car:'/ 23 / 72374',petrol:'7005430001001645002',sim:'99135709',device:'10HF9FF48F0009C',nationality:'INDIA',age:29,startDate:'2026-01-05',civil:'296121605642',license:'2026-01-22',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1009',name:'Ghulam Sarwar',car:'/ 23 / 72410',petrol:'7005430001001644992',sim:'97423156',device:'10HF9FF4XE0009C',nationality:'INDIA',age:23,startDate:'2025-12-23',civil:'302010165742',license:'2026-01-22',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1010',name:'Swarup Nath',car:'/ 23 / 72003',petrol:'7005430001001644993',sim:'94178569',device:'10HF9FF49N0009C',nationality:'INDIA',age:47,startDate:'2025-12-23',civil:'283081514689',license:'2026-01-22',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1011',name:'SAKAR CHAUDHARY',car:'/ 23 / 72282',petrol:'7005430001001644995',sim:'94906127',device:'10HF9FF3F00009C',nationality:'NEPAL',age:29,startDate:'2026-01-03',civil:'296042205448',license:'2026-01-22',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1012',name:'peterclever anyanwuocha',car:'/ 23 / 72229',petrol:'7005430001001639936',sim:'99014613',device:'10HF9FF3JT0009C',nationality:'NIGERIA',age:47,startDate:'2026-01-04',civil:'279010409943',license:'2031-01-29',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1013',name:'DANIEL AKPAH',car:'/ 23 / 72304',petrol:'7005430001001645007',sim:'97369568',device:'10hf9ff3mx0009c',nationality:'GHANA',age:30,startDate:'2026-12-30',civil:'295082106327',license:'2031-01-29',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1014',name:'MARK OTENG KONADU',car:'/ 23 / 72408',petrol:'7005430001001645005',sim:'94915969',device:'10hf9dfhhn0009a',nationality:'GHANA',age:49,startDate:'2026-12-30',civil:'286122608061',license:'2031-01-29',partner:'keeta',health:'available',docs:[]},
+  {id:'SA1015',name:'Kalashdeep Singh',car:'/ 23 / 72385',petrol:'7005430001001645003',sim:'97316601',device:'10f9ff4xc0009c',nationality:'INDIA',age:26,startDate:'2025-12-11',civil:'299060602897',license:'2031-01-29',partner:'caboria',health:'available',docs:[]},
+  {id:'SA1016',name:'SANTOSH PRASAD SAH KANU',car:'/ 23 / 72389',petrol:'7005430001001644986',sim:'97153272',device:'10HF9FF3K50009C',nationality:'NEPAL',age:23,startDate:'2025-12-26',civil:'287120115292',license:'2026-03-02',partner:'caboria',health:'available',docs:[]},
+  {id:'SA1017',name:'RAMIT KUMAR SINGH',car:'/ 23 / 15150',petrol:'7005430001001644987',sim:'97527196',device:'10hf9ff3pq0009c',nationality:'NEPAL',age:28,startDate:'2025-12-26',civil:'301110303562',license:'2026-03-01',partner:'caboria',health:'available',docs:[]},
+  {id:'SA1018',name:'SHUSHIL SAH',car:'/ 23 / 72012',petrol:'7005430001001644985',sim:'96670189',device:'10hf9ff3pu0009c',nationality:'NEPAL',age:21,startDate:'2025-12-26',civil:'304051402109',license:'2026-03-01',partner:'caboria',health:'available',docs:[]},
+  {id:'SA1019',name:'SHYAM SUNDAR PRASAD',car:'/ 23 / 72276',petrol:'7005430001001645004',sim:'98851697',device:'10F9FF3PT0009C',nationality:'NEPAL',age:33,startDate:'2025-12-26',civil:'292052807743',license:'2031-02-01',partner:'homy',health:'available',docs:[]},
+  {id:'SA1020',name:'ANAND KUMAR CHAUDARY',car:'/ 23 / 72182',petrol:'7005430001001644997',sim:'96918953',device:'10HF9FF41G0009C',nationality:'NEPAL',age:43,startDate:'2025-12-26',civil:'288092014949',license:'2031-02-01',partner:'imile',health:'available',docs:[]},
+  {id:'SA1021',name:'RAMIT KUMAR SIGH',car:'',petrol:'',sim:'97527196',device:'10hf9ff3pq0009c',nationality:'NEPAL',age:24,startDate:'2025-12-26',civil:'301110303562',license:'2031-02-01',partner:'imile',health:'available',docs:[]},
+  {id:'SA1022',name:'DANISH PARYA',car:'/ 23 / 72272',petrol:'7005430001001645006',sim:'94731656',device:'10hf9ff3t20009c',nationality:'NEPAL',age:33,startDate:'2025-12-26',civil:'295120704927',license:'2031-02-01',partner:'homy',health:'available',docs:[]},
+  {id:'SA1023',name:'NISHAN CHAUDHARY',car:'/ 23 / 72323',petrol:'7005430001001639936',sim:'98073978',device:'10H9FF4KJ0009C',nationality:'NEPAL',age:23,startDate:'2026-01-12',civil:'30306132473',license:'2031-02-15',partner:'imile',health:'available',docs:[]},
+  {id:'SA1024',name:'CHANDRA DEV YADAV',car:'/ 23 / 72417',petrol:'7005430001001645000',sim:'96693149',device:'10HFFF16E0009C',nationality:'NEPAL',age:26,startDate:'2026-01-12',civil:'300031703694',license:'2031-02-15',partner:'imile',health:'available',docs:[]},
+  {id:'SA1025',name:'IRSHAD MIYA',car:'/ 23 / 72461',petrol:'7005430001001644999',sim:'96015075',device:'10HF9FF3FA0009C',nationality:'NEPAL',age:24,startDate:'2026-01-12',civil:'304051402125',license:'2031-02-15',partner:'imile',health:'available',docs:[]},
+  {id:'SA1026',name:'Rphael Selvester',car:'/ 23 / 72235',petrol:'7005430001001644979',sim:'97326245',device:'10HFDFG3X0009A',nationality:'NIGERIA',age:32,startDate:'2026-02-01',civil:'293050907753',license:'2026-03-11',partner:'caboria',health:'',docs:[]},
+  {id:'SA1027',name:'Prince ugwueze',car:'/ 23 / 72078',petrol:'7005430001001644984',sim:'94951086',device:'10HF9DFG9P0009A',nationality:'NIGERIA',age:34,startDate:'2026-01-21',civil:'291110406557',license:'2026-03-11',partner:'caboria',health:'',docs:[]},
+  {id:'SA1028',name:'Promise Chikelitem',car:'/ 23 / 72311',petrol:'7005430001001644989',sim:'97647976',device:'10F9DFG9L0009A',nationality:'NIGERIA',age:42,startDate:'2026-01-30',civil:'284050120147',license:'2026-03-11',partner:'homy',health:'',docs:[]},
+  {id:'SA1029',name:'Chika nwaogwugwu',car:'/ 23 / 72438',petrol:'7005430001001644982',sim:'97526391',device:'10HF9FF3DH0009C',nationality:'NIGERIA',age:43,startDate:'2026-01-26',civil:'283102408763',license:'2026-03-17',partner:'homy',health:'',docs:[]},
+  {id:'SA1030',name:'okechukuw michael',car:'/ 23 / 72120',petrol:'7005430001001644980',sim:'94743827',device:'10HFDFF620009A',nationality:'NIGERIA',age:52,startDate:'2026-01-28',civil:'273042904677',license:'2026-03-17',partner:'homy',health:'',docs:[]},
+  {id:'SA1031',name:'mohamed osama',car:'/ 23 / 72319',petrol:'7005430001001644983',sim:'96959682',device:'10hf9dfd3a0009a',nationality:'EGYPT',age:0,startDate:'2025-03-03',civil:'300011203123',license:'2025-03-03',partner:'caboria',health:'available',docs:[]},
+  {id:'SA1032',name:'Emmanuel chidiebere',car:'/ 23 / 72243',petrol:'7005430001001644982',sim:'94051757',device:'10HF9FF3S40009C',nationality:'NIGERIA',age:33,startDate:'2026-01-26',civil:'292041012603',license:'2025-03-03',partner:'homy',health:'',docs:[]},
+  {id:'SA1033',name:'Samson Nwachukwu Akanezie',car:'/ 23 / 72090',petrol:'7005430001001644990',sim:'96061964',device:'10HFDFGAH0009A',nationality:'NIGERIA',age:0,startDate:'2026-02-01',civil:'284020610049',license:'2026-03-11',partner:'homy',health:'',docs:[]},
+  {id:'SA1034',name:'aaron hussaini timoty',car:'/ 23 / 72085',petrol:'7005430001001639936',sim:'98074472',device:'10hf9ff4kn0009c',nationality:'NIGERIA',age:0,startDate:'2026-01-29',civil:'293022306483',license:'2026-03-11',partner:'homy',health:'',docs:[]},
+  {id:'SA1035',name:'Bartholomew Kaku Niamh',car:'/ 23/89295',petrol:'',sim:'94164875',device:'10HF9DFD4N0009A',nationality:'GHANA',age:0,startDate:'2026-02-07',civil:'292062606929',license:'',partner:'',health:'',docs:[]},
+  {id:'SA1036',name:'sylvester kopu',car:'/23 /89034',petrol:'645017',sim:'96964047',device:'10HF9DFEK90009A',nationality:'NIGERIA',age:35,startDate:'2026-02-09',civil:'',license:'',partner:'',health:'',docs:[]},
+];
+
+const INIT_PARTNERS = [
+  {id:'keeta',   name:'Keeta',   color:'#3b82f6'},
+  {id:'caboria', name:'Caboria', color:'#10b981'},
+  {id:'homy',    name:'HOMY',    color:'#f59e0b'},
+  {id:'imile',   name:'iMile',   color:'#a855f7'},
+];
+
+const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#a855f7','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+const SK_D = 'sl_drv2';
+const SK_P = 'sl_par2';
+
+// ==========================================
+// STATE — يتحمل من localStorage أو الداتا الافتراضية
+// ==========================================
+function loadLS(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    if (v) {
+      const p = JSON.parse(v);
+      if (Array.isArray(p) && p.length > 0) return p;
+    }
+  } catch(e) {}
+  // حفظ الافتراضي في localStorage للمرة الأولى
+  try { localStorage.setItem(key, JSON.stringify(fallback)); } catch(e) {}
+  return JSON.parse(JSON.stringify(fallback));
+}
+
+function saveLS(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+}
+
+let DRV      = loadLS(SK_D, INIT_DRIVERS);
+let PARTNERS = loadLS(SK_P, INIT_PARTNERS);
+let selId    = null;
+let editing  = false;
+let filter   = 'all';
+let srchQ    = '';
+let upTarget = null;
+let selColor = COLORS[0];
+
+// ==========================================
+// HELPERS
+// ==========================================
+function ini(n){ return n.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase(); }
+function getPartner(id){ return PARTNERS.find(p=>p.id===id); }
+function pColor(id){ const p=getPartner(id); return p?p.color:'#7d8590'; }
+function pBadge(id){
+  const c=pColor(id), nm=(getPartner(id)||{name:id||'—'}).name;
+  return `<span class="bdg" style="background:${c}22;color:${c};border:1px solid ${c}44">${nm}</span>`;
+}
+function licStat(s){
+  if(!s) return {c:'xbad',l:'غير محدد',vc:'bad'};
+  const d=Math.floor((new Date(s)-Date.now())/86400000);
+  if(d<0)  return {c:'xbad',l:'منتهية',vc:'bad'};
+  if(d<90) return {c:'xwarn',l:`${d} يوم`,vc:'warn'};
+  return {c:'xok',l:'سارية',vc:'ok'};
+}
+function dico(n){ if(/\.pdf$/i.test(n)) return 'ti-file-type-pdf'; if(/\.(jpg|jpeg|png)/i.test(n)) return 'ti-photo'; if(/\.doc/i.test(n)) return 'ti-file-word'; return 'ti-file'; }
+function save(){ saveLS(SK_D, DRV); saveLS(SK_P, PARTNERS); flashSaved(); }
+function flashSaved(){ const el=document.getElementById('savedMsg'); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000); }
+function toast(msg,t='s'){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),2500); }
+
+// ==========================================
+// FILTER + LIST
+// ==========================================
+function getFiltered(){
+  return DRV.filter(d=>{
+    const mf = filter==='all' || (d.partner||'')=== filter;
+    const q  = srchQ;
+    const ms = !q || d.name.toLowerCase().includes(q) || (d.car||'').toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || (d.sim||'').includes(q);
+    return mf && ms;
+  });
+}
+
+function renderFilterBar(){
+  const el = document.getElementById('filterBar');
+  el.innerHTML = '<span class="ftab'+(filter==='all'?' on':'')+'" onclick="setFilter(\'all\')">الكل</span>'
+    + PARTNERS.map(p=>{
+        const cnt = DRV.filter(d=>d.partner===p.id).length;
+        const on  = filter===p.id;
+        return `<span class="ftab${on?' on':''}" onclick="setFilter('${p.id}')" style="${on?'background:'+p.color+';border-color:'+p.color+';color:#fff':''}">${p.name} <span style="font-size:9px;opacity:.75">${cnt}</span></span>`;
+      }).join('');
+}
+
+function renderTopStats(){
+  document.getElementById('st-total').textContent = DRV.length;
+  const now=Date.now(), in60=now+60*86400000;
+  document.getElementById('st-exp').textContent = DRV.filter(d=>{
+    if(!d.license) return false;
+    const t=new Date(d.license).getTime();
+    return t>now && t<in60;
+  }).length;
+  document.getElementById('st-partners').innerHTML = PARTNERS.map(p=>{
+    const cnt = DRV.filter(d=>d.partner===p.id).length;
+    return `<div class="ts"><div class="ts-n" style="color:${p.color}">${cnt}</div><div class="ts-l">${p.name}</div></div>`;
+  }).join('');
+}
+
+function renderList(){
+  const el  = document.getElementById('driverList');
+  const lst = getFiltered();
+  renderFilterBar();
+  renderTopStats();
+  if(!lst.length){ el.innerHTML='<div class="nores"><i class="ti ti-search"></i><p>لا توجد نتائج</p></div>'; return; }
+  el.innerHTML = lst.map(d=>`
+    <div class="dc${selId===d.id?' on':''}" onclick="selectDriver('${d.id}')">
+      <div class="av" style="background:${pColor(d.partner)}">${ini(d.name)}</div>
+      <div class="di">
+        <div class="dn">${d.name}</div>
+        <div class="dc2">${d.id}</div>
+        <div class="dc3">${d.car||'<span style="color:var(--muted)">لا يوجد رقم سيارة</span>'}</div>
+      </div>
+      ${pBadge(d.partner)}
+    </div>`).join('');
+}
+
+function setFilter(f){ filter=f; renderList(); }
+function onSearch(){ srchQ=document.getElementById('srchBox').value.toLowerCase(); renderList(); }
+
+// ==========================================
+// DETAIL
+// ==========================================
+function selectDriver(id){ selId=id; editing=false; renderList(); renderDetail(); }
+
+function F(val, fld, opts={}){
+  if(!editing) return `<span class="ival${opts.vc?' '+opts.vc:''}">${opts.disp||val||'—'}</span>`;
+  if(opts.sel) return `<select class="fsel" id="e_${fld}">${opts.sel.map(o=>`<option value="${o.v}"${val===o.v?' selected':''}>${o.l}</option>`).join('')}</select>`;
+  return `<input class="fin" id="e_${fld}" type="${opts.t||'text'}" value="${(val||'').toString().replace(/"/g,'&quot;')}">`;
+}
+
+function renderDetail(){
+  const m = document.getElementById('mainArea');
+  const d = DRV.find(x=>x.id===selId);
+  if(!d){ m.innerHTML='<div class="empty-state"><i class="ti ti-steering-wheel"></i><h2>اختر سائقاً من القائمة</h2><p>أو ابحث عن اسم أو رقم سيارة</p></div>'; return; }
+  const ls = licStat(d.license);
+  const parOpts = [{v:'',l:'—'}].concat(PARTNERS.map(p=>({v:p.id,l:p.name})));
+
+  m.innerHTML = `
+    ${editing?'<div class="edit-bar"><i class="ti ti-pencil pulse"></i> وضع التعديل — عدّل ثم اضغط حفظ</div>':''}
+    <div class="dh">
+      <div class="dh-l">
+        <div class="big-av" style="background:${pColor(d.partner)}">${ini(d.name)}</div>
+        <div>
+          <div class="dh-name">${d.name}</div>
+          <div class="dh-meta">
+            <span class="id-chip">${d.id}</span>
+            ${pBadge(d.partner)}
+            <span class="exp-chip ${ls.c}">● ${ls.l}</span>
+          </div>
+        </div>
+      </div>
+      <div class="dh-r">
+        ${editing
+          ? `<button class="btn btn-s" onclick="saveDriver()"><i class="ti ti-device-floppy"></i> حفظ</button>
+             <button class="btn btn-c" onclick="cancelEdit()"><i class="ti ti-x"></i> إلغاء</button>`
+          : `<button class="btn btn-e" onclick="startEdit()"><i class="ti ti-pencil"></i> تعديل</button>`}
+        <button class="btn btn-d" onclick="deleteDriver()"><i class="ti ti-trash"></i> حذف</button>
+        <button class="sal-btn" onclick="openSalaryModal()"><i class="ti ti-coin"></i> الراتب والخصومات</button>
+      </div>
+    </div>
+
+    <div class="igrid">
+      <div class="isec">
+        <div class="isec-h"><div class="dot" style="background:#3b82f6"></div>معلومات السيارة</div>
+        <div class="irows">
+          <div class="irow"><i class="ti ti-car iico"></i><span class="ilbl">رقم السيارة</span><span class="ival mono">${F(d.car,'car')}</span></div>
+          <div class="irow"><i class="ti ti-gas-station iico"></i><span class="ilbl">بطاقة البترول</span><span class="ival mono">${F(d.petrol,'petrol')}</span></div>
+          <div class="irow"><i class="ti ti-device-mobile iico"></i><span class="ilbl">رقم الجهاز</span><span class="ival mono">${F(d.device,'device')}</span></div>
+          <div class="irow"><i class="ti ti-sim iico"></i><span class="ilbl">SIM</span><span class="ival mono">${F(d.sim,'sim')}</span></div>
+        </div>
+      </div>
+      <div class="isec">
+        <div class="isec-h"><div class="dot" style="background:#10b981"></div>معلومات السائق</div>
+        <div class="irows">
+          <div class="irow"><i class="ti ti-user iico"></i><span class="ilbl">الاسم</span><span class="ival">${F(d.name,'name')}</span></div>
+          <div class="irow"><i class="ti ti-world iico"></i><span class="ilbl">الجنسية</span><span class="ival">${F(d.nationality,'nationality')}</span></div>
+          <div class="irow"><i class="ti ti-cake iico"></i><span class="ilbl">العمر</span><span class="ival">${F(d.age||'','age',{t:'number'})}</span></div>
+          <div class="irow"><i class="ti ti-calendar iico"></i><span class="ilbl">تاريخ الانضمام</span><span class="ival">${F(d.startDate,'startDate',{t:'date'})}</span></div>
+        </div>
+      </div>
+      <div class="isec">
+        <div class="isec-h"><div class="dot" style="background:#f59e0b"></div>المستندات الرسمية</div>
+        <div class="irows">
+          <div class="irow"><i class="ti ti-id iico"></i><span class="ilbl">الرقم المدني</span><span class="ival mono">${F(d.civil,'civil')}</span></div>
+          <div class="irow"><i class="ti ti-license iico"></i><span class="ilbl">انتهاء الرخصة</span><span class="ival">${F(d.license,'license',{t:'date',vc:ls.vc})}</span></div>
+          <div class="irow"><i class="ti ti-heart-plus iico"></i><span class="ilbl">البطاقة الصحية</span><span class="ival">
+            ${F(d.health,'health',{sel:[{v:'available',l:'متاحة'},{v:'',l:'غير متاحة'}],
+              disp:d.health==='available'?'<span class="ival ok">متاحة</span>':'<span class="ival bad">غير متاحة</span>',vc:''})}
+          </span></div>
+        </div>
+      </div>
+      <div class="isec">
+        <div class="isec-h"><div class="dot" style="background:#a855f7"></div>الشراكة</div>
+        <div class="irows">
+          <div class="irow"><i class="ti ti-handshake iico"></i><span class="ilbl">الشريك</span><span class="ival">
+            ${editing ? F(d.partner,'partner',{sel:parOpts}) : pBadge(d.partner)}
+          </span></div>
+          <div class="irow"><i class="ti ti-key iico"></i><span class="ilbl">كود الموظف</span><span class="ival mono">${d.id}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dsec">
+      <div class="isec-h" style="padding:9px 13px;background:var(--s2);border-bottom:1px solid var(--br)">
+        <div class="dot" style="background:#ef4444"></div>المستندات والمرفقات
+        <span style="margin-right:auto;font-size:10px;color:var(--muted)">${d.docs.length} ملف</span>
+      </div>
+      <div class="dgrid">
+        ${d.docs.map((dc,i)=>`
+          <div class="dcard">
+            <button class="drm" onclick="removeDoc(${i})">✕</button>
+            <i class="ti ${dico(dc.name)}"></i>
+            <div class="dnm">${dc.name}</div>
+            <div class="ddt">${dc.date}</div>
+          </div>`).join('')}
+        <div class="dadd" onclick="trigDoc()">
+          <i class="ti ti-paperclip"></i>
+          <span>إضافة مستند</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ==========================================
+// EDIT / SAVE
+// ==========================================
+function startEdit(){ editing=true; renderDetail(); }
+function cancelEdit(){ editing=false; renderDetail(); }
+
+function saveDriver(){
+  const d = DRV.find(x=>x.id===selId); if(!d) return;
+  ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate'].forEach(f=>{
+    const el=document.getElementById('e_'+f); if(el) d[f]=el.value;
+  });
+  const ag=document.getElementById('e_age'); if(ag) d.age=parseInt(ag.value)||0;
+  editing=false; save(); renderList(); renderDetail(); toast('تم حفظ التعديلات','s');
+}
+
+function deleteDriver(){
+  if(!confirm('هل أنت متأكد من حذف هذا السائق؟')) return;
+  DRV=DRV.filter(d=>d.id!==selId); selId=null; editing=false;
+  save(); renderList();
+  document.getElementById('mainArea').innerHTML='<div class="empty-state"><i class="ti ti-trash" style="color:var(--red)"></i><h2>تم حذف السائق</h2><p>اختر سائقاً آخر</p></div>';
+  toast('تم حذف السائق','e');
+}
+
+// ==========================================
+// ADD DRIVER
+// ==========================================
+function openAddModal(){
+  document.getElementById('a_par').innerHTML = PARTNERS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('addModal').classList.add('on');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('on'); }
+
+function addDriver(){
+  const nm=document.getElementById('a_name').value.trim();
+  if(!nm){alert('يرجى إدخال اسم السائق');return}
+  const newId=document.getElementById('a_id').value.trim()||('SA'+String(Date.now()).slice(-4));
+  if(DRV.find(d=>d.id===newId)){alert('كود الموظف موجود بالفعل');return}
+  DRV.push({
+    id:newId, name:nm,
+    car:document.getElementById('a_car').value.trim(),
+    petrol:document.getElementById('a_pet').value.trim(),
+    sim:document.getElementById('a_sim').value.trim(),
+    device:document.getElementById('a_dev').value.trim(),
+    nationality:document.getElementById('a_nat').value.trim(),
+    age:parseInt(document.getElementById('a_age').value)||0,
+    startDate:document.getElementById('a_start').value,
+    civil:document.getElementById('a_civil').value.trim(),
+    license:document.getElementById('a_lic').value,
+    partner:document.getElementById('a_par').value,
+    health:document.getElementById('a_health').value,
+    docs:[]
+  });
+  save(); closeModal('addModal'); selId=newId; editing=false;
+  renderList(); renderDetail(); toast('تمت إضافة السائق','s');
+  // save salary
+  const salInput = document.getElementById('a_salary');
+  if(salInput && parseFloat(salInput.value) > 0){
+    const sd = getSalData(newId);
+    sd.base = parseFloat(salInput.value);
+    saveSalaries();
+    salInput.value='';
+  }
+  ['a_name','a_id','a_car','a_pet','a_sim','a_dev','a_nat','a_age','a_start','a_civil','a_lic'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+}
+
+// ==========================================
+// DOCUMENTS
+// ==========================================
+function trigDoc(){ upTarget=selId; document.getElementById('docFile').click(); }
+function onDocUpload(){
+  const f=document.getElementById('docFile'); const d=DRV.find(x=>x.id===upTarget);
+  if(!d||!f.files.length) return;
+  Array.from(f.files).forEach(fl=>d.docs.push({name:fl.name,date:new Date().toLocaleDateString('ar-KW')}));
+  save(); renderDetail(); toast('تمت إضافة '+f.files.length+' ملف','s'); f.value='';
+}
+function removeDoc(i){ const d=DRV.find(x=>x.id===selId); if(!d) return; d.docs.splice(i,1); save(); renderDetail(); }
+
+// ==========================================
+// PARTNERS
+// ==========================================
+function openPartnersModal(){
+  renderPartnersList();
+  renderColorPicker();
+  document.getElementById('partnersModal').classList.add('on');
+}
+function renderPartnersList(){
+  const el=document.getElementById('partnersList');
+  if(!PARTNERS.length){el.innerHTML='<div class="nores" style="padding:16px"><i class="ti ti-building-off" style="font-size:26px;display:block;margin-bottom:7px"></i><p>لا يوجد شركاء</p></div>';return}
+  el.innerHTML=PARTNERS.map(p=>{
+    const cnt=DRV.filter(d=>d.partner===p.id).length;
+    return `<div class="pcard">
+      <div class="pav" style="background:${p.color}">${p.name.slice(0,2).toUpperCase()}</div>
+      <div class="pinfo">
+        <div class="pname">${p.name}</div>
+        <div class="pcnt"><i class="ti ti-users" style="font-size:10px"></i> ${cnt} سائق</div>
+      </div>
+      <button class="pdel" onclick="deletePartner('${p.id}')" ${cnt>0?'disabled title="لا يمكن الحذف — يوجد سائقون مرتبطون"':''}>
+        <i class="ti ti-trash"></i> ${cnt>0?'مرتبط':'حذف'}
+      </button>
+    </div>`;
+  }).join('');
+}
+function renderColorPicker(){
+  const el=document.getElementById('colorPicker');
+  el.innerHTML=COLORS.map(c=>`<div class="clr${c===selColor?' on':''}" style="background:${c}" onclick="pickColor('${c}')"></div>`).join('');
+}
+function pickColor(c){ selColor=c; renderColorPicker(); }
+
+function addPartner(){
+  const nm=document.getElementById('p_name').value.trim();
+  if(!nm){alert('يرجى إدخال اسم الشريك');return}
+  const id=nm.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+  if(PARTNERS.find(p=>p.id===id)){alert('هذا الشريك موجود بالفعل');return}
+  PARTNERS.push({id,name:nm,color:selColor});
+  save(); document.getElementById('p_name').value='';
+  renderPartnersList(); renderList(); toast('تمت إضافة الشريك '+nm,'s');
+}
+function deletePartner(id){
+  if(DRV.filter(d=>d.partner===id).length>0) return;
+  if(!confirm('حذف هذا الشريك؟')) return;
+  PARTNERS=PARTNERS.filter(p=>p.id!==id);
+  save(); renderPartnersList(); renderList(); toast('تم حذف الشريك','e');
+}
+
+// ==========================================
+// EXPORT / IMPORT
+// ==========================================
+function doExport(){
+  const now=new Date();
+  const stamp=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const payload={drivers:DRV, partners:PARTNERS};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='السلاسل_'+stamp+'.json'; a.click(); URL.revokeObjectURL(a.href);
+  toast('تم التصدير بنجاح','s');
+}
+function doImport(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      // يقبل الصيغتين: {drivers,partners} أو array قديم
+      const newDrv=Array.isArray(data)?data:(data.drivers||[]);
+      const newPar=data.partners||[];
+      if(!newDrv.length) throw new Error('لا يوجد سائقون');
+      if(!confirm('استيراد '+newDrv.length+' سائق و'+newPar.length+' شريك؟\nسيُدمج مع البيانات الموجودة.')) return;
+      let da=0,pa=0;
+      newDrv.forEach(d=>{if(d.id&&!DRV.find(x=>x.id===d.id)){DRV.push(Object.assign({docs:[]},d));da++;}});
+      newPar.forEach(p=>{if(p.id&&!PARTNERS.find(x=>x.id===p.id)){PARTNERS.push(p);pa++;}});
+      save(); renderList(); renderDetail();
+      toast('تم استيراد '+da+' سائق و'+pa+' شريك','s');
+    }catch(err){toast('خطأ في الملف: '+err.message,'e');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ==========================================
+// KEYBOARD
+// ==========================================
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ ['addModal','partnersModal'].forEach(id=>document.getElementById(id).classList.remove('on')); if(editing) cancelEdit(); }
+  if((e.ctrlKey||e.metaKey)&&e.key==='f'){ e.preventDefault(); document.getElementById('srchBox').focus(); }
+});
+
+
+// ==========================================
+// SALARY & DEDUCTIONS MODULE
+// ==========================================
+const SK_SAL = 'sl_sal2';
+
+function loadSalaries() {
+  try {
+    const v = localStorage.getItem(SK_SAL);
+    if (v) return JSON.parse(v);
+  } catch(e) {}
+  return {};
+}
+function saveSalaries() {
+  try { localStorage.setItem(SK_SAL, JSON.stringify(SALARIES)); } catch(e) {}
+  flashSaved();
+}
+
+// SALARIES = { SA1001: { base: 150, deductions: [{id,reason,amount,date,month,year}] } }
+let SALARIES = loadSalaries();
+
+function getSalData(driverId) {
+  if (!SALARIES[driverId]) SALARIES[driverId] = { base: 0, deductions: [] };
+  return SALARIES[driverId];
+}
+
+function openSalaryModal() {
+  const d = DRV.find(x => x.id === selId);
+  if (!d) return;
+  document.getElementById('sal-dname').textContent = d.name;
+
+  // populate month/year selectors
+  const now = new Date();
+  const mSel = document.getElementById('sal-month');
+  const ySel = document.getElementById('sal-year');
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  mSel.innerHTML = months.map((m,i) => `<option value="${i+1}" ${i+1===now.getMonth()+1?'selected':''}>${m}</option>`).join('');
+  const yr = now.getFullYear();
+  ySel.innerHTML = [yr-1,yr,yr+1].map(y => `<option value="${y}" ${y===yr?'selected':''}>${y}</option>`).join('');
+
+  // set today as default ded date
+  document.getElementById('ded-date').value = now.toISOString().split('T')[0];
+  document.getElementById('ded-reason').value = '';
+  const dedDays = document.getElementById('ded-days');
+  if(dedDays) dedDays.value = '0.5';
+
+  renderSalaryModal();
+  setTimeout(calcDedAmount, 100);
+  document.getElementById('salaryModal').classList.add('on');
+}
+
+function renderSalaryModal() {
+  const d = DRV.find(x => x.id === selId); if (!d) return;
+  const sal = getSalData(d.id);
+  const month = parseInt(document.getElementById('sal-month').value);
+  const year  = parseInt(document.getElementById('sal-year').value);
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  // set base input
+  document.getElementById('sal-base-input').value = sal.base || '';
+
+  // filter deductions for selected month/year
+  const deds = sal.deductions.filter(x => x.month === month && x.year === year);
+  const totalDed = deds.reduce((s, x) => s + parseFloat(x.amount||0), 0);
+  const net = (sal.base||0) - totalDed;
+
+  document.getElementById('sal-s-base').textContent  = (sal.base||0).toFixed(3);
+  document.getElementById('sal-s-ded').textContent   = totalDed.toFixed(3);
+  document.getElementById('sal-s-count').textContent = deds.length;
+  document.getElementById('sal-s-net').textContent   = net.toFixed(3) + ' د.ك';
+  document.getElementById('sal-month-label').textContent = months[month-1] + ' ' + year;
+
+  // deductions list
+  const el = document.getElementById('ded-list');
+  if (!deds.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px"><i class="ti ti-check" style="font-size:20px;display:block;margin-bottom:6px;color:var(--green)"></i>لا توجد خصومات هذا الشهر</div>';
+  } else {
+    el.innerHTML = deds.map(ded => `
+      <div class="ded-row">
+        <div class="ded-reason"><i class="ti ti-alert-circle" style="color:var(--amber);font-size:13px;margin-left:5px"></i>${ded.reason}</div>
+        <div class="ded-date">${ded.date||''}</div>
+        <div class="ded-amt">- ${parseFloat(ded.amount).toFixed(3)} د.ك</div>
+        <button class="ded-wa" onclick="sendWhatsApp('${d.id}','${ded.reason}',${ded.amount})" title="إرسال واتساب"><i class="ti ti-brand-whatsapp"></i></button>
+        <button class="ded-sms" onclick="sendSMS('${d.id}','${ded.reason}',${ded.amount})" title="إرسال SMS"><i class="ti ti-message"></i></button>
+        <button class="ded-del" onclick="removeDeduction('${d.id}','${ded.id}')" title="حذف"><i class="ti ti-trash"></i></button>
+      </div>`).join('');
+  }
+}
+
+function updateBaseSalary() {
+  const val = parseFloat(document.getElementById('sal-base-input').value) || 0;
+  const sal = getSalData(selId);
+  sal.base = val;
+  saveSalaries();
+  renderSalaryModal();
+}
+
+function calcDedAmount(){
+  const sal    = getSalData(selId);
+  const base   = sal.base || 0;
+  const select = document.getElementById('ded-days');
+  const wrap   = document.getElementById('ded-custom-wrap');
+  let days;
+
+  if(select.value === 'custom'){
+    wrap.style.display = 'flex';
+    days = parseFloat(document.getElementById('ded-custom-days').value) || 0;
+  } else {
+    wrap.style.display = 'none';
+    days = parseFloat(select.value);
+  }
+
+  const dailyRate = base / 26; // 26 working days/month
+  const amount    = dailyRate * days;
+
+  document.getElementById('calc-base').textContent   = base.toFixed(3) + ' KD';
+  document.getElementById('calc-days').textContent   = days;
+  document.getElementById('calc-amount').textContent = amount.toFixed(3) + ' KD';
+}
+
+function getDedDays(){
+  const select = document.getElementById('ded-days');
+  if(select.value === 'custom'){
+    return parseFloat(document.getElementById('ded-custom-days').value) || 0;
+  }
+  return parseFloat(select.value);
+}
+
+function addDeduction() {
+  const reason = document.getElementById('ded-reason').value.trim();
+  const date   = document.getElementById('ded-date').value;
+  const days   = getDedDays();
+
+  if (!reason) { toast('يرجى إدخال سبب الخصم','e'); return; }
+  if (!days || days <= 0) { toast('يرجى اختيار عدد الأيام','e'); return; }
+
+  const sal        = getSalData(selId);
+  const base       = sal.base || 0;
+  if(!base){ toast('يرجى تحديد الراتب الأساسي أولاً','e'); return; }
+
+  const dailyRate  = base / 26;
+  const amount     = dailyRate * days;
+
+  const month = parseInt(document.getElementById('sal-month').value);
+  const year  = parseInt(document.getElementById('sal-year').value);
+
+  const ded = {
+    id:     'D' + Date.now(),
+    reason,
+    amount:  amount,
+    days:    days,
+    date,
+    month,
+    year
+  };
+
+  sal.deductions.push(ded);
+  saveSalaries();
+  renderSalaryModal();
+
+  // Also save to Supabase for driver app visibility
+  saveDeductionToSupabase(ded, selId);
+
+  // Reset form
+  document.getElementById('ded-reason').value = '';
+  document.getElementById('ded-days').value   = '0.5';
+  document.getElementById('ded-custom-wrap').style.display = 'none';
+  calcDedAmount();
+
+  toast('تم إضافة الخصم — ' + days + ' يوم = ' + amount.toFixed(3) + ' KD', 's');
+
+  // Ask to notify
+  const d = DRV.find(x => x.id === selId);
+  if (d && confirm('إرسال إشعار الخصم للسائق ' + d.name + '؟')) {
+    sendWhatsApp(selId, reason, amount, days);
+  }
+}
+
+function removeDeduction(driverId, dedId) {
+  if (!confirm('حذف هذا الخصم؟')) return;
+  const sal  = getSalData(driverId);
+  const ded  = sal.deductions.find(x => x.id === dedId);
+  sal.deductions = sal.deductions.filter(x => x.id !== dedId);
+  saveSalaries();
+  renderSalaryModal();
+  toast('تم حذف الخصم','e');
+
+  // Send cancellation notification to driver
+  if(ded) {
+    const d = DRV.find(x => x.id === driverId);
+    if(d && confirm('إرسال إشعار إلغاء الخصم للسائق ' + d.name + '؟')) {
+      sendDeductionCancelNotif(driverId, ded);
+    }
+  }
+}
+
+function sendDeductionCancelNotif(driverId, ded) {
+  const d   = DRV.find(x => x.id === driverId); if(!d) return;
+  const sal = getSalData(driverId);
+  const phone = (d.sim||'').replace(/[^0-9]/g,'');
+  const par = PARTNERS.find(p=>p.id===d.partner);
+  const months_en = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months_ar = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const mIdx = (ded.month||new Date().getMonth()+1) - 1;
+  const totalDed = sal.deductions.reduce((s,x)=>s+parseFloat(x.amount||0),0);
+  const net = (sal.base||0) - totalDed;
+  const daysStr_en = ded.days===0.5?'Half Day':ded.days+' Days';
+  const daysStr_ar = ded.days===0.5?'نصف يوم':ded.days+' أيام';
+
+  const msg =
+    '━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '✅ *DEDUCTION CANCELLED*\n' +
+    '🏢 *Al-Salasil Co.*\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    '👤 *Driver:* ' + d.name + '\n' +
+    (par?'🤝 *Partner:* '+par.name+'\n':'') +
+    '📅 *Month:* ' + months_en[mIdx] + '\n\n' +
+    '📋 *Cancelled Deduction:*\n' +
+    '• Reason: ' + (ded.reason||'—') + '\n' +
+    '• Duration: *' + daysStr_en + '*\n' +
+    '• Amount Restored: *+' + parseFloat(ded.amount).toFixed(3) + ' KD*\n\n' +
+    '💰 *Updated Salary Summary:*\n' +
+    '• Base Salary: ' + (sal.base||0).toFixed(3) + ' KD\n' +
+    '• Total Deductions: -' + totalDed.toFixed(3) + ' KD\n' +
+    '• *Net Salary: ' + net.toFixed(3) + ' KD*\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '✅ *تم إلغاء الخصم*\n' +
+    '🏢 *شركة السلاسل*\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    '👤 *السائق:* ' + d.name + '\n' +
+    '📅 *الشهر:* ' + months_ar[mIdx] + '\n\n' +
+    '📋 *الخصم الملغي:*\n' +
+    '• السبب: ' + (ded.reason||'—') + '\n' +
+    '• المدة: *' + daysStr_ar + '*\n' +
+    '• المبلغ المسترد: *+' + parseFloat(ded.amount).toFixed(3) + ' د.ك*\n\n' +
+    '💰 *ملخص الراتب المحدّث:*\n' +
+    '• الراتب الأساسي: ' + (sal.base||0).toFixed(3) + ' د.ك\n' +
+    '• إجمالي الخصومات: -' + totalDed.toFixed(3) + ' د.ك\n' +
+    '• *صافي الراتب: ' + net.toFixed(3) + ' د.ك*\n\n' +
+    '📞 للاستفسار تواصل مع الإدارة\n' +
+    'For inquiries contact management 🙏';
+
+  const fp = phone.startsWith('965') ? phone : '965' + phone;
+  window.open('https://wa.me/' + fp + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function sendWhatsApp(driverId, reason, amount, days) {
+  const d = DRV.find(x => x.id === driverId); if (!d) return;
+  const phone    = (d.sim||'').replace(/[^0-9]/g,'');
+  const sal      = getSalData(driverId);
+  const base     = sal.base || 0;
+  const allDeds  = sal.deductions.filter(x => x.month===parseInt(document.getElementById('sal-month')?.value||new Date().getMonth()+1) && x.year===parseInt(document.getElementById('sal-year')?.value||new Date().getFullYear()));
+  const totalDed = allDeds.reduce((s,x) => s + parseFloat(x.amount||0), 0);
+  const net      = base - totalDed;
+  const par      = PARTNERS.find(p=>p.id===d.partner);
+  const daysStr  = days ? (days===0.5?'Half Day (0.5)':days+' Day'+(days>1?'s':'')) : '';
+  const daysArStr= days ? (days===0.5?'نصف يوم':days+' أيام') : '';
+  const months_en= ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months_ar= ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const mIdx     = (parseInt(document.getElementById('sal-month')?.value||new Date().getMonth()+1))-1;
+
+  const msg =
+    '━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '⚠️ *SALARY DEDUCTION NOTICE*\n' +
+    '🏢 *Al-Salasil Co.*\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    '👤 *Driver:* ' + d.name + '\n' +
+    (par ? '🤝 *Partner:* ' + par.name + '\n' : '') +
+    '🆔 *ID:* ' + d.id + '\n' +
+    '📅 *Month:* ' + months_en[mIdx] + '\n\n' +
+    '📋 *Deduction Details:*\n' +
+    '• Reason: ' + reason + '\n' +
+    (daysStr ? '• Duration: *' + daysStr + '*\n' : '') +
+    '• Amount: *' + parseFloat(amount).toFixed(3) + ' KD*\n\n' +
+    '💰 *Salary Summary:*\n' +
+    '• Base Salary: ' + base.toFixed(3) + ' KD\n' +
+    '• Total Deductions: -' + totalDed.toFixed(3) + ' KD\n' +
+    '• *Net Salary: ' + net.toFixed(3) + ' KD*\n\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '⚠️ *إشعار خصم من الراتب*\n' +
+    '🏢 *شركة السلاسل*\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+    '👤 *السائق:* ' + d.name + '\n' +
+    '📅 *الشهر:* ' + months_ar[mIdx] + '\n\n' +
+    '📋 *تفاصيل الخصم:*\n' +
+    '• السبب: ' + reason + '\n' +
+    (daysArStr ? '• المدة: *' + daysArStr + '*\n' : '') +
+    '• المبلغ: *' + parseFloat(amount).toFixed(3) + ' د.ك*\n\n' +
+    '💰 *ملخص الراتب:*\n' +
+    '• الراتب الأساسي: ' + base.toFixed(3) + ' د.ك\n' +
+    '• إجمالي الخصومات: -' + totalDed.toFixed(3) + ' د.ك\n' +
+    '• *صافي الراتب: ' + net.toFixed(3) + ' د.ك*\n\n' +
+    '📞 للاستفسار تواصل مع الإدارة\n' +
+    'For inquiries contact management 🙏';
+
+  const fullPhone = phone.startsWith('965') ? phone : '965' + phone;
+  window.open('https://wa.me/' + fullPhone + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function sendSMS(driverId, reason, amount) {
+  const d = DRV.find(x => x.id === driverId); if (!d) return;
+  const phone = (d.sim||'').replace(/[^0-9]/g,'');
+  const sal = getSalData(driverId);
+  const net = ((sal.base||0) - parseFloat(amount)).toFixed(3);
+  const msg =
+    '[Al-Salasil] Deduction | السائق: ' + d.name +
+    ' | خصم/Ded: ' + parseFloat(amount).toFixed(3) + ' KD' +
+    ' | السبب/Reason: ' + reason +
+    ' | صافي/Net: ' + net + ' KD';
+  const fullPhone = phone.startsWith('965') ? phone : '+965' + phone;
+  window.open('sms:' + fullPhone + '?body=' + encodeURIComponent(msg), '_blank');
+}
+
+function exportSalaryReport() {
+  const d = DRV.find(x => x.id === selId); if (!d) return;
+  const sal = getSalData(d.id);
+  const month = parseInt(document.getElementById('sal-month').value);
+  const year  = parseInt(document.getElementById('sal-year').value);
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const deds = sal.deductions.filter(x => x.month===month && x.year===year);
+  const totalDed = deds.reduce((s,x) => s+parseFloat(x.amount||0), 0);
+  const net = (sal.base||0) - totalDed;
+
+  let txt = '====================================\n';
+  txt += '       شركة السلاسل — كشف راتب\n';
+  txt += '====================================\n';
+  txt += 'السائق  : ' + d.name + '\n';
+  txt += 'الكود   : ' + d.id + '\n';
+  txt += 'الشهر   : ' + months[month-1] + ' ' + year + '\n';
+  txt += '------------------------------------\n';
+  txt += 'الراتب الأساسي : ' + (sal.base||0).toFixed(3) + ' د.ك (يومي: ' + ((sal.base||0)/26).toFixed(3) + ' د.ك)\n';
+  txt += '------------------------------------\n';
+  if (deds.length) {
+    txt += 'الخصومات:\n';
+    deds.forEach((x,i) => { const dStr=x.days?(x.days===0.5?' | نصف يوم':' | '+x.days+' أيام'):''; txt += (i+1)+'. '+x.reason+dStr+' : -'+parseFloat(x.amount).toFixed(3)+' KD  ('+x.date+')\n'; });
+  } else {
+    txt += 'لا توجد خصومات\n';
+  }
+  txt += '------------------------------------\n';
+  txt += 'إجمالي الخصومات : -' + totalDed.toFixed(3) + ' د.ك\n';
+  txt += 'صافي الراتب     : ' + net.toFixed(3) + ' د.ك\n';
+  txt += '====================================\n';
+
+  const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'راتب_' + d.name.replace(/ /g,'_') + '_' + months[month-1] + '_' + year + '.txt';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('تم تصدير التقرير','s');
+}
+
+
+// ==========================================
+// EXCEL SALARY SHEET EXPORT
+// ==========================================
+function exportSalaryExcel() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year  = now.getFullYear();
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  // Ask which month
+  const mStr = prompt('أدخل الشهر (1-12):', month);
+  const yStr = prompt('أدخل السنة:', year);
+  const m = parseInt(mStr);
+  const y = parseInt(yStr);
+  if (!m || !y || m<1 || m>12) { alert('شهر أو سنة غير صحيحة'); return; }
+
+  // Build CSV (Excel-compatible with BOM for Arabic)
+  const cols = ['كود الموظف','الاسم','الجنسية','رقم السيارة','الشريك','الراتب الأساسي','أيام الخصم','عدد الخصومات','إجمالي الخصومات','صافي الراتب'];
+  
+  let rows = [];
+  rows.push(cols.join(','));
+
+  let totalBase = 0, totalDed = 0, totalNet = 0;
+
+  DRV.forEach(d => {
+    const sal  = getSalData(d.id);
+    const deds = sal.deductions.filter(x => x.month===m && x.year===y);
+    const sumDed = deds.reduce((s,x) => s + parseFloat(x.amount||0), 0);
+    const base   = sal.base || 0;
+    const net    = base - sumDed;
+
+    totalBase += base;
+    totalDed  += sumDed;
+    totalNet  += net;
+
+    const par = (PARTNERS.find(p=>p.id===d.partner)||{name:d.partner||'—'}).name;
+
+    const totalDays = deds.reduce((s,x)=>s+(parseFloat(x.days)||0),0);
+    rows.push([
+      d.id,
+      '"' + d.name + '"',
+      d.nationality || '—',
+      '"' + (d.car||'—') + '"',
+      par,
+      base.toFixed(3),
+      totalDays,
+      deds.length,
+      sumDed.toFixed(3),
+      net.toFixed(3)
+    ].join(','));
+  });
+
+  // Totals row
+  rows.push(['','الإجمالي','','','',totalBase.toFixed(3),'',totalDed.toFixed(3),totalNet.toFixed(3)].join(','));
+
+  // Header info
+  const header = [
+    '"شركة السلاسل — كشف رواتب شهر ' + months[m-1] + ' ' + y + '"',
+    '"تاريخ الطباعة: ' + now.toLocaleDateString('ar-KW') + '"',
+    '',
+  ].join('\n');
+
+  const csv = '\uFEFF' + header + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'رواتب_' + months[m-1] + '_' + y + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('تم تصدير شيت الرواتب ✓', 's');
+}
+
+// ==========================================
+
+// ==========================================
+// MAIN VIEW NAVIGATION
+// ==========================================
+let currentView = 'drivers';
+
+function setMainView(view) {
+  currentView = view;
+  // Hide all views
+  const bodyEl = document.querySelector('.body');
+  if(bodyEl) bodyEl.style.display = view==='drivers' ? 'grid' : 'none';
+  document.getElementById('view-dash').style.display     = view==='dash'    ? 'block' : 'none';
+  document.getElementById('view-att').style.display      = view==='att'     ? 'block' : 'none';
+  document.getElementById('view-vio').style.display      = view==='vio'     ? 'block' : 'none';
+  document.getElementById('view-clockin').style.display  = view==='clockin' ? 'block' : 'none';
+  // Update nav tabs
+  ['drivers','dash','att','vio'].forEach(v => {
+    const el = document.getElementById('nav-'+v);
+    if(el) el.classList.toggle('on', v===view);
+  });
+  // Render selected view
+  if(view==='dash')    { fetchClockinRecords().then(renderDash); }
+  if(view==='att')     renderAtt();
+  if(view==='vio')     renderVio();
+  if(view==='clockin') renderClockin();
+  if(view!=='clockin') clearInterval(clockinAutoRefresh);
+}
+
+// ==========================================
+// STORAGE FOR NEW MODULES
+// ==========================================
+let ATTENDANCE  = {}; // { 'SA1001_2026-05-12': {status:'present'|'late'|'absent', note:'', time:''} }
+let VIOLATIONS  = []; // [{id, driverId, reason, amount, date, notes}]
+
+(function(){
+  try { const v=localStorage.getItem('sl_att2');  if(v){const p=JSON.parse(v);if(Object.keys(p).length>0) ATTENDANCE=p;} } catch(e){}
+  try { const v=localStorage.getItem('sl_vio2');  if(v){const p=JSON.parse(v);if(Array.isArray(p)&&p.length>0) VIOLATIONS=p;} } catch(e){}
+})();
+
+function saveAtt(){ try{localStorage.setItem('sl_att2',JSON.stringify(ATTENDANCE));}catch(e){} }
+function saveVio(){ try{localStorage.setItem('sl_vio2',JSON.stringify(VIOLATIONS));}catch(e){} }
+
+// ==========================================
+// DASHBOARD
+// ==========================================
+function renderDash() {
+  const today    = fmtDate(new Date());
+  const now      = Date.now();
+  const in30     = now + 30*86400000;
+  const in60     = now + 60*86400000;
+
+  // Expiring licenses
+  const expSoon  = DRV.filter(d => { if(!d.license) return false; const t=new Date(d.license).getTime(); return t>now && t<in60; });
+  const expNow   = DRV.filter(d => { if(!d.license) return false; return new Date(d.license).getTime() < now; });
+
+  // Today attendance
+  const todayAtt  = Object.entries(ATTENDANCE).filter(([k])=>k.endsWith('_'+today));
+  const present   = todayAtt.filter(([,v])=>v.status==='present').length;
+  const late      = todayAtt.filter(([,v])=>v.status==='late').length;
+  const absent    = todayAtt.filter(([,v])=>v.status==='absent').length;
+  const unmarked  = DRV.length - todayAtt.length;
+
+  // This month violations
+  const thisMonth = new Date().getMonth()+1;
+  const thisYear  = new Date().getFullYear();
+  const monthVio  = VIOLATIONS.filter(v=>{ const d=new Date(v.date); return d.getMonth()+1===thisMonth && d.getFullYear()===thisYear; });
+  const monthVioAmt = monthVio.reduce((s,v)=>s+parseFloat(v.amount||0),0);
+
+  // This month salary total
+  const totalSalary = DRV.reduce((s,d)=>{ const sal=getSalData(d.id); return s+(sal.base||0); },0);
+
+  let html = '';
+
+  // STATS CARDS
+  html += '<h2 style="font-size:16px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:8px"><i class="ti ti-dashboard" style="color:var(--accent)"></i> لوحة التحكم</h2>';
+  html += '<div class="dash-grid">';
+  // Clockin stats
+  const ciStatus = {};
+  CLOCKIN_RECORDS.forEach(r => { if(!ciStatus[r.driver_id]) ciStatus[r.driver_id]=r; });
+  const ciIn = Object.values(ciStatus).filter(r=>r.action==='clock_in').length;
+
+  html += dashCard('ti-users','#3b82f6', DRV.length, 'إجمالي السائقين', '', 'drivers');
+  html += dashCard('ti-login','#10b981', ciIn, 'داخل الآن', 'Clock In', 'clockin');
+  html += dashCard('ti-check','#10b981', present+late, 'حضور اليوم', late>0?late+' متأخر':'', 'att');
+  html += dashCard('ti-alert-triangle','#f59e0b', expSoon.length, 'رخص قريبة الانتهاء', expNow.length>0?expNow.length+' منتهية':'', 'drivers');
+  html += dashCard('ti-coin','#10b981', totalSalary.toFixed(0)+' KD', 'إجمالي الرواتب', 'هذا الشهر', null);
+  html += dashCard('ti-alert-circle','#ef4444', monthVio.length, 'مخالفات الشهر', monthVioAmt.toFixed(3)+' KD', 'vio');
+  html += '</div>';
+
+  // PARTNER BREAKDOWN
+  html += '<h3 style="font-size:13px;font-weight:700;color:var(--muted2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">توزيع السائقين بالشريك</h3>';
+  html += '<div class="partner-breakdown">';
+  PARTNERS.forEach(p => {
+    const cnt = DRV.filter(d=>d.partner===p.id).length;
+    const pAtt = todayAtt.filter(([k])=>{ const drv=DRV.find(d=>k.startsWith(d.id+'_')&&d.partner===p.id); return !!drv; });
+    html += `<div class="pb-card">
+      <div class="pb-ico" style="background:${p.color}">${p.name.slice(0,2).toUpperCase()}</div>
+      <div class="pb-info">
+        <div class="pb-name">${p.name}</div>
+        <div class="pb-num" style="color:${p.color}">${cnt}</div>
+        <div class="pb-lbl">سائق</div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // ALERTS
+  html += '<h3 style="font-size:13px;font-weight:700;color:var(--muted2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">التنبيهات</h3>';
+  html += '<div class="alerts-list">';
+
+  if(expNow.length>0){
+    html += `<div class="alert-item danger"><i class="ti ti-license-off"></i><div><div class="at">⚠️ ${expNow.length} رخصة منتهية</div><div class="as">${expNow.map(d=>d.name.split(' ')[0]).join('، ')}</div></div></div>`;
+  }
+  if(expSoon.length>0){
+    html += `<div class="alert-item warn"><i class="ti ti-license"></i><div><div class="at">🔔 ${expSoon.length} رخصة تنتهي قريباً (خلال 60 يوم)</div><div class="as">${expSoon.map(d=>d.name.split(' ')[0]).join('، ')}</div></div></div>`;
+  }
+  if(unmarked>0){
+    html += `<div class="alert-item info"><i class="ti ti-calendar-question"></i><div><div class="at">📋 ${unmarked} سائق لم يُسجَّل حضورهم اليوم</div><div class="as">اذهب لسجل الحضور لتسجيلهم</div></div></div>`;
+  }
+  if(expNow.length===0 && expSoon.length===0 && unmarked===0){
+    html += `<div class="alert-item info"><i class="ti ti-circle-check"></i><div><div class="at">✅ كل شيء على ما يرام</div></div></div>`;
+  }
+  html += '</div>';
+
+  document.getElementById('dash-content').innerHTML = html;
+}
+
+function dashCard(icon, color, num, lbl, sub, view){
+  const clickAttr = view ? `onclick="setMainView('${view}')" style="cursor:pointer;border-color:${color}44"` : `style="border-color:${color}22"`;
+  return `<div class="dash-card" ${clickAttr}>
+    <i class="ti ${icon}" style="font-size:22px;color:${color}"></i>
+    <div class="dc-num" style="color:${color}">${num}</div>
+    <div class="dc-lbl">${lbl}</div>
+    ${sub ? '<div class="dc-sub">'+sub+'</div>' : ''}
+  </div>`;
+}
+
+// ==========================================
+// ATTENDANCE
+// ==========================================
+let attDate = fmtDate(new Date());
+let attFilter = 'all';
+
+function renderAtt(){
+  const d = new Date(attDate);
+  const dayAr = DAYS_AR[d.getDay()];
+  const dateDisp = d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear();
+
+  const drvList = attFilter==='all' ? DRV : DRV.filter(x=>x.partner===attFilter);
+
+  // Summary
+  const present = drvList.filter(x=>{ const r=ATTENDANCE[x.id+'_'+attDate]; return r&&r.status==='present'; }).length;
+  const late    = drvList.filter(x=>{ const r=ATTENDANCE[x.id+'_'+attDate]; return r&&r.status==='late'; }).length;
+  const absent  = drvList.filter(x=>{ const r=ATTENDANCE[x.id+'_'+attDate]; return r&&r.status==='absent'; }).length;
+  const total   = drvList.length;
+
+  let html = '';
+  html += '<div class="att-day-header">';
+  html += '<h2 style="font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px"><i class="ti ti-calendar-check" style="color:var(--green)"></i> سجل الحضور</h2>';
+  html += '<div class="att-date-nav">';
+  html += `<button class="btn btn-cancel" onclick="changeAttDate(-1)"><i class="ti ti-chevron-right"></i></button>`;
+  html += `<div class="att-date-label">${dayAr} — ${dateDisp}</div>`;
+  html += `<button class="btn btn-cancel" onclick="changeAttDate(1)"><i class="ti ti-chevron-left"></i></button>`;
+  html += `<button class="btn btn-cancel" onclick="attDate=fmtDate(new Date());renderAtt()" style="font-size:11px">اليوم</button>`;
+  html += '</div>';
+  html += '</div>';
+
+  // Summary cards
+  html += '<div class="att-summary">';
+  html += `<div class="att-sum-card"><div class="att-sum-n" style="color:var(--accent)">${total}</div><div class="att-sum-l">إجمالي</div></div>`;
+  html += `<div class="att-sum-card"><div class="att-sum-n" style="color:var(--green)">${present}</div><div class="att-sum-l">حاضر</div></div>`;
+  html += `<div class="att-sum-card"><div class="att-sum-n" style="color:var(--amber)">${late}</div><div class="att-sum-l">متأخر</div></div>`;
+  html += `<div class="att-sum-card"><div class="att-sum-n" style="color:var(--red)">${absent}</div><div class="att-sum-l">غائب</div></div>`;
+  html += '</div>';
+
+  // Filter bar
+  html += '<div class="vio-filter">';
+  html += `<span class="sch-ftab${attFilter==='all'?' on':''}" onclick="attFilter='all';renderAtt()">الكل (${DRV.length})</span>`;
+  PARTNERS.forEach(p=>{
+    const cnt=DRV.filter(d=>d.partner===p.id).length;
+    html += `<span class="sch-ftab${attFilter===p.id?' on':''}" onclick="attFilter='${p.id}';renderAtt()" style="${attFilter===p.id?'background:'+p.color+';border-color:'+p.color+';color:#fff':''}">${p.name} (${cnt})</span>`;
+  });
+  html += '</div>';
+
+  // Mark all buttons
+  html += '<div style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">';
+  html += `<button class="att-btn present" onclick="markAll('present')">✅ تسجيل الكل حاضر</button>`;
+  html += `<button class="att-btn absent" onclick="markAll('absent')">❌ تسجيل الكل غائب</button>`;
+  html += '</div>';
+
+  // Driver rows
+  drvList.forEach(drv => {
+    const key    = drv.id+'_'+attDate;
+    const rec    = ATTENDANCE[key] || {};
+    const status = rec.status || '';
+    const pc     = pColor(drv.partner);
+    const ini    = drv.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+    const par    = PARTNERS.find(p=>p.id===drv.partner);
+
+    html += `<div class="att-row">
+      <div class="att-av" style="background:${pc}">${ini}</div>
+      <div class="att-info">
+        <div class="att-name">${drv.name}</div>
+        <div class="att-sub">${drv.id} • ${par?par.name:''}${(function(){
+          const sal=getSalData(drv.id);
+          const today_deds=sal.deductions.filter(x=>x.date===attDate);
+          if(!today_deds.length) return '';
+          const amt=today_deds.reduce((s,x)=>s+parseFloat(x.amount||0),0);
+          return ' <span style="color:var(--red);font-weight:700">• خصم '+amt.toFixed(3)+' KD</span>';
+        })()}</div>
+      </div>
+      <div class="att-btns">
+        <button class="att-btn present${status==='present'?' on':''}" onclick="setAtt('${drv.id}','present')">✅ حاضر</button>
+        <button class="att-btn late${status==='late'?' on':''}" onclick="setAtt('${drv.id}','late')">⏰ متأخر</button>
+        <button class="att-btn absent${status==='absent'?' on':''}" onclick="setAtt('${drv.id}','absent')">❌ غائب</button>
+        <input class="att-note" placeholder="ملاحظة..." value="${rec.note||''}" onchange="setAttNote('${drv.id}',this.value)">
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('att-content').innerHTML = html;
+}
+
+function changeAttDate(dir){
+  const d = new Date(attDate);
+  d.setDate(d.getDate()+dir);
+  attDate = fmtDate(d);
+  renderAtt();
+}
+
+function setAtt(driverId, status){
+  const key = driverId+'_'+attDate;
+  const prev = (ATTENDANCE[key]||{}).status || '';
+
+  if(!ATTENDANCE[key]) ATTENDANCE[key] = {status:'', note:'', time: new Date().toLocaleTimeString('ar-KW')};
+
+  // Toggle off if same status
+  if(prev === status){
+    ATTENDANCE[key].status = '';
+    saveAtt(); renderAtt();
+    return;
+  }
+
+  // If was late/absent before, remove old deduction first
+  if(prev === 'late' || prev === 'absent'){
+    removeDedByAttKey(driverId, key);
+  }
+
+  ATTENDANCE[key].status = status;
+  ATTENDANCE[key].time   = new Date().toLocaleTimeString('ar-KW');
+
+  saveAtt();
+
+  // If marking present - just save, no deduction
+  if(status === 'present'){
+    renderAtt();
+    toast(DRV.find(d=>d.id===driverId)?.name.split(' ')[0] + ' — تم تسجيل الحضور ✅','s');
+    return;
+  }
+
+  // If late or absent — show deduction dialog
+  if(status === 'late' || status === 'absent'){
+    showAttDeductionDialog(driverId, status, key);
+  }
+}
+
+function removeDedByAttKey(driverId, attKey){
+  const sal = getSalData(driverId);
+  sal.deductions = sal.deductions.filter(d => d.attKey !== attKey);
+  saveSalaries();
+}
+
+function showAttDeductionDialog(driverId, status, attKey){
+  const d   = DRV.find(x=>x.id===driverId); if(!d) return;
+  const sal = getSalData(driverId);
+  const base= sal.base || 0;
+
+  const isLate   = status === 'late';
+  const defDays  = isLate ? 0.5 : 1;
+  const defReason= isLate ? 'تأخر عن العمل / Late Arrival' : 'غياب / Absence';
+  const dailyRate= base > 0 ? base / 26 : 0;
+  const defAmt   = dailyRate * defDays;
+
+  // Build dialog HTML
+  const dlgId = 'attDlg_' + driverId;
+
+  // Remove old dialog if exists
+  const old = document.getElementById(dlgId);
+  if(old) old.remove();
+
+  const dlg = document.createElement('div');
+  dlg.id = dlgId;
+  dlg.className = 'ov on';
+  dlg.style.zIndex = '500';
+  dlg.innerHTML = `
+    <div class="modal" style="max-width:460px">
+      <h2><i class="ti ti-${isLate?'clock':'user-off'}" style="color:${isLate?'var(--amber)':'var(--red)'}"></i>
+        ${isLate ? 'تسجيل تأخر — Late Arrival' : 'تسجيل غياب — Absence'}
+      </h2>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700">${d.name}</div>
+        <div style="font-size:10px;color:var(--muted)">${d.id} — ${attDate}</div>
+      </div>
+
+      <!-- DEDUCTION OPTIONS -->
+      <div class="fg" style="margin-bottom:10px">
+        <label>نوع الخصم / Deduction Type</label>
+        <select id="dlg-days-${driverId}" onchange="updateDlgCalc('${driverId}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;width:100%">
+          ${isLate
+            ? `<option value="0.5" selected>نصف يوم — Half Day (0.5)</option>
+               <option value="1">يوم كامل — Full Day (1)</option>`
+            : `<option value="1" selected>يوم كامل — Full Day (1)</option>
+               <option value="0.5">نصف يوم — Half Day (0.5)</option>
+               <option value="2">يومان — 2 Days</option>
+               <option value="3">3 أيام — 3 Days</option>`
+          }
+          <option value="0">بدون خصم — No Deduction</option>
+        </select>
+      </div>
+
+      <div class="fg" style="margin-bottom:12px">
+        <label>السبب / Reason</label>
+        <input id="dlg-reason-${driverId}" value="${defReason}" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;width:100%">
+      </div>
+
+      <!-- CALC PREVIEW -->
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--r);padding:12px;margin-bottom:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+        <div>
+          <div style="font-size:9px;color:var(--muted)">الراتب الأساسي</div>
+          <div style="font-size:13px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--green)">${base.toFixed(3)} KD</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--muted)">الأيام</div>
+          <div id="dlg-days-preview-${driverId}" style="font-size:13px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--amber)">${defDays}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--muted)">مبلغ الخصم</div>
+          <div id="dlg-amt-preview-${driverId}" style="font-size:15px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--red)">${defAmt.toFixed(3)} KD</div>
+        </div>
+      </div>
+
+      <div class="macts">
+        <button class="btn btn-c" onclick="cancelAttDlg('${driverId}','${dlgId}')">إلغاء التسجيل</button>
+        <button class="btn btn-e" onclick="confirmAttNoDeduction('${driverId}','${dlgId}')">تسجيل بدون خصم</button>
+        <button class="btn btn-s" onclick="confirmAttDeduction('${driverId}','${dlgId}','${attKey}')">
+          <i class="ti ti-device-floppy"></i> تأكيد وخصم
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(dlg);
+  updateDlgCalc(driverId);
+  renderAtt();
+}
+
+function updateDlgCalc(driverId){
+  const sal     = getSalData(driverId);
+  const base    = sal.base || 0;
+  const days    = parseFloat(document.getElementById('dlg-days-'+driverId)?.value || 0);
+  const amount  = (base/26) * days;
+  const prevEl  = document.getElementById('dlg-days-preview-'+driverId);
+  const amtEl   = document.getElementById('dlg-amt-preview-'+driverId);
+  if(prevEl) prevEl.textContent = days;
+  if(amtEl)  amtEl.textContent  = amount.toFixed(3) + ' KD';
+}
+
+function cancelAttDlg(driverId, dlgId){
+  // Revert attendance status
+  const key = driverId + '_' + attDate;
+  if(ATTENDANCE[key]) ATTENDANCE[key].status = '';
+  saveAtt();
+  document.getElementById(dlgId)?.remove();
+  renderAtt();
+}
+
+function confirmAttNoDeduction(driverId, dlgId){
+  document.getElementById(dlgId)?.remove();
+  renderAtt();
+  toast('تم التسجيل بدون خصم','s');
+}
+
+function confirmAttDeduction(driverId, dlgId, attKey){
+  const d      = DRV.find(x=>x.id===driverId); if(!d) return;
+  const sal    = getSalData(driverId);
+  const base   = sal.base || 0;
+  const days   = parseFloat(document.getElementById('dlg-days-'+driverId)?.value || 0);
+  const reason = document.getElementById('dlg-reason-'+driverId)?.value || '';
+
+  if(days <= 0){
+    document.getElementById(dlgId)?.remove();
+    renderAtt();
+    return;
+  }
+
+  if(!base){ toast('يرجى تحديد الراتب الأساسي للسائق أولاً','e'); return; }
+
+  const amount   = (base/26) * days;
+  const now      = new Date();
+  const month    = now.getMonth()+1;
+  const year     = now.getFullYear();
+
+  // Add deduction to salary
+  const ded = {
+    id:     'D'+Date.now(),
+    reason,
+    amount,
+    days,
+    date:   attDate,
+    month,
+    year,
+    attKey  // link to attendance record
+  };
+  sal.deductions.push(ded);
+  saveSalaries();
+  saveDeductionToSupabase(ded, driverId);
+
+  document.getElementById(dlgId)?.remove();
+  renderAtt();
+
+  const daysStr = days===0.5?'نصف يوم':days+' أيام';
+  toast(d.name.split(' ')[0]+' — خصم '+amount.toFixed(3)+' KD ('+daysStr+') ✅','s');
+
+  // Prompt to send notification
+  if(confirm('إرسال إشعار الخصم للسائق '+d.name+' على واتساب؟')){
+    // Temporarily set selId for sendWhatsApp context
+    const prevSel = selId;
+    selId = driverId;
+    // Create temp month/year elements for sendWhatsApp to read
+    sendWhatsAppAtt(driverId, reason, amount, days, month, year);
+    selId = prevSel;
+  }
+}
+
+function sendWhatsAppAtt(driverId, reason, amount, days, month, year){
+  const d   = DRV.find(x=>x.id===driverId); if(!d) return;
+  const sal = getSalData(driverId);
+  const base= sal.base||0;
+  const allDeds = sal.deductions.filter(x=>x.month===month && x.year===year);
+  const totalDed= allDeds.reduce((s,x)=>s+parseFloat(x.amount||0),0);
+  const net = base - totalDed;
+  const phone = (d.sim||'').replace(/[^0-9]/g,'');
+  const par = PARTNERS.find(p=>p.id===d.partner);
+  const months_en=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const months_ar=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const daysStr_en = days===0.5?'Half Day (0.5 day)':days+' Day'+(days>1?'s':'');
+  const daysStr_ar = days===0.5?'نصف يوم':days+' أيام';
+
+  const msg =
+    '━━━━━━━━━━━━━━━━━━━━━━\n'+
+    '⚠️ *SALARY DEDUCTION NOTICE*\n'+
+    '🏢 *Al-Salasil Co.*\n'+
+    '━━━━━━━━━━━━━━━━━━━━━━\n\n'+
+    '👤 *Driver:* '+d.name+'\n'+
+    (par?'🤝 *Partner:* '+par.name+'\n':'')+
+    '📅 *Date:* '+attDate+' | '+months_en[month-1]+' '+year+'\n\n'+
+    '📋 *Deduction Details:*\n'+
+    '• Reason: '+reason+'\n'+
+    '• Duration: *'+daysStr_en+'*\n'+
+    '• Amount: *'+amount.toFixed(3)+' KD*\n\n'+
+    '💰 *Salary Summary — '+months_en[month-1]+':*\n'+
+    '• Base Salary: '+base.toFixed(3)+' KD\n'+
+    '• Total Deductions: -'+totalDed.toFixed(3)+' KD\n'+
+    '• *Net Salary: '+net.toFixed(3)+' KD*\n\n'+
+    '━━━━━━━━━━━━━━━━━━━━━━\n'+
+    '⚠️ *إشعار خصم من الراتب*\n'+
+    '🏢 *شركة السلاسل*\n'+
+    '━━━━━━━━━━━━━━━━━━━━━━\n\n'+
+    '👤 *السائق:* '+d.name+'\n'+
+    '📅 *التاريخ:* '+attDate+' | '+months_ar[month-1]+' '+year+'\n\n'+
+    '📋 *تفاصيل الخصم:*\n'+
+    '• السبب: '+reason+'\n'+
+    '• المدة: *'+daysStr_ar+'*\n'+
+    '• المبلغ: *'+amount.toFixed(3)+' د.ك*\n\n'+
+    '💰 *ملخص الراتب — '+months_ar[month-1]+':*\n'+
+    '• الراتب الأساسي: '+base.toFixed(3)+' د.ك\n'+
+    '• إجمالي الخصومات: -'+totalDed.toFixed(3)+' د.ك\n'+
+    '• *صافي الراتب: '+net.toFixed(3)+' د.ك*\n\n'+
+    '📞 للاستفسار تواصل مع الإدارة\n'+
+    'For inquiries contact management 🙏';
+
+  const fp = phone.startsWith('965')?phone:'965'+phone;
+  window.open('https://wa.me/'+fp+'?text='+encodeURIComponent(msg),'_blank');
+}
+
+
+function setAttNote(driverId, note){
+  const key = driverId+'_'+attDate;
+  if(!ATTENDANCE[key]) ATTENDANCE[key]={status:'',note:'',time:''};
+  ATTENDANCE[key].note = note;
+  saveAtt();
+}
+
+function markAll(status){
+  const drvList = attFilter==='all' ? DRV : DRV.filter(x=>x.partner===attFilter);
+  if(status==='absent' || status==='late'){
+    const confirmed = confirm(
+      (status==='absent'?'تسجيل الكل غائب':'تسجيل الكل متأخر')+
+      '\n\nهل تريد تطبيق خصم تلقائي؟\n'+
+      '• نصف يوم للمتأخر\n• يوم كامل للغائب'
+    );
+    const days = status==='absent' ? 1 : 0.5;
+    drvList.forEach(d=>{
+      const key = d.id+'_'+attDate;
+      const prev = (ATTENDANCE[key]||{}).status||'';
+      if(prev===status) return; // skip already set
+      if(prev==='late'||prev==='absent') removeDedByAttKey(d.id, key);
+      ATTENDANCE[key]={status,note:ATTENDANCE[key]?.note||'',time:new Date().toLocaleTimeString('ar-KW')};
+      if(confirmed){
+        const sal=getSalData(d.id);
+        const base=sal.base||0;
+        if(base>0){
+          const amount=(base/26)*days;
+          const now=new Date();
+          sal.deductions.push({
+            id:'D'+Date.now()+'_'+d.id,
+            reason:status==='absent'?'غياب / Absence':'تأخر / Late Arrival',
+            amount,days,
+            date:attDate,
+            month:now.getMonth()+1,
+            year:now.getFullYear(),
+            attKey:key
+          });
+        }
+      }
+    });
+    saveSalaries();
+    saveAtt(); renderAtt();
+    toast('تم تسجيل '+(status==='absent'?'الغياب':'التأخر')+(confirmed?' مع الخصم':' بدون خصم'),'s');
+  } else {
+    drvList.forEach(d=>{
+      const key=d.id+'_'+attDate;
+      ATTENDANCE[key]={status,note:ATTENDANCE[key]?.note||'',time:new Date().toLocaleTimeString('ar-KW')};
+    });
+    saveAtt(); renderAtt(); toast('تم تسجيل الكل حاضر ✅','s');
+  }
+}
+
+// ==========================================
+// VIOLATIONS
+// ==========================================
+let vioFilter = 'all';
+let vioMonth  = new Date().getMonth()+1;
+let vioYear   = new Date().getFullYear();
+
+function renderVio(){
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  // Filter violations
+  let vios = VIOLATIONS.filter(v=>{
+    const d = new Date(v.date);
+    return d.getMonth()+1===vioMonth && d.getFullYear()===vioYear;
+  });
+  if(vioFilter!=='all') vios = vios.filter(v=>{ const drv=DRV.find(x=>x.id===v.driverId); return drv&&drv.partner===vioFilter; });
+  vios = [...vios].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  const totalAmt = vios.reduce((s,v)=>s+parseFloat(v.amount||0),0);
+
+  let html = '';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">';
+  html += '<h2 style="font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px"><i class="ti ti-alert-triangle" style="color:var(--amber)"></i> سجل المخالفات</h2>';
+  html += `<div style="display:flex;gap:8px;align-items:center">
+    <select onchange="vioMonth=parseInt(this.value);renderVio()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none">
+      ${months.map((m,i)=>`<option value="${i+1}" ${i+1===vioMonth?'selected':''}>${m}</option>`).join('')}
+    </select>
+    <select onchange="vioYear=parseInt(this.value);renderVio()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none">
+      ${[vioYear-1,vioYear,vioYear+1].map(y=>`<option value="${y}" ${y===vioYear?'selected':''}>${y}</option>`).join('')}
+    </select>
+  </div>`;
+  html += '</div>';
+
+  // Summary
+  html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+    <div class="att-sum-card"><div class="att-sum-n" style="color:var(--red)">${vios.length}</div><div class="att-sum-l">مخالفة</div></div>
+    <div class="att-sum-card"><div class="att-sum-n" style="color:var(--amber)">${totalAmt.toFixed(3)}</div><div class="att-sum-l">إجمالي (KD)</div></div>
+    <div class="att-sum-card"><div class="att-sum-n" style="color:var(--accent)">${new Set(vios.map(v=>v.driverId)).size}</div><div class="att-sum-l">سائق</div></div>
+  </div>`;
+
+  // Filter bar
+  html += '<div class="vio-filter">';
+  html += `<span class="sch-ftab${vioFilter==='all'?' on':''}" onclick="vioFilter='all';renderVio()">الكل</span>`;
+  PARTNERS.forEach(p=>{
+    html += `<span class="sch-ftab${vioFilter===p.id?' on':''}" onclick="vioFilter='${p.id}';renderVio()" style="${vioFilter===p.id?'background:'+p.color+';border-color:'+p.color+';color:#fff':''}">${p.name}</span>`;
+  });
+  html += '</div>';
+
+  // Add violation form
+  html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">➕ إضافة مخالفة</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end;flex-wrap:wrap">
+      <div class="fg" style="margin:0">
+        <label>السائق</label>
+        <select id="vio-drv" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none">
+          ${DRV.map(d=>`<option value="${d.id}">${d.name.split(' ').slice(0,2).join(' ')} (${d.id})</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg" style="margin:0"><label>السبب</label><input id="vio-reason" placeholder="سبب المخالفة..." style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;width:100%"></div>
+      <div class="fg" style="margin:0"><label>المبلغ (KD)</label><input id="vio-amt" type="number" placeholder="0.000" step="0.001" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;width:100%"></div>
+      <button class="btn btn-save" onclick="addViolation()" style="height:36px"><i class="ti ti-plus"></i> إضافة</button>
+    </div>
+  </div>`;
+
+  // Violations list
+  if(!vios.length){
+    html += '<div style="text-align:center;padding:32px;color:var(--muted)"><i class="ti ti-checks" style="font-size:32px;display:block;margin-bottom:8px;color:var(--green)"></i><p>لا توجد مخالفات هذا الشهر</p></div>';
+  } else {
+    vios.forEach(v=>{
+      const drv = DRV.find(x=>x.id===v.driverId);
+      if(!drv) return;
+      const pc  = pColor(drv.partner);
+      const ini = drv.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      html += `<div class="vio-row">
+        <div class="vio-av" style="background:${pc}">${ini}</div>
+        <div class="vio-info">
+          <div class="vio-name">${drv.name}</div>
+          <div class="vio-detail">📝 ${v.reason}</div>
+        </div>
+        <div>
+          <div class="vio-amt">- ${parseFloat(v.amount).toFixed(3)} KD</div>
+          <div class="vio-date">${v.date}</div>
+        </div>
+        <button class="vio-del" onclick="delViolation('${v.id}')"><i class="ti ti-trash"></i></button>
+      </div>`;
+    });
+  }
+
+  // Export button
+  html += `<div style="margin-top:12px;display:flex;gap:8px">
+    <button class="btn btn-cancel" onclick="exportVioExcel()"><i class="ti ti-table-export"></i> تصدير Excel</button>
+  </div>`;
+
+  document.getElementById('vio-content').innerHTML = html;
+}
+
+function addViolation(){
+  const drvId  = document.getElementById('vio-drv').value;
+  const reason = document.getElementById('vio-reason').value.trim();
+  const amount = parseFloat(document.getElementById('vio-amt').value);
+  if(!reason){ toast('يرجى إدخال سبب المخالفة','e'); return; }
+  if(!amount||amount<=0){ toast('يرجى إدخال مبلغ صحيح','e'); return; }
+  const today = fmtDate(new Date());
+  VIOLATIONS.push({ id:'V'+Date.now(), driverId:drvId, reason, amount, date:today, notes:'' });
+  saveVio(); renderVio(); toast('تمت إضافة المخالفة','s');
+}
+
+function delViolation(id){
+  if(!confirm('حذف هذه المخالفة؟')) return;
+  VIOLATIONS = VIOLATIONS.filter(v=>v.id!==id);
+  saveVio(); renderVio(); toast('تم الحذف','e');
+}
+
+function exportVioExcel(){
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  let vios = VIOLATIONS.filter(v=>{ const d=new Date(v.date); return d.getMonth()+1===vioMonth && d.getFullYear()===vioYear; });
+  const hdr = ['"الكود"','"الاسم"','"الشريك"','"السبب"','"المبلغ (KD)"','"التاريخ"'].join(',');
+  const rows = vios.map(v=>{
+    const drv=DRV.find(x=>x.id===v.driverId)||{name:'—',id:'—',partner:''};
+    const par=(PARTNERS.find(p=>p.id===drv.partner)||{name:'—'}).name;
+    return ['"'+drv.id+'"','"'+drv.name+'"','"'+par+'"','"'+v.reason+'"',v.amount,'"'+v.date+'"'].join(',');
+  });
+  const csv = '\uFEFF"شركة السلاسل — مخالفات '+months[vioMonth-1]+' '+vioYear+'"\n\n'+hdr+'\n'+rows.join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='مخالفات_'+months[vioMonth-1]+'_'+vioYear+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('تم التصدير','s');
+}
+
+
+
+
+// ==========================================
+// CLOCK IN LIVE VIEW
+// ==========================================
+let clockinAutoRefresh = null;
+
+
+// ============================================================
+// SYNC CLOCK IN → ATTENDANCE
+// ============================================================
+function syncClockinToAttendance() {
+  const today = fmtDate(new Date());
+  const driverStatus = {};
+  CLOCKIN_RECORDS.forEach(r => {
+    if(!driverStatus[r.driver_id]) driverStatus[r.driver_id] = r;
+  });
+
+  let synced = 0;
+  Object.values(driverStatus).forEach(r => {
+    const key = r.driver_id + '_' + today;
+    const isIn = r.action === 'clock_in';
+    if(!ATTENDANCE[key]) {
+      ATTENDANCE[key] = {
+        status: isIn ? 'present' : 'present',
+        note: isIn ? 'Clock In: ' + new Date(r.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'}) : 'Clock Out',
+        time: new Date(r.created_at).toLocaleTimeString('ar-KW')
+      };
+      synced++;
+    }
+  });
+
+  saveAtt();
+  toast('تم مزامنة ' + synced + ' سائق مع سجل الحضور ✅', 's');
+  renderClockin();
+}
+
+async function renderClockin() {
+  const el = document.getElementById('clockin-content');
+  if(!el) return;
+
+  // Show loading
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><div style="width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:pulse 1s linear infinite;margin:0 auto 12px"></div><p>جاري تحميل البيانات...</p></div>';
+
+  await fetchClockinRecords();
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const timeStr = today.toLocaleTimeString('ar-KW', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+  // Get latest status per driver
+  const driverStatus = {};
+  CLOCKIN_RECORDS.forEach(r => {
+    if(!driverStatus[r.driver_id]) driverStatus[r.driver_id] = r;
+  });
+
+  const inDrivers  = Object.values(driverStatus).filter(r => r.action === 'clock_in');
+  const outDrivers = Object.values(driverStatus).filter(r => r.action === 'clock_out');
+  const totalToday = CLOCKIN_RECORDS.length;
+
+  let html = '';
+
+  // HEADER
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">';
+  html += '<div><h2 style="font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px"><i class="ti ti-map-pin" style="color:var(--green)"></i> الحضور المباشر</h2>';
+  html += '<div style="font-size:11px;color:var(--muted);margin-top:3px">آخر تحديث: ' + timeStr + '</div></div>';
+  html += '<div style="display:flex;gap:8px;align-items:center">';
+  html += '<div class="live-badge-top"><div class="live-dot"></div> مباشر</div>';
+  html += '<a href="' + CLOCKIN_APP_URL + '" target="_blank" style="padding:7px 13px;background:rgba(16,185,129,0.12);color:var(--green);border:1px solid rgba(16,185,129,0.3);border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:5px"><i class="ti ti-external-link"></i> رابط السائقين</a>';
+  html += '<button class="btn btn-e" onclick="renderClockin()" style="font-size:11px"><i class="ti ti-refresh"></i> تحديث</button>' +
+    '<button class="btn btn-s" onclick="syncClockinToAttendance()" style="font-size:11px;background:var(--green)"><i class="ti ti-arrows-exchange"></i> مزامنة الحضور</button>';
+  html += '</div></div>';
+
+  // STATS
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">';
+  html += statCard('#3b82f6','ti-users', DRV.length, 'إجمالي السائقين');
+  html += statCard('#10b981','ti-login', inDrivers.length, 'داخل الآن');
+  html += statCard('#ef4444','ti-logout', outDrivers.length, 'خارج');
+  html += statCard('#f59e0b','ti-clock', totalToday, 'تسجيل اليوم');
+  html += '</div>';
+
+  // SEND LINK SECTION
+  html += '<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:var(--r2);padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+  html += '<i class="ti ti-brand-whatsapp" style="font-size:22px;color:#25d366;flex-shrink:0"></i>';
+  html += '<div style="flex:1"><div style="font-size:13px;font-weight:700">ابعت رابط التسجيل للسائقين</div>';
+  html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;font-family:monospace">' + CLOCKIN_APP_URL + '</div></div>';
+  html += '<button onclick="sendClockInLink()" style="padding:8px 14px;background:#25d366;border:none;border-radius:8px;color:#fff;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><i class="ti ti-send"></i> إرسال للكل</button>';
+  html += '</div>';
+
+  // DRIVERS CURRENTLY IN
+  if(inDrivers.length > 0) {
+    html += '<div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🟢 داخل الآن (' + inDrivers.length + ')</div>';
+    html += '<div class="clockin-grid">';
+    inDrivers.forEach(r => {
+      const drv = DRV.find(d => d.id === r.driver_id);
+      const pc  = pColor(r.partner || (drv ? drv.partner : ''));
+      const ini = r.driver_name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      const t   = new Date(r.created_at);
+      const ts  = t.toLocaleTimeString('ar-KW', {hour:'2-digit', minute:'2-digit'});
+      const hasLoc = r.latitude && r.longitude;
+      html += '<div class="ci-card in" onclick="showMapModal(' + JSON.stringify(r).replace(/"/g,'&quot;') + ')">';
+      html += '<div class="ci-av" style="background:' + pc + '">' + ini + '</div>';
+      html += '<div class="ci-info"><div class="ci-name">' + r.driver_name + '</div>';
+      html += '<div class="ci-sub">' + r.driver_id + ' • ' + (r.partner||'—') + (hasLoc?' • 📍':'') + '</div></div>';
+      html += '<div class="ci-status"><div class="ci-badge in">Clock In</div><div class="ci-time">' + ts + '</div></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // DRIVERS OUT / NOT REGISTERED
+  const registeredIds = Object.keys(driverStatus);
+  const notRegistered = DRV.filter(d => !registeredIds.includes(d.id));
+
+  if(outDrivers.length > 0) {
+    html += '<div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🔴 سجّل خروجه (' + outDrivers.length + ')</div>';
+    html += '<div class="clockin-grid">';
+    outDrivers.forEach(r => {
+      const pc  = pColor(r.partner);
+      const ini = r.driver_name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      const t   = new Date(r.created_at);
+      const ts  = t.toLocaleTimeString('ar-KW', {hour:'2-digit', minute:'2-digit'});
+      html += '<div class="ci-card out" onclick="showMapModal(' + JSON.stringify(r).replace(/"/g,'&quot;') + ')">';
+      html += '<div class="ci-av" style="background:' + pc + '">' + ini + '</div>';
+      html += '<div class="ci-info"><div class="ci-name">' + r.driver_name + '</div>';
+      html += '<div class="ci-sub">' + r.driver_id + ' • ' + (r.partner||'—') + '</div></div>';
+      html += '<div class="ci-status"><div class="ci-badge out">Clock Out</div><div class="ci-time">' + ts + '</div></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // NOT REGISTERED
+  if(notRegistered.length > 0) {
+    html += '<div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">⬜ لم يسجل بعد (' + notRegistered.length + ')</div>';
+    html += '<div class="clockin-grid">';
+    notRegistered.slice(0,12).forEach(d => {
+      const pc  = pColor(d.partner);
+      const ini = d.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      html += '<div class="ci-card" style="opacity:.5">';
+      html += '<div class="ci-av" style="background:' + pc + '">' + ini + '</div>';
+      html += '<div class="ci-info"><div class="ci-name">' + d.name + '</div>';
+      html += '<div class="ci-sub">' + d.id + ' • ' + (d.partner||'—') + '</div></div>';
+      html += '<div class="ci-status"><div class="ci-badge" style="background:var(--surface2);color:var(--muted)">—</div></div>';
+      html += '</div>';
+    });
+    if(notRegistered.length > 12) html += '<div style="text-align:center;color:var(--muted);font-size:12px;padding:10px">+ ' + (notRegistered.length-12) + ' آخرين</div>';
+    html += '</div>';
+  }
+
+  if(!CLOCKIN_RECORDS.length) {
+    html += '<div style="text-align:center;padding:40px;color:var(--muted);opacity:.4"><i class="ti ti-clock" style="font-size:36px;display:block;margin-bottom:10px"></i><p>لا توجد تسجيلات اليوم بعد</p><p style="font-size:11px;margin-top:6px">ابعت الرابط للسائقين عشان يبدأوا يسجلوا</p></div>';
+  }
+
+  el.innerHTML = html;
+
+  // Auto refresh every 30 seconds
+  clearInterval(clockinAutoRefresh);
+  clockinAutoRefresh = setInterval(renderClockin, 30000);
+}
+
+function statCard(color, icon, num, lbl) {
+  return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;align-items:center;gap:10px">' +
+    '<div style="width:36px;height:36px;border-radius:9px;background:' + color + '22;display:grid;place-items:center;flex-shrink:0"><i class="ti ' + icon + '" style="font-size:18px;color:' + color + '"></i></div>' +
+    '<div><div style="font-size:20px;font-weight:900;font-family:JetBrains Mono,monospace;color:' + color + '">' + num + '</div><div style="font-size:10px;color:var(--muted)">' + lbl + '</div></div></div>';
+}
+
+function sendClockInLink() {
+  const valid = DRV.filter(d => (d.sim||'').replace(/[^0-9]/g,'').length >= 7);
+  if(!valid.length){ toast('لا يوجد سائقون برقم هاتف','e'); return; }
+
+  const msg = '🚗 *شركة السلاسل — Al-Salasil Co.*\n\n' +
+    '📱 *رابط تسجيل الحضور اليومي:*\n' +
+    CLOCKIN_APP_URL + '\n\n' +
+    '✅ سجّل دخولك في بداية الشفت\n' +
+    '🔴 سجّل خروجك في نهاية الشفت\n\n' +
+    '⚠️ أي تأخير 15 دقيقة = خصم نصف يوم\n' +
+    '⚠️ Any delay of 15 min or more = half-day deduction 🔴';
+
+  // Build links page
+  let html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إرسال رابط التسجيل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;padding:20px}
+.header{text-align:center;padding:20px;margin-bottom:20px;background:#161b22;border-radius:14px;border:1px solid #30363d}
+.header h1{font-size:20px;font-weight:900;margin-bottom:6px}
+.header p{font-size:12px;color:#7d8590}
+.url-box{background:#1a2234;border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:10px 14px;font-family:monospace;font-size:13px;color:#60a5fa;margin:10px 0;word-break:break-all}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px}
+.av{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0;background:#3b82f6}
+.info{flex:1;min-width:0}
+.name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:10px;color:#7d8590;margin-top:2px}
+.wa-btn{display:inline-flex;align-items:center;gap:5px;background:#25d36622;color:#25d366;border:1px solid #25d36644;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;font-family:'Cairo',sans-serif}
+.wa-btn:hover{background:#25d366;color:#fff}
+.warn{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:10px 14px;color:#f87171;font-size:12px;font-weight:600;text-align:center;margin-bottom:16px}
+.stats{display:flex;gap:12px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.stat{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:10px 18px;text-align:center}
+.stat-n{font-size:20px;font-weight:900;color:#3b82f6}
+.stat-l{font-size:10px;color:#7d8590}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📤 إرسال رابط تسجيل الحضور</h1>
+  <p>اضغط على زر واتساب لكل سائق لإرسال الرابط</p>
+  <div class="url-box">${CLOCKIN_APP_URL}</div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="stat-n">${valid.length}</div><div class="stat-l">سائق</div></div>
+</div>
+<div class="warn">⚠️ أي تأخير 15 دقيقة أو أكثر = خصم نصف يوم تلقائياً</div>
+<div class="grid">`;
+
+  valid.forEach(d => {
+    const phone = (d.sim||'').replace(/[^0-9]/g,'');
+    const fp    = phone.startsWith('965') ? phone : '965'+phone;
+    const waUrl = 'https://wa.me/'+fp+'?text='+encodeURIComponent(msg);
+    const par   = PARTNERS.find(p=>p.id===d.partner);
+    const color = par ? par.color : '#7d8590';
+    const ini   = d.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+    html += `
+  <div class="card">
+    <div class="av" style="background:${color}">${ini}</div>
+    <div class="info">
+      <div class="name">${d.name}</div>
+      <div class="sub">${d.id} • ${par?par.name:''} • ${fp}</div>
+    </div>
+    <a class="wa-btn" href="${waUrl}" target="_blank">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      إرسال
+    </a>
+  </div>`;
+  });
+
+  html += '</div><div style="text-align:center;margin-top:20px;padding:14px;background:#161b22;border-radius:12px;border:1px solid #30363d;font-size:12px;color:#7d8590">شركة السلاسل — Al-Salasil Co.</div></body></html>';
+
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  toast('تم فتح صفحة الإرسال ✅','s');
+}
+
+
+
+// ============================================================
+// SUPABASE SYNC HELPERS
+// ============================================================
+async function saveDeductionToSupabase(ded, driverId) {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/deductions', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        driver_id: driverId,
+        reason:    ded.reason,
+        amount:    ded.amount,
+        days:      ded.days,
+        date:      ded.date,
+        month:     ded.month,
+        year:      ded.year
+      })
+    });
+    console.log('Deduction synced to Supabase');
+  } catch(e) {
+    console.error('Supabase sync error:', e);
+  }
+}
+
+async function syncDriversToSupabase() {
+  // Sync all drivers to Supabase drivers table
+  for(const d of DRV) {
+    try {
+      await fetch(SUPA_URL + '/rest/v1/drivers', {
+        method: 'POST',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': 'Bearer ' + SUPA_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+          id: d.id,
+          name: d.name,
+          partner: d.partner,
+          sim: d.sim,
+          salary_base: getSalData(d.id).base || 0,
+          car: d.car || '',
+          license: d.license || '',
+          civil: d.civil || '',
+          device: d.device || '',
+          petrol: d.petrol || '',
+          nationality: d.nationality || '',
+          age: parseInt(d.age) || 0,
+          start_date: d.startDate || '',
+          health: d.health || ''
+        })
+      });
+    } catch(e) {}
+  }
+  toast('تم مزامنة السائقين مع التطبيق ✅','s');
+}
+
+async function syncScheduleToSupabase(driverId, dateStr, shiftType, shiftStart, shiftEnd) {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/schedules', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify({
+        driver_id:   driverId,
+        date:        dateStr,
+        shift_type:  shiftType,
+        shift_start: shiftStart,
+        shift_end:   shiftEnd
+      })
+    });
+  } catch(e) {
+    console.error('Schedule sync error:', e);
+  }
+}
+
+// ==========================================
+// SUPABASE CONFIG — Clock In Integration
+// ==========================================
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+const CLOCKIN_APP_URL = 'https://lys590932-cmyk.github.io/alsalasil';
+
+let CLOCKIN_RECORDS = [];
+let clockinLoading = false;
+
+async function fetchClockinRecords() {
+  const today = new Date().toISOString().split('T')[0];
+  const url = SUPA_URL + '/rest/v1/clockin'
+    + '?created_at=gte.' + today + 'T00:00:00'
+    + '&order=created_at.desc&limit=200';
+  try {
+    const res = await fetch(url, {
+      headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY}
+    });
+    if(res.ok) {
+      CLOCKIN_RECORDS = await res.json();
+    }
+  } catch(e) {
+    console.error('Supabase error:', e);
+  }
+}
+
+function getClockinStatus(driverId) {
+  const recs = CLOCKIN_RECORDS.filter(r => r.driver_id === driverId);
+  if(!recs.length) return null;
+  return recs[0]; // latest record
+}
+
+function getDriversCurrentlyIn() {
+  const status = {};
+  CLOCKIN_RECORDS.forEach(r => {
+    if(!status[r.driver_id]) status[r.driver_id] = r;
+  });
+  return Object.values(status).filter(r => r.action === 'clock_in');
+}
+
+function showMapModal(record) {
+  if(!record || !record.latitude) {
+    toast('لا يوجد موقع لهذا التسجيل', 'e');
+    return;
+  }
+  const modal = document.getElementById('mapModal');
+  if(!modal) return;
+  const t = new Date(record.created_at);
+  const timeStr = t.toLocaleTimeString('ar-KW', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('mmh-name').textContent = record.driver_name;
+  document.getElementById('mmh-action').textContent = record.action === 'clock_in' ? '🟢 Clock In — ' + timeStr : '🔴 Clock Out — ' + timeStr;
+  document.getElementById('map-iframe').src = 'https://maps.google.com/maps?q=' + record.latitude + ',' + record.longitude + '&z=16&output=embed';
+  modal.classList.add('on');
+}
+
+// BOOT
+// ==========================================
+renderList();
+renderDetail();
+
+
+// ==========================================
+// SELF-SAVING SYSTEM
+// ==========================================
+function manualSaveFile() {
+  const cur = document.documentElement.outerHTML;
+  const drvJSON  = JSON.stringify(DRV,      null, 2);
+  const parJSON  = JSON.stringify(PARTNERS, null, 2);
+  const salJSON  = JSON.stringify(SALARIES);
+  const attJSON  = JSON.stringify(ATTENDANCE);
+  const vioJSON  = JSON.stringify(VIOLATIONS);
+  const schJSON  = JSON.stringify(SCHED);
+
+  let html = '<!DOCTYPE html>\n' + cur;
+
+  // Replace INIT_DRIVERS
+  html = html.replace(
+    /const INIT_DRIVERS\s*=\s*\[[\s\S]*?\];/,
+    'const INIT_DRIVERS = ' + drvJSON + ';'
+  );
+  // Replace INIT_PARTNERS
+  html = html.replace(
+    /const INIT_PARTNERS\s*=\s*\[[\s\S]*?\];/,
+    'const INIT_PARTNERS = ' + parJSON + ';'
+  );
+  // Replace SALARIES saved block
+  html = html.replace(
+    /let SALARIES\s*=\s*\{[\s\S]*?\};\s*\/\/SAVED/,
+    'let SALARIES = ' + salJSON + '; //SAVED'
+  );
+  // Replace SCHED saved block
+  html = html.replace(
+    /let SCHED\s*=\s*\{[\s\S]*?\};\s*\/\/SAVED_SCHED/,
+    'let SCHED = ' + schJSON + '; //SAVED_SCHED'
+  );
+
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  const now = new Date();
+  const stamp = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'السلاسل_' + stamp + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('✅ تم حفظ الملف — استبدل القديم بالجديد', 'success');
+}
+
+// ==========================================
+// SCHEDULE MODULE
+// ==========================================
+const DAYS_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let SCHED = {}; //SAVED_SCHED
+try { const _sv=localStorage.getItem('sl_sched2'); if(_sv){const _p=JSON.parse(_sv);if(Object.keys(_p).length>0)SCHED=_p;} } catch(e){}
+function saveSched(){ try{localStorage.setItem('sl_sched2',JSON.stringify(SCHED));}catch(e){} toast('تم الحفظ ✓','s'); }
+
+const SHIFT_TYPES = [
+  {id:'work',    labelAr:'يعمل',        labelEn:'Working',  color:'#10b981', icon:'✅'},
+  {id:'morning', labelAr:'صباحي',       labelEn:'Morning',  color:'#3b82f6', icon:'🌅'},
+  {id:'evening', labelAr:'مسائي',       labelEn:'Evening',  color:'#a855f7', icon:'🌙'},
+  {id:'off',     labelAr:'إجازة',       labelEn:'Day Off',  color:'#ef4444', icon:'🔴'},
+  {id:'holiday', labelAr:'عطلة رسمية', labelEn:'Holiday',  color:'#f59e0b', icon:'🌴'},
+];
+function getST(id){ return SHIFT_TYPES.find(s=>s.id===id)||null; }
+
+let schedWeekStart = getMonday(new Date());
+let schedFilt = 'all';
+
+function getMonday(d){ const dt=new Date(d); const day=dt.getDay(); dt.setDate(dt.getDate()-day+(day===0?-6:1)); dt.setHours(0,0,0,0); return dt; }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDate(d){ return d.toISOString().split('T')[0]; }
+function fmtDAr(d){ return d.getDate()+' '+MONTHS_AR[d.getMonth()]; }
+
+function openScheduleModal(){
+  schedFilt='all';
+  schedWeekStart=getMonday(new Date());
+  renderSchedFbar();
+  renderSchedTable();
+  document.getElementById('schedModal').classList.add('on');
+}
+
+function renderSchedFbar(){
+  const el=document.getElementById('sch-fbar'); if(!el) return;
+  el.innerHTML='<span class="sch-ftab'+(schedFilt==='all'?' on':'')+'" onclick="setSchedFilt(\'all\')">الكل</span>'
+    +PARTNERS.map(p=>'<span class="sch-ftab'+(schedFilt===p.id?' on':'')+'" onclick="setSchedFilt(\''+p.id+'\')" style="'+(schedFilt===p.id?'background:'+p.color+';border-color:'+p.color+';color:#fff':'')+'">'
+      +p.name+'</span>').join('');
+}
+function setSchedFilt(f){ schedFilt=f; renderSchedFbar(); renderSchedTable(); }
+function prevWeek(){ schedWeekStart=addDays(schedWeekStart,-7); renderSchedTable(); }
+function nextWeek(){ schedWeekStart=addDays(schedWeekStart,7);  renderSchedTable(); }
+function goToday(){  schedWeekStart=getMonday(new Date());       renderSchedTable(); }
+
+function renderSchedTable(){
+  const el=document.getElementById('sch-table'); if(!el) return;
+  const today=fmtDate(new Date());
+  const days=Array.from({length:7},(_,i)=>addDays(schedWeekStart,i));
+  document.getElementById('sch-week-label').textContent=fmtDAr(days[0])+' — '+fmtDAr(days[6])+'  '+days[0].getFullYear();
+
+  const drvList = schedFilt==='all' ? DRV : DRV.filter(d=>d.partner===schedFilt);
+
+  let html='<div class="sch-week-header">';
+  html+='<div style="font-size:10px;color:var(--muted);padding:4px 8px">السائق</div>';
+  days.forEach(d=>{
+    const isT=fmtDate(d)===today;
+    html+='<div class="sch-day-head'+(isT?' today':'')+'">'+DAYS_AR[d.getDay()]+'<div style="font-size:9px;opacity:.7">'+d.getDate()+'/'+(d.getMonth()+1)+'</div></div>';
+  });
+  html+='</div>';
+
+  drvList.forEach(drv=>{
+    const pc=pColor(drv.partner);
+    html+='<div class="sch-row">';
+    html+='<div class="sch-driver-cell" style="color:'+pc+'" title="'+drv.name+'">'+drv.name.split(' ')[0]+'<div style="font-size:9px;color:var(--muted)">'+drv.id+'</div></div>';
+    days.forEach(d=>{
+      const key=drv.id+'_'+fmtDate(d);
+      const entry=SCHED[key];
+      const st=entry?getST(entry.type):null;
+      const cs=st?'border-color:'+st.color+'66;background:'+st.color+'1a;color:'+st.color:'';
+      html+='<div class="sch-cell" style="'+cs+'" onclick="toggleCell(\''+drv.id+'\',\''+fmtDate(d)+'\')">';
+      if(st){
+        const dispShift = entry.shift || st.labelEn;
+        const parts = entry.shift ? entry.shift.split('-') : [];
+        html+='<div class="cell-inner">'+st.icon+' <span style="font-size:9px;font-weight:700">'+st.labelEn+'</span>';
+        if(parts.length===2) html+='<span class="cell-time" style="font-size:8px;opacity:.8;display:block">'+parts[0]+' → '+parts[1]+'</span>';
+        html+='</div>';
+      }
+      else html+='<div style="font-size:10px;opacity:.25">—</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+
+
+function buildDriverMsg(drv){
+  const days  = Array.from({length:7}, (_,i) => addDays(schedWeekStart, i));
+  const wEn   = MONTHS_EN[days[0].getMonth()]+' '+days[0].getDate()+' — '+MONTHS_EN[days[6].getMonth()]+' '+days[6].getDate()+', '+days[6].getFullYear();
+  const wAr   = fmtDAr(days[0]) + ' — ' + fmtDAr(days[6]) + ' ' + days[0].getFullYear();
+  const par   = PARTNERS.find(p=>p.id===drv.partner);
+  const parName = par ? par.name : '';
+
+  let msg = '';
+  msg += '🗓 *Weekly Schedule — Al-Salasil Co.*\n';
+  msg += '━━━━━━━━━━━━━━━━━━━━\n';
+  msg += '👤 *Driver:* ' + drv.name + '\n';
+  if(parName) msg += '🤝 *Partner:* ' + parName + '\n';
+  msg += '📅 *Week:* ' + wEn + '\n';
+  msg += '━━━━━━━━━━━━━━━━━━━━\n\n';
+
+  days.forEach(d => {
+    const key   = drv.id + '_' + fmtDate(d);
+    const entry = SCHED[key];
+    const st    = entry ? getST(entry.type) : null;
+    const dayEn = DAYS_EN[d.getDay()];
+    const dateD = d.getDate() + '/' + (d.getMonth()+1);
+    const isWeekend = d.getDay() === 5 || d.getDay() === 6; // Fri/Sat
+
+    let line = '';
+    if(st){
+      const timeStr = entry.shift ? ' (' + entry.shift + ')' : '';
+      line = st.icon + ' *' + dayEn + '* ' + dateD + ' → ' + st.labelEn + timeStr;
+    } else {
+      line = (isWeekend ? '🔵' : '⬜') + ' *' + dayEn + '* ' + dateD + ' → ' + (isWeekend ? 'Weekend' : 'Not Set');
+    }
+    msg += line + '\n';
+  });
+
+  msg += '\n━━━━━━━━━━━━━━━━━━━━\n';
+  msg += '⚠️ *IMPORTANT NOTICE:*\n';
+  msg += 'Any delay of *15 minutes or more* will result in an automatic *half-day deduction* from your salary.\n\n';
+  msg += '⚠️ *تنبيه مهم:*\n';
+  msg += 'أي تأخير لمدة *15 دقيقة أو أكثر* سيتم خصم *نصف يوم* من الراتب تلقائياً.\n\n';
+  msg += '📞 For inquiries contact management.\n';
+  msg += '🙏 Al-Salasil Co.';
+  return msg;
+}
+
+function broadcastAll(){
+  const drvList = schedFilt==='all' ? DRV : DRV.filter(d=>d.partner===schedFilt);
+  const valid   = drvList.filter(d => (d.sim||'').replace(/[^0-9]/g,'').length >= 7);
+  if(!valid.length){ toast('لا يوجد سائقون برقم هاتف','e'); return; }
+
+  // Build links page
+  const days = Array.from({length:7},(_,i)=>addDays(schedWeekStart,i));
+  const wEn  = MONTHS_EN[days[0].getMonth()]+' '+days[0].getDate()+' — '+MONTHS_EN[days[6].getMonth()]+' '+days[6].getDate()+', '+days[6].getFullYear();
+
+  let html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إرسال الجدول — السلاسل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;padding:20px}
+.header{text-align:center;padding:24px;margin-bottom:24px;background:#161b22;border-radius:16px;border:1px solid #30363d}
+.header h1{font-size:22px;font-weight:900;margin-bottom:6px}
+.header p{font-size:13px;color:#7d8590}
+.week-badge{display:inline-block;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;transition:all .2s}
+.card:hover{border-color:#3b82f6;transform:translateY(-2px)}
+.av{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}
+.info{flex:1;min-width:0}
+.name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:11px;color:#7d8590;margin-top:2px}
+.wa-link{display:inline-flex;align-items:center;gap:6px;background:#25d36622;color:#25d366;border:1px solid #25d36644;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s;white-space:nowrap;font-family:'Cairo',sans-serif}
+.wa-link:hover{background:#25d366;color:#fff}
+.wa-link svg{width:18px;height:18px;fill:currentColor}
+.stats{display:flex;gap:16px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.stat{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:10px 20px;text-align:center}
+.stat-n{font-size:22px;font-weight:900;color:#3b82f6}
+.stat-l{font-size:10px;color:#7d8590}
+.footer{text-align:center;margin-top:24px;padding:16px;color:#7d8590;font-size:12px;background:#161b22;border-radius:12px;border:1px solid #30363d}
+.warn{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 16px;color:#f87171;font-size:12px;font-weight:600;text-align:center;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📤 إرسال الجدول الأسبوعي</h1>
+  <p>اضغط على زر واتساب لكل سائق لإرسال جدوله</p>
+  <div class="week-badge">📅 ${wEn}</div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="stat-n">${valid.length}</div><div class="stat-l">سائق</div></div>
+</div>
+<div class="warn">⚠️ Any delay of 15 minutes or more = Automatic half-day deduction | أي تأخير 15 دقيقة = خصم نصف يوم</div>
+<div class="grid">`;
+
+  valid.forEach(d => {
+    const phone = (d.sim||'').replace(/[^0-9]/g,'');
+    const fp    = phone.startsWith('965') ? phone : '965' + phone;
+    const msg   = buildDriverMsg(d);
+    const waUrl = 'https://wa.me/' + fp + '?text=' + encodeURIComponent(msg);
+    const par   = PARTNERS.find(p=>p.id===d.partner);
+    const color = par ? par.color : '#7d8590';
+    const ini   = d.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+
+    html += `
+  <div class="card">
+    <div class="av" style="background:${color}">${ini}</div>
+    <div class="info">
+      <div class="name">${d.name}</div>
+      <div class="sub">${d.id} • ${par?par.name:''} • ${fp}</div>
+    </div>
+    <a class="wa-link" href="${waUrl}" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      إرسال
+    </a>
+  </div>`;
+  });
+
+  html += `
+</div>
+<div class="footer">شركة السلاسل — Al-Salasil Co. | ${new Date().toLocaleDateString('ar-KW')}</div>
+</body></html>`;
+
+  // Open in new tab
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  toast('تم فتح صفحة الإرسال — اضغط على كل سائق ✅','s');
+}
+
+function broadcastGroup(){
+  const drvList=schedFilt==='all'?DRV:DRV.filter(d=>d.partner===schedFilt);
+  const days=Array.from({length:7},(_,i)=>addDays(schedWeekStart,i));
+  const wAr=fmtDAr(days[0])+' — '+fmtDAr(days[6])+' '+days[0].getFullYear();
+  const wEn=days[0].getDate()+' '+MONTHS_EN[days[0].getMonth()]+' — '+days[6].getDate()+' '+MONTHS_EN[days[6].getMonth()]+' '+days[6].getFullYear();
+  let msg='📋 *جدول الأسبوع — شركة السلاسل*\n*Weekly Schedule — Al-Salasil Co.*\n🗓️ '+wAr+' / '+wEn+'\n━━━━━━━━━━━━━━━━━━\n\n';
+  drvList.forEach(d=>{
+    msg+='👤 *'+d.name+'*\n';
+    days.forEach(day=>{
+      const key=d.id+'_'+fmtDate(day);
+      const entry=SCHED[key]; const st=entry?getST(entry.type):null;
+      const sAr=st?st.icon+' '+st.labelAr+(entry&&entry.shift?' ('+entry.shift+')':''):'⬜';
+      const sEn=st?st.icon+' '+st.labelEn+(entry&&entry.shift?' ('+entry.shift+')':''):'⬜';
+      msg+=DAYS_AR[day.getDay()]+'/'+DAYS_EN[day.getDay()]+': '+sAr+' / '+sEn+'\n';
+    });
+    msg+='\n';
+  });
+  msg+='━━━━━━━━━━━━━━━━━━\n';
+  msg+='⚠️ أي تأخير لمدة *15 دقيقة* أو أكثر = خصم نصف يوم تلقائياً\n';
+  msg+='⚠️ Any delay of 15 min or more = automatic half-day deduction 🔴';
+  if(navigator.clipboard){ navigator.clipboard.writeText(msg).then(()=>toast('تم نسخ رسالة الجروب — الصقها في واتساب','s')); }
+  else { const t=document.createElement('textarea');t.value=msg;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);toast('تم النسخ ✓','s'); }
+}
+
+function exportSchedExcel(){
+  const days=Array.from({length:7},(_,i)=>addDays(schedWeekStart,i));
+  const drvList=schedFilt==='all'?DRV:DRV.filter(d=>d.partner===schedFilt);
+  const hdr=['"الكود"','"الاسم"','"الشريك"'].concat(days.map(d=>'"'+DAYS_AR[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+'"')).join(',');
+  const rows=drvList.map(d=>{
+    const par=(PARTNERS.find(p=>p.id===d.partner)||{name:'—'}).name;
+    const cells=days.map(day=>{
+      const key=d.id+'_'+fmtDate(day);
+      const entry=SCHED[key]; const st=entry?getST(entry.type):null;
+      return '"'+(st?st.labelAr+(entry&&entry.shift?' ('+entry.shift+')':''):'—')+'"';
+    });
+    return ['"'+d.id+'"','"'+d.name+'"','"'+par+'"'].concat(cells).join(',');
+  });
+  const wAr=fmtDAr(days[0])+' — '+fmtDAr(days[6])+' '+days[0].getFullYear();
+  const csv='\uFEFF"شركة السلاسل — جدول الأسبوع: '+wAr+'"\n\n'+hdr+'\n'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='جدول_'+fmtDate(days[0])+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('تم تصدير الجدول','s');
+}
+
+
+
+
+// ==========================================
+// UPDATED SCHEDULE - TIME PICKER + PNG EXPORT
+// ==========================================
+
+// Time picker state
+let tmDriverId = null;
+let tmDateStr  = null;
+let tmShiftId  = 'work';
+
+// Override toggleCell to open time picker on click
+function toggleCell(drvId, dateStr){
+  tmDriverId = drvId;
+  tmDateStr  = dateStr;
+  const key  = drvId + '_' + dateStr;
+  const cur  = SCHED[key];
+
+  if (cur) {
+    tmShiftId = cur.type;
+    const parts = (cur.shift||'').split('-');
+    document.getElementById('tm-start').value = parts[0] || '08:00';
+    document.getElementById('tm-end').value   = parts[1] || '16:00';
+  } else {
+    tmShiftId = 'work';
+    document.getElementById('tm-start').value = '08:00';
+    document.getElementById('tm-end').value   = '16:00';
+  }
+
+  const drv = DRV.find(x=>x.id===drvId);
+  const day = new Date(dateStr);
+  document.getElementById('tm-title').innerHTML =
+    '<i class="ti ti-clock" style="color:var(--accent)"></i> تحديد الوردية — ' +
+    DAYS_AR[day.getDay()] + ' ' + fmtDAr(day);
+  document.getElementById('tm-driver-name').textContent =
+    drv ? '👤 ' + drv.name : '';
+
+  document.getElementById('timeModal').classList.add('on');
+}
+
+function setQuickShift(type, start, end){
+  tmShiftId = type;
+  if(start) document.getElementById('tm-start').value = start;
+  if(end)   document.getElementById('tm-end').value   = end;
+
+  // if off/holiday apply immediately
+  if(type === 'off' || type === 'holiday'){
+    applyTimeShift();
+  }
+}
+
+function applyTimeShift(){
+  if(!tmDriverId || !tmDateStr) return;
+  const key   = tmDriverId + '_' + tmDateStr;
+  const start = document.getElementById('tm-start').value;
+  const end   = document.getElementById('tm-end').value;
+  const st    = getST(tmShiftId);
+
+  if(!st){ delete SCHED[key]; }
+  else {
+    const shift = (st.id==='off'||st.id==='holiday') ? '' : (start && end ? start+'-'+end : '');
+    SCHED[key] = { type: st.id, shift };
+  }
+
+  saveSched();
+  closeModal('timeModal');
+  renderSchedTable();
+}
+
+// ============================================================
+// EXPORT SCHEDULE AS PNG IMAGE
+// ============================================================
+function exportScheduleImage(){
+  const days = Array.from({length:7}, (_,i) => addDays(schedWeekStart, i));
+  const drvList = schedFilt==='all' ? DRV : DRV.filter(d=>d.partner===schedFilt);
+  const wAr = fmtDAr(days[0]) + ' — ' + fmtDAr(days[6]) + '  ' + days[0].getFullYear();
+  const wEn = MONTHS_EN[days[0].getMonth()]+' '+days[0].getDate()+' — '+MONTHS_EN[days[6].getMonth()]+' '+days[6].getDate()+', '+days[6].getFullYear();
+
+  // Build a clean HTML table for export
+  const COL_W = 110;
+  const ROW_H = 44;
+  const NAME_W = 160;
+  const W = NAME_W + COL_W * 7 + 40;
+  const H = (drvList.length + 2) * ROW_H + 100;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Arial,sans-serif">`;
+
+  // Background
+  svg += `<rect width="${W}" height="${H}" fill="#0d1117" rx="12"/>`;
+
+  // Header
+  svg += `<rect x="0" y="0" width="${W}" height="56" fill="#161b22" rx="12"/>`;
+  svg += `<rect x="0" y="44" width="${W}" height="12" fill="#161b22"/>`;
+  svg += `<text x="${W/2}" y="22" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="bold">Al-Salasil Co. — Weekly Schedule</text>`;
+  svg += `<text x="${W/2}" y="42" text-anchor="middle" fill="#7d8590" font-size="11">${wEn}</text>`;
+
+  // Day headers
+  const dayColors = ['#7d8590','#7d8590','#7d8590','#7d8590','#10b981','#ef4444','#7d8590'];
+  days.forEach((d,i)=>{
+    const x = NAME_W + 20 + i*COL_W + COL_W/2;
+    const y = 68;
+    const isToday = fmtDate(d) === fmtDate(new Date());
+    svg += `<rect x="${NAME_W+20+i*COL_W+2}" y="58" width="${COL_W-4}" height="26" fill="${isToday?'rgba(59,130,246,0.3)':'rgba(255,255,255,0.05)'}" rx="6"/>`;
+    svg += `<text x="${x}" y="${y+4}" text-anchor="middle" fill="${isToday?'#60a5fa':dayColors[d.getDay()]}" font-size="11" font-weight="bold">${DAYS_EN[d.getDay()]}</text>`;
+    svg += `<text x="${x}" y="${y+16}" text-anchor="middle" fill="${isToday?'#60a5fa':'#7d8590'}" font-size="9">${d.getDate()}/${d.getMonth()+1}</text>`;
+  });
+
+  // Driver rows
+  drvList.forEach((drv,ri)=>{
+    const y = 92 + ri * ROW_H;
+    const bg = ri%2===0 ? '#161b22' : '#1a2030';
+    svg += `<rect x="10" y="${y+2}" width="${W-20}" height="${ROW_H-4}" fill="${bg}" rx="7"/>`;
+
+    // Driver name
+    const pc = pColor(drv.partner);
+    const shortName = drv.name.split(' ').slice(0,2).join(' ');
+    svg += `<text x="25" y="${y+18}" fill="${pc}" font-size="11" font-weight="bold">${shortName}</text>`;
+    svg += `<text x="25" y="${y+32}" fill="#7d8590" font-size="9">${drv.id}</text>`;
+
+    // Day cells
+    days.forEach((d,i)=>{
+      const key = drv.id+'_'+fmtDate(d);
+      const entry = SCHED[key];
+      const st = entry ? getST(entry.type) : null;
+      const cx = NAME_W + 20 + i*COL_W + 4;
+      const cy = y + 4;
+      const cw = COL_W - 8;
+      const ch = ROW_H - 8;
+
+      if(st){
+        svg += `<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" fill="${st.color}22" stroke="${st.color}66" stroke-width="1" rx="5"/>`;
+        // Icon + type
+        svg += `<text x="${cx+cw/2}" y="${cy+14}" text-anchor="middle" fill="${st.color}" font-size="12">${st.icon}</text>`;
+        svg += `<text x="${cx+cw/2}" y="${cy+24}" text-anchor="middle" fill="${st.color}" font-size="9" font-weight="bold">${st.labelEn}</text>`;
+        // Time
+        if(entry.shift){
+          svg += `<text x="${cx+cw/2}" y="${cy+34}" text-anchor="middle" fill="${st.color}" font-size="8" opacity="0.9">${entry.shift}</text>`;
+        }
+      } else {
+        svg += `<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1" rx="5"/>`;
+        svg += `<text x="${cx+cw/2}" y="${cy+ch/2+4}" text-anchor="middle" fill="#7d8590" font-size="10">—</text>`;
+      }
+    });
+  });
+
+  // Footer
+  const fy = 96 + drvList.length * ROW_H;
+  svg += `<rect x="10" y="${fy+4}" width="${W-20}" height="28" fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.3)" stroke-width="1" rx="7"/>`;
+  svg += `<text x="${W/2}" y="${fy+22}" text-anchor="middle" fill="#f87171" font-size="10" font-weight="bold">⚠ Any delay of 15 minutes or more = Automatic half-day deduction</text>`;
+
+  svg += `</svg>`;
+
+  // Convert SVG to PNG via canvas
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
+  img.onload = function(){
+    const canvas = document.getElementById('sch-export-canvas');
+    canvas.width  = W * 2;
+    canvas.height = H * 2;
+    canvas.style.display = 'none';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+
+    canvas.toBlob(function(pngBlob){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(pngBlob);
+      const now = new Date();
+      a.download = 'Schedule_' + wEn.replace(/[, ]+/g,'_') + '.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('تم تصدير الجدول كصورة PNG ✅','s');
+    }, 'image/png');
+  };
+  img.src = url;
+}
+
+
+</script>
+
+<!-- SCHEDULE MODAL -->
+<div class="ov" id="schedModal" onclick="if(event.target===this)closeModal('schedModal')">
+  <div class="modal" style="max-width:980px;max-height:92vh">
+    <div class="sch-nav">
+      <h3><i class="ti ti-calendar-week" style="color:#a78bfa"></i> جدول المواعيد والإجازات</h3>
+      <button class="btn btn-cancel" onclick="prevWeek()"><i class="ti ti-chevron-right"></i></button>
+      <span id="sch-week-label" style="font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap"></span>
+      <button class="btn btn-cancel" onclick="nextWeek()"><i class="ti ti-chevron-left"></i></button>
+      <button class="btn btn-cancel" onclick="goToday()" style="font-size:11px">اليوم</button>
+    </div>
+    <div class="sch-fbar" id="sch-fbar"></div>
+    <div class="sch-legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>يعمل</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#3b82f6"></div>صباحي</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#a855f7"></div>مسائي</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>إجازة</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div>عطلة رسمية</div>
+    </div>
+    <div style="overflow-x:auto"><div id="sch-table" style="min-width:700px"></div></div>
+    <div class="broadcast-panel">
+      <div style="font-size:12px;font-weight:700;color:#25d366;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-brand-whatsapp"></i> إرسال الجدول</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="wa-group-btn" onclick="broadcastAll()"><i class="ti ti-send"></i> إرسال للكل (كل سائق على حده)</button>
+        <button class="wa-group-btn blue" onclick="broadcastGroup()"><i class="ti ti-copy"></i> نسخ رسالة الجروب</button>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:7px">⚠️ تنبيه: أي تأخير لمدة 15 دقيقة أو أكثر سيتم خصم نصف يوم تلقائياً</div>
+    </div>
+    <div class="modal-actions" style="margin-top:10px">
+      <button class="btn btn-cancel" onclick="closeModal('schedModal')">إغلاق</button>
+      <button class="btn btn-cancel" onclick="exportSchedExcel()"><i class="ti ti-table-export"></i> Excel</button>
+      <button class="btn btn-save" onclick="exportScheduleImage()" style="background:linear-gradient(135deg,#a855f7,#7c3aed)"><i class="ti ti-photo-down"></i> تصدير PNG</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- TIME PICKER MODAL -->
+<div class="ov" id="timeModal" onclick="if(event.target===this)closeModal('timeModal')">
+  <div class="modal time-modal">
+    <h2 id="tm-title"><i class="ti ti-clock" style="color:var(--accent)"></i> تحديد الوردية</h2>
+    <div id="tm-driver-name" style="font-size:12px;color:var(--muted2);margin-bottom:12px"></div>
+
+    <!-- QUICK SHIFTS -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">وردية سريعة / Quick Shift</div>
+    <div class="shift-quick">
+      <button class="sq-btn" onclick="setQuickShift('work','00:00','24:00')">🟢 Full Day</button>
+      <button class="sq-btn" onclick="setQuickShift('morning','06:00','14:00')">🌅 Morning 06-14</button>
+      <button class="sq-btn" onclick="setQuickShift('morning','07:00','15:00')">🌅 Morning 07-15</button>
+      <button class="sq-btn" onclick="setQuickShift('evening','14:00','22:00')">🌙 Evening 14-22</button>
+      <button class="sq-btn" onclick="setQuickShift('evening','15:00','23:00')">🌙 Evening 15-23</button>
+      <button class="sq-btn" onclick="setQuickShift('evening','22:00','06:00')">🌙 Night 22-06</button>
+      <button class="sq-btn" onclick="setQuickShift('off','','')">🔴 Day Off</button>
+      <button class="sq-btn" onclick="setQuickShift('holiday','','')">🌴 Holiday</button>
+    </div>
+
+    <!-- CUSTOM TIME -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted2);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px">وقت مخصص / Custom Time</div>
+    <div class="time-grid">
+      <div class="time-field">
+        <label>⏰ بداية الوردية / Start</label>
+        <input type="time" id="tm-start" value="08:00">
+      </div>
+      <div class="time-field">
+        <label>⏱ نهاية الوردية / End</label>
+        <input type="time" id="tm-end" value="16:00">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('timeModal')">إلغاء</button>
+      <button class="btn btn-save" onclick="applyTimeShift()"><i class="ti ti-check"></i> تطبيق</button>
+    </div>
+  </div>
+</div>
+<canvas id="sch-export-canvas"></canvas>
+
+</body>
+</html>

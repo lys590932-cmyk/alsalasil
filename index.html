@@ -1,1086 +1,1175 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0a0f1e">
-<title>Al-Salasil — Driver Check-In</title>
+<meta name="mobile-web-app-capable" content="yes">
+<title>السلاسل | تطبيق السائقين</title>
 <link rel="manifest" href="manifest.json">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#0a0f1e;--card:#111827;--card2:#1a2234;--border:#1e2d45;
-  --blue:#3b82f6;--green:#10b981;--red:#ef4444;--amber:#f59e0b;
-  --text:#f0f4ff;--muted:#64748b;--muted2:#94a3b8;
+  --bg:#0d1117;--s1:#161b22;--s2:#21262d;--s3:#2d333b;--br:#30363d;
+  --blue:#3b82f6;--blue2:#60a5fa;--green:#10b981;--green2:#34d399;
+  --amber:#f59e0b;--amber2:#fbbf24;--red:#ef4444;--red2:#f87171;--purple:#a855f7;
+  --text:#e6edf3;--muted:#8b949e;--muted2:#7d8590;
+  --r:12px;--r2:16px;--r3:20px;
 }
-html,body{min-height:100vh;background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,0.1) 0%,transparent 60%)}
+html,body{height:100%;overscroll-behavior:none}
+body{
+  font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);
+  -webkit-font-smoothing:antialiased;line-height:1.5;
+  padding-top:env(safe-area-inset-top);
+}
+button,input,select{font-family:'Cairo',sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}
+::-webkit-scrollbar{width:0;height:0}
+.hide{display:none!important}
 
-/* APP */
-.app{min-height:100vh;display:flex;flex-direction:column;position:relative;z-index:1;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,20px)}
+/* ===================== LOGIN ===================== */
+#loginScreen{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 22px;background:radial-gradient(circle at 50% 0%,rgba(59,130,246,0.12),transparent 55%),var(--bg);
+}
+.login-logo{
+  width:84px;height:84px;border-radius:24px;background:linear-gradient(135deg,var(--blue),#2563eb);
+  display:grid;place-items:center;margin-bottom:18px;box-shadow:0 12px 36px rgba(59,130,246,0.35);
+}
+.login-logo i{font-size:42px;color:#fff}
+.login-title{font-size:24px;font-weight:900;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:34px}
+.login-card{
+  width:100%;max-width:380px;background:var(--s1);border:1px solid var(--br);
+  border-radius:var(--r3);padding:24px 20px;
+}
+.login-card h2{font-size:16px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.login-card p.lc-hint{font-size:11px;color:var(--muted);margin-bottom:20px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:6px;letter-spacing:.3px}
+.field .inp-wrap{position:relative}
+.field .inp-wrap i{position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:18px}
+.field input{
+  width:100%;background:var(--s2);border:1.5px solid var(--br);border-radius:var(--r);
+  padding:13px 42px 13px 14px;color:var(--text);font-size:15px;font-weight:600;outline:none;transition:border-color .15s;
+}
+.field input:focus{border-color:var(--blue)}
+.field input::placeholder{color:var(--muted2);font-weight:400}
+.btn-primary{
+  width:100%;background:linear-gradient(135deg,var(--blue),#2563eb);border:none;border-radius:var(--r);
+  padding:14px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;gap:8px;transition:transform .1s,opacity .15s;
+}
+.btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.remember{display:flex;align-items:center;gap:8px;margin:4px 0 18px;font-size:12px;color:var(--muted)}
+.remember input{width:17px;height:17px;accent-color:var(--blue)}
+.login-err{
+  background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--red2);
+  border-radius:10px;padding:10px 13px;font-size:12px;font-weight:600;margin-bottom:14px;
+  display:flex;align-items:center;gap:7px;
+}
+.login-foot{margin-top:24px;font-size:11px;color:var(--muted2);text-align:center;line-height:1.7}
 
-/* HEADER */
-.header{padding:20px 24px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
-.logo{width:44px;height:44px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:13px;display:grid;place-items:center;flex-shrink:0;box-shadow:0 0 24px rgba(59,130,246,0.35)}
-.logo svg{width:24px;height:24px;fill:#fff}
-.logo-text h1{font-size:18px;font-weight:900;letter-spacing:-.3px}
-.logo-text p{font-size:11px;color:var(--muted2);margin-top:1px}
+/* ===================== APP SHELL ===================== */
+#appScreen{min-height:100vh;display:flex;flex-direction:column;padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+.appbar{
+  position:sticky;top:0;z-index:50;background:rgba(13,17,23,0.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--br);padding:12px 16px;display:flex;align-items:center;gap:11px;
+}
+.ab-av{
+  width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+  font-size:15px;font-weight:900;color:#fff;flex-shrink:0;
+}
+.ab-info{flex:1;min-width:0}
+.ab-hi{font-size:11px;color:var(--muted)}
+.ab-name{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ab-bell{
+  position:relative;width:42px;height:42px;border-radius:13px;background:var(--s1);
+  border:1px solid var(--br);display:grid;place-items:center;cursor:pointer;color:var(--text);flex-shrink:0;
+}
+.ab-bell i{font-size:21px}
+.bell-dot{
+  position:absolute;top:7px;left:8px;min-width:17px;height:17px;padding:0 4px;background:var(--red);
+  border-radius:9px;font-size:10px;font-weight:800;color:#fff;display:grid;place-items:center;border:2px solid var(--bg);
+}
 
-/* SCREENS */
-.screen{display:none;flex-direction:column;flex:1;padding:24px}
-.screen.active{display:flex}
+/* content */
+.screen{flex:1;padding:16px;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+.sec-title{font-size:12px;font-weight:800;color:var(--muted2);letter-spacing:.5px;margin:18px 4px 9px;text-transform:uppercase}
+.sec-title:first-child{margin-top:2px}
 
-/* ===== LOGIN SCREEN ===== */
-.login-hero{text-align:center;padding:32px 0 28px}
-.login-hero .lh-icon{font-size:52px;margin-bottom:12px}
-.login-hero h2{font-size:24px;font-weight:900;margin-bottom:6px;letter-spacing:-.3px}
-.login-hero p{font-size:14px;color:var(--muted2);line-height:1.5}
+/* cards */
+.card{background:var(--s1);border:1px solid var(--br);border-radius:var(--r2);overflow:hidden}
+.card-pad{padding:15px}
 
-.phone-input-wrap{position:relative;margin-bottom:16px}
-.phone-prefix{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:15px;font-weight:700;color:var(--muted2);font-family:'JetBrains Mono',monospace;pointer-events:none}
-.phone-input{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px 60px 16px 16px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;outline:none;letter-spacing:2px;transition:all .2s;text-align:left;direction:ltr}
-.phone-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,0.15)}
-.phone-input::placeholder{color:var(--muted);letter-spacing:1px;font-size:16px}
+/* status hero */
+.hero{
+  border-radius:var(--r3);padding:20px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#1f6feb,#2563eb);
+}
+.hero.out{background:linear-gradient(135deg,#475569,#334155)}
+.hero::after{
+  content:"";position:absolute;left:-30px;top:-30px;width:140px;height:140px;
+  background:rgba(255,255,255,0.08);border-radius:50%;
+}
+.hero-label{font-size:12px;opacity:.85;font-weight:600}
+.hero-status{font-size:26px;font-weight:900;margin:3px 0 2px;display:flex;align-items:center;gap:9px}
+.hero-time{font-size:12px;opacity:.8}
+.hero-pulse{width:11px;height:11px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:pulse 2s infinite}
+.hero.out .hero-pulse{background:#f87171;animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}70%{box-shadow:0 0 0 12px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
 
-.verify-btn{width:100%;padding:16px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border:none;border-radius:14px;color:#fff;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;letter-spacing:.3px}
-.verify-btn:active{transform:scale(.98)}
-.verify-btn:disabled{opacity:.5;cursor:not-allowed}
+/* big action button */
+.clock-btn{
+  width:100%;border:none;border-radius:var(--r2);padding:17px;font-size:16px;font-weight:900;
+  color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-top:13px;transition:transform .1s;
+}
+.clock-btn:active{transform:scale(.98)}
+.clock-btn:disabled{opacity:.55}
+.clock-in{background:linear-gradient(135deg,var(--green),#059669)}
+.clock-out{background:linear-gradient(135deg,var(--red),#dc2626)}
+.clock-btn i{font-size:22px}
 
-.error-msg{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:12px 14px;font-size:13px;color:#f87171;display:none;align-items:center;gap:8px;margin-bottom:12px}
-.error-msg.show{display:flex}
+/* quick stat grid */
+.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.qstat{background:var(--s1);border:1px solid var(--br);border-radius:var(--r2);padding:14px}
+.qstat-top{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.qstat-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}
+.qstat-ic i{font-size:17px}
+.qstat-lbl{font-size:11px;color:var(--muted)}
+.qstat-val{font-size:21px;font-weight:900}
+.qstat-sub{font-size:11px;color:var(--muted);margin-top:1px}
 
-.hint{text-align:center;font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}
-.hint strong{color:var(--muted2)}
+/* info rows */
+.irow{display:flex;align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid rgba(48,54,61,.55)}
+.irow:last-child{border-bottom:none}
+.irow-ic{width:34px;height:34px;border-radius:10px;background:var(--s2);display:grid;place-items:center;flex-shrink:0}
+.irow-ic i{font-size:18px;color:var(--muted)}
+.irow-body{flex:1;min-width:0}
+.irow-lbl{font-size:11px;color:var(--muted)}
+.irow-val{font-size:14px;font-weight:700;word-break:break-word}
+.irow-val.mono{font-size:13px}
 
-/* ===== HOME SCREEN ===== */
-.driver-hero{background:linear-gradient(135deg,#1a2848,#0f1a30);border:1px solid rgba(59,130,246,0.2);border-radius:20px;padding:20px;margin-bottom:20px;position:relative;overflow:hidden}
-.driver-hero::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)}
-.dh-greeting{font-size:12px;color:var(--muted2);margin-bottom:4px}
-.dh-name{font-size:22px;font-weight:900;letter-spacing:-.3px;margin-bottom:6px}
-.dh-badges{display:flex;gap:6px;flex-wrap:wrap}
-.dh-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
-.dh-id{background:rgba(59,130,246,0.12);color:#60a5fa;font-family:'JetBrains Mono',monospace}
-.dh-partner{color:#fff}
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800}
+.b-green{background:rgba(16,185,129,.16);color:var(--green2)}
+.b-amber{background:rgba(245,158,11,.16);color:var(--amber2)}
+.b-red{background:rgba(239,68,68,.16);color:var(--red2)}
+.b-blue{background:rgba(59,130,246,.16);color:var(--blue2)}
+.b-gray{background:var(--s2);color:var(--muted)}
 
-/* STATUS */
-.status-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:16px}
-.sc-head{padding:12px 16px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
-.sc-dot{width:7px;height:7px;border-radius:50%;animation:sdpulse 2s infinite}
-@keyframes sdpulse{0%,100%{opacity:1}50%{opacity:.4}}
-.sc-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px}
-.sc-body{padding:14px 16px}
-.sc-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.sc-row:last-child{margin:0}
-.sc-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
-.sc-label{font-size:11px;color:var(--muted);flex:0 0 80px}
-.sc-val{font-size:13px;font-weight:600;flex:1}
-.sc-val.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+/* salary */
+.sal-hero{
+  border-radius:var(--r3);padding:22px 20px;background:linear-gradient(135deg,#065f46,#047857);
+  color:#fff;text-align:center;position:relative;overflow:hidden;
+}
+.sal-hero::after{content:"";position:absolute;right:-40px;bottom:-40px;width:150px;height:150px;background:rgba(255,255,255,.07);border-radius:50%}
+.sal-net-lbl{font-size:13px;opacity:.85;font-weight:600}
+.sal-net-val{font-size:38px;font-weight:900;margin:4px 0;line-height:1}
+.sal-net-cur{font-size:15px;opacity:.85}
+.sal-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.sal-box{background:var(--s1);border:1px solid var(--br);border-radius:var(--r2);padding:14px;text-align:center}
+.sal-box-v{font-size:20px;font-weight:900}
+.sal-box-l{font-size:11px;color:var(--muted);margin-top:2px}
+.month-pick{display:flex;gap:8px;margin-bottom:13px}
+.month-pick select{
+  flex:1;background:var(--s1);border:1px solid var(--br);border-radius:var(--r);padding:11px;
+  color:var(--text);font-size:13px;font-weight:700;outline:none;
+}
+.ded-item{display:flex;align-items:center;gap:11px;padding:13px 14px;border-bottom:1px solid rgba(48,54,61,.55)}
+.ded-item:last-child{border-bottom:none}
+.ded-ic{width:36px;height:36px;border-radius:11px;background:rgba(239,68,68,.13);display:grid;place-items:center;flex-shrink:0}
+.ded-ic i{font-size:18px;color:var(--red2)}
+.ded-body{flex:1;min-width:0}
+.ded-reason{font-size:13px;font-weight:700}
+.ded-date{font-size:11px;color:var(--muted);margin-top:1px}
+.ded-amt{font-size:14px;font-weight:900;color:var(--red2);white-space:nowrap}
 
-/* LOCATION */
-.loc-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:16px}
-.loc-map{height:130px;background:var(--card2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.loc-map .map-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.05) 1px,transparent 1px);background-size:28px 28px}
-.loc-dot{width:14px;height:14px;background:var(--blue);border-radius:50%;box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 0 8px rgba(59,130,246,0.08);animation:locpulse 2s infinite;position:relative;z-index:1}
-@keyframes locpulse{0%,100%{box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 0 8px rgba(59,130,246,0.08)}50%{box-shadow:0 0 0 8px rgba(59,130,246,0.15),0 0 0 16px rgba(59,130,246,0.04)}}
-.loc-info{padding:10px 14px;font-size:11px;color:var(--muted2);display:flex;align-items:center;gap:6px}
-.loc-coords{font-family:'JetBrains Mono',monospace;font-size:10px}
+/* clockin history */
+.ci-item{display:flex;align-items:center;gap:11px;padding:13px 14px;border-bottom:1px solid rgba(48,54,61,.55)}
+.ci-item:last-child{border-bottom:none}
+.ci-dot{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex-shrink:0}
+.ci-dot.in{background:rgba(16,185,129,.14)} .ci-dot.in i{color:var(--green2)}
+.ci-dot.out{background:rgba(239,68,68,.14)} .ci-dot.out i{color:var(--red2)}
+.ci-dot i{font-size:19px}
+.ci-body{flex:1;min-width:0}
+.ci-act{font-size:13px;font-weight:800}
+.ci-meta{font-size:11px;color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:5px}
+.ci-time{font-size:13px;font-weight:800;white-space:nowrap}
+.ci-loc-link{color:var(--blue2);font-size:11px;font-weight:700;text-decoration:none}
 
-/* CLOCK BUTTON */
-.clock-btn{width:100%;padding:18px;border:none;border-radius:18px;font-family:'Inter',sans-serif;font-size:17px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;margin-bottom:14px;letter-spacing:.3px}
-.clock-btn.in{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 8px 24px rgba(16,185,129,0.35)}
-.clock-btn.out{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 8px 24px rgba(239,68,68,0.35)}
-.clock-btn:active{transform:scale(.97)}
-.clock-btn:disabled{opacity:.5;cursor:not-allowed}
+/* notif */
+.nt-item{display:flex;gap:12px;padding:14px;border-bottom:1px solid rgba(48,54,61,.55)}
+.nt-item:last-child{border-bottom:none}
+.nt-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex-shrink:0}
+.nt-ic i{font-size:20px}
+.nt-body{flex:1;min-width:0}
+.nt-title{font-size:13px;font-weight:800}
+.nt-desc{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.55}
+.nt-time{font-size:10px;color:var(--muted2);margin-top:5px}
 
-/* HISTORY */
-.hist-section h3{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
-.hist-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:6px}
-.hi-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.hi-info{flex:1}
-.hi-action{font-size:12px;font-weight:700}
-.hi-time{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px}
-.hi-loc{font-size:10px;color:var(--muted2);margin-top:1px}
+/* empty */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty i{font-size:46px;opacity:.4;display:block;margin-bottom:10px}
+.empty p{font-size:13px}
+.empty .e-sub{font-size:11px;color:var(--muted2);margin-top:4px}
 
-/* LOGOUT */
-.logout-btn{width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;transition:all .15s}
-.logout-btn:hover{border-color:var(--red);color:var(--red)}
-
-/* LOADING */
-.loading-overlay{display:none;position:fixed;inset:0;background:rgba(10,15,30,0.85);backdrop-filter:blur(6px);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:14px}
-.loading-overlay.show{display:flex}
-.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+/* loader */
+.loader{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;gap:13px;color:var(--muted)}
+.spinner{width:34px;height:34px;border:3px solid var(--s2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:13px;color:var(--muted2);font-weight:500}
+.loader p{font-size:12px}
 
-/* TOAST */
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--card);border:1px solid var(--border);border-radius:14px;padding:11px 18px;font-size:13px;font-weight:600;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:7px;box-shadow:0 8px 30px rgba(0,0,0,.5);white-space:nowrap}
+/* btn secondary */
+.btn-sec{
+  width:100%;background:var(--s1);border:1px solid var(--br);border-radius:var(--r);padding:13px;
+  color:var(--text);font-size:14px;font-weight:700;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;gap:8px;transition:border-color .15s;
+}
+.btn-sec:active{border-color:var(--blue)}
+.btn-danger{color:var(--red2);border-color:rgba(239,68,68,.3)}
+.btn-refresh{
+  background:var(--s1);border:1px solid var(--br);border-radius:11px;padding:9px 14px;
+  color:var(--text);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+}
+
+/* bottom nav */
+.bottomnav{
+  position:fixed;bottom:0;left:0;right:0;z-index:60;background:rgba(22,27,34,0.97);
+  backdrop-filter:blur(14px);border-top:1px solid var(--br);display:flex;
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+}
+.navbtn{
+  flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:3px;padding:5px 0;color:var(--muted2);transition:color .15s;
+}
+.navbtn i{font-size:23px}
+.navbtn span{font-size:10px;font-weight:700}
+.navbtn.on{color:var(--blue2)}
+.navbtn.on i{transform:translateY(-1px)}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
+  bottom:calc(86px + env(safe-area-inset-bottom));background:var(--s3);border:1px solid var(--br);
+  color:var(--text);padding:12px 18px;border-radius:13px;font-size:13px;font-weight:700;
+  z-index:200;transition:transform .3s cubic-bezier(.2,.9,.3,1);max-width:88%;
+  display:flex;align-items:center;gap:8px;box-shadow:0 12px 30px rgba(0,0,0,.4);
+}
 .toast.show{transform:translateX(-50%) translateY(0)}
-.toast.s{border-color:var(--green);color:var(--green)}
-.toast.e{border-color:var(--red);color:var(--red)}
+.toast.t-ok{border-color:rgba(16,185,129,.4)} .toast.t-ok i{color:var(--green2)}
+.toast.t-err{border-color:rgba(239,68,68,.4)} .toast.t-err i{color:var(--red2)}
+.toast.t-info i{color:var(--blue2)}
 
-/* NUMPAD */
-.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
-.np-btn{padding:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;border:none}
-.np-btn:active{background:var(--card2);transform:scale(.94)}
-.np-btn.del{font-size:16px;color:var(--muted2)}
-.np-btn.empty{background:transparent;cursor:default}
+/* sheet (notifications panel) */
+.sheet-ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet-ov.on{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:160;background:var(--bg);
+  border-radius:22px 22px 0 0;border-top:1px solid var(--br);max-height:80vh;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.9,.3,1);
+  display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);
+}
+.sheet.on{transform:translateY(0)}
+.sheet-handle{width:38px;height:4px;background:var(--br);border-radius:3px;margin:10px auto 4px}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 12px;border-bottom:1px solid var(--br)}
+.sheet-head h3{font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px}
+.sheet-close{width:32px;height:32px;border-radius:10px;background:var(--s1);border:1px solid var(--br);color:var(--text);display:grid;place-items:center;cursor:pointer}
+.sheet-body{overflow-y:auto;flex:1}
 
-/* ===== BOTTOM NAV ===== */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(17,24,39,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100}
-.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .15s;padding:8px 4px;border:none;background:transparent}
-.bn-item svg{width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:2;transition:all .15s}
-.bn-item span{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.3px}
-.bn-item.on svg{stroke:var(--blue)}
-.bn-item.on span{color:var(--blue)}
-.bn-item .bn-badge{position:absolute;top:6px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1.5px solid var(--bg)}
+/* license alert banner */
+.lic-banner{display:flex;align-items:center;gap:11px;padding:13px 15px;border-radius:var(--r2);margin-top:12px}
+.lic-banner.warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3)}
+.lic-banner.bad{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+.lic-banner i{font-size:24px;flex-shrink:0}
+.lic-banner.warn i{color:var(--amber2)} .lic-banner.bad i{color:var(--red2)}
+.lic-banner-t{font-size:13px;font-weight:800}
+.lic-banner-d{font-size:11px;color:var(--muted);margin-top:1px}
 
-/* ===== SCHEDULE SCREEN ===== */
-.shift-day{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px}
-.sd-date{text-align:center;flex:0 0 44px}
-.sd-day{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
-.sd-num{font-size:18px;font-weight:900}
-.sd-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
-.sd-icon{font-size:20px;flex:0 0 28px;text-align:center}
-.sd-info{flex:1}
-.sd-type{font-size:13px;font-weight:700}
-.sd-time{font-size:11px;color:var(--muted2);font-family:'JetBrains Mono',monospace;margin-top:2px}
-.sd-today-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(59,130,246,0.15);color:#60a5fa;flex-shrink:0}
-.late-warning{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}
-.late-warning .lw-icon{font-size:20px;flex-shrink:0}
-.late-warning .lw-text{font-size:12px;color:var(--amber);line-height:1.5}
-.late-warning strong{font-weight:700}
-
-/* ===== SALARY SCREEN ===== */
-.sal-hero{background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2);border-radius:18px;padding:20px;text-align:center;margin-bottom:16px}
-.sh-label{font-size:11px;color:var(--muted2);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.sh-amount{font-size:40px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--green);line-height:1}
-.sh-sub{font-size:11px;color:var(--muted);margin-top:4px}
-.sal-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px}
-.sal-row .sr-l{font-size:12px;color:var(--muted2)}
-.sal-row .sr-r{font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace}
-
-/* ===== NOTIFICATIONS ===== */
-.notif-item{display:flex;gap:12px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;position:relative}
-.notif-item.unread{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)}
-.notif-item.unread::after{content:'';position:absolute;top:14px;left:14px;width:7px;height:7px;background:var(--blue);border-radius:50%}
-.ni-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex-shrink:0}
-.ni-content{flex:1;min-width:0;padding-left:4px}
-.ni-title{font-size:13px;font-weight:700;margin-bottom:3px}
-.ni-body{font-size:11px;color:var(--muted2);line-height:1.5}
-.ni-time{font-size:10px;color:var(--muted);margin-top:4px}
-.empty-state{text-align:center;padding:40px 20px;opacity:.35}
-.empty-state .es-icon{font-size:44px;margin-bottom:10px}
-.empty-state p{font-size:13px;color:var(--muted)}
-
-/* LATE DEDUCTION MODAL */
-.late-modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);z-index:300;align-items:center;justify-content:center;padding:24px}
-.late-modal-ov.show{display:flex}
-.late-modal{background:var(--card);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px;width:100%;max-width:360px;animation:lmup .25s ease}
-@keyframes lmup{from{opacity:0;transform:translateY(20px)}}
-.lm-icon{font-size:44px;text-align:center;margin-bottom:12px}
-.lm-title{font-size:18px;font-weight:900;text-align:center;margin-bottom:6px}
-.lm-sub{font-size:13px;color:var(--muted2);text-align:center;margin-bottom:16px;line-height:1.5}
-.lm-detail{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:14px;margin-bottom:16px}
-.lm-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px}
-.lm-row:last-child{margin:0;padding-top:8px;border-top:1px solid rgba(245,158,11,0.15);font-size:14px;font-weight:900}
-.lm-row .lr-l{color:var(--muted2)}
-.lm-row .lr-r{font-family:'JetBrains Mono',monospace;font-weight:700}
-.lm-btns{display:flex;gap:10px}
-.lm-btn{flex:1;padding:13px;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
-.lm-btn.confirm{background:var(--amber);color:#000}
-.lm-btn.dismiss{background:var(--card2);color:var(--muted2);border:1px solid var(--border)}
-
-/* SAFE AREA PADDING FOR BOTTOM NAV */
-.screen{padding-bottom:80px}
+/* misc */
+.flex-between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gps-hint{font-size:11px;color:var(--muted2);text-align:center;margin-top:9px;display:flex;align-items:center;justify-content:center;gap:5px}
+.offline-bar{background:var(--amber);color:#000;font-size:12px;font-weight:800;text-align:center;padding:6px;display:none}
+.offline-bar.show{display:block}
 </style>
 </head>
 <body>
-<div class="app">
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="logo">
-      <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
+<!-- ============ OFFLINE BAR ============ -->
+<div class="offline-bar" id="offlineBar"><i class="ti ti-wifi-off"></i> لا يوجد اتصال بالإنترنت — يتم عرض آخر بيانات محفوظة</div>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="loginScreen" class="hide">
+  <div class="login-logo"><i class="ti ti-steering-wheel"></i></div>
+  <div class="login-title">شركة السلاسل</div>
+  <div class="login-sub">تطبيق السائقين — Al-Salasil Drivers</div>
+
+  <div class="login-card">
+    <h2><i class="ti ti-login-2" style="color:var(--blue)"></i> تسجيل الدخول</h2>
+    <p class="lc-hint">ادخل كود الموظف ورقم هاتفك المسجّل لدى الإدارة</p>
+
+    <div class="login-err hide" id="loginErr"><i class="ti ti-alert-triangle"></i><span id="loginErrTxt"></span></div>
+
+    <div class="field">
+      <label>كود الموظف</label>
+      <div class="inp-wrap">
+        <i class="ti ti-id-badge-2"></i>
+        <input type="text" id="inpCode" placeholder="مثال: SA1001" autocomplete="off" autocapitalize="characters">
+      </div>
     </div>
-    <div class="logo-text">
-      <h1>Al-Salasil</h1>
-      <p>Driver Attendance System</p>
+    <div class="field">
+      <label>رقم الهاتف</label>
+      <div class="inp-wrap">
+        <i class="ti ti-phone"></i>
+        <input type="tel" id="inpPhone" placeholder="مثال: 9XXXXXXXX" autocomplete="off" inputmode="numeric">
+      </div>
     </div>
+
+    <label class="remember">
+      <input type="checkbox" id="inpRemember" checked>
+      تذكّرني على هذا الجهاز
+    </label>
+
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">
+      <i class="ti ti-login-2"></i> دخول
+    </button>
   </div>
 
-  <!-- LOGIN SCREEN -->
-  <div class="screen active" id="screen-login">
-    <div class="login-hero">
-      <div class="lh-icon">📱</div>
-      <h2>Verify Your Identity</h2>
-      <p>Enter your registered phone number<br>to access the system</p>
-    </div>
-
-    <div class="error-msg" id="errorMsg">
-      <span>⛔</span>
-      <span id="errorText">Phone number not found</span>
-    </div>
-
-    <!-- PHONE DISPLAY -->
-    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px;min-height:64px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Phone Number</div>
-      <div id="phoneDisplay" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--text);letter-spacing:3px">_ _ _ _ _ _ _ _ _</div>
-    </div>
-
-    <!-- NUMPAD -->
-    <div class="numpad" id="numpad">
-      <button class="np-btn" onclick="npPress('1')">1</button>
-      <button class="np-btn" onclick="npPress('2')">2</button>
-      <button class="np-btn" onclick="npPress('3')">3</button>
-      <button class="np-btn" onclick="npPress('4')">4</button>
-      <button class="np-btn" onclick="npPress('5')">5</button>
-      <button class="np-btn" onclick="npPress('6')">6</button>
-      <button class="np-btn" onclick="npPress('7')">7</button>
-      <button class="np-btn" onclick="npPress('8')">8</button>
-      <button class="np-btn" onclick="npPress('9')">9</button>
-      <button class="np-btn empty"></button>
-      <button class="np-btn" onclick="npPress('0')">0</button>
-      <button class="np-btn del" onclick="npDel()">⌫</button>
-    </div>
-
-    <button class="verify-btn" id="verifyBtn" onclick="verifyPhone()" style="margin-top:16px" disabled>
-      <span>🔍</span> Verify & Continue
-    </button>
-
-    <p class="hint">
-      <strong>How it works:</strong> Enter your SIM number registered<br>
-      in the Al-Salasil system to sign in
-    </p>
+  <div class="login-foot">
+    إذا واجهت مشكلة في الدخول تواصل مع الإدارة<br>© شركة السلاسل لإدارة السائقين
   </div>
-
-  <!-- HOME SCREEN -->
-  <div class="screen" id="screen-home">
-
-    <!-- DRIVER HERO -->
-    <div class="driver-hero">
-      <div class="dh-greeting">Welcome back 👋</div>
-      <div class="dh-name" id="dh-name">—</div>
-      <div class="dh-badges">
-        <span class="dh-badge dh-id" id="dh-id">—</span>
-        <span class="dh-badge dh-partner" id="dh-partner">—</span>
-      </div>
-    </div>
-
-    <!-- STATUS CARD -->
-    <div class="status-card">
-      <div class="sc-head">
-        <div class="sc-dot" id="sc-dot" style="background:var(--muted)"></div>
-        <div class="sc-title" id="sc-title">Current Status</div>
-      </div>
-      <div class="sc-body">
-        <div class="sc-row">
-          <span class="sc-icon">⏰</span>
-          <span class="sc-label">Last Action</span>
-          <span class="sc-val mono" id="sc-last">No records today</span>
-        </div>
-        <div class="sc-row">
-          <span class="sc-icon">📍</span>
-          <span class="sc-label">Location</span>
-          <span class="sc-val" id="sc-loc" style="font-size:11px">Detecting...</span>
-        </div>
-        <div class="sc-row">
-          <span class="sc-icon">🚗</span>
-          <span class="sc-label">Vehicle</span>
-          <span class="sc-val mono" id="sc-car" style="font-size:11px">—</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- LOCATION MAP -->
-    <div class="loc-card">
-      <div class="loc-map">
-        <div class="map-grid"></div>
-        <div class="loc-dot"></div>
-      </div>
-      <div class="loc-info">
-        📍 <span class="loc-coords" id="loc-coords">Getting your location...</span>
-      </div>
-    </div>
-
-    <!-- CLOCK BUTTON -->
-    <button class="clock-btn in" id="clockBtn" onclick="doClock()">
-      <span id="btn-icon">✅</span>
-      <span id="btn-text">Clock In — Start Shift</span>
-    </button>
-
-    <!-- HISTORY -->
-    <div class="hist-section">
-      <h3>Today's Records</h3>
-      <div id="histList">
-        <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No records yet today</div>
-      </div>
-    </div>
-
-    <!-- LOGOUT -->
-    <button class="logout-btn" onclick="logout()">
-      <span>🚪</span> Sign Out
-    </button>
-
-  </div>
-
-  <!-- SCHEDULE SCREEN -->
-  <div class="screen" id="screen-sched" style="padding:20px 20px 80px">
-    <div style="font-size:18px;font-weight:900;margin-bottom:4px">My Schedule</div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:16px" id="sched-week-label">This Week</div>
-    <div class="late-warning">
-      <div class="lw-icon">⚠️</div>
-      <div class="lw-text">
-        <strong>Late Policy:</strong> Any delay of <strong>30 minutes or more</strong> from your scheduled start time will result in an automatic <strong>half-day deduction</strong> from your salary.
-      </div>
-    </div>
-    <div id="schedList"></div>
-  </div>
-
-  <!-- SALARY SCREEN -->
-  <div class="screen" id="screen-salary" style="padding:20px 20px 80px">
-    <div style="font-size:18px;font-weight:900;margin-bottom:4px">My Salary</div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:16px" id="sal-month-label">May 2026</div>
-    <div class="sal-hero">
-      <div class="sh-label">Net Salary</div>
-      <div class="sh-amount" id="app-sal-net">— KD</div>
-      <div class="sh-sub" id="app-sal-sub">Loading...</div>
-    </div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Summary</div>
-      <div class="sal-row"><span class="sr-l">Base Salary</span><span class="sr-r" id="app-sal-base" style="color:var(--green)">— KD</span></div>
-      <div class="sal-row"><span class="sr-l">Total Deductions</span><span class="sr-r" id="app-sal-ded" style="color:var(--red)">— KD</span></div>
-    </div>
-    <div>
-      <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Deduction Details</div>
-      <div id="app-ded-list"></div>
-    </div>
-  </div>
-
-  <!-- NOTIFICATIONS SCREEN -->
-  <div class="screen" id="screen-notif" style="padding:20px 20px 80px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:18px;font-weight:900">Notifications</div>
-      <button onclick="clearNotifs()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif">Mark all read</button>
-    </div>
-    <div id="notifList"></div>
-  </div>
-
-  <!-- BOTTOM NAV -->
-  <nav class="bottom-nav" id="bottomNav" style="display:none">
-    <button class="bn-item on" id="bn-home" onclick="switchScreen('home')">
-      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span>Home</span>
-    </button>
-    <button class="bn-item" id="bn-sched" onclick="switchScreen('sched')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span>Schedule</span>
-    </button>
-    <button class="bn-item" id="bn-salary" onclick="switchScreen('salary')">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <span>Salary</span>
-    </button>
-    <button class="bn-item" id="bn-notif" onclick="switchScreen('notif')" style="position:relative">
-      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span>Alerts</span>
-      <div class="bn-badge" id="notif-badge" style="display:none"></div>
-    </button>
-  </nav>
-
-  <!-- LATE DEDUCTION MODAL -->
-  <div class="late-modal-ov" id="lateModal">
-    <div class="late-modal">
-      <div class="lm-icon">⏰</div>
-      <div class="lm-title">Late Arrival Detected</div>
-      <div class="lm-sub">You clocked in <strong id="lm-late-mins">0</strong> minutes late. A half-day deduction will be applied.</div>
-      <div class="lm-detail">
-        <div class="lm-row"><span class="lr-l">Scheduled Start</span><span class="lr-r" id="lm-sched-time">—</span></div>
-        <div class="lm-row"><span class="lr-l">Clock In Time</span><span class="lr-r" id="lm-actual-time">—</span></div>
-        <div class="lm-row"><span class="lr-l">Delay</span><span class="lr-r" style="color:var(--amber)" id="lm-delay">—</span></div>
-        <div class="lm-row"><span class="lr-l">Deduction</span><span class="lr-r" style="color:var(--red)" id="lm-amount">— KD</span></div>
-      </div>
-      <div class="lm-btns">
-        <button class="lm-btn dismiss" onclick="dismissLateModal()">Dismiss</button>
-        <button class="lm-btn confirm" onclick="confirmLateDeduction()">✓ Confirm Deduction</button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<!-- LOADING -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="loading-text" id="loadingText">Processing...</div>
+<!-- ============ APP SCREEN ============ -->
+<div id="appScreen" class="hide">
+
+  <div class="appbar">
+    <div class="ab-av" id="abAv">--</div>
+    <div class="ab-info">
+      <div class="ab-hi" id="abHi">أهلاً</div>
+      <div class="ab-name" id="abName">—</div>
+    </div>
+    <div class="ab-bell" onclick="openNotif()">
+      <i class="ti ti-bell"></i>
+      <span class="bell-dot hide" id="bellDot">0</span>
+    </div>
+  </div>
+
+  <div class="screen" id="scrHome"></div>
+  <div class="screen hide" id="scrAttendance"></div>
+  <div class="screen hide" id="scrSalary"></div>
+  <div class="screen hide" id="scrProfile"></div>
+
+  <div class="bottomnav">
+    <button class="navbtn on" id="navHome" onclick="switchTab('home')">
+      <i class="ti ti-home-2"></i><span>الرئيسية</span>
+    </button>
+    <button class="navbtn" id="navAttendance" onclick="switchTab('attendance')">
+      <i class="ti ti-map-pin"></i><span>الحضور</span>
+    </button>
+    <button class="navbtn" id="navSalary" onclick="switchTab('salary')">
+      <i class="ti ti-wallet"></i><span>راتبي</span>
+    </button>
+    <button class="navbtn" id="navProfile" onclick="switchTab('profile')">
+      <i class="ti ti-user"></i><span>بياناتي</span>
+    </button>
+  </div>
 </div>
 
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
+<!-- ============ NOTIFICATIONS SHEET ============ -->
+<div class="sheet-ov" id="notifOv" onclick="closeNotif()"></div>
+<div class="sheet" id="notifSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <h3><i class="ti ti-bell" style="color:var(--amber2)"></i> التنبيهات</h3>
+    <button class="sheet-close" onclick="closeNotif()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="sheet-body" id="notifBody"></div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast"><i class="ti ti-info-circle"></i><span id="toastTxt"></span></div>
 
 <script>
-// ============================================================
-// CONFIG
-// ============================================================
-const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
-const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+/* =========================================================
+   شركة السلاسل - تطبيق السائقين
+   متصل بقاعدة بيانات Supabase نفسها المستخدمة في نظام المدير
+   ========================================================= */
 
-// ============================================================
-// DRIVERS DATABASE
-// ============================================================
-const DRIVERS = [
-  {id:'SA1001',name:'ASHRAF MOHAMED',       car:'/ 23 / 72401',sim:'94041969',  partner:'Keeta'},
-  {id:'SA1002',name:'Anik Rudra paul',       car:'/ 23 / 72248',sim:'92295624',  partner:'Keeta'},
-  {id:'SA1003',name:'PHIROJ HUSEN ANSARI',   car:'/ 23 / 72394',sim:'97383174',  partner:'Keeta'},
-  {id:'SA1004',name:'RAJ KUMAR BK',          car:'/ 23 / 72355',sim:'96723948',  partner:'Keeta'},
-  {id:'SA1005',name:'Heshmat Ali',           car:'/ 23 / 72033',sim:'97218562',  partner:'Keeta'},
-  {id:'SA1006',name:'Saddam Ansari',         car:'/ 23 / 72498',sim:'97203583',  partner:'Keeta'},
-  {id:'SA1007',name:'Shabir Alam',           car:'/ 23 / 72029',sim:'94776046',  partner:'Keeta'},
-  {id:'SA1008',name:'Vishnu Arjun Rathod',   car:'/ 23 / 72374',sim:'99135709',  partner:'Keeta'},
-  {id:'SA1009',name:'Ghulam Sarwar',         car:'/ 23 / 72410',sim:'97423156',  partner:'Keeta'},
-  {id:'SA1010',name:'Swarup Nath',           car:'/ 23 / 72003',sim:'94178569',  partner:'Keeta'},
-  {id:'SA1011',name:'SAKAR CHAUDHARY',       car:'/ 23 / 72282',sim:'94906127',  partner:'Keeta'},
-  {id:'SA1012',name:'peterclever anyanwuocha',car:'/ 23 / 72229',sim:'99014613', partner:'Keeta'},
-  {id:'SA1013',name:'DANIEL AKPAH',          car:'/ 23 / 72304',sim:'97369568',  partner:'Keeta'},
-  {id:'SA1014',name:'MARK OTENG KONADU',     car:'/ 23 / 72408',sim:'94915969',  partner:'Keeta'},
-  {id:'SA1015',name:'Kalashdeep Singh',      car:'/ 23 / 72385',sim:'97316601',  partner:'Caboria'},
-  {id:'SA1016',name:'SANTOSH PRASAD SAH KANU',car:'/ 23 / 72389',sim:'97153272', partner:'Caboria'},
-  {id:'SA1017',name:'RAMIT KUMAR SINGH',     car:'/ 23 / 15150',sim:'97527196',  partner:'Caboria'},
-  {id:'SA1018',name:'SHUSHIL SAH',           car:'/ 23 / 72012',sim:'96670189',  partner:'Caboria'},
-  {id:'SA1019',name:'SHYAM SUNDAR PRASAD',   car:'/ 23 / 72276',sim:'98851697',  partner:'HOMY'},
-  {id:'SA1020',name:'ANAND KUMAR CHAUDARY',  car:'/ 23 / 72182',sim:'96918953',  partner:'iMile'},
-  {id:'SA1021',name:'RAMIT KUMAR SIGH',      car:'',            sim:'97527196',  partner:'iMile'},
-  {id:'SA1022',name:'DANISH PARYA',          car:'/ 23 / 72272',sim:'94731656',  partner:'HOMY'},
-  {id:'SA1023',name:'NISHAN CHAUDHARY',      car:'/ 23 / 72323',sim:'98073978',  partner:'iMile'},
-  {id:'SA1024',name:'CHANDRA DEV YADAV',     car:'/ 23 / 72417',sim:'96693149',  partner:'iMile'},
-  {id:'SA1025',name:'IRSHAD MIYA',           car:'/ 23 / 72461',sim:'96015075',  partner:'iMile'},
-  {id:'SA1026',name:'Rphael Selvester',      car:'/ 23 / 72235',sim:'97326245',  partner:'Caboria'},
-  {id:'SA1027',name:'Prince ugwueze',        car:'/ 23 / 72078',sim:'94951086',  partner:'Caboria'},
-  {id:'SA1028',name:'Promise Chikelitem',    car:'/ 23 / 72311',sim:'97647976',  partner:'HOMY'},
-  {id:'SA1029',name:'Chika nwaogwugwu',      car:'/ 23 / 72438',sim:'97526391',  partner:'HOMY'},
-  {id:'SA1030',name:'okechukuw michael',     car:'/ 23 / 72120',sim:'94743827',  partner:'HOMY'},
-  {id:'SA1031',name:'mohamed osama',         car:'/ 23 / 72319',sim:'96959682',  partner:'Caboria'},
-  {id:'SA1032',name:'Emmanuel chidiebere',   car:'/ 23 / 72243',sim:'94051757',  partner:'HOMY'},
-  {id:'SA1033',name:'Samson Nwachukwu Akanezie',car:'/ 23 / 72090',sim:'96061964',partner:'HOMY'},
-  {id:'SA1034',name:'aaron hussaini timoty', car:'/ 23 / 72085',sim:'98074472',  partner:'HOMY'},
-  {id:'SA1035',name:'Bartholomew Kaku Niamh',car:'/ 23/89295',  sim:'94164875',  partner:''},
-  {id:'SA1036',name:'sylvester kopu',        car:'/23 /89034',  sim:'96964047',  partner:''},
-];
+/* ---------- CONFIG ---------- */
+var SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+var SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+var SK_SESSION = 'sl_driver_session_v1';
+var SK_CACHE   = 'sl_driver_cache_v1';
 
-const PARTNER_COLORS = {
-  'Keeta':'#3b82f6','Caboria':'#10b981','HOMY':'#f59e0b','iMile':'#a855f7',''  :'#64748b'
-};
+var MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+var AV_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#a855f7','#ec4899','#14b8a6','#f97316','#6366f1','#0ea5e9'];
 
-// ============================================================
-// STATE
-// ============================================================
-let currentDriver  = null;
-let currentLat     = null;
-let currentLng     = null;
-let currentAcc     = null;
-let isClockIn      = true;
-let todayRecords   = [];
-let phoneInput     = '';
+/* ---------- STATE ---------- */
+var DRIVER     = null;
+var CLOCKINS   = [];
+var DEDUCTIONS = [];
+var SCHEDULES  = [];
+var NOTIFS     = [];
+var currentTab = 'home';
+var busyClock  = false;
+var salMonth   = new Date().getMonth()+1;
+var salYear    = new Date().getFullYear();
 
-// ============================================================
-// NUMPAD
-// ============================================================
-function npPress(digit) {
-  if(phoneInput.length >= 9) return;
-  phoneInput += digit;
-  updatePhoneDisplay();
+/* ---------- HELPERS ---------- */
+function $(id){ return document.getElementById(id); }
+function digits(s){ return (s||'').toString().replace(/[^0-9]/g,''); }
+function initials(n){ return (n||'?').trim().split(/\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase(); }
+function avColor(seed){
+  var h=0, s=(seed||'')+'';
+  for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
+  return AV_COLORS[h % AV_COLORS.length];
+}
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function fmtKD(n){ return (parseFloat(n)||0).toFixed(3); }
+function fmtTime(d){
+  try{ return new Date(d).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; }
+}
+function fmtDate(d){
+  if(!d) return '—';
+  try{
+    var dt=new Date(d);
+    if(isNaN(dt.getTime())) return d;
+    return dt.getDate()+' '+MONTHS_AR[dt.getMonth()]+' '+dt.getFullYear();
+  }catch(e){ return d; }
+}
+function fmtDateTime(d){ return fmtDate(d)+' • '+fmtTime(d); }
+
+function toast(msg, type){
+  type = type||'info';
+  var t=$('toast'); $('toastTxt').textContent=msg;
+  t.className='toast t-'+type+' show';
+  var ic=t.querySelector('i');
+  ic.className = type==='ok'?'ti ti-circle-check':type==='err'?'ti ti-alert-triangle':'ti ti-info-circle';
+  clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); },2800);
 }
 
-function npDel() {
-  phoneInput = phoneInput.slice(0, -1);
-  updatePhoneDisplay();
-  hideError();
+/* حساب حالة الرخصة / الإقامة بالأيام المتبقية */
+function expiryStatus(dateStr){
+  if(!dateStr) return {cls:'b-gray',label:'غير محدد',days:null,level:'none'};
+  var dt=new Date(dateStr);
+  if(isNaN(dt.getTime())) return {cls:'b-gray',label:'غير محدد',days:null,level:'none'};
+  var days = Math.floor((dt - Date.now())/86400000);
+  if(days < 0)   return {cls:'b-red',  label:'منتهية',          days:days,level:'bad'};
+  if(days <= 30) return {cls:'b-red',  label:days+' يوم متبقي', days:days,level:'bad'};
+  if(days <= 90) return {cls:'b-amber',label:days+' يوم متبقي', days:days,level:'warn'};
+  return {cls:'b-green',label:'سارية',days:days,level:'ok'};
 }
 
-function updatePhoneDisplay() {
-  const el = document.getElementById('phoneDisplay');
-  const btn = document.getElementById('verifyBtn');
-  const padded = phoneInput.padEnd(9, '_');
-  const formatted = padded.split('').join(' ');
-  el.textContent = formatted;
-  btn.disabled = phoneInput.length < 7;
-}
-
-function showError(msg) {
-  const el = document.getElementById('errorMsg');
-  document.getElementById('errorText').textContent = msg;
-  el.classList.add('show');
-}
-
-function hideError() {
-  document.getElementById('errorMsg').classList.remove('show');
-}
-
-// ============================================================
-// VERIFY PHONE
-// ============================================================
-function verifyPhone() {
-  hideError();
-  const phone = phoneInput.trim();
-  if(phone.length < 7) { showError('Please enter a valid phone number'); return; }
-
-  showLoading(true, 'Verifying identity...');
-
-  // Search in drivers database
-  const driver = DRIVERS.find(d => {
-    const dSim = (d.sim||'').replace(/[^0-9]/g,'');
-    const inputClean = phone.replace(/[^0-9]/g,'');
-    return dSim === inputClean ||
-           dSim.endsWith(inputClean) ||
-           inputClean.endsWith(dSim);
+/* ---------- SUPABASE REST ---------- */
+function sb(path, opts){
+  opts = opts||{};
+  var headers = {
+    'apikey':SUPA_KEY,
+    'Authorization':'Bearer '+SUPA_KEY,
+    'Content-Type':'application/json'
+  };
+  if(opts.headers) for(var k in opts.headers) headers[k]=opts.headers[k];
+  return fetch(SUPA_URL+'/rest/v1/'+path, {
+    method: opts.method||'GET',
+    headers: headers,
+    body: opts.body
+  }).then(function(res){
+    if(!res.ok){
+      return res.text().catch(function(){return '';}).then(function(txt){
+        throw new Error('Supabase '+res.status+' '+txt.slice(0,120));
+      });
+    }
+    var ct = res.headers.get('content-type')||'';
+    return ct.indexOf('application/json')>=0 ? res.json() : null;
   });
+}
 
-  setTimeout(() => {
-    showLoading(false);
-    if(!driver) {
-      showError('❌ Phone number not registered in Al-Salasil system');
-      // Shake numpad
-      const np = document.getElementById('numpad');
-      np.style.animation = 'none';
-      np.offsetHeight;
-      np.style.animation = 'shake .4s ease';
+/* ---------- CACHE ---------- */
+function saveCache(){
+  try{
+    localStorage.setItem(SK_CACHE, JSON.stringify({
+      driver:DRIVER, clockins:CLOCKINS, deductions:DEDUCTIONS, schedules:SCHEDULES, ts:Date.now()
+    }));
+  }catch(e){}
+}
+function loadCache(){
+  try{
+    var v=localStorage.getItem(SK_CACHE);
+    return v ? JSON.parse(v) : null;
+  }catch(e){ return null; }
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+function showLoginErr(msg){
+  $('loginErrTxt').textContent = msg;
+  $('loginErr').classList.remove('hide');
+}
+function hideLoginErr(){ $('loginErr').classList.add('hide'); }
+
+function doLogin(){
+  hideLoginErr();
+  var code  = $('inpCode').value.trim().toUpperCase();
+  var phone = digits($('inpPhone').value);
+  if(!code){ showLoginErr('من فضلك ادخل كود الموظف'); return; }
+  if(!phone || phone.length < 6){ showLoginErr('من فضلك ادخل رقم هاتف صحيح'); return; }
+
+  var btn=$('loginBtn');
+  btn.disabled=true;
+  btn.innerHTML='<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> جاري التحقق...';
+
+  sb('drivers?id=eq.'+encodeURIComponent(code)+'&select=*').then(function(rows){
+    if(!rows || !rows.length){
+      showLoginErr('كود الموظف غير موجود — تأكد من الكود أو تواصل مع الإدارة');
       return;
     }
-    // SUCCESS
-    currentDriver = driver;
-    localStorage.setItem('salasil_driver', JSON.stringify(driver));
-    loginSuccess(driver);
-  }, 800);
-}
-
-function loginSuccess(driver) {
-  // Update UI
-  document.getElementById('dh-name').textContent    = driver.name;
-  document.getElementById('dh-id').textContent      = driver.id;
-  const par = driver.partner || 'No Partner';
-  const parEl = document.getElementById('dh-partner');
-  parEl.textContent = par;
-  parEl.style.background = (PARTNER_COLORS[driver.partner]||'#64748b') + '33';
-  parEl.style.color = PARTNER_COLORS[driver.partner] || '#64748b';
-  document.getElementById('sc-car').textContent = driver.car || 'Not assigned';
-
-  // Show home screen
-  document.getElementById('screen-login').classList.remove('active');
-  document.getElementById('screen-home').classList.add('active');
-
-  // Start location + show bottom nav
-  startLocation();
-  loadTodayRecords();
-  loadNotifications();
-  document.getElementById('bottomNav').style.display = 'flex';
-  // Hide non-home screens
-  ['sched','salary','notif'].forEach(s=>{
-    const el=document.getElementById('screen-'+s);
-    if(el) el.style.display='none';
-  });
-
-  toast('Welcome, ' + driver.name.split(' ')[0] + '! 👋', 's');
-}
-
-// ============================================================
-// AUTO LOGIN
-// ============================================================
-window.onload = function() {
-  // Check saved session
-  const saved = localStorage.getItem('salasil_driver');
-  if(saved) {
-    try {
-      const driver = JSON.parse(saved);
-      currentDriver = driver;
-      loginSuccess(driver);
+    var d = rows[0];
+    var storedPhone  = digits(d.sim).replace(/^965/,'');
+    var enteredPhone = phone.replace(/^965/,'');
+    if(storedPhone && enteredPhone && storedPhone !== enteredPhone){
+      showLoginErr('رقم الهاتف لا يطابق المسجّل لهذا الكود');
       return;
-    } catch(e) {}
-  }
-  updatePhoneDisplay();
-};
+    }
+    DRIVER = d;
+    if($('inpRemember').checked){
+      localStorage.setItem(SK_SESSION, JSON.stringify({id:d.id, phone:enteredPhone}));
+    }else{
+      localStorage.removeItem(SK_SESSION);
+    }
+    enterApp(false);
+  }).catch(function(err){
+    console.error(err);
+    showLoginErr('تعذّر الاتصال بالخادم — تأكد من الإنترنت وحاول مرة أخرى');
+  }).then(function(){
+    btn.disabled=false;
+    btn.innerHTML='<i class="ti ti-login-2"></i> دخول';
+  });
+}
 
-// ============================================================
-// LOCATION
-// ============================================================
-function startLocation() {
-  if(!navigator.geolocation) {
-    document.getElementById('loc-coords').textContent = 'Location not available';
+function tryAutoLogin(){
+  var sess=null;
+  try{ sess=JSON.parse(localStorage.getItem(SK_SESSION)||'null'); }catch(e){}
+  if(!sess || !sess.id){
+    $('loginScreen').classList.remove('hide');
     return;
   }
-  navigator.geolocation.watchPosition(
-    pos => {
-      currentLat = pos.coords.latitude;
-      currentLng = pos.coords.longitude;
-      currentAcc = pos.coords.accuracy;
-      const coords = currentLat.toFixed(5) + ', ' + currentLng.toFixed(5);
-      document.getElementById('loc-coords').textContent = coords + ' (±' + Math.round(currentAcc) + 'm)';
-      document.getElementById('sc-loc').textContent = coords;
+
+  /* اعرض من الكاش فوراً لو موجود */
+  var cache = loadCache();
+  var shownFromCache = false;
+  if(cache && cache.driver && cache.driver.id === sess.id){
+    DRIVER     = cache.driver;
+    CLOCKINS   = cache.clockins||[];
+    DEDUCTIONS = cache.deductions||[];
+    SCHEDULES  = cache.schedules||[];
+    enterApp(true);
+    shownFromCache = true;
+  }
+
+  sb('drivers?id=eq.'+encodeURIComponent(sess.id)+'&select=*').then(function(rows){
+    if(rows && rows.length){
+      DRIVER = rows[0];
+      if(!shownFromCache){ enterApp(false); }
+      else { renderAppBar(); refreshAll(); }
+    }else if(!shownFromCache){
+      $('loginScreen').classList.remove('hide');
+    }
+  }).catch(function(e){
+    if(!shownFromCache){
+      $('loginScreen').classList.remove('hide');
+    }else{
+      updateOfflineBar(false);
+    }
+  });
+}
+
+function logout(){
+  if(!confirm('تسجيل الخروج من التطبيق؟')) return;
+  localStorage.removeItem(SK_SESSION);
+  localStorage.removeItem(SK_CACHE);
+  DRIVER=null; CLOCKINS=[]; DEDUCTIONS=[]; SCHEDULES=[]; NOTIFS=[];
+  $('appScreen').classList.add('hide');
+  $('loginScreen').classList.remove('hide');
+  $('inpPhone').value='';
+  window.scrollTo(0,0);
+}
+
+/* =========================================================
+   ENTER APP + DATA LOADING
+   ========================================================= */
+function enterApp(fromCache){
+  $('loginScreen').classList.add('hide');
+  $('appScreen').classList.remove('hide');
+  window.scrollTo(0,0);
+  renderAppBar();
+  switchTab('home');
+  if(!fromCache) refreshAll();
+}
+
+function renderAppBar(){
+  if(!DRIVER) return;
+  $('abAv').textContent = initials(DRIVER.name);
+  $('abAv').style.background = avColor(DRIVER.id);
+  $('abName').textContent = DRIVER.name || '—';
+  var h=new Date().getHours();
+  $('abHi').textContent = (h<12?'صباح الخير':h<18?'مساء الخير':'مساء الخير');
+}
+
+function refreshAll(){
+  if(!DRIVER) return;
+  var id = encodeURIComponent(DRIVER.id);
+  Promise.all([
+    sb('clockin?driver_id=eq.'+id+'&order=created_at.desc&limit=60').catch(function(){return null;}),
+    sb('deductions?driver_id=eq.'+id+'&order=date.desc&limit=200').catch(function(){return null;}),
+    sb('schedules?driver_id=eq.'+id+'&order=date.asc&limit=60').catch(function(){return null;})
+  ]).then(function(r){
+    if(r[0]) CLOCKINS   = r[0];
+    if(r[1]) DEDUCTIONS = r[1];
+    if(r[2]) SCHEDULES  = r[2];
+    saveCache();
+    updateOfflineBar(true);
+    computeNotifs();
+    renderCurrentTab();
+  }).catch(function(e){
+    console.error('refresh error', e);
+    updateOfflineBar(false);
+    computeNotifs();
+    renderCurrentTab();
+  });
+}
+
+function updateOfflineBar(online){
+  var bar=$('offlineBar');
+  if(online===false || !navigator.onLine) bar.classList.add('show');
+  else bar.classList.remove('show');
+}
+
+function lastClockin(){ return CLOCKINS.length ? CLOCKINS[0] : null; }
+function isCurrentlyIn(){
+  var l=lastClockin();
+  return !!(l && l.action==='clock_in');
+}
+function todayClockins(){
+  var t=todayStr();
+  return CLOCKINS.filter(function(r){ return (r.created_at||'').indexOf(t)===0; });
+}
+
+function deductionsOf(month, year){
+  return DEDUCTIONS.filter(function(d){
+    if(d.month!=null && d.year!=null) return (+d.month)===month && (+d.year)===year;
+    if(!d.date) return false;
+    var dt=new Date(d.date);
+    return dt.getMonth()+1===month && dt.getFullYear()===year;
+  });
+}
+
+function shiftOf(dateStr){
+  for(var i=0;i<SCHEDULES.length;i++) if(SCHEDULES[i].date===dateStr) return SCHEDULES[i];
+  return null;
+}
+function upcomingShifts(){
+  var t=todayStr();
+  return SCHEDULES.filter(function(s){ return s.date>=t; }).slice(0,7);
+}
+
+/* =========================================================
+   NOTIFICATIONS (محسوبة محلياً من البيانات)
+   ========================================================= */
+function computeNotifs(){
+  NOTIFS=[];
+  if(!DRIVER) return;
+  var now=new Date();
+
+  var lic=expiryStatus(DRIVER.license);
+  if(lic.level==='bad'){
+    NOTIFS.push({ic:'ti-id-off',color:'var(--red2)',bg:'rgba(239,68,68,.14)',
+      title:'رخصة القيادة منتهية',
+      desc:'رخصتك '+(lic.days<0?'منتهية منذ '+Math.abs(lic.days)+' يوم':'تنتهي خلال '+lic.days+' يوم')+'. يرجى التجديد فوراً وإبلاغ الإدارة.',
+      time:'مهم'});
+  }else if(lic.level==='warn'){
+    NOTIFS.push({ic:'ti-id',color:'var(--amber2)',bg:'rgba(245,158,11,.14)',
+      title:'رخصة القيادة قاربت على الانتهاء',
+      desc:'تنتهي رخصتك خلال '+lic.days+' يوم. خطّط للتجديد مبكراً.',
+      time:'تنبيه'});
+  }
+
+  var m=now.getMonth()+1, y=now.getFullYear();
+  var monthDed=deductionsOf(m,y);
+  if(monthDed.length){
+    var total=monthDed.reduce(function(s,d){ return s+(parseFloat(d.amount)||0); },0);
+    NOTIFS.push({ic:'ti-receipt-2',color:'var(--red2)',bg:'rgba(239,68,68,.14)',
+      title:'خصومات هذا الشهر ('+monthDed.length+')',
+      desc:'إجمالي الخصومات على راتب شهر '+MONTHS_AR[m-1]+': '+fmtKD(total)+' د.ك. راجع تفاصيلها في صفحة راتبي.',
+      time:MONTHS_AR[m-1]+' '+y});
+  }
+
+  var up=upcomingShifts();
+  if(up.length){
+    var next=up[0];
+    var isToday = next.date===todayStr();
+    NOTIFS.push({ic:'ti-calendar-event',color:'var(--blue2)',bg:'rgba(59,130,246,.14)',
+      title: isToday?'مناوبة اليوم':'مناوبتك القادمة',
+      desc:(isToday?'اليوم':fmtDate(next.date))+(next.shift_start?' • من '+next.shift_start+(next.shift_end?' إلى '+next.shift_end:''):'')+(next.shift_type?' • '+next.shift_type:''),
+      time:'الجدول'});
+  }
+
+  if(!todayClockins().length){
+    NOTIFS.push({ic:'ti-clock-exclamation',color:'var(--amber2)',bg:'rgba(245,158,11,.14)',
+      title:'لم تسجّل حضورك اليوم',
+      desc:'لا تنسَ تسجيل الدخول عند بداية الشفت من صفحة الحضور.',
+      time:'اليوم'});
+  }
+
+  var dot=$('bellDot');
+  if(NOTIFS.length){ dot.textContent=NOTIFS.length; dot.classList.remove('hide'); }
+  else dot.classList.add('hide');
+}
+
+function openNotif(){
+  renderNotifs();
+  $('notifOv').classList.add('on');
+  $('notifSheet').classList.add('on');
+}
+function closeNotif(){
+  $('notifOv').classList.remove('on');
+  $('notifSheet').classList.remove('on');
+}
+function renderNotifs(){
+  var el=$('notifBody');
+  if(!NOTIFS.length){
+    el.innerHTML='<div class="empty"><i class="ti ti-bell-check"></i><p>لا توجد تنبيهات</p><div class="e-sub">كل شيء على ما يرام</div></div>';
+    return;
+  }
+  el.innerHTML = NOTIFS.map(function(n){
+    return '<div class="nt-item">'+
+      '<div class="nt-ic" style="background:'+n.bg+'"><i class="ti '+n.ic+'" style="color:'+n.color+'"></i></div>'+
+      '<div class="nt-body">'+
+        '<div class="nt-title">'+n.title+'</div>'+
+        '<div class="nt-desc">'+n.desc+'</div>'+
+        '<div class="nt-time">'+n.time+'</div>'+
+      '</div></div>';
+  }).join('');
+}
+
+/* =========================================================
+   TABS
+   ========================================================= */
+function switchTab(tab){
+  currentTab=tab;
+  var screens=['Home','Attendance','Salary','Profile'];
+  screens.forEach(function(s){ $('scr'+s).classList.add('hide'); $('nav'+s).classList.remove('on'); });
+  var map={home:'Home',attendance:'Attendance',salary:'Salary',profile:'Profile'};
+  var s=map[tab]||'Home';
+  $('scr'+s).classList.remove('hide');
+  $('nav'+s).classList.add('on');
+  window.scrollTo(0,0);
+  renderCurrentTab();
+}
+function renderCurrentTab(){
+  if(!DRIVER) return;
+  if(currentTab==='home') renderHome();
+  else if(currentTab==='attendance') renderAttendance();
+  else if(currentTab==='salary') renderSalary();
+  else if(currentTab==='profile') renderProfile();
+}
+
+/* =========================================================
+   HOME TAB
+   ========================================================= */
+function renderHome(){
+  var el=$('scrHome');
+  var inNow = isCurrentlyIn();
+  var last  = lastClockin();
+  var now   = new Date();
+  var m=now.getMonth()+1, y=now.getFullYear();
+
+  var base=parseFloat(DRIVER.salary_base)||0;
+  var monthDed=deductionsOf(m,y);
+  var totalDed=monthDed.reduce(function(s,d){ return s+(parseFloat(d.amount)||0); },0);
+  var net=base-totalDed;
+
+  var lic=expiryStatus(DRIVER.license);
+  var shift=shiftOf(todayStr());
+
+  var html='';
+
+  html+='<div class="hero '+(inNow?'':'out')+'">'+
+    '<div class="hero-label">حالتك الآن</div>'+
+    '<div class="hero-status"><span class="hero-pulse"></span>'+(inNow?'داخل الآن':'خارج الدوام')+'</div>'+
+    '<div class="hero-time">'+(last?((inNow?'سجّلت دخولك ':'آخر تسجيل خروج ')+fmtTime(last.created_at)):'لم تسجّل اليوم بعد')+'</div>'+
+  '</div>';
+
+  html+='<button class="clock-btn '+(inNow?'clock-out':'clock-in')+'" id="homeClockBtn" onclick="clockAction(\''+(inNow?'clock_out':'clock_in')+'\')">'+
+    '<i class="ti ti-'+(inNow?'logout':'login-2')+'"></i> '+(inNow?'تسجيل خروج':'تسجيل دخول')+
+  '</button>'+
+  '<div class="gps-hint"><i class="ti ti-map-pin"></i> سيتم تسجيل موقعك الحالي مع الحضور</div>';
+
+  if(lic.level==='bad'){
+    html+='<div class="lic-banner bad"><i class="ti ti-id-off"></i><div>'+
+      '<div class="lic-banner-t">رخصة القيادة منتهية / شارفت على الانتهاء</div>'+
+      '<div class="lic-banner-d">'+(lic.days<0?'منتهية منذ '+Math.abs(lic.days)+' يوم':'تنتهي خلال '+lic.days+' يوم')+' — يرجى التجديد</div>'+
+    '</div></div>';
+  }else if(lic.level==='warn'){
+    html+='<div class="lic-banner warn"><i class="ti ti-id"></i><div>'+
+      '<div class="lic-banner-t">رخصة القيادة قاربت على الانتهاء</div>'+
+      '<div class="lic-banner-d">باقي '+lic.days+' يوم على انتهاء الرخصة</div>'+
+    '</div></div>';
+  }
+
+  html+='<div class="qgrid">'+
+    '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
+      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(16,185,129,.14)"><i class="ti ti-wallet" style="color:var(--green2)"></i></div><div class="qstat-lbl">صافي راتب الشهر</div></div>'+
+      '<div class="qstat-val" style="color:var(--green2)">'+fmtKD(net)+'</div>'+
+      '<div class="qstat-sub">'+MONTHS_AR[m-1]+' '+y+' • د.ك</div>'+
+    '</div>'+
+    '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
+      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(239,68,68,.14)"><i class="ti ti-receipt-2" style="color:var(--red2)"></i></div><div class="qstat-lbl">خصومات الشهر</div></div>'+
+      '<div class="qstat-val" style="color:'+(totalDed>0?'var(--red2)':'var(--text)')+'">'+fmtKD(totalDed)+'</div>'+
+      '<div class="qstat-sub">'+monthDed.length+' خصم</div>'+
+    '</div>'+
+  '</div>';
+
+  html+='<div class="sec-title">مناوبة اليوم</div>';
+  if(shift){
+    html+='<div class="card"><div class="irow">'+
+      '<div class="irow-ic" style="background:rgba(59,130,246,.14)"><i class="ti ti-calendar-event" style="color:var(--blue2)"></i></div>'+
+      '<div class="irow-body"><div class="irow-lbl">'+(shift.shift_type||'مناوبة')+'</div>'+
+      '<div class="irow-val">'+(shift.shift_start?shift.shift_start+(shift.shift_end?' — '+shift.shift_end:''):'لم يُحدد الوقت')+'</div></div>'+
+      '<span class="badge b-blue">اليوم</span>'+
+    '</div></div>';
+  }else{
+    html+='<div class="card card-pad" style="color:var(--muted);font-size:13px;text-align:center">'+
+      '<i class="ti ti-calendar-off" style="font-size:26px;opacity:.4;display:block;margin-bottom:6px"></i>لا توجد مناوبة مجدولة لليوم</div>';
+  }
+
+  var tci=todayClockins();
+  html+='<div class="sec-title">حضور اليوم</div>';
+  if(tci.length){
+    html+='<div class="card">'+tci.map(ciItemHTML).join('')+'</div>';
+  }else{
+    html+='<div class="card card-pad" style="color:var(--muted);font-size:13px;text-align:center">لم تسجّل دخول أو خروج اليوم بعد</div>';
+  }
+
+  el.innerHTML=html;
+}
+
+function ciItemHTML(r){
+  var isIn=r.action==='clock_in';
+  var hasLoc=r.latitude && r.longitude;
+  var mapUrl=hasLoc?('https://www.google.com/maps?q='+r.latitude+','+r.longitude):'';
+  return '<div class="ci-item">'+
+    '<div class="ci-dot '+(isIn?'in':'out')+'"><i class="ti ti-'+(isIn?'login-2':'logout')+'"></i></div>'+
+    '<div class="ci-body">'+
+      '<div class="ci-act">'+(isIn?'تسجيل دخول':'تسجيل خروج')+'</div>'+
+      '<div class="ci-meta"><span>'+fmtDate(r.created_at)+'</span>'+
+      (hasLoc?' • <a class="ci-loc-link" href="'+mapUrl+'" target="_blank"><i class="ti ti-map-pin"></i> الموقع</a>':' • بدون موقع')+
+      '</div>'+
+    '</div>'+
+    '<div class="ci-time">'+fmtTime(r.created_at)+'</div>'+
+  '</div>';
+}
+
+/* =========================================================
+   ATTENDANCE TAB
+   ========================================================= */
+function renderAttendance(){
+  var el=$('scrAttendance');
+  var inNow=isCurrentlyIn();
+  var last=lastClockin();
+
+  var html='';
+  html+='<div class="flex-between" style="margin-bottom:4px">'+
+    '<div class="sec-title" style="margin:0">تسجيل الحضور</div>'+
+    '<button class="btn-refresh" onclick="refreshAll()"><i class="ti ti-refresh"></i> تحديث</button>'+
+  '</div>';
+
+  html+='<div class="hero '+(inNow?'':'out')+'" style="margin-top:8px">'+
+    '<div class="hero-label">حالتك الآن</div>'+
+    '<div class="hero-status"><span class="hero-pulse"></span>'+(inNow?'داخل الآن':'خارج الدوام')+'</div>'+
+    '<div class="hero-time">'+(last?'آخر تسجيل: '+fmtDateTime(last.created_at):'لا توجد تسجيلات')+'</div>'+
+  '</div>';
+
+  html+='<button class="clock-btn '+(inNow?'clock-out':'clock-in')+'" id="attClockBtn" onclick="clockAction(\''+(inNow?'clock_out':'clock_in')+'\')">'+
+    '<i class="ti ti-'+(inNow?'logout':'login-2')+'"></i> '+(inNow?'تسجيل خروج':'تسجيل دخول')+
+  '</button>'+
+  '<div class="gps-hint"><i class="ti ti-current-location"></i> تأكد من تفعيل خدمة الموقع GPS</div>';
+
+  html+='<div class="sec-title">سجل الحضور</div>';
+  if(!CLOCKINS.length){
+    html+='<div class="card"><div class="empty"><i class="ti ti-history"></i><p>لا توجد تسجيلات حضور بعد</p><div class="e-sub">سجّل دخولك ليظهر هنا</div></div></div>';
+  }else{
+    var groups={};
+    CLOCKINS.forEach(function(r){
+      var d=(r.created_at||'').split('T')[0];
+      if(!groups[d]) groups[d]=[];
+      groups[d].push(r);
+    });
+    Object.keys(groups).sort().reverse().forEach(function(d){
+      var dayLabel = d===todayStr()?'اليوم':fmtDate(d);
+      html+='<div style="font-size:11px;font-weight:700;color:var(--muted2);margin:13px 4px 6px">'+dayLabel+'</div>';
+      html+='<div class="card">'+groups[d].map(ciItemHTML).join('')+'</div>';
+    });
+  }
+  el.innerHTML=html;
+}
+
+/* =========================================================
+   CLOCK ACTION (GPS + SUPABASE)
+   ========================================================= */
+function setClockBtnsBusy(busy, label){
+  ['homeClockBtn','attClockBtn'].forEach(function(id){
+    var b=$(id); if(!b) return;
+    b.disabled=busy;
+    if(busy) b.innerHTML='<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> '+(label||'جاري...');
+  });
+}
+
+function clockAction(action){
+  if(busyClock) return;
+  busyClock=true;
+  setClockBtnsBusy(true,'جاري تحديد الموقع...');
+
+  function finish(lat,lng){ submitClock(action,lat,lng); }
+
+  if(!navigator.geolocation){
+    toast('جهازك لا يدعم تحديد الموقع — سيتم التسجيل بدون موقع','info');
+    finish(null,null);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    function(pos){ finish(pos.coords.latitude, pos.coords.longitude); },
+    function(err){
+      console.warn('geo error',err);
+      toast('تعذّر تحديد الموقع — سيتم التسجيل بدون موقع','info');
+      finish(null,null);
     },
-    err => {
-      document.getElementById('loc-coords').textContent = 'Unable to get location';
-      document.getElementById('sc-loc').textContent = 'Unavailable';
-    },
-    {enableHighAccuracy:true, maximumAge:10000, timeout:15000}
+    {enableHighAccuracy:true, timeout:9000, maximumAge:0}
   );
 }
 
-// ============================================================
-// LOAD TODAY RECORDS
-// ============================================================
-async function loadTodayRecords() {
-  if(!currentDriver) return;
-  const today = new Date().toISOString().split('T')[0];
-  const url   = SUPA_URL + '/rest/v1/clockin?driver_id=eq.' + currentDriver.id
-    + '&created_at=gte.' + today + 'T00:00:00&order=created_at.desc&limit=10';
-  try {
-    const res = await fetch(url, {
-      headers: {'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY}
-    });
-    todayRecords = await res.json();
-    updateHomeUI();
-  } catch(e) { console.error(e); }
-}
-
-// ============================================================
-// UPDATE UI
-// ============================================================
-function updateHomeUI() {
-  if(todayRecords.length > 0) {
-    const last = todayRecords[0];
-    isClockIn  = last.action === 'clock_out';
-    const t    = new Date(last.created_at);
-    const ts   = t.toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('sc-last').textContent = (last.action==='clock_in'?'🟢 Clock In':'🔴 Clock Out') + ' — ' + ts;
-    document.getElementById('sc-dot').style.background = last.action==='clock_in' ? 'var(--green)' : 'var(--red)';
-    document.getElementById('sc-title').textContent = last.action==='clock_in' ? 'Currently Working' : 'Shift Ended';
-  } else {
-    isClockIn = true;
-    document.getElementById('sc-last').textContent = 'No records today';
-    document.getElementById('sc-dot').style.background = 'var(--muted)';
-    document.getElementById('sc-title').textContent = 'Not Started';
-  }
-
-  const btn = document.getElementById('clockBtn');
-  if(isClockIn) {
-    btn.className='clock-btn in';
-    document.getElementById('btn-icon').textContent='✅';
-    document.getElementById('btn-text').textContent='Clock In — Start Shift';
-  } else {
-    btn.className='clock-btn out';
-    document.getElementById('btn-icon').textContent='🔴';
-    document.getElementById('btn-text').textContent='Clock Out — End Shift';
-  }
-
-  // History
-  const el = document.getElementById('histList');
-  if(!todayRecords.length) {
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No records yet today</div>';
-    return;
-  }
-  el.innerHTML = todayRecords.map(r => {
-    const t   = new Date(r.created_at);
-    const ts  = t.toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    const isIn= r.action==='clock_in';
-    const loc = r.latitude ? r.latitude.toFixed(4)+', '+r.longitude.toFixed(4) : 'Location unavailable';
-    return `<div class="hist-item">
-      <div class="hi-dot" style="background:${isIn?'var(--green)':'var(--red)'}"></div>
-      <div class="hi-info">
-        <div class="hi-action" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'🟢 Clock In — Started':'🔴 Clock Out — Ended'}</div>
-        <div class="hi-time">${ts}</div>
-        <div class="hi-loc">📍 ${loc}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ============================================================
-// CLOCK IN/OUT
-// ============================================================
-async function doClock() {
-  if(!currentDriver) return;
-  const action = isClockIn ? 'clock_in' : 'clock_out';
-  showLoading(true, isClockIn ? 'Recording Clock In...' : 'Recording Clock Out...');
-
-  let lat = currentLat, lng = currentLng, acc = currentAcc;
-  if(!lat) {
-    try {
-      const pos = await new Promise((res,rej) => navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:10000}));
-      lat = pos.coords.latitude; lng = pos.coords.longitude; acc = pos.coords.accuracy;
-    } catch(e) {}
-  }
-
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/clockin', {
-      method:'POST',
-      headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body: JSON.stringify({driver_id:currentDriver.id,driver_name:currentDriver.name,partner:currentDriver.partner,action,latitude:lat,longitude:lng,accuracy:acc})
-    });
-    showLoading(false);
-    if(res.ok||res.status===201) {
-      const actionMsg = isClockIn?'✅ Clock In recorded!':'🔴 Clock Out recorded!';
-      toast(actionMsg,'s');
-
-      // Add notification
-      addNotification({
-        type:'attendance',
-        title: isClockIn ? '✅ Clock In Recorded' : '🔴 Clock Out Recorded',
-        body: isClockIn ? 'You clocked in at ' + new Date().toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'}) : 'Your shift has ended',
-        time: new Date().toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'}),
-        unread: true
-      });
-
-      await loadTodayRecords();
-
-      // Check late arrival on clock in
-      if(isClockIn) {
-        await checkLateArrival(new Date());
-      }
-    } else {
-      toast('Error — please try again','e');
-    }
-  } catch(e) {
-    showLoading(false);
-    toast('Connection error','e');
-  }
-}
-
-// ============================================================
-// LOGOUT
-// ============================================================
-function logout() {
-  if(!confirm('Sign out of your account?')) return;
-  localStorage.removeItem('salasil_driver');
-  currentDriver = null; todayRecords = []; phoneInput = ''; notifications = [];
-  // Hide bottom nav
-  document.getElementById('bottomNav').style.display = 'none';
-  // Hide all screens
-  ['sched','salary','notif'].forEach(s=>{
-    const el=document.getElementById('screen-'+s);
-    if(el) el.style.display='none';
-  });
-  document.getElementById('screen-home').classList.remove('active');
-  document.getElementById('screen-login').classList.add('active');
-  updatePhoneDisplay();
-  toast('Signed out successfully','s');
-}
-
-// ============================================================
-// HELPERS
-// ============================================================
-function showLoading(show, text) {
-  document.getElementById('loadingOverlay').classList.toggle('show',show);
-  if(text) document.getElementById('loadingText').textContent = text;
-}
-
-function toast(msg, type='s') {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.className='toast '+type+' show';
-  setTimeout(()=>el.classList.remove('show'),3000);
-}
-
-// ============================================================
-// SCREEN NAVIGATION
-// ============================================================
-let currentScreen = 'home';
-let notifications = [];
-let pendingLateDeduction = null;
-
-function switchScreen(screen) {
-  ['home','sched','salary','notif'].forEach(s => {
-    const el = document.getElementById('screen-' + (s==='home'?'home':s));
-    if(el) el.classList.remove('active');
-    const bn = document.getElementById('bn-' + s);
-    if(bn) bn.classList.remove('on');
-  });
-  document.getElementById('screen-home').classList.toggle('active', screen==='home');
-  const scEl = document.getElementById('screen-' + screen);
-  if(scEl && screen !== 'home') scEl.style.display = 'block';
-
-  // Hide all non-home screens first
-  ['sched','salary','notif'].forEach(s => {
-    const el = document.getElementById('screen-' + s);
-    if(el) el.style.display = s===screen ? 'block' : 'none';
-  });
-
-  document.getElementById('bn-' + screen)?.classList.add('on');
-  currentScreen = screen;
-
-  if(screen==='sched')   renderScheduleScreen();
-  if(screen==='salary')  renderSalaryScreen();
-  if(screen==='notif')   renderNotifsScreen();
-}
-
-// ============================================================
-// SCHEDULE SCREEN
-// ============================================================
-async function renderScheduleScreen() {
-  const el = document.getElementById('schedList');
-  if(!currentDriver) return;
-
-  const today = new Date();
-  const days  = Array.from({length:7}, (_,i) => {
-    const d = new Date(today); d.setDate(today.getDate() - today.getDay() + i); return d;
-  });
-
-  const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const todayStr = today.toISOString().split('T')[0];
-
-  document.getElementById('sched-week-label').textContent =
-    MONTHS_EN[days[0].getMonth()] + ' ' + days[0].getDate() + ' — ' +
-    MONTHS_EN[days[6].getMonth()] + ' ' + days[6].getDate() + ', ' + days[6].getFullYear();
-
-  // Fetch schedule from Supabase
-  const url = SUPA_URL + '/rest/v1/schedules?driver_id=eq.' + currentDriver.id +
-    '&date=gte.' + days[0].toISOString().split('T')[0] +
-    '&date=lte.' + days[6].toISOString().split('T')[0];
-  let schedData = {};
-  try {
-    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    const data = await res.json();
-    data.forEach(s => { schedData[s.date] = s; });
-  } catch(e) {}
-
-  const SHIFTS = {
-    'work':    {icon:'✅', label:'Working',      color:'#10b981'},
-    'morning': {icon:'🌅', label:'Morning Shift', color:'#3b82f6'},
-    'evening': {icon:'🌙', label:'Evening Shift', color:'#a855f7'},
-    'off':     {icon:'🔴', label:'Day Off',       color:'#ef4444'},
-    'holiday': {icon:'🌴', label:'Holiday',       color:'#f59e0b'},
+function submitClock(action,lat,lng){
+  setClockBtnsBusy(true,'جاري التسجيل...');
+  var record={
+    driver_id:   DRIVER.id,
+    driver_name: DRIVER.name,
+    partner:     DRIVER.partner||null,
+    action:      action,
+    latitude:    lat,
+    longitude:   lng,
+    created_at:  new Date().toISOString()
   };
-
-  el.innerHTML = days.map(d => {
-    const ds    = d.toISOString().split('T')[0];
-    const isT   = ds === todayStr;
-    const sched = schedData[ds];
-    const sh    = sched ? SHIFTS[sched.shift_type] || SHIFTS.work : null;
-    const isWk  = d.getDay() === 5 || d.getDay() === 6;
-
-    return `<div class="shift-day" style="${isT?'border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.04)':''}">
-      <div class="sd-date">
-        <div class="sd-day">${DAYS_EN[d.getDay()]}</div>
-        <div class="sd-num" style="color:${isT?'var(--blue)':'var(--text)'}">${d.getDate()}</div>
-      </div>
-      <div class="sd-divider"></div>
-      <div class="sd-icon">${sh ? sh.icon : (isWk ? '⬜' : '—')}</div>
-      <div class="sd-info">
-        <div class="sd-type" style="color:${sh?sh.color:'var(--muted)'}">${sh ? sh.label : (isWk?'Weekend':'Not Set')}</div>
-        ${sched&&sched.shift_start ? '<div class="sd-time">'+sched.shift_start+' → '+sched.shift_end+'</div>' : ''}
-      </div>
-      ${isT ? '<div class="sd-today-badge">Today</div>' : ''}
-    </div>`;
-  }).join('');
+  sb('clockin', {
+    method:'POST',
+    headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify(record)
+  }).then(function(){
+    CLOCKINS.unshift(record);
+    saveCache();
+    computeNotifs();
+    renderCurrentTab();
+    toast(action==='clock_in'?'تم تسجيل دخولك بنجاح':'تم تسجيل خروجك بنجاح','ok');
+  }).catch(function(err){
+    console.error(err);
+    toast('فشل التسجيل — تأكد من الإنترنت وحاول مرة أخرى','err');
+    renderCurrentTab();
+  }).then(function(){
+    busyClock=false;
+  });
 }
 
-// ============================================================
-// CHECK LATE ON CLOCK IN
-// ============================================================
-async function checkLateArrival(clockInTime) {
-  if(!currentDriver) return;
-  const todayStr = clockInTime.toISOString().split('T')[0];
+/* =========================================================
+   SALARY TAB
+   ========================================================= */
+function renderSalary(){
+  var el=$('scrSalary');
+  var base=parseFloat(DRIVER.salary_base)||0;
+  var deds=deductionsOf(salMonth,salYear);
+  var totalDed=deds.reduce(function(s,d){ return s+(parseFloat(d.amount)||0); },0);
+  var net=base-totalDed;
 
-  try {
-    const url = SUPA_URL + '/rest/v1/schedules?driver_id=eq.' + currentDriver.id + '&date=eq.' + todayStr;
-    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    const data = await res.json();
+  var now=new Date();
+  var mOpts='', yOpts='';
+  for(var i=0;i<12;i++) mOpts+='<option value="'+(i+1)+'" '+((i+1)===salMonth?'selected':'')+'>'+MONTHS_AR[i]+'</option>';
+  for(var yy=now.getFullYear()-1;yy<=now.getFullYear()+1;yy++) yOpts+='<option value="'+yy+'" '+(yy===salYear?'selected':'')+'>'+yy+'</option>';
 
-    if(!data.length || !data[0].shift_start) return;
+  var html='';
+  html+='<div class="flex-between" style="margin-bottom:10px">'+
+    '<div class="sec-title" style="margin:0">راتبي</div>'+
+    '<button class="btn-refresh" onclick="refreshAll()"><i class="ti ti-refresh"></i> تحديث</button>'+
+  '</div>';
 
-    const sched = data[0];
-    const parts = sched.shift_start.split(':');
-    const schedTime = new Date(clockInTime);
-    schedTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+  html+='<div class="month-pick">'+
+    '<select id="salMonthSel" onchange="onSalChange()">'+mOpts+'</select>'+
+    '<select id="salYearSel" onchange="onSalChange()">'+yOpts+'</select>'+
+  '</div>';
 
-    const diffMins = Math.floor((clockInTime - schedTime) / 60000);
+  html+='<div class="sal-hero">'+
+    '<div class="sal-net-lbl">صافي الراتب — '+MONTHS_AR[salMonth-1]+' '+salYear+'</div>'+
+    '<div class="sal-net-val">'+fmtKD(net)+'</div>'+
+    '<div class="sal-net-cur">دينار كويتي</div>'+
+  '</div>';
 
-    if(diffMins >= 30) {
-      // Show late deduction modal
-      const sal = await getSalaryFromSupabase();
-      const base = sal ? sal.base : 0;
-      const amount = base > 0 ? (base / 26) * 0.5 : 0;
+  html+='<div class="sal-split">'+
+    '<div class="sal-box"><div class="sal-box-v" style="color:var(--green2)">'+fmtKD(base)+'</div><div class="sal-box-l">الراتب الأساسي</div></div>'+
+    '<div class="sal-box"><div class="sal-box-v" style="color:'+(totalDed>0?'var(--red2)':'var(--text)')+'">'+fmtKD(totalDed)+'</div><div class="sal-box-l">إجمالي الخصومات</div></div>'+
+  '</div>';
 
-      pendingLateDeduction = {
-        driverId: currentDriver.id,
-        reason: 'Late Arrival — تأخر عن العمل',
-        days: 0.5,
-        amount: amount,
-        date: todayStr,
-        month: clockInTime.getMonth() + 1,
-        year: clockInTime.getFullYear(),
-        lateMinutes: diffMins,
-        schedStart: sched.shift_start,
-        actualTime: clockInTime.toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'})
-      };
-
-      document.getElementById('lm-late-mins').textContent = diffMins;
-      document.getElementById('lm-sched-time').textContent = sched.shift_start;
-      document.getElementById('lm-actual-time').textContent = pendingLateDeduction.actualTime;
-      document.getElementById('lm-delay').textContent = diffMins + ' minutes';
-      document.getElementById('lm-amount').textContent = amount.toFixed(3) + ' KD';
-      document.getElementById('lateModal').classList.add('show');
-    }
-  } catch(e) { console.error(e); }
-}
-
-function dismissLateModal() {
-  document.getElementById('lateModal').classList.remove('show');
-  pendingLateDeduction = null;
-  toast('Noted — no deduction applied', 's');
-}
-
-async function confirmLateDeduction() {
-  if(!pendingLateDeduction) return;
-  document.getElementById('lateModal').classList.remove('show');
-
-  const ded = pendingLateDeduction;
-  try {
-    await fetch(SUPA_URL + '/rest/v1/deductions', {
-      method: 'POST',
-      headers: {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body: JSON.stringify({
-        driver_id: ded.driverId,
-        reason: ded.reason,
-        amount: ded.amount,
-        days: ded.days,
-        date: ded.date,
-        month: ded.month,
-        year: ded.year
-      })
-    });
-
-    // Add notification
-    addNotification({
-      type: 'deduction',
-      title: '⚠️ Half-Day Deduction Applied',
-      body: 'Late arrival by ' + ded.lateMinutes + ' min. Deduction: ' + ded.amount.toFixed(3) + ' KD\nالسبب: تأخر عن الدوام — ' + ded.amount.toFixed(3) + ' د.ك',
-      time: new Date().toLocaleTimeString('en-KW',{hour:'2-digit',minute:'2-digit'}),
-      unread: true
-    });
-
-    toast('⚠️ Half-day deduction: ' + ded.amount.toFixed(3) + ' KD', 'e');
-  } catch(e) {
-    toast('Error saving deduction', 'e');
-  }
-  pendingLateDeduction = null;
-}
-
-// ============================================================
-// SALARY SCREEN
-// ============================================================
-async function getSalaryFromSupabase() {
-  if(!currentDriver) return null;
-  try {
-    const url = SUPA_URL + '/rest/v1/drivers?id=eq.' + currentDriver.id;
-    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    const data = await res.json();
-    return data.length ? data[0] : null;
-  } catch(e) { return null; }
-}
-
-async function renderSalaryScreen() {
-  const now = new Date();
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('sal-month-label').textContent = months[now.getMonth()] + ' ' + now.getFullYear();
-
-  try {
-    // Get base salary
-    const drvData = await getSalaryFromSupabase();
-    const base = drvData ? (parseFloat(drvData.salary_base)||0) : 0;
-
-    // Get deductions
-    const url = SUPA_URL + '/rest/v1/deductions?driver_id=eq.' + currentDriver.id +
-      '&month=eq.' + (now.getMonth()+1) + '&year=eq.' + now.getFullYear();
-    const res = await fetch(url, {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    const deds = await res.json();
-    const totalDed = deds.reduce((s,d) => s+parseFloat(d.amount||0), 0);
-    const net = base - totalDed;
-
-    document.getElementById('app-sal-net').textContent  = net.toFixed(3) + ' KD';
-    document.getElementById('app-sal-base').textContent = base.toFixed(3) + ' KD';
-    document.getElementById('app-sal-ded').textContent  = '-' + totalDed.toFixed(3) + ' KD';
-    document.getElementById('app-sal-sub').textContent  = months[now.getMonth()] + ' ' + now.getFullYear();
-
-    const dedEl = document.getElementById('app-ded-list');
-    if(!deds.length) {
-      dedEl.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div><p>No deductions this month</p></div>';
-    } else {
-      dedEl.innerHTML = deds.map(d => `
-        <div class="sal-row">
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)">${d.reason}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px">${d.days===0.5?'Half Day':''+d.days+' Days'} • ${d.date}</div>
-          </div>
-          <span class="sr-r" style="color:var(--red)">-${parseFloat(d.amount).toFixed(3)}</span>
-        </div>`).join('');
-    }
-  } catch(e) {
-    document.getElementById('app-sal-net').textContent = 'Connection Error';
-  }
-}
-
-// ============================================================
-// NOTIFICATIONS
-// ============================================================
-function addNotification(notif) {
-  notif.id = Date.now();
-  notifications.unshift(notif);
-  try { localStorage.setItem('salasil_notifs_' + currentDriver?.id, JSON.stringify(notifications.slice(0,50))); } catch(e){}
-  updateNotifBadge();
-}
-
-function loadNotifications() {
-  if(!currentDriver) return;
-  try {
-    const saved = localStorage.getItem('salasil_notifs_' + currentDriver.id);
-    if(saved) notifications = JSON.parse(saved);
-  } catch(e) {}
-  updateNotifBadge();
-}
-
-function updateNotifBadge() {
-  const unread = notifications.filter(n=>n.unread).length;
-  const badge = document.getElementById('notif-badge');
-  if(badge) badge.style.display = unread > 0 ? 'block' : 'none';
-}
-
-function clearNotifs() {
-  notifications = notifications.map(n => ({...n, unread:false}));
-  try { localStorage.setItem('salasil_notifs_' + currentDriver?.id, JSON.stringify(notifications)); } catch(e){}
-  updateNotifBadge();
-  renderNotifsScreen();
-}
-
-function renderNotifsScreen() {
-  const el = document.getElementById('notifList');
-  notifications.forEach(n => { n.unread = false; });
-  updateNotifBadge();
-
-  if(!notifications.length) {
-    el.innerHTML = '<div class="empty-state"><div class="es-icon">🔔</div><p>No notifications yet</p></div>';
-    return;
+  html+='<div class="sec-title">خصومات '+MONTHS_AR[salMonth-1]+' ('+deds.length+')</div>';
+  if(!deds.length){
+    html+='<div class="card"><div class="empty"><i class="ti ti-circle-check" style="color:var(--green2);opacity:.6"></i><p>لا توجد خصومات هذا الشهر</p><div class="e-sub">راتبك كامل</div></div></div>';
+  }else{
+    html+='<div class="card">'+deds.map(function(d){
+      return '<div class="ded-item">'+
+        '<div class="ded-ic"><i class="ti ti-alert-circle"></i></div>'+
+        '<div class="ded-body"><div class="ded-reason">'+(d.reason||'خصم')+'</div>'+
+        '<div class="ded-date">'+fmtDate(d.date)+(d.days?' • '+(d.days===0.5?'نصف يوم':d.days+' يوم'):'')+'</div></div>'+
+        '<div class="ded-amt">- '+fmtKD(d.amount)+'</div>'+
+      '</div>';
+    }).join('')+'</div>';
   }
 
-  const ICONS = {
-    deduction: {bg:'rgba(239,68,68,0.12)', emoji:'💸'},
-    schedule:  {bg:'rgba(59,130,246,0.12)', emoji:'📅'},
-    attendance:{bg:'rgba(16,185,129,0.12)', emoji:'✅'},
-  };
+  html+='<div class="card card-pad" style="margin-top:12px;font-size:11px;color:var(--muted);line-height:1.7">'+
+    '<i class="ti ti-info-circle" style="color:var(--blue2)"></i> '+
+    'تُحتسب قيمة خصم اليوم الواحد = الراتب الأساسي ÷ 26 يوم عمل. للاستفسار عن أي خصم تواصل مع الإدارة.'+
+  '</div>';
 
-  el.innerHTML = notifications.map(n => {
-    const ic = ICONS[n.type] || {bg:'rgba(100,116,139,0.12)', emoji:'🔔'};
-    return `<div class="notif-item ${n.unread?'unread':''}">
-      <div class="ni-icon" style="background:${ic.bg}">${ic.emoji}</div>
-      <div class="ni-content">
-        <div class="ni-title">${n.title}</div>
-        <div class="ni-body">${n.body}</div>
-        <div class="ni-time">${n.time}</div>
-      </div>
-    </div>`;
-  }).join('');
+  el.innerHTML=html;
+}
+function onSalChange(){
+  salMonth=parseInt($('salMonthSel').value,10);
+  salYear=parseInt($('salYearSel').value,10);
+  renderSalary();
 }
 
+/* =========================================================
+   PROFILE TAB
+   ========================================================= */
+function renderProfile(){
+  var el=$('scrProfile');
+  var d=DRIVER;
+  var lic=expiryStatus(d.license);
+  var civilExp = d.civil_expiry || d.residency || d.iqama_expiry;
+  var civExpSt = civilExp?expiryStatus(civilExp):null;
 
+  var html='';
+
+  html+='<div class="card card-pad" style="text-align:center;padding:22px 16px">'+
+    '<div class="ab-av" style="width:74px;height:74px;border-radius:22px;font-size:26px;margin:0 auto 12px;background:'+avColor(d.id)+'">'+initials(d.name)+'</div>'+
+    '<div style="font-size:19px;font-weight:900">'+(d.name||'—')+'</div>'+
+    '<div style="font-size:12px;color:var(--muted);margin-top:3px" class="mono">'+d.id+'</div>'+
+    '<div style="margin-top:9px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">'+
+      (d.partner?'<span class="badge b-blue"><i class="ti ti-building"></i> '+d.partner+'</span>':'')+
+      (d.nationality?'<span class="badge b-gray"><i class="ti ti-flag"></i> '+d.nationality+'</span>':'')+
+    '</div>'+
+  '</div>';
+
+  html+='<div class="sec-title">الرخصة والوثائق</div>';
+  html+='<div class="card">';
+  html+=infoRow('ti-id','رخصة القيادة', d.license?fmtDate(d.license):'غير مسجّلة', '<span class="badge '+lic.cls+'">'+lic.label+'</span>', false);
+  if(civilExp){
+    html+=infoRow('ti-credit-card','انتهاء الإقامة', fmtDate(civilExp), '<span class="badge '+civExpSt.cls+'">'+civExpSt.label+'</span>', false);
+  }
+  if(d.civil) html+=infoRow('ti-id-badge-2','الرقم المدني', d.civil, '', true);
+  if(d.health!==undefined && d.health!==null && d.health!==''){
+    html+=infoRow('ti-heart','البطاقة الصحية', d.health==='available'?'متاحة':'غير متاحة',
+      '<span class="badge '+(d.health==='available'?'b-green':'b-gray')+'">'+(d.health==='available'?'سارية':'—')+'</span>', false);
+  }
+  html+='</div>';
+
+  html+='<div class="sec-title">المركبة والمعدات</div>';
+  html+='<div class="card">';
+  html+=infoRow('ti-car','رقم السيارة', d.car||'غير مسجّل','',true);
+  if(d.device) html+=infoRow('ti-device-mobile','رقم الجهاز', d.device,'',true);
+  if(d.petrol) html+=infoRow('ti-gas-station','بطاقة البترول', d.petrol,'',true);
+  html+='</div>';
+
+  html+='<div class="sec-title">البيانات الشخصية</div>';
+  html+='<div class="card">';
+  html+=infoRow('ti-phone','رقم الهاتف', d.sim||'غير مسجّل','',true);
+  if(d.age) html+=infoRow('ti-cake','العمر', d.age+' سنة','',false);
+  var sd = d.start_date||d.startdate||d.startDate;
+  if(sd) html+=infoRow('ti-calendar-plus','تاريخ الانضمام', fmtDate(sd),'',false);
+  html+=infoRow('ti-wallet','الراتب الأساسي', fmtKD(d.salary_base)+' د.ك','',false);
+  html+='</div>';
+
+  html+='<div style="margin-top:18px;display:flex;flex-direction:column;gap:9px">'+
+    '<button class="btn-sec" onclick="refreshAll();toast(\'تم تحديث البيانات\',\'ok\')"><i class="ti ti-refresh"></i> تحديث البيانات</button>'+
+    '<button class="btn-sec btn-danger" onclick="logout()"><i class="ti ti-logout"></i> تسجيل الخروج</button>'+
+  '</div>';
+
+  html+='<div style="text-align:center;font-size:10px;color:var(--muted2);margin-top:18px;line-height:1.7">'+
+    'شركة السلاسل لإدارة السائقين<br>الإصدار 1.0 • متصل بنظام الإدارة'+
+  '</div>';
+
+  el.innerHTML=html;
+}
+
+function infoRow(icon,label,value,extra,mono){
+  return '<div class="irow">'+
+    '<div class="irow-ic"><i class="ti '+icon+'"></i></div>'+
+    '<div class="irow-body"><div class="irow-lbl">'+label+'</div>'+
+    '<div class="irow-val '+(mono?'mono':'')+'">'+(value||'—')+'</div></div>'+
+    (extra||'')+
+  '</div>';
+}
+
+/* =========================================================
+   NETWORK / INIT
+   ========================================================= */
+window.addEventListener('online',  function(){ updateOfflineBar(true); if(DRIVER) refreshAll(); });
+window.addEventListener('offline', function(){ updateOfflineBar(false); });
+
+window.addEventListener('DOMContentLoaded',function(){
+  ['inpCode','inpPhone'].forEach(function(id){
+    var e=$(id);
+    if(e) e.addEventListener('keydown',function(ev){ if(ev.key==='Enter') doLogin(); });
+  });
+  var ic=$('inpCode');
+  if(ic) ic.addEventListener('input',function(e){ e.target.value=e.target.value.toUpperCase(); });
+});
+
+/* وضع المعاينة — افتح الرابط مع ?demo لرؤية التطبيق ببيانات تجريبية */
+function runDemo(){
+  var today=todayStr();
+  var nowM=new Date().getMonth()+1, nowY=new Date().getFullYear();
+  DRIVER={id:'SA1001',name:'ASHRAF MOHAMED',partner:'Keeta',sim:'94041969',salary_base:160,
+    car:'/ 23 / 72401',license:'2026-06-25',civil:'298092402529',device:'10HF9FF5310009C',
+    petrol:'7005430001001644977',nationality:'EGYPT',age:28,start_date:'2025-12-23',health:'available'};
+  CLOCKINS=[
+    {driver_id:'SA1001',action:'clock_in', created_at:new Date(Date.now()-3600000*4).toISOString(),latitude:29.3759,longitude:47.9774},
+    {driver_id:'SA1001',action:'clock_out',created_at:new Date(Date.now()-86400000+3600000*9).toISOString(),latitude:29.3759,longitude:47.9774},
+    {driver_id:'SA1001',action:'clock_in', created_at:new Date(Date.now()-86400000).toISOString(),latitude:29.3759,longitude:47.9774}
+  ];
+  DEDUCTIONS=[
+    {id:'D1',driver_id:'SA1001',reason:'تأخير عن الشفت',amount:6.154,days:1,  date:today,month:nowM,year:nowY},
+    {id:'D2',driver_id:'SA1001',reason:'غياب نصف يوم',  amount:3.077,days:0.5,date:today,month:nowM,year:nowY}
+  ];
+  SCHEDULES=[{driver_id:'SA1001',date:today,shift_type:'شفت صباحي',shift_start:'08:00',shift_end:'16:00'}];
+  enterApp(true);
+  computeNotifs();
+  renderCurrentTab();
+}
+
+function init(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(function(e){ console.warn('SW',e); });
+  }
+  updateOfflineBar(navigator.onLine);
+  if(location.search.indexOf('demo')>=0){ runDemo(); return; }
+  tryAutoLogin();
+}
+init();
 </script>
 </body>
 </html>
