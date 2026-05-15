@@ -36,8 +36,16 @@ button,input,select{font-family:'Cairo',sans-serif}
 /* ===================== LOGIN ===================== */
 #loginScreen{
   min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:32px 22px;background:radial-gradient(circle at 50% 0%,rgba(59,130,246,0.12),transparent 55%),var(--bg);
+  padding:32px 22px;position:relative;
+  background:radial-gradient(circle at 50% 0%,rgba(59,130,246,0.12),transparent 55%),var(--bg);
 }
+.lang-switch{
+  position:absolute;top:14px;inset-inline-end:16px;z-index:10;
+  background:var(--s1);border:1px solid var(--br);border-radius:20px;
+  padding:7px 13px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:5px;
+}
+.lang-switch i{font-size:15px}
 .login-logo{
   width:84px;height:84px;border-radius:24px;background:linear-gradient(135deg,var(--blue),#2563eb);
   display:grid;place-items:center;margin-bottom:18px;box-shadow:0 12px 36px rgba(59,130,246,0.35);
@@ -54,10 +62,11 @@ button,input,select{font-family:'Cairo',sans-serif}
 .field{margin-bottom:14px}
 .field label{display:block;font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:6px;letter-spacing:.3px}
 .field .inp-wrap{position:relative}
-.field .inp-wrap i{position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:18px}
+.field .inp-wrap i{position:absolute;inset-inline-end:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:18px}
 .field input{
   width:100%;background:var(--s2);border:1.5px solid var(--br);border-radius:var(--r);
-  padding:13px 42px 13px 14px;color:var(--text);font-size:15px;font-weight:600;outline:none;transition:border-color .15s;
+  padding:13px;padding-inline-end:42px;padding-inline-start:14px;
+  color:var(--text);font-size:15px;font-weight:600;outline:none;transition:border-color .15s;
 }
 .field input:focus{border-color:var(--blue)}
 .field input::placeholder{color:var(--muted2);font-weight:400}
@@ -69,7 +78,7 @@ button,input,select{font-family:'Cairo',sans-serif}
 .btn-primary:active{transform:scale(.98)}
 .btn-primary:disabled{opacity:.6;cursor:not-allowed}
 .remember{display:flex;align-items:center;gap:8px;margin:4px 0 18px;font-size:12px;color:var(--muted)}
-.remember input{width:17px;height:17px;accent-color:var(--blue)}
+.remember input{width:17px;height:17px;accent-color:var(--blue);flex-shrink:0}
 .login-err{
   background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--red2);
   border-radius:10px;padding:10px 13px;font-size:12px;font-weight:600;margin-bottom:14px;
@@ -81,7 +90,7 @@ button,input,select{font-family:'Cairo',sans-serif}
 #appScreen{min-height:100vh;display:flex;flex-direction:column;padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 .appbar{
   position:sticky;top:0;z-index:50;background:rgba(13,17,23,0.92);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--br);padding:12px 16px;display:flex;align-items:center;gap:11px;
+  border-bottom:1px solid var(--br);padding:12px 16px;display:flex;align-items:center;gap:10px;
 }
 .ab-av{
   width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
@@ -90,13 +99,14 @@ button,input,select{font-family:'Cairo',sans-serif}
 .ab-info{flex:1;min-width:0}
 .ab-hi{font-size:11px;color:var(--muted)}
 .ab-name{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ab-bell{
+.ab-lang,.ab-bell{
   position:relative;width:42px;height:42px;border-radius:13px;background:var(--s1);
   border:1px solid var(--br);display:grid;place-items:center;cursor:pointer;color:var(--text);flex-shrink:0;
 }
+.ab-lang{font-size:14px;font-weight:800}
 .ab-bell i{font-size:21px}
 .bell-dot{
-  position:absolute;top:7px;left:8px;min-width:17px;height:17px;padding:0 4px;background:var(--red);
+  position:absolute;top:7px;inset-inline-start:8px;min-width:17px;height:17px;padding:0 4px;background:var(--red);
   border-radius:9px;font-size:10px;font-weight:800;color:#fff;display:grid;place-items:center;border:2px solid var(--bg);
 }
 
@@ -117,7 +127,7 @@ button,input,select{font-family:'Cairo',sans-serif}
 }
 .hero.out{background:linear-gradient(135deg,#475569,#334155)}
 .hero::after{
-  content:"";position:absolute;left:-30px;top:-30px;width:140px;height:140px;
+  content:"";position:absolute;inset-inline-start:-30px;top:-30px;width:140px;height:140px;
   background:rgba(255,255,255,0.08);border-radius:50%;
 }
 .hero-label{font-size:12px;opacity:.85;font-weight:600}
@@ -172,7 +182,7 @@ button,input,select{font-family:'Cairo',sans-serif}
   border-radius:var(--r3);padding:22px 20px;background:linear-gradient(135deg,#065f46,#047857);
   color:#fff;text-align:center;position:relative;overflow:hidden;
 }
-.sal-hero::after{content:"";position:absolute;right:-40px;bottom:-40px;width:150px;height:150px;background:rgba(255,255,255,.07);border-radius:50%}
+.sal-hero::after{content:"";position:absolute;inset-inline-end:-40px;bottom:-40px;width:150px;height:150px;background:rgba(255,255,255,.07);border-radius:50%}
 .sal-net-lbl{font-size:13px;opacity:.85;font-weight:600}
 .sal-net-val{font-size:38px;font-weight:900;margin:4px 0;line-height:1}
 .sal-net-cur{font-size:15px;opacity:.85}
@@ -224,10 +234,8 @@ button,input,select{font-family:'Cairo',sans-serif}
 .empty .e-sub{font-size:11px;color:var(--muted2);margin-top:4px}
 
 /* loader */
-.loader{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;gap:13px;color:var(--muted)}
 .spinner{width:34px;height:34px;border:3px solid var(--s2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loader p{font-size:12px}
 
 /* btn secondary */
 .btn-sec{
@@ -305,47 +313,49 @@ button,input,select{font-family:'Cairo',sans-serif}
 <body>
 
 <!-- ============ OFFLINE BAR ============ -->
-<div class="offline-bar" id="offlineBar"><i class="ti ti-wifi-off"></i> لا يوجد اتصال بالإنترنت — يتم عرض آخر بيانات محفوظة</div>
+<div class="offline-bar" id="offlineBar"><i class="ti ti-wifi-off"></i> <span data-i18n="offline">لا يوجد اتصال بالإنترنت</span></div>
 
 <!-- ============ LOGIN SCREEN ============ -->
 <div id="loginScreen" class="hide">
+  <button class="lang-switch" id="loginLang" onclick="toggleLang()"><i class="ti ti-language"></i> <span id="loginLangTxt">English</span></button>
   <div class="login-logo"><i class="ti ti-steering-wheel"></i></div>
-  <div class="login-title">شركة السلاسل</div>
-  <div class="login-sub">تطبيق السائقين — Al-Salasil Drivers</div>
+  <div class="login-title" data-i18n="company">شركة السلاسل</div>
+  <div class="login-sub" data-i18n="app_sub">تطبيق السائقين</div>
 
   <div class="login-card">
-    <h2><i class="ti ti-login-2" style="color:var(--blue)"></i> تسجيل الدخول</h2>
-    <p class="lc-hint">ادخل كود الموظف ورقم هاتفك المسجّل لدى الإدارة</p>
+    <h2><i class="ti ti-login-2" style="color:var(--blue)"></i> <span data-i18n="login_title">تسجيل الدخول</span></h2>
+    <p class="lc-hint" data-i18n="login_hint">ادخل كود الموظف ورقم هاتفك المسجّل لدى الإدارة</p>
 
     <div class="login-err hide" id="loginErr"><i class="ti ti-alert-triangle"></i><span id="loginErrTxt"></span></div>
 
     <div class="field">
-      <label>كود الموظف</label>
+      <label data-i18n="emp_code">كود الموظف</label>
       <div class="inp-wrap">
         <i class="ti ti-id-badge-2"></i>
-        <input type="text" id="inpCode" placeholder="مثال: SA1001" autocomplete="off" autocapitalize="characters">
+        <input type="text" id="inpCode" data-i18n-ph="code_ph" placeholder="مثال: SA1001" autocomplete="off" autocapitalize="characters">
       </div>
     </div>
     <div class="field">
-      <label>رقم الهاتف</label>
+      <label data-i18n="phone">رقم الهاتف</label>
       <div class="inp-wrap">
         <i class="ti ti-phone"></i>
-        <input type="tel" id="inpPhone" placeholder="مثال: 9XXXXXXXX" autocomplete="off" inputmode="numeric">
+        <input type="tel" id="inpPhone" data-i18n-ph="phone_ph" placeholder="مثال: 9XXXXXXXX" autocomplete="off" inputmode="numeric">
       </div>
     </div>
 
     <label class="remember">
       <input type="checkbox" id="inpRemember" checked>
-      تذكّرني على هذا الجهاز
+      <span data-i18n="remember">تذكّرني على هذا الجهاز</span>
     </label>
 
     <button class="btn-primary" id="loginBtn" onclick="doLogin()">
-      <i class="ti ti-login-2"></i> دخول
+      <i class="ti ti-login-2"></i> <span data-i18n="login_btn">دخول</span>
     </button>
   </div>
 
   <div class="login-foot">
-    إذا واجهت مشكلة في الدخول تواصل مع الإدارة<br>© شركة السلاسل لإدارة السائقين
+    <span data-i18n="login_foot">إذا واجهت مشكلة في الدخول تواصل مع الإدارة</span><br>
+    <span data-i18n="company_full">© شركة السلاسل لإدارة السائقين</span>
   </div>
 </div>
 
@@ -358,6 +368,7 @@ button,input,select{font-family:'Cairo',sans-serif}
       <div class="ab-hi" id="abHi">أهلاً</div>
       <div class="ab-name" id="abName">—</div>
     </div>
+    <div class="ab-lang" id="abLang" onclick="toggleLang()">EN</div>
     <div class="ab-bell" onclick="openNotif()">
       <i class="ti ti-bell"></i>
       <span class="bell-dot hide" id="bellDot">0</span>
@@ -371,16 +382,16 @@ button,input,select{font-family:'Cairo',sans-serif}
 
   <div class="bottomnav">
     <button class="navbtn on" id="navHome" onclick="switchTab('home')">
-      <i class="ti ti-home-2"></i><span>الرئيسية</span>
+      <i class="ti ti-home-2"></i><span data-i18n="nav_home">الرئيسية</span>
     </button>
     <button class="navbtn" id="navAttendance" onclick="switchTab('attendance')">
-      <i class="ti ti-map-pin"></i><span>الحضور</span>
+      <i class="ti ti-map-pin"></i><span data-i18n="nav_attendance">الحضور</span>
     </button>
     <button class="navbtn" id="navSalary" onclick="switchTab('salary')">
-      <i class="ti ti-wallet"></i><span>راتبي</span>
+      <i class="ti ti-wallet"></i><span data-i18n="nav_salary">راتبي</span>
     </button>
     <button class="navbtn" id="navProfile" onclick="switchTab('profile')">
-      <i class="ti ti-user"></i><span>بياناتي</span>
+      <i class="ti ti-user"></i><span data-i18n="nav_profile">بياناتي</span>
     </button>
   </div>
 </div>
@@ -390,7 +401,7 @@ button,input,select{font-family:'Cairo',sans-serif}
 <div class="sheet" id="notifSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-head">
-    <h3><i class="ti ti-bell" style="color:var(--amber2)"></i> التنبيهات</h3>
+    <h3><i class="ti ti-bell" style="color:var(--amber2)"></i> <span data-i18n="notifications">التنبيهات</span></h3>
     <button class="sheet-close" onclick="closeNotif()"><i class="ti ti-x"></i></button>
   </div>
   <div class="sheet-body" id="notifBody"></div>
@@ -401,7 +412,7 @@ button,input,select{font-family:'Cairo',sans-serif}
 
 <script>
 /* =========================================================
-   شركة السلاسل - تطبيق السائقين
+   شركة السلاسل - تطبيق السائقين  |  Al-Salasil Drivers App
    متصل بقاعدة بيانات Supabase نفسها المستخدمة في نظام المدير
    ========================================================= */
 
@@ -410,9 +421,278 @@ var SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
 var SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 var SK_SESSION = 'sl_driver_session_v1';
 var SK_CACHE   = 'sl_driver_cache_v1';
+var SK_LANG    = 'sl_driver_lang_v1';
 
-var MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+var MONTHS = {
+  ar: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
+  en: ['January','February','March','April','May','June','July','August','September','October','November','December']
+};
 var AV_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#a855f7','#ec4899','#14b8a6','#f97316','#6366f1','#0ea5e9'];
+
+/* ---------- I18N ---------- */
+var I18N = {
+  ar: {
+    company:'شركة السلاسل',
+    app_sub:'تطبيق السائقين — Al-Salasil Drivers',
+    login_title:'تسجيل الدخول',
+    login_hint:'ادخل كود الموظف ورقم هاتفك المسجّل لدى الإدارة',
+    emp_code:'كود الموظف',
+    phone:'رقم الهاتف',
+    remember:'تذكّرني على هذا الجهاز',
+    login_btn:'دخول',
+    login_foot:'إذا واجهت مشكلة في الدخول تواصل مع الإدارة',
+    company_full:'© شركة السلاسل لإدارة السائقين',
+    code_ph:'مثال: SA1001',
+    phone_ph:'مثال: 9XXXXXXXX',
+    verifying:'جاري التحقق...',
+    err_no_code:'من فضلك ادخل كود الموظف',
+    err_bad_phone:'من فضلك ادخل رقم هاتف صحيح',
+    err_not_found:'كود الموظف غير موجود — تأكد من الكود أو تواصل مع الإدارة',
+    err_phone_mismatch:'رقم الهاتف لا يطابق المسجّل لهذا الكود',
+    err_server:'تعذّر الاتصال بالخادم — تأكد من الإنترنت وحاول مرة أخرى',
+    offline:'لا يوجد اتصال بالإنترنت — يتم عرض آخر بيانات محفوظة',
+    greet_morning:'صباح الخير',
+    greet_evening:'مساء الخير',
+    nav_home:'الرئيسية',
+    nav_attendance:'الحضور',
+    nav_salary:'راتبي',
+    nav_profile:'بياناتي',
+    notifications:'التنبيهات',
+    no_notifs:'لا توجد تنبيهات',
+    all_good:'كل شيء على ما يرام',
+    status_now:'حالتك الآن',
+    clocked_in:'داخل الآن',
+    clocked_out:'خارج الدوام',
+    clocked_in_at:'سجّلت دخولك',
+    last_out_at:'آخر تسجيل خروج',
+    not_clocked_today:'لم تسجّل اليوم بعد',
+    clock_in:'تسجيل دخول',
+    clock_out:'تسجيل خروج',
+    gps_hint_home:'سيتم تسجيل موقعك الحالي مع الحضور',
+    gps_hint_att:'تأكد من تفعيل خدمة الموقع GPS',
+    lic_expired_t:'رخصة القيادة منتهية / شارفت على الانتهاء',
+    lic_warn_t:'رخصة القيادة قاربت على الانتهاء',
+    lic_renew:'يرجى التجديد',
+    net_salary_month:'صافي راتب الشهر',
+    month_deductions:'خصومات الشهر',
+    today_shift:'مناوبة اليوم',
+    shift:'مناوبة',
+    no_shift_time:'لم يُحدد الوقت',
+    today:'اليوم',
+    no_shift_today:'لا توجد مناوبة مجدولة لليوم',
+    today_attendance:'حضور اليوم',
+    no_clock_today:'لم تسجّل دخول أو خروج اليوم بعد',
+    location:'الموقع',
+    no_location:'بدون موقع',
+    attendance_reg:'تسجيل الحضور',
+    refresh:'تحديث',
+    last_record:'آخر تسجيل:',
+    no_records:'لا توجد تسجيلات',
+    attendance_log:'سجل الحضور',
+    no_attendance_yet:'لا توجد تسجيلات حضور بعد',
+    clock_to_see:'سجّل دخولك ليظهر هنا',
+    locating:'جاري تحديد الموقع...',
+    registering:'جاري التسجيل...',
+    no_geo:'جهازك لا يدعم تحديد الموقع — سيتم التسجيل بدون موقع',
+    geo_fail:'تعذّر تحديد الموقع — سيتم التسجيل بدون موقع',
+    clock_in_ok:'تم تسجيل دخولك بنجاح',
+    clock_out_ok:'تم تسجيل خروجك بنجاح',
+    clock_fail:'فشل التسجيل — تأكد من الإنترنت وحاول مرة أخرى',
+    my_salary:'راتبي',
+    net_salary:'صافي الراتب',
+    kwd_full:'دينار كويتي',
+    base_salary:'الراتب الأساسي',
+    total_deductions:'إجمالي الخصومات',
+    no_deductions:'لا توجد خصومات هذا الشهر',
+    full_salary:'راتبك كامل',
+    salary_note:'تُحتسب قيمة خصم اليوم الواحد = الراتب الأساسي ÷ 26 يوم عمل. للاستفسار عن أي خصم تواصل مع الإدارة.',
+    deduction_label:'خصم',
+    sec_license:'الرخصة والوثائق',
+    sec_vehicle:'المركبة والمعدات',
+    sec_personal:'البيانات الشخصية',
+    driving_license:'رخصة القيادة',
+    not_registered_f:'غير مسجّلة',
+    not_registered_m:'غير مسجّل',
+    residency_expiry:'انتهاء الإقامة',
+    civil_id:'الرقم المدني',
+    health_card:'البطاقة الصحية',
+    available:'متاحة',
+    not_available:'غير متاحة',
+    valid_short:'سارية',
+    car_number:'رقم السيارة',
+    device_number:'رقم الجهاز',
+    petrol_card:'بطاقة البترول',
+    age:'العمر',
+    join_date:'تاريخ الانضمام',
+    kwd:'د.ك',
+    refresh_data:'تحديث البيانات',
+    data_refreshed:'تم تحديث البيانات',
+    logout:'تسجيل الخروج',
+    logout_confirm:'تسجيل الخروج من التطبيق؟',
+    app_footer1:'شركة السلاسل لإدارة السائقين',
+    app_footer2:'الإصدار 1.0 • متصل بنظام الإدارة',
+    exp_undefined:'غير محدد',
+    exp_expired:'منتهية',
+    exp_valid:'سارية',
+    ntf_lic_expired_t:'رخصة القيادة منتهية',
+    ntf_lic_expired_suffix:'. يرجى التجديد فوراً وإبلاغ الإدارة.',
+    ntf_lic_prefix:'رخصتك ',
+    ntf_important:'مهم',
+    ntf_lic_warn_t:'رخصة القيادة قاربت على الانتهاء',
+    ntf_alert:'تنبيه',
+    ntf_shift_today:'مناوبة اليوم',
+    ntf_shift_next:'مناوبتك القادمة',
+    ntf_schedule:'الجدول',
+    ntf_no_clock_t:'لم تسجّل حضورك اليوم',
+    ntf_no_clock_d:'لا تنسَ تسجيل الدخول عند بداية الشفت من صفحة الحضور.',
+    days_left:function(n){ return n+' يوم متبقي'; },
+    expired_since:function(n){ return 'منتهية منذ '+n+' يوم'; },
+    expires_in:function(n){ return 'تنتهي خلال '+n+' يوم'; },
+    lic_days_remaining:function(n){ return 'باقي '+n+' يوم على انتهاء الرخصة'; },
+    ntf_lic_warn_d:function(n){ return 'تنتهي رخصتك خلال '+n+' يوم. خطّط للتجديد مبكراً.'; },
+    n_deductions:function(n){ return n+' خصم'; },
+    ntf_ded_t:function(n){ return 'خصومات هذا الشهر ('+n+')'; },
+    ntf_ded_d:function(m,tot){ return 'إجمالي الخصومات على راتب شهر '+m+': '+tot+' د.ك. راجع تفاصيلها في صفحة راتبي.'; },
+    deductions_title:function(m,n){ return 'خصومات '+m+' ('+n+')'; },
+    day_count:function(n){ return n===0.5 ? 'نصف يوم' : n+' يوم'; },
+    age_years:function(n){ return n+' سنة'; }
+  },
+  en: {
+    company:'Al-Salasil Co.',
+    app_sub:'Drivers App — تطبيق السائقين',
+    login_title:'Sign In',
+    login_hint:'Enter your employee code and the phone number registered with management',
+    emp_code:'Employee Code',
+    phone:'Phone Number',
+    remember:'Remember me on this device',
+    login_btn:'Sign In',
+    login_foot:'If you have trouble signing in, contact management',
+    company_full:'© Al-Salasil Driver Management',
+    code_ph:'e.g. SA1001',
+    phone_ph:'e.g. 9XXXXXXXX',
+    verifying:'Verifying...',
+    err_no_code:'Please enter your employee code',
+    err_bad_phone:'Please enter a valid phone number',
+    err_not_found:'Employee code not found — check the code or contact management',
+    err_phone_mismatch:'The phone number does not match the one registered for this code',
+    err_server:'Could not connect to the server — check your internet and try again',
+    offline:'No internet connection — showing last saved data',
+    greet_morning:'Good morning',
+    greet_evening:'Good evening',
+    nav_home:'Home',
+    nav_attendance:'Attendance',
+    nav_salary:'Salary',
+    nav_profile:'Profile',
+    notifications:'Notifications',
+    no_notifs:'No notifications',
+    all_good:'Everything looks good',
+    status_now:'Your status now',
+    clocked_in:'Clocked In',
+    clocked_out:'Off Duty',
+    clocked_in_at:'Clocked in at',
+    last_out_at:'Last clock-out at',
+    not_clocked_today:'Not clocked in today yet',
+    clock_in:'Clock In',
+    clock_out:'Clock Out',
+    gps_hint_home:'Your current location is recorded with attendance',
+    gps_hint_att:'Make sure GPS location is enabled',
+    lic_expired_t:'Driving license expired / about to expire',
+    lic_warn_t:'Driving license is about to expire',
+    lic_renew:'please renew',
+    net_salary_month:'Net salary this month',
+    month_deductions:'Deductions this month',
+    today_shift:'Today shift',
+    shift:'Shift',
+    no_shift_time:'Time not set',
+    today:'Today',
+    no_shift_today:'No shift scheduled for today',
+    today_attendance:'Today attendance',
+    no_clock_today:'You have not clocked in or out today yet',
+    location:'Location',
+    no_location:'no location',
+    attendance_reg:'Attendance',
+    refresh:'Refresh',
+    last_record:'Last record:',
+    no_records:'No records',
+    attendance_log:'Attendance log',
+    no_attendance_yet:'No attendance records yet',
+    clock_to_see:'Clock in to see it here',
+    locating:'Getting location...',
+    registering:'Recording...',
+    no_geo:'Your device does not support location — recording without location',
+    geo_fail:'Could not get location — recording without location',
+    clock_in_ok:'Clocked in successfully',
+    clock_out_ok:'Clocked out successfully',
+    clock_fail:'Recording failed — check your internet and try again',
+    my_salary:'My Salary',
+    net_salary:'Net Salary',
+    kwd_full:'Kuwaiti Dinar',
+    base_salary:'Base Salary',
+    total_deductions:'Total Deductions',
+    no_deductions:'No deductions this month',
+    full_salary:'Your salary is complete',
+    salary_note:'One-day deduction = base salary divided by 26 working days. For any deduction inquiry, contact management.',
+    deduction_label:'deduction',
+    sec_license:'License & Documents',
+    sec_vehicle:'Vehicle & Equipment',
+    sec_personal:'Personal Details',
+    driving_license:'Driving License',
+    not_registered_f:'not registered',
+    not_registered_m:'not registered',
+    residency_expiry:'Residency Expiry',
+    civil_id:'Civil ID',
+    health_card:'Health Card',
+    available:'Available',
+    not_available:'Not available',
+    valid_short:'Valid',
+    car_number:'Car Number',
+    device_number:'Device Number',
+    petrol_card:'Petrol Card',
+    age:'Age',
+    join_date:'Join Date',
+    kwd:'KWD',
+    refresh_data:'Refresh data',
+    data_refreshed:'Data refreshed',
+    logout:'Sign Out',
+    logout_confirm:'Sign out of the app?',
+    app_footer1:'Al-Salasil Driver Management',
+    app_footer2:'Version 1.0 • Connected to management system',
+    exp_undefined:'Not set',
+    exp_expired:'Expired',
+    exp_valid:'Valid',
+    ntf_lic_expired_t:'Driving license expired',
+    ntf_lic_expired_suffix:'. Please renew it immediately and inform management.',
+    ntf_lic_prefix:'Your license ',
+    ntf_important:'Important',
+    ntf_lic_warn_t:'Driving license about to expire',
+    ntf_alert:'Alert',
+    ntf_shift_today:'Today shift',
+    ntf_shift_next:'Your next shift',
+    ntf_schedule:'Schedule',
+    ntf_no_clock_t:'You have not clocked in today',
+    ntf_no_clock_d:'Do not forget to clock in at the start of your shift from the Attendance page.',
+    days_left:function(n){ return n+' day'+(n!==1?'s':'')+' left'; },
+    expired_since:function(n){ return 'expired '+n+' day'+(n!==1?'s':'')+' ago'; },
+    expires_in:function(n){ return 'expires in '+n+' day'+(n!==1?'s':''); },
+    lic_days_remaining:function(n){ return n+' day'+(n!==1?'s':'')+' remaining on your license'; },
+    ntf_lic_warn_d:function(n){ return 'Your license expires in '+n+' day'+(n!==1?'s':'')+'. Plan to renew it early.'; },
+    n_deductions:function(n){ return n+' deduction'+(n!==1?'s':''); },
+    ntf_ded_t:function(n){ return 'Deductions this month ('+n+')'; },
+    ntf_ded_d:function(m,tot){ return 'Total deductions on '+m+' salary: '+tot+' KWD. See details in the My Salary page.'; },
+    deductions_title:function(m,n){ return m+' deductions ('+n+')'; },
+    day_count:function(n){ return n===0.5 ? 'half day' : n+' day'+(n!==1?'s':''); },
+    age_years:function(n){ return n+(n===1?' year':' years'); }
+  }
+};
+
+var LANG = (function(){ try{ return localStorage.getItem(SK_LANG)==='en' ? 'en' : 'ar'; }catch(e){ return 'ar'; } })();
+
+function t(key){
+  var v = (I18N[LANG] && I18N[LANG][key]);
+  if(v===undefined) v = I18N.ar[key];
+  if(typeof v === 'function') return v.apply(null, Array.prototype.slice.call(arguments,1));
+  return v!==undefined ? v : key;
+}
 
 /* ---------- STATE ---------- */
 var DRIVER     = null;
@@ -437,37 +717,64 @@ function avColor(seed){
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function fmtKD(n){ return (parseFloat(n)||0).toFixed(3); }
 function fmtTime(d){
-  try{ return new Date(d).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; }
+  try{ return new Date(d).toLocaleTimeString(LANG==='ar'?'ar-EG':'en-GB',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; }
 }
 function fmtDate(d){
   if(!d) return '—';
   try{
     var dt=new Date(d);
     if(isNaN(dt.getTime())) return d;
-    return dt.getDate()+' '+MONTHS_AR[dt.getMonth()]+' '+dt.getFullYear();
+    return dt.getDate()+' '+MONTHS[LANG][dt.getMonth()]+' '+dt.getFullYear();
   }catch(e){ return d; }
 }
 function fmtDateTime(d){ return fmtDate(d)+' • '+fmtTime(d); }
 
 function toast(msg, type){
   type = type||'info';
-  var t=$('toast'); $('toastTxt').textContent=msg;
-  t.className='toast t-'+type+' show';
-  var ic=t.querySelector('i');
+  var el=$('toast'); $('toastTxt').textContent=msg;
+  el.className='toast t-'+type+' show';
+  var ic=el.querySelector('i');
   ic.className = type==='ok'?'ti ti-circle-check':type==='err'?'ti ti-alert-triangle':'ti ti-info-circle';
-  clearTimeout(t._tm); t._tm=setTimeout(function(){ t.classList.remove('show'); },2800);
+  clearTimeout(el._tm); el._tm=setTimeout(function(){ el.classList.remove('show'); },2800);
 }
 
-/* حساب حالة الرخصة / الإقامة بالأيام المتبقية */
+/* حالة الرخصة / الإقامة */
 function expiryStatus(dateStr){
-  if(!dateStr) return {cls:'b-gray',label:'غير محدد',days:null,level:'none'};
+  if(!dateStr) return {cls:'b-gray',label:t('exp_undefined'),days:null,level:'none'};
   var dt=new Date(dateStr);
-  if(isNaN(dt.getTime())) return {cls:'b-gray',label:'غير محدد',days:null,level:'none'};
+  if(isNaN(dt.getTime())) return {cls:'b-gray',label:t('exp_undefined'),days:null,level:'none'};
   var days = Math.floor((dt - Date.now())/86400000);
-  if(days < 0)   return {cls:'b-red',  label:'منتهية',          days:days,level:'bad'};
-  if(days <= 30) return {cls:'b-red',  label:days+' يوم متبقي', days:days,level:'bad'};
-  if(days <= 90) return {cls:'b-amber',label:days+' يوم متبقي', days:days,level:'warn'};
-  return {cls:'b-green',label:'سارية',days:days,level:'ok'};
+  if(days < 0)   return {cls:'b-red',  label:t('exp_expired'),  days:days,level:'bad'};
+  if(days <= 30) return {cls:'b-red',  label:t('days_left',days),days:days,level:'bad'};
+  if(days <= 90) return {cls:'b-amber',label:t('days_left',days),days:days,level:'warn'};
+  return {cls:'b-green',label:t('exp_valid'),days:days,level:'ok'};
+}
+
+/* ---------- I18N APPLY ---------- */
+function applyStaticI18n(){
+  var els=document.querySelectorAll('[data-i18n]');
+  for(var i=0;i<els.length;i++) els[i].textContent = t(els[i].getAttribute('data-i18n'));
+  var phs=document.querySelectorAll('[data-i18n-ph]');
+  for(var j=0;j<phs.length;j++) phs[j].setAttribute('placeholder', t(phs[j].getAttribute('data-i18n-ph')));
+}
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.documentElement.dir  = (LANG==='ar') ? 'rtl' : 'ltr';
+  applyStaticI18n();
+  var lt=$('loginLangTxt'); if(lt) lt.textContent = (LANG==='ar') ? 'English' : 'العربية';
+  var ab=$('abLang');       if(ab) ab.textContent = (LANG==='ar') ? 'EN' : 'ع';
+}
+function toggleLang(){
+  LANG = (LANG==='ar') ? 'en' : 'ar';
+  try{ localStorage.setItem(SK_LANG, LANG); }catch(e){}
+  applyLang();
+  hideLoginErr();
+  if(DRIVER){
+    renderAppBar();
+    computeNotifs();
+    renderCurrentTab();
+    if($('notifSheet').classList.contains('on')) renderNotifs();
+  }
 }
 
 /* ---------- SUPABASE REST ---------- */
@@ -522,23 +829,23 @@ function doLogin(){
   hideLoginErr();
   var code  = $('inpCode').value.trim().toUpperCase();
   var phone = digits($('inpPhone').value);
-  if(!code){ showLoginErr('من فضلك ادخل كود الموظف'); return; }
-  if(!phone || phone.length < 6){ showLoginErr('من فضلك ادخل رقم هاتف صحيح'); return; }
+  if(!code){ showLoginErr(t('err_no_code')); return; }
+  if(!phone || phone.length < 6){ showLoginErr(t('err_bad_phone')); return; }
 
   var btn=$('loginBtn');
   btn.disabled=true;
-  btn.innerHTML='<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> جاري التحقق...';
+  btn.innerHTML='<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> '+t('verifying');
 
   sb('drivers?id=eq.'+encodeURIComponent(code)+'&select=*').then(function(rows){
     if(!rows || !rows.length){
-      showLoginErr('كود الموظف غير موجود — تأكد من الكود أو تواصل مع الإدارة');
+      showLoginErr(t('err_not_found'));
       return;
     }
     var d = rows[0];
     var storedPhone  = digits(d.sim).replace(/^965/,'');
     var enteredPhone = phone.replace(/^965/,'');
     if(storedPhone && enteredPhone && storedPhone !== enteredPhone){
-      showLoginErr('رقم الهاتف لا يطابق المسجّل لهذا الكود');
+      showLoginErr(t('err_phone_mismatch'));
       return;
     }
     DRIVER = d;
@@ -550,10 +857,10 @@ function doLogin(){
     enterApp(false);
   }).catch(function(err){
     console.error(err);
-    showLoginErr('تعذّر الاتصال بالخادم — تأكد من الإنترنت وحاول مرة أخرى');
+    showLoginErr(t('err_server'));
   }).then(function(){
     btn.disabled=false;
-    btn.innerHTML='<i class="ti ti-login-2"></i> دخول';
+    btn.innerHTML='<i class="ti ti-login-2"></i> <span>'+t('login_btn')+'</span>';
   });
 }
 
@@ -565,7 +872,6 @@ function tryAutoLogin(){
     return;
   }
 
-  /* اعرض من الكاش فوراً لو موجود */
   var cache = loadCache();
   var shownFromCache = false;
   if(cache && cache.driver && cache.driver.id === sess.id){
@@ -595,7 +901,7 @@ function tryAutoLogin(){
 }
 
 function logout(){
-  if(!confirm('تسجيل الخروج من التطبيق؟')) return;
+  if(!confirm(t('logout_confirm'))) return;
   localStorage.removeItem(SK_SESSION);
   localStorage.removeItem(SK_CACHE);
   DRIVER=null; CLOCKINS=[]; DEDUCTIONS=[]; SCHEDULES=[]; NOTIFS=[];
@@ -623,7 +929,8 @@ function renderAppBar(){
   $('abAv').style.background = avColor(DRIVER.id);
   $('abName').textContent = DRIVER.name || '—';
   var h=new Date().getHours();
-  $('abHi').textContent = (h<12?'صباح الخير':h<18?'مساء الخير':'مساء الخير');
+  $('abHi').textContent = (h<12) ? t('greet_morning') : t('greet_evening');
+  var ab=$('abLang'); if(ab) ab.textContent = (LANG==='ar') ? 'EN' : 'ع';
 }
 
 function refreshAll(){
@@ -661,8 +968,8 @@ function isCurrentlyIn(){
   return !!(l && l.action==='clock_in');
 }
 function todayClockins(){
-  var t=todayStr();
-  return CLOCKINS.filter(function(r){ return (r.created_at||'').indexOf(t)===0; });
+  var ts=todayStr();
+  return CLOCKINS.filter(function(r){ return (r.created_at||'').indexOf(ts)===0; });
 }
 
 function deductionsOf(month, year){
@@ -679,12 +986,12 @@ function shiftOf(dateStr){
   return null;
 }
 function upcomingShifts(){
-  var t=todayStr();
-  return SCHEDULES.filter(function(s){ return s.date>=t; }).slice(0,7);
+  var ts=todayStr();
+  return SCHEDULES.filter(function(s){ return s.date>=ts; }).slice(0,7);
 }
 
 /* =========================================================
-   NOTIFICATIONS (محسوبة محلياً من البيانات)
+   NOTIFICATIONS
    ========================================================= */
 function computeNotifs(){
   NOTIFS=[];
@@ -693,15 +1000,16 @@ function computeNotifs(){
 
   var lic=expiryStatus(DRIVER.license);
   if(lic.level==='bad'){
+    var licPart = (lic.days<0) ? t('expired_since',Math.abs(lic.days)) : t('expires_in',lic.days);
     NOTIFS.push({ic:'ti-id-off',color:'var(--red2)',bg:'rgba(239,68,68,.14)',
-      title:'رخصة القيادة منتهية',
-      desc:'رخصتك '+(lic.days<0?'منتهية منذ '+Math.abs(lic.days)+' يوم':'تنتهي خلال '+lic.days+' يوم')+'. يرجى التجديد فوراً وإبلاغ الإدارة.',
-      time:'مهم'});
+      title:t('ntf_lic_expired_t'),
+      desc:t('ntf_lic_prefix')+licPart+t('ntf_lic_expired_suffix'),
+      time:t('ntf_important')});
   }else if(lic.level==='warn'){
     NOTIFS.push({ic:'ti-id',color:'var(--amber2)',bg:'rgba(245,158,11,.14)',
-      title:'رخصة القيادة قاربت على الانتهاء',
-      desc:'تنتهي رخصتك خلال '+lic.days+' يوم. خطّط للتجديد مبكراً.',
-      time:'تنبيه'});
+      title:t('ntf_lic_warn_t'),
+      desc:t('ntf_lic_warn_d',lic.days),
+      time:t('ntf_alert')});
   }
 
   var m=now.getMonth()+1, y=now.getFullYear();
@@ -709,9 +1017,9 @@ function computeNotifs(){
   if(monthDed.length){
     var total=monthDed.reduce(function(s,d){ return s+(parseFloat(d.amount)||0); },0);
     NOTIFS.push({ic:'ti-receipt-2',color:'var(--red2)',bg:'rgba(239,68,68,.14)',
-      title:'خصومات هذا الشهر ('+monthDed.length+')',
-      desc:'إجمالي الخصومات على راتب شهر '+MONTHS_AR[m-1]+': '+fmtKD(total)+' د.ك. راجع تفاصيلها في صفحة راتبي.',
-      time:MONTHS_AR[m-1]+' '+y});
+      title:t('ntf_ded_t',monthDed.length),
+      desc:t('ntf_ded_d',MONTHS[LANG][m-1],fmtKD(total)),
+      time:MONTHS[LANG][m-1]+' '+y});
   }
 
   var up=upcomingShifts();
@@ -719,16 +1027,16 @@ function computeNotifs(){
     var next=up[0];
     var isToday = next.date===todayStr();
     NOTIFS.push({ic:'ti-calendar-event',color:'var(--blue2)',bg:'rgba(59,130,246,.14)',
-      title: isToday?'مناوبة اليوم':'مناوبتك القادمة',
-      desc:(isToday?'اليوم':fmtDate(next.date))+(next.shift_start?' • من '+next.shift_start+(next.shift_end?' إلى '+next.shift_end:''):'')+(next.shift_type?' • '+next.shift_type:''),
-      time:'الجدول'});
+      title: isToday?t('ntf_shift_today'):t('ntf_shift_next'),
+      desc:(isToday?t('today'):fmtDate(next.date))+(next.shift_start?' • '+next.shift_start+(next.shift_end?' - '+next.shift_end:''):'')+(next.shift_type?' • '+next.shift_type:''),
+      time:t('ntf_schedule')});
   }
 
   if(!todayClockins().length){
     NOTIFS.push({ic:'ti-clock-exclamation',color:'var(--amber2)',bg:'rgba(245,158,11,.14)',
-      title:'لم تسجّل حضورك اليوم',
-      desc:'لا تنسَ تسجيل الدخول عند بداية الشفت من صفحة الحضور.',
-      time:'اليوم'});
+      title:t('ntf_no_clock_t'),
+      desc:t('ntf_no_clock_d'),
+      time:t('today')});
   }
 
   var dot=$('bellDot');
@@ -748,7 +1056,7 @@ function closeNotif(){
 function renderNotifs(){
   var el=$('notifBody');
   if(!NOTIFS.length){
-    el.innerHTML='<div class="empty"><i class="ti ti-bell-check"></i><p>لا توجد تنبيهات</p><div class="e-sub">كل شيء على ما يرام</div></div>';
+    el.innerHTML='<div class="empty"><i class="ti ti-bell-check"></i><p>'+t('no_notifs')+'</p><div class="e-sub">'+t('all_good')+'</div></div>';
     return;
   }
   el.innerHTML = NOTIFS.map(function(n){
@@ -805,60 +1113,61 @@ function renderHome(){
   var html='';
 
   html+='<div class="hero '+(inNow?'':'out')+'">'+
-    '<div class="hero-label">حالتك الآن</div>'+
-    '<div class="hero-status"><span class="hero-pulse"></span>'+(inNow?'داخل الآن':'خارج الدوام')+'</div>'+
-    '<div class="hero-time">'+(last?((inNow?'سجّلت دخولك ':'آخر تسجيل خروج ')+fmtTime(last.created_at)):'لم تسجّل اليوم بعد')+'</div>'+
+    '<div class="hero-label">'+t('status_now')+'</div>'+
+    '<div class="hero-status"><span class="hero-pulse"></span>'+(inNow?t('clocked_in'):t('clocked_out'))+'</div>'+
+    '<div class="hero-time">'+(last?((inNow?t('clocked_in_at'):t('last_out_at'))+' '+fmtTime(last.created_at)):t('not_clocked_today'))+'</div>'+
   '</div>';
 
   html+='<button class="clock-btn '+(inNow?'clock-out':'clock-in')+'" id="homeClockBtn" onclick="clockAction(\''+(inNow?'clock_out':'clock_in')+'\')">'+
-    '<i class="ti ti-'+(inNow?'logout':'login-2')+'"></i> '+(inNow?'تسجيل خروج':'تسجيل دخول')+
+    '<i class="ti ti-'+(inNow?'logout':'login-2')+'"></i> '+(inNow?t('clock_out'):t('clock_in'))+
   '</button>'+
-  '<div class="gps-hint"><i class="ti ti-map-pin"></i> سيتم تسجيل موقعك الحالي مع الحضور</div>';
+  '<div class="gps-hint"><i class="ti ti-map-pin"></i> '+t('gps_hint_home')+'</div>';
 
   if(lic.level==='bad'){
+    var d1 = (lic.days<0) ? t('expired_since',Math.abs(lic.days)) : t('expires_in',lic.days);
     html+='<div class="lic-banner bad"><i class="ti ti-id-off"></i><div>'+
-      '<div class="lic-banner-t">رخصة القيادة منتهية / شارفت على الانتهاء</div>'+
-      '<div class="lic-banner-d">'+(lic.days<0?'منتهية منذ '+Math.abs(lic.days)+' يوم':'تنتهي خلال '+lic.days+' يوم')+' — يرجى التجديد</div>'+
+      '<div class="lic-banner-t">'+t('lic_expired_t')+'</div>'+
+      '<div class="lic-banner-d">'+d1+' — '+t('lic_renew')+'</div>'+
     '</div></div>';
   }else if(lic.level==='warn'){
     html+='<div class="lic-banner warn"><i class="ti ti-id"></i><div>'+
-      '<div class="lic-banner-t">رخصة القيادة قاربت على الانتهاء</div>'+
-      '<div class="lic-banner-d">باقي '+lic.days+' يوم على انتهاء الرخصة</div>'+
+      '<div class="lic-banner-t">'+t('lic_warn_t')+'</div>'+
+      '<div class="lic-banner-d">'+t('lic_days_remaining',lic.days)+'</div>'+
     '</div></div>';
   }
 
   html+='<div class="qgrid">'+
     '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
-      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(16,185,129,.14)"><i class="ti ti-wallet" style="color:var(--green2)"></i></div><div class="qstat-lbl">صافي راتب الشهر</div></div>'+
+      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(16,185,129,.14)"><i class="ti ti-wallet" style="color:var(--green2)"></i></div><div class="qstat-lbl">'+t('net_salary_month')+'</div></div>'+
       '<div class="qstat-val" style="color:var(--green2)">'+fmtKD(net)+'</div>'+
-      '<div class="qstat-sub">'+MONTHS_AR[m-1]+' '+y+' • د.ك</div>'+
+      '<div class="qstat-sub">'+MONTHS[LANG][m-1]+' '+y+' • '+t('kwd')+'</div>'+
     '</div>'+
     '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
-      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(239,68,68,.14)"><i class="ti ti-receipt-2" style="color:var(--red2)"></i></div><div class="qstat-lbl">خصومات الشهر</div></div>'+
+      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(239,68,68,.14)"><i class="ti ti-receipt-2" style="color:var(--red2)"></i></div><div class="qstat-lbl">'+t('month_deductions')+'</div></div>'+
       '<div class="qstat-val" style="color:'+(totalDed>0?'var(--red2)':'var(--text)')+'">'+fmtKD(totalDed)+'</div>'+
-      '<div class="qstat-sub">'+monthDed.length+' خصم</div>'+
+      '<div class="qstat-sub">'+t('n_deductions',monthDed.length)+'</div>'+
     '</div>'+
   '</div>';
 
-  html+='<div class="sec-title">مناوبة اليوم</div>';
+  html+='<div class="sec-title">'+t('today_shift')+'</div>';
   if(shift){
     html+='<div class="card"><div class="irow">'+
       '<div class="irow-ic" style="background:rgba(59,130,246,.14)"><i class="ti ti-calendar-event" style="color:var(--blue2)"></i></div>'+
-      '<div class="irow-body"><div class="irow-lbl">'+(shift.shift_type||'مناوبة')+'</div>'+
-      '<div class="irow-val">'+(shift.shift_start?shift.shift_start+(shift.shift_end?' — '+shift.shift_end:''):'لم يُحدد الوقت')+'</div></div>'+
-      '<span class="badge b-blue">اليوم</span>'+
+      '<div class="irow-body"><div class="irow-lbl">'+(shift.shift_type||t('shift'))+'</div>'+
+      '<div class="irow-val">'+(shift.shift_start?shift.shift_start+(shift.shift_end?' - '+shift.shift_end:''):t('no_shift_time'))+'</div></div>'+
+      '<span class="badge b-blue">'+t('today')+'</span>'+
     '</div></div>';
   }else{
     html+='<div class="card card-pad" style="color:var(--muted);font-size:13px;text-align:center">'+
-      '<i class="ti ti-calendar-off" style="font-size:26px;opacity:.4;display:block;margin-bottom:6px"></i>لا توجد مناوبة مجدولة لليوم</div>';
+      '<i class="ti ti-calendar-off" style="font-size:26px;opacity:.4;display:block;margin-bottom:6px"></i>'+t('no_shift_today')+'</div>';
   }
 
   var tci=todayClockins();
-  html+='<div class="sec-title">حضور اليوم</div>';
+  html+='<div class="sec-title">'+t('today_attendance')+'</div>';
   if(tci.length){
     html+='<div class="card">'+tci.map(ciItemHTML).join('')+'</div>';
   }else{
-    html+='<div class="card card-pad" style="color:var(--muted);font-size:13px;text-align:center">لم تسجّل دخول أو خروج اليوم بعد</div>';
+    html+='<div class="card card-pad" style="color:var(--muted);font-size:13px;text-align:center">'+t('no_clock_today')+'</div>';
   }
 
   el.innerHTML=html;
@@ -871,9 +1180,9 @@ function ciItemHTML(r){
   return '<div class="ci-item">'+
     '<div class="ci-dot '+(isIn?'in':'out')+'"><i class="ti ti-'+(isIn?'login-2':'logout')+'"></i></div>'+
     '<div class="ci-body">'+
-      '<div class="ci-act">'+(isIn?'تسجيل دخول':'تسجيل خروج')+'</div>'+
+      '<div class="ci-act">'+(isIn?t('clock_in'):t('clock_out'))+'</div>'+
       '<div class="ci-meta"><span>'+fmtDate(r.created_at)+'</span>'+
-      (hasLoc?' • <a class="ci-loc-link" href="'+mapUrl+'" target="_blank"><i class="ti ti-map-pin"></i> الموقع</a>':' • بدون موقع')+
+      (hasLoc?' • <a class="ci-loc-link" href="'+mapUrl+'" target="_blank"><i class="ti ti-map-pin"></i> '+t('location')+'</a>':' • '+t('no_location'))+
       '</div>'+
     '</div>'+
     '<div class="ci-time">'+fmtTime(r.created_at)+'</div>'+
@@ -890,24 +1199,24 @@ function renderAttendance(){
 
   var html='';
   html+='<div class="flex-between" style="margin-bottom:4px">'+
-    '<div class="sec-title" style="margin:0">تسجيل الحضور</div>'+
-    '<button class="btn-refresh" onclick="refreshAll()"><i class="ti ti-refresh"></i> تحديث</button>'+
+    '<div class="sec-title" style="margin:0">'+t('attendance_reg')+'</div>'+
+    '<button class="btn-refresh" onclick="refreshAll()"><i class="ti ti-refresh"></i> '+t('refresh')+'</button>'+
   '</div>';
 
   html+='<div class="hero '+(inNow?'':'out')+'" style="margin-top:8px">'+
-    '<div class="hero-label">حالتك الآن</div>'+
-    '<div class="hero-status"><span class="hero-pulse"></span>'+(inNow?'داخل الآن':'خارج الدوام')+'</div>'+
-    '<div class="hero-time">'+(last?'آخر تسجيل: '+fmtDateTime(last.created_at):'لا توجد تسجيلات')+'</div>'+
+    '<div class="hero-label">'+t('status_now')+'</div>'+
+    '<div class="hero-status"><span class="hero-pulse"></span>'+(inNow?t('clocked_in'):t('clocked_out'))+'</div>'+
+    '<div class="hero-time">'+(last?t('last_record')+' '+fmtDateTime(last.created_at):t('no_records'))+'</div>'+
   '</div>';
 
   html+='<button class="clock-btn '+(inNow?'clock-out':'clock-in')+'" id="attClockBtn" onclick="clockAction(\''+(inNow?'clock_out':'clock_in')+'\')">'+
-    '<i class="ti ti-'+(inNow?'logout':'login-2')+'"></i> '+(inNow?'تسجيل خروج':'تسجيل دخول')+
+    '<i class="ti ti-'+(inNow?'logout':'login-2')+'"></i> '+(inNow?t('clock_out'):t('clock_in'))+
   '</button>'+
-  '<div class="gps-hint"><i class="ti ti-current-location"></i> تأكد من تفعيل خدمة الموقع GPS</div>';
+  '<div class="gps-hint"><i class="ti ti-current-location"></i> '+t('gps_hint_att')+'</div>';
 
-  html+='<div class="sec-title">سجل الحضور</div>';
+  html+='<div class="sec-title">'+t('attendance_log')+'</div>';
   if(!CLOCKINS.length){
-    html+='<div class="card"><div class="empty"><i class="ti ti-history"></i><p>لا توجد تسجيلات حضور بعد</p><div class="e-sub">سجّل دخولك ليظهر هنا</div></div></div>';
+    html+='<div class="card"><div class="empty"><i class="ti ti-history"></i><p>'+t('no_attendance_yet')+'</p><div class="e-sub">'+t('clock_to_see')+'</div></div></div>';
   }else{
     var groups={};
     CLOCKINS.forEach(function(r){
@@ -916,7 +1225,7 @@ function renderAttendance(){
       groups[d].push(r);
     });
     Object.keys(groups).sort().reverse().forEach(function(d){
-      var dayLabel = d===todayStr()?'اليوم':fmtDate(d);
+      var dayLabel = d===todayStr()?t('today'):fmtDate(d);
       html+='<div style="font-size:11px;font-weight:700;color:var(--muted2);margin:13px 4px 6px">'+dayLabel+'</div>';
       html+='<div class="card">'+groups[d].map(ciItemHTML).join('')+'</div>';
     });
@@ -931,19 +1240,19 @@ function setClockBtnsBusy(busy, label){
   ['homeClockBtn','attClockBtn'].forEach(function(id){
     var b=$(id); if(!b) return;
     b.disabled=busy;
-    if(busy) b.innerHTML='<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> '+(label||'جاري...');
+    if(busy) b.innerHTML='<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> '+(label||'');
   });
 }
 
 function clockAction(action){
   if(busyClock) return;
   busyClock=true;
-  setClockBtnsBusy(true,'جاري تحديد الموقع...');
+  setClockBtnsBusy(true,t('locating'));
 
   function finish(lat,lng){ submitClock(action,lat,lng); }
 
   if(!navigator.geolocation){
-    toast('جهازك لا يدعم تحديد الموقع — سيتم التسجيل بدون موقع','info');
+    toast(t('no_geo'),'info');
     finish(null,null);
     return;
   }
@@ -951,7 +1260,7 @@ function clockAction(action){
     function(pos){ finish(pos.coords.latitude, pos.coords.longitude); },
     function(err){
       console.warn('geo error',err);
-      toast('تعذّر تحديد الموقع — سيتم التسجيل بدون موقع','info');
+      toast(t('geo_fail'),'info');
       finish(null,null);
     },
     {enableHighAccuracy:true, timeout:9000, maximumAge:0}
@@ -959,7 +1268,7 @@ function clockAction(action){
 }
 
 function submitClock(action,lat,lng){
-  setClockBtnsBusy(true,'جاري التسجيل...');
+  setClockBtnsBusy(true,t('registering'));
   var record={
     driver_id:   DRIVER.id,
     driver_name: DRIVER.name,
@@ -978,10 +1287,10 @@ function submitClock(action,lat,lng){
     saveCache();
     computeNotifs();
     renderCurrentTab();
-    toast(action==='clock_in'?'تم تسجيل دخولك بنجاح':'تم تسجيل خروجك بنجاح','ok');
+    toast(action==='clock_in'?t('clock_in_ok'):t('clock_out_ok'),'ok');
   }).catch(function(err){
     console.error(err);
-    toast('فشل التسجيل — تأكد من الإنترنت وحاول مرة أخرى','err');
+    toast(t('clock_fail'),'err');
     renderCurrentTab();
   }).then(function(){
     busyClock=false;
@@ -1000,13 +1309,13 @@ function renderSalary(){
 
   var now=new Date();
   var mOpts='', yOpts='';
-  for(var i=0;i<12;i++) mOpts+='<option value="'+(i+1)+'" '+((i+1)===salMonth?'selected':'')+'>'+MONTHS_AR[i]+'</option>';
+  for(var i=0;i<12;i++) mOpts+='<option value="'+(i+1)+'" '+((i+1)===salMonth?'selected':'')+'>'+MONTHS[LANG][i]+'</option>';
   for(var yy=now.getFullYear()-1;yy<=now.getFullYear()+1;yy++) yOpts+='<option value="'+yy+'" '+(yy===salYear?'selected':'')+'>'+yy+'</option>';
 
   var html='';
   html+='<div class="flex-between" style="margin-bottom:10px">'+
-    '<div class="sec-title" style="margin:0">راتبي</div>'+
-    '<button class="btn-refresh" onclick="refreshAll()"><i class="ti ti-refresh"></i> تحديث</button>'+
+    '<div class="sec-title" style="margin:0">'+t('my_salary')+'</div>'+
+    '<button class="btn-refresh" onclick="refreshAll()"><i class="ti ti-refresh"></i> '+t('refresh')+'</button>'+
   '</div>';
 
   html+='<div class="month-pick">'+
@@ -1015,33 +1324,32 @@ function renderSalary(){
   '</div>';
 
   html+='<div class="sal-hero">'+
-    '<div class="sal-net-lbl">صافي الراتب — '+MONTHS_AR[salMonth-1]+' '+salYear+'</div>'+
+    '<div class="sal-net-lbl">'+t('net_salary')+' — '+MONTHS[LANG][salMonth-1]+' '+salYear+'</div>'+
     '<div class="sal-net-val">'+fmtKD(net)+'</div>'+
-    '<div class="sal-net-cur">دينار كويتي</div>'+
+    '<div class="sal-net-cur">'+t('kwd_full')+'</div>'+
   '</div>';
 
   html+='<div class="sal-split">'+
-    '<div class="sal-box"><div class="sal-box-v" style="color:var(--green2)">'+fmtKD(base)+'</div><div class="sal-box-l">الراتب الأساسي</div></div>'+
-    '<div class="sal-box"><div class="sal-box-v" style="color:'+(totalDed>0?'var(--red2)':'var(--text)')+'">'+fmtKD(totalDed)+'</div><div class="sal-box-l">إجمالي الخصومات</div></div>'+
+    '<div class="sal-box"><div class="sal-box-v" style="color:var(--green2)">'+fmtKD(base)+'</div><div class="sal-box-l">'+t('base_salary')+'</div></div>'+
+    '<div class="sal-box"><div class="sal-box-v" style="color:'+(totalDed>0?'var(--red2)':'var(--text)')+'">'+fmtKD(totalDed)+'</div><div class="sal-box-l">'+t('total_deductions')+'</div></div>'+
   '</div>';
 
-  html+='<div class="sec-title">خصومات '+MONTHS_AR[salMonth-1]+' ('+deds.length+')</div>';
+  html+='<div class="sec-title">'+t('deductions_title',MONTHS[LANG][salMonth-1],deds.length)+'</div>';
   if(!deds.length){
-    html+='<div class="card"><div class="empty"><i class="ti ti-circle-check" style="color:var(--green2);opacity:.6"></i><p>لا توجد خصومات هذا الشهر</p><div class="e-sub">راتبك كامل</div></div></div>';
+    html+='<div class="card"><div class="empty"><i class="ti ti-circle-check" style="color:var(--green2);opacity:.6"></i><p>'+t('no_deductions')+'</p><div class="e-sub">'+t('full_salary')+'</div></div></div>';
   }else{
     html+='<div class="card">'+deds.map(function(d){
       return '<div class="ded-item">'+
         '<div class="ded-ic"><i class="ti ti-alert-circle"></i></div>'+
-        '<div class="ded-body"><div class="ded-reason">'+(d.reason||'خصم')+'</div>'+
-        '<div class="ded-date">'+fmtDate(d.date)+(d.days?' • '+(d.days===0.5?'نصف يوم':d.days+' يوم'):'')+'</div></div>'+
+        '<div class="ded-body"><div class="ded-reason">'+(d.reason||t('deduction_label'))+'</div>'+
+        '<div class="ded-date">'+fmtDate(d.date)+(d.days?' • '+t('day_count',d.days):'')+'</div></div>'+
         '<div class="ded-amt">- '+fmtKD(d.amount)+'</div>'+
       '</div>';
     }).join('')+'</div>';
   }
 
   html+='<div class="card card-pad" style="margin-top:12px;font-size:11px;color:var(--muted);line-height:1.7">'+
-    '<i class="ti ti-info-circle" style="color:var(--blue2)"></i> '+
-    'تُحتسب قيمة خصم اليوم الواحد = الراتب الأساسي ÷ 26 يوم عمل. للاستفسار عن أي خصم تواصل مع الإدارة.'+
+    '<i class="ti ti-info-circle" style="color:var(--blue2)"></i> '+t('salary_note')+
   '</div>';
 
   el.innerHTML=html;
@@ -1074,42 +1382,42 @@ function renderProfile(){
     '</div>'+
   '</div>';
 
-  html+='<div class="sec-title">الرخصة والوثائق</div>';
+  html+='<div class="sec-title">'+t('sec_license')+'</div>';
   html+='<div class="card">';
-  html+=infoRow('ti-id','رخصة القيادة', d.license?fmtDate(d.license):'غير مسجّلة', '<span class="badge '+lic.cls+'">'+lic.label+'</span>', false);
+  html+=infoRow('ti-id',t('driving_license'), d.license?fmtDate(d.license):t('not_registered_f'), '<span class="badge '+lic.cls+'">'+lic.label+'</span>', false);
   if(civilExp){
-    html+=infoRow('ti-credit-card','انتهاء الإقامة', fmtDate(civilExp), '<span class="badge '+civExpSt.cls+'">'+civExpSt.label+'</span>', false);
+    html+=infoRow('ti-credit-card',t('residency_expiry'), fmtDate(civilExp), '<span class="badge '+civExpSt.cls+'">'+civExpSt.label+'</span>', false);
   }
-  if(d.civil) html+=infoRow('ti-id-badge-2','الرقم المدني', d.civil, '', true);
+  if(d.civil) html+=infoRow('ti-id-badge-2',t('civil_id'), d.civil, '', true);
   if(d.health!==undefined && d.health!==null && d.health!==''){
-    html+=infoRow('ti-heart','البطاقة الصحية', d.health==='available'?'متاحة':'غير متاحة',
-      '<span class="badge '+(d.health==='available'?'b-green':'b-gray')+'">'+(d.health==='available'?'سارية':'—')+'</span>', false);
+    html+=infoRow('ti-heart',t('health_card'), d.health==='available'?t('available'):t('not_available'),
+      '<span class="badge '+(d.health==='available'?'b-green':'b-gray')+'">'+(d.health==='available'?t('valid_short'):'—')+'</span>', false);
   }
   html+='</div>';
 
-  html+='<div class="sec-title">المركبة والمعدات</div>';
+  html+='<div class="sec-title">'+t('sec_vehicle')+'</div>';
   html+='<div class="card">';
-  html+=infoRow('ti-car','رقم السيارة', d.car||'غير مسجّل','',true);
-  if(d.device) html+=infoRow('ti-device-mobile','رقم الجهاز', d.device,'',true);
-  if(d.petrol) html+=infoRow('ti-gas-station','بطاقة البترول', d.petrol,'',true);
+  html+=infoRow('ti-car',t('car_number'), d.car||t('not_registered_m'),'',true);
+  if(d.device) html+=infoRow('ti-device-mobile',t('device_number'), d.device,'',true);
+  if(d.petrol) html+=infoRow('ti-gas-station',t('petrol_card'), d.petrol,'',true);
   html+='</div>';
 
-  html+='<div class="sec-title">البيانات الشخصية</div>';
+  html+='<div class="sec-title">'+t('sec_personal')+'</div>';
   html+='<div class="card">';
-  html+=infoRow('ti-phone','رقم الهاتف', d.sim||'غير مسجّل','',true);
-  if(d.age) html+=infoRow('ti-cake','العمر', d.age+' سنة','',false);
+  html+=infoRow('ti-phone',t('phone'), d.sim||t('not_registered_m'),'',true);
+  if(d.age) html+=infoRow('ti-cake',t('age'), t('age_years',d.age),'',false);
   var sd = d.start_date||d.startdate||d.startDate;
-  if(sd) html+=infoRow('ti-calendar-plus','تاريخ الانضمام', fmtDate(sd),'',false);
-  html+=infoRow('ti-wallet','الراتب الأساسي', fmtKD(d.salary_base)+' د.ك','',false);
+  if(sd) html+=infoRow('ti-calendar-plus',t('join_date'), fmtDate(sd),'',false);
+  html+=infoRow('ti-wallet',t('base_salary'), fmtKD(d.salary_base)+' '+t('kwd'),'',false);
   html+='</div>';
 
   html+='<div style="margin-top:18px;display:flex;flex-direction:column;gap:9px">'+
-    '<button class="btn-sec" onclick="refreshAll();toast(\'تم تحديث البيانات\',\'ok\')"><i class="ti ti-refresh"></i> تحديث البيانات</button>'+
-    '<button class="btn-sec btn-danger" onclick="logout()"><i class="ti ti-logout"></i> تسجيل الخروج</button>'+
+    '<button class="btn-sec" onclick="refreshAll();toast(t(\'data_refreshed\'),\'ok\')"><i class="ti ti-refresh"></i> '+t('refresh_data')+'</button>'+
+    '<button class="btn-sec btn-danger" onclick="logout()"><i class="ti ti-logout"></i> '+t('logout')+'</button>'+
   '</div>';
 
   html+='<div style="text-align:center;font-size:10px;color:var(--muted2);margin-top:18px;line-height:1.7">'+
-    'شركة السلاسل لإدارة السائقين<br>الإصدار 1.0 • متصل بنظام الإدارة'+
+    t('app_footer1')+'<br>'+t('app_footer2')+
   '</div>';
 
   el.innerHTML=html;
@@ -1139,7 +1447,7 @@ window.addEventListener('DOMContentLoaded',function(){
   if(ic) ic.addEventListener('input',function(e){ e.target.value=e.target.value.toUpperCase(); });
 });
 
-/* وضع المعاينة — افتح الرابط مع ?demo لرؤية التطبيق ببيانات تجريبية */
+/* وضع المعاينة — افتح الرابط مع ?demo */
 function runDemo(){
   var today=todayStr();
   var nowM=new Date().getMonth()+1, nowY=new Date().getFullYear();
@@ -1152,16 +1460,17 @@ function runDemo(){
     {driver_id:'SA1001',action:'clock_in', created_at:new Date(Date.now()-86400000).toISOString(),latitude:29.3759,longitude:47.9774}
   ];
   DEDUCTIONS=[
-    {id:'D1',driver_id:'SA1001',reason:'تأخير عن الشفت',amount:6.154,days:1,  date:today,month:nowM,year:nowY},
-    {id:'D2',driver_id:'SA1001',reason:'غياب نصف يوم',  amount:3.077,days:0.5,date:today,month:nowM,year:nowY}
+    {id:'D1',driver_id:'SA1001',reason:(LANG==='ar'?'تأخير عن الشفت':'Shift delay'),amount:6.154,days:1,  date:today,month:nowM,year:nowY},
+    {id:'D2',driver_id:'SA1001',reason:(LANG==='ar'?'غياب نصف يوم':'Half-day absence'),amount:3.077,days:0.5,date:today,month:nowM,year:nowY}
   ];
-  SCHEDULES=[{driver_id:'SA1001',date:today,shift_type:'شفت صباحي',shift_start:'08:00',shift_end:'16:00'}];
+  SCHEDULES=[{driver_id:'SA1001',date:today,shift_type:(LANG==='ar'?'شفت صباحي':'Morning shift'),shift_start:'08:00',shift_end:'16:00'}];
   enterApp(true);
   computeNotifs();
   renderCurrentTab();
 }
 
 function init(){
+  applyLang();
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(function(e){ console.warn('SW',e); });
   }
