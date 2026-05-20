@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1c5878">
+<title>تقديم على وظيفة سائق — شركة السلاسل</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --teal:#1c5878;--teal-dk:#0f3a52;--red:#8e2235;--cream:#faf7f2;
+  --gray:#5a6b78;--gray-lt:#e8eef2;--ok:#10b981;
+}
+body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0f3a52 0%,#1c5878 100%);min-height:100vh;color:#1a2e3a;-webkit-font-smoothing:antialiased;padding:20px 16px}
+.wrap{max-width:560px;margin:0 auto}
+.brand{text-align:center;margin-bottom:22px;color:#fff}
+.brand img{height:90px;margin:0 auto 12px;background:#fff;padding:10px 14px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.3)}
+.brand h1{font-size:22px;font-weight:900;margin-bottom:4px;letter-spacing:-.3px}
+.brand p{font-size:13px;opacity:.9}
+.card{background:#fff;border-radius:22px;padding:28px 22px;box-shadow:0 20px 50px rgba(0,0,0,0.2)}
+.card h2{font-size:19px;font-weight:900;color:var(--teal);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.card h2 i{color:var(--red)}
+.card .sub{font-size:13px;color:var(--gray);margin-bottom:22px;line-height:1.7}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:13px;font-weight:700;color:var(--teal);margin-bottom:6px}
+.fg label .req{color:var(--red)}
+.fg input,.fg select,.fg textarea{
+  width:100%;padding:13px 14px;border:1.5px solid var(--gray-lt);border-radius:11px;
+  font-family:inherit;font-size:15px;background:#fff;transition:border-color .15s;outline:none;color:#1a2e3a;
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(28,88,120,0.1)}
+.fg textarea{resize:vertical;min-height:80px}
+.fg .hint{font-size:11px;color:var(--gray);margin-top:5px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.fgrid{grid-template-columns:1fr}}
+.check{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--cream);border-radius:10px;cursor:pointer;border:1.5px solid var(--gray-lt);transition:all .15s}
+.check:has(input:checked){border-color:var(--teal);background:#fff}
+.check input{width:18px;height:18px;accent-color:var(--teal);cursor:pointer}
+.check span{font-size:14px;font-weight:600;color:var(--teal)}
+.submit{
+  width:100%;padding:15px;background:var(--teal);color:#fff;border:none;border-radius:11px;
+  font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;
+  align-items:center;justify-content:center;gap:8px;transition:all .15s;margin-top:8px;
+}
+.submit:hover{background:var(--teal-dk);transform:translateY(-1px);box-shadow:0 8px 22px rgba(28,88,120,0.4)}
+.submit:disabled{opacity:.6;cursor:not-allowed}
+.submit i{font-size:20px}
+
+.success{display:none;text-align:center;padding:20px 10px}
+.success.show{display:block}
+.success .ic{width:80px;height:80px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(0)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.success .ic i{font-size:46px;color:#fff}
+.success h3{font-size:22px;color:var(--teal);margin-bottom:10px;font-weight:900}
+.success p{font-size:14px;color:var(--gray);line-height:1.8;margin-bottom:20px}
+.success .next{background:var(--cream);border-radius:12px;padding:14px;font-size:13px;color:var(--teal);font-weight:600;line-height:1.7}
+
+.err{display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#dc2626;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;align-items:center;gap:7px}
+.err.show{display:flex}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.foot{text-align:center;color:rgba(255,255,255,0.7);font-size:11px;margin-top:18px}
+.foot a{color:#fff;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="logo.png" alt="Al-Salasil">
+    <h1>انضم لفريق السلاسل</h1>
+    <p>قدّم بياناتك وسنتواصل معك قريباً</p>
+  </div>
+
+  <div class="card">
+    <div id="formScreen">
+      <h2><i class="ti ti-user-plus"></i> نموذج التقديم</h2>
+      <p class="sub">املأ بياناتك بدقة. الحقول اللي عليها <span style="color:var(--red)">*</span> إجبارية.</p>
+
+      <div class="err" id="errBox"><i class="ti ti-alert-triangle"></i> <span id="errTxt"></span></div>
+
+      <form id="applyForm" onsubmit="submitApp(event)">
+        <div class="fg">
+          <label>الاسم الكامل <span class="req">*</span></label>
+          <input id="f-name" required placeholder="مثال: محمد أحمد علي" autocomplete="name">
+        </div>
+
+        <div class="fgrid">
+          <div class="fg">
+            <label>رقم الهاتف <span class="req">*</span></label>
+            <input id="f-phone" required type="tel" inputmode="numeric" placeholder="9XXXXXXX" autocomplete="tel">
+            <div class="hint">رقم نتواصل معك عليه</div>
+          </div>
+          <div class="fg">
+            <label>الجنسية</label>
+            <input id="f-nat" placeholder="مثال: مصري، هندي، نيبالي...">
+          </div>
+        </div>
+
+        <div class="fgrid">
+          <div class="fg">
+            <label>الرقم المدني</label>
+            <input id="f-civil" inputmode="numeric" placeholder="12 رقم">
+          </div>
+          <div class="fg">
+            <label>العمر</label>
+            <input id="f-age" type="number" min="18" max="65" placeholder="مثال: 28">
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>تاريخ انتهاء رخصة القيادة</label>
+          <input id="f-lic" type="date">
+          <div class="hint">سيب الخانة فاضية لو ما عندكش رخصة سارية</div>
+        </div>
+
+        <div class="fg">
+          <label class="check">
+            <input id="f-hascar" type="checkbox">
+            <span>عندي سيارة خاصة بي</span>
+          </label>
+        </div>
+
+        <div class="fg" id="carInfoWrap" style="display:none">
+          <label>تفاصيل السيارة</label>
+          <input id="f-car" placeholder="مثال: تويوتا 2020، رقم 23/72401">
+        </div>
+
+        <div class="fg">
+          <label>تفضّل العمل مع</label>
+          <select id="f-partner">
+            <option value="">— لا يهم —</option>
+            <option value="keeta">Keeta</option>
+            <option value="caboria">Caboria</option>
+            <option value="homy">HOMY</option>
+            <option value="imile">iMile</option>
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>ملاحظات / خبرة سابقة</label>
+          <textarea id="f-notes" placeholder="مثال: خبرة سنتين كسائق توصيل، أتقن مناطق الكويت..."></textarea>
+        </div>
+
+        <button type="submit" class="submit" id="submitBtn">
+          <i class="ti ti-send"></i> أرسل الطلب
+        </button>
+      </form>
+    </div>
+
+    <div class="success" id="successScreen">
+      <div class="ic"><i class="ti ti-check"></i></div>
+      <h3>تم استلام طلبك بنجاح</h3>
+      <p>شكراً لاهتمامك بالعمل مع شركة السلاسل.<br>سنراجع طلبك ونتواصل معك قريباً على الرقم اللي قدّمته.</p>
+      <div class="next">
+        💡 احتفظ بهذا الرابط في حال أردت معرفة حالة طلبك لاحقاً.
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>
+    Al-Salasil Consumer Delivery Services
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+// toggle car info field
+document.getElementById('f-hascar').addEventListener('change', e => {
+  document.getElementById('carInfoWrap').style.display = e.target.checked ? 'block' : 'none';
+});
+
+function showErr(msg){
+  const e = document.getElementById('errBox');
+  document.getElementById('errTxt').textContent = msg;
+  e.classList.add('show');
+  setTimeout(()=>e.classList.remove('show'), 6000);
+}
+
+async function submitApp(ev){
+  ev.preventDefault();
+  const name  = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.replace(/[^0-9]/g,'');
+  const civil = document.getElementById('f-civil').value.trim();
+  const nat   = document.getElementById('f-nat').value.trim();
+  const age   = parseInt(document.getElementById('f-age').value) || null;
+  const lic   = document.getElementById('f-lic').value || null;
+  const hasCar= document.getElementById('f-hascar').checked;
+  const car   = document.getElementById('f-car').value.trim();
+  const part  = document.getElementById('f-partner').value;
+  const notes = document.getElementById('f-notes').value.trim();
+
+  if(!name){ showErr('من فضلك أدخل اسمك الكامل'); return; }
+  if(!phone || phone.length < 7){ showErr('من فضلك أدخل رقم هاتف صحيح'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> جاري الإرسال...';
+
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/applications', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        full_name: name,
+        phone: phone,
+        civil_id: civil,
+        nationality: nat,
+        age: age,
+        license_expiry: lic,
+        has_car: hasCar,
+        car_info: hasCar ? car : '',
+        preferred_partner: part,
+        notes: notes,
+        status: 'pending'
+      })
+    });
+    if(!res.ok){
+      const txt = await res.text().catch(()=>'');
+      throw new Error('HTTP '+res.status+' '+txt.slice(0,80));
+    }
+    document.getElementById('formScreen').style.display = 'none';
+    document.getElementById('successScreen').classList.add('show');
+    window.scrollTo({top:0, behavior:'smooth'});
+  } catch(err) {
+    console.error(err);
+    showErr('تعذّر إرسال الطلب — تأكد من الإنترنت وحاول مرة أخرى');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send"></i> أرسل الطلب';
+  }
+}
+</script>
+</body>
+</html>
