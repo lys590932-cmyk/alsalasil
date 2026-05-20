@@ -129,14 +129,9 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0f3a52 0%
         </div>
 
         <div class="fg">
-          <label>تفضّل العمل مع</label>
-          <select id="f-partner">
-            <option value="">— لا يهم —</option>
-            <option value="keeta">Keeta</option>
-            <option value="caboria">Caboria</option>
-            <option value="homy">HOMY</option>
-            <option value="imile">iMile</option>
-          </select>
+          <label>الراتب المتوقع (د.ك / شهر)</label>
+          <input id="f-salary" type="number" min="0" step="0.001" placeholder="مثال: 150">
+          <div class="hint">ضع الراتب اللي تتمناه شهرياً</div>
         </div>
 
         <div class="fg">
@@ -192,7 +187,7 @@ async function submitApp(ev){
   const lic   = document.getElementById('f-lic').value || null;
   const hasCar= document.getElementById('f-hascar').checked;
   const car   = document.getElementById('f-car').value.trim();
-  const part  = document.getElementById('f-partner').value;
+  const sal   = parseFloat(document.getElementById('f-salary').value) || null;
   const notes = document.getElementById('f-notes').value.trim();
 
   if(!name){ showErr('من فضلك أدخل اسمك الكامل'); return; }
@@ -220,7 +215,7 @@ async function submitApp(ev){
         license_expiry: lic,
         has_car: hasCar,
         car_info: hasCar ? car : '',
-        preferred_partner: part,
+        expected_salary: sal,
         notes: notes,
         status: 'pending'
       })
