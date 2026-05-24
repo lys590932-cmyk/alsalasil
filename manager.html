@@ -428,9 +428,14 @@ async function api(path, opts={}){
   const url = SUPA_URL + '/rest/v1/' + path;
   const headers = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
   const res = await fetch(url, {...opts, headers:{...headers,...(opts.headers||{})}});
-  if(!res.ok) throw new Error('HTTP '+res.status);
+  if(!res.ok){
+    const txt = await res.text().catch(()=>'');
+    console.error('[API ERROR]', res.status, path, txt);
+    throw new Error('HTTP '+res.status+' '+(txt||'').slice(0,200));
+  }
   if(res.status===204) return null;
-  return await res.json();
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
 }
 
 async function fetchDrivers(){
@@ -668,7 +673,14 @@ async function doSendMsg(){
     renderMsgList();
   } catch(e){
     console.error(e);
-    toast('فشل الإرسال — تأكد من جدول messages','e');
+    const msg = (e.message||'').toLowerCase();
+    if(msg.includes('404') || msg.includes('does not exist') || msg.includes('relation')) {
+      toast('جدول messages غير موجود — شغّل ملف SQL أولاً','e');
+    } else if(msg.includes('401') || msg.includes('403') || msg.includes('permission')) {
+      toast('صلاحيات Supabase — أعد تشغيل ملف SQL','e');
+    } else {
+      toast('خطأ: '+e.message.slice(0,80),'e');
+    }
   }
 }
 
