@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f3a52">
+<title>السلاسل — تطبيق المدير</title>
+
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="السلاسل مدير">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manager-manifest.json">
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+:root{
+  --bg:#f4f6fa; --surf:#fff; --teal:#1c5878; --teal-dk:#0f3a52; --red:#8e2235;
+  --green:#10b981; --amber:#f59e0b; --blue:#3b82f6; --violet:#a855f7;
+  --text:#0f1729; --muted:#64748b; --line:#e2e8f0;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14px}
+
+/* ===== LOGIN ===== */
+.login{position:fixed;inset:0;background:linear-gradient(135deg,#0f3a52 0%,#1c5878 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;z-index:9999}
+.login.gone{display:none}
+.login-logo{width:90px;height:90px;background:#fff;border-radius:24px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.login-logo i{font-size:48px;color:var(--teal)}
+.login h1{color:#fff;font-size:22px;font-weight:900;margin-bottom:6px}
+.login p{color:rgba(255,255,255,.85);font-size:13px;margin-bottom:30px}
+.pin-dots{display:flex;gap:12px;margin-bottom:30px}
+.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.4);transition:all .15s}
+.pin-dot.on{background:#fff;border-color:#fff;transform:scale(1.1)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.pin-key{width:72px;height:72px;background:rgba(255,255,255,.15);border:none;border-radius:50%;color:#fff;font-size:28px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.pin-key:active{background:rgba(255,255,255,.35);transform:scale(.95)}
+.pin-key.back{font-size:22px}
+.pin-err{color:#fca5a5;font-size:13px;margin-top:14px;min-height:16px;font-weight:700}
+
+/* ===== APP SHELL ===== */
+.app{display:flex;flex-direction:column;height:100vh;padding-top:var(--safe-top);padding-bottom:calc(70px + var(--safe-bot))}
+.topbar{background:var(--teal-dk);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.1);z-index:50}
+.topbar h2{font-size:17px;font-weight:900;display:flex;align-items:center;gap:8px}
+.topbar h2 i{color:#fbbf24}
+.topbar-actions{display:flex;gap:8px}
+.tba-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.tba-btn:active{background:rgba(255,255,255,.3)}
+.tba-btn .badge{position:absolute;top:-2px;left:-2px;background:var(--red);color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;padding:0 4px}
+.tba-btn{position:relative}
+
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.tab{display:none;padding:14px;animation:fadeUp .25s ease}
+.tab.on{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== BOTTOM TAB BAR ===== */
+.btab{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + var(--safe-bot));z-index:100;box-shadow:0 -4px 14px rgba(0,0,0,.05)}
+.btab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;transition:color .15s}
+.btab-item i{font-size:22px}
+.btab-item span{font-size:10px;font-weight:700}
+.btab-item.on{color:var(--teal)}
+.btab-item.on i{transform:scale(1.1)}
+
+/* ===== CARDS / KPI ===== */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.kpi-card{background:var(--surf);border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);border:1px solid var(--line)}
+.kpi-card .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;margin-bottom:8px}
+.kpi-card .v{font-size:22px;font-weight:900;line-height:1.1}
+.kpi-card .l{font-size:11px;color:var(--muted);margin-top:3px;font-weight:700}
+
+/* ===== SECTION ===== */
+.section{background:var(--surf);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid var(--line)}
+.section-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.section-h h3{font-size:14px;font-weight:900;color:var(--text);display:flex;align-items:center;gap:8px}
+.section-h h3 i{color:var(--teal)}
+.section-h .more{color:var(--teal);font-size:11px;font-weight:800;background:none;border:none;cursor:pointer;font-family:inherit}
+
+/* ===== LIST ROW ===== */
+.row{display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row-av{width:42px;height:42px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.row-info{flex:1;min-width:0}
+.row-name{font-weight:700;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-sub{font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-side{text-align:center;flex-shrink:0}
+.row-pill{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:800;display:inline-block}
+.pill-green{background:#d1fae5;color:#065f46}
+.pill-red{background:#fee2e2;color:#991b1b}
+.pill-amber{background:#fef3c7;color:#92400e}
+.pill-blue{background:#dbeafe;color:#1e40af}
+
+/* ===== BUTTONS ===== */
+.btn{padding:10px 16px;border:none;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn-pri{background:var(--teal);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-out{background:#fff;color:var(--teal);border:1.5px solid var(--teal)}
+.btn-block{width:100%;padding:14px;font-size:14px}
+
+/* ===== SEARCH ===== */
+.search{position:relative;margin-bottom:12px}
+.search input{width:100%;padding:12px 40px 12px 14px;border:1px solid var(--line);border-radius:12px;font-family:inherit;font-size:14px;background:#fff;outline:none}
+.search input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(28,88,120,.1)}
+.search i{position:absolute;top:50%;right:14px;transform:translateY(-50%);color:var(--muted);font-size:18px}
+
+/* ===== FILTER CHIPS ===== */
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{padding:7px 14px;background:#fff;border:1px solid var(--line);border-radius:18px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit}
+.chip.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+/* ===== MAP ===== */
+#map{height:calc(100vh - 56px - 70px - var(--safe-top) - var(--safe-bot));width:100%}
+.map-overlay{position:absolute;top:calc(var(--safe-top) + 70px);right:14px;background:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);font-size:11px;font-weight:700;z-index:1000;display:flex;align-items:center;gap:6px}
+.map-overlay .dot{width:10px;height:10px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ===== SHEET / MODAL ===== */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:flex-end}
+.sheet.on{display:flex}
+.sheet-box{background:#fff;width:100%;border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;padding:20px;padding-bottom:calc(20px + var(--safe-bot));animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.sheet-head h3{font-size:18px;font-weight:900}
+.sheet-x{background:#f1f5f9;border:none;width:34px;height:34px;border-radius:50%;font-size:20px;color:var(--muted);cursor:pointer}
+
+/* ===== FORM ===== */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;font-weight:800;color:var(--teal);margin-bottom:6px}
+.fg input,.fg select,.fg textarea{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--teal)}
+.fg textarea{resize:vertical;min-height:80px}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;top:calc(var(--safe-top) + 70px);left:50%;transform:translateX(-50%) translateY(-100px);background:var(--text);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 22px rgba(0,0,0,.3);transition:transform .3s ease;display:flex;align-items:center;gap:8px}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast.s{background:#065f46}
+.toast.e{background:#991b1b}
+
+/* ===== EMPTY ===== */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty i{font-size:48px;color:#cbd5e1;margin-bottom:10px}
+.empty p{font-size:13px}
+
+/* ===== LOADER ===== */
+.loader{display:flex;justify-content:center;padding:30px}
+.spin{width:30px;height:30px;border:3px solid #cbd5e1;border-top-color:var(--teal);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== QUICK ACTIONS GRID ===== */
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.qa{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px 4px;cursor:pointer;text-align:center;font-family:inherit}
+.qa:active{background:#f8fafc}
+.qa .ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;margin:0 auto 6px}
+.qa .l{font-size:10px;font-weight:800;color:var(--text)}
+
+/* Profile detail */
+.prof-head{background:linear-gradient(135deg,var(--teal),var(--teal-dk));color:#fff;padding:24px 20px;text-align:center;margin:-20px -20px 16px;border-radius:0}
+.prof-av{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.2);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;border:3px solid rgba(255,255,255,.3)}
+.prof-name{font-size:18px;font-weight:900}
+.prof-code{font-size:12px;opacity:.85;margin-top:3px}
+.prof-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.prof-info{background:#f8fafc;padding:10px;border-radius:10px}
+.prof-info .l{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px}
+.prof-info .v{font-size:12px;font-weight:800;color:var(--text)}
+
+.prof-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.prof-act{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;cursor:pointer;font-family:inherit}
+.prof-act i{font-size:24px;color:var(--teal);margin-bottom:4px;display:block}
+.prof-act span{font-size:11px;font-weight:800;color:var(--text)}
+.prof-act.wa i{color:#25d366}
+.prof-act.call i{color:var(--green)}
+.prof-act.msg i{color:var(--violet)}
+
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div class="login" id="loginScreen">
+  <div class="login-logo"><i class="ti ti-shield-lock"></i></div>
+  <h1>السلاسل — تطبيق المدير</h1>
+  <p>أدخل رمز الدخول للمتابعة</p>
+  <div class="pin-dots" id="pinDots"></div>
+  <div class="pin-pad" id="pinPad"></div>
+  <div class="pin-err" id="pinErr"></div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div class="app" id="mainApp" style="display:none">
+  <div class="topbar">
+    <h2 id="topbar-title"><i class="ti ti-dashboard"></i> الرئيسية</h2>
+    <div class="topbar-actions">
+      <button class="tba-btn" onclick="manualRefresh()"><i class="ti ti-refresh"></i></button>
+      <button class="tba-btn" onclick="openTab('more')"><i class="ti ti-dots"></i></button>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <!-- HOME TAB -->
+    <div class="tab on" id="tab-home">
+      <div class="qa-grid">
+        <div class="qa" onclick="openSendMsgSheet()"><div class="ic" style="background:var(--violet)"><i class="ti ti-message"></i></div><div class="l">رسالة</div></div>
+        <div class="qa" onclick="openTab('live')"><div class="ic" style="background:var(--green)"><i class="ti ti-map-pin"></i></div><div class="l">الخريطة</div></div>
+        <div class="qa" onclick="openAddVioSheet()"><div class="ic" style="background:var(--red)"><i class="ti ti-alert-triangle"></i></div><div class="l">مخالفة</div></div>
+        <div class="qa" onclick="openAppsList()"><div class="ic" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div><div class="l">طلبات<br><span id="qa-apps-count">0</span></div></div>
+      </div>
+
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="loader"><div class="spin"></div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-h">
+          <h3><i class="ti ti-broadcast"></i> الحضور المباشر اليوم</h3>
+          <button class="more" onclick="refreshClockin()">تحديث</button>
+        </div>
+        <div id="home-clockin"><div class="loader"><div class="spin"></div></div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-h">
+          <h3><i class="ti ti-cash-banknote"></i> ملخص سريع</h3>
+        </div>
+        <div id="home-stats"></div>
+      </div>
+    </div>
+
+    <!-- DRIVERS TAB -->
+    <div class="tab" id="tab-drivers">
+      <div class="search">
+        <input type="text" id="drvSearch" placeholder="ابحث بالاسم أو الكود..." oninput="renderDriversList()">
+        <i class="ti ti-search"></i>
+      </div>
+      <div class="chips" id="drvChips"></div>
+      <div class="section" style="padding:6px 14px">
+        <div id="drvList"></div>
+      </div>
+    </div>
+
+    <!-- LIVE MAP TAB -->
+    <div class="tab" id="tab-live" style="padding:0;height:100%">
+      <div id="map"></div>
+      <div class="map-overlay"><div class="dot"></div><span id="liveCount">0</span> سائق متصل</div>
+    </div>
+
+    <!-- MESSAGES TAB -->
+    <div class="tab" id="tab-msg">
+      <button class="btn btn-pri btn-block" onclick="openSendMsgSheet()" style="margin-bottom:14px"><i class="ti ti-message-plus"></i> رسالة جديدة</button>
+      <div class="section">
+        <div class="section-h"><h3><i class="ti ti-history"></i> الرسائل المرسلة</h3></div>
+        <div id="msgList"><div class="empty"><i class="ti ti-message-2-off"></i><p>لم ترسل أي رسائل بعد</p></div></div>
+      </div>
+    </div>
+
+    <!-- MORE TAB -->
+    <div class="tab" id="tab-more">
+      <div class="section" style="padding:0">
+        <div class="row" onclick="openAppsList()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div>
+          <div class="row-info"><div class="row-name">طلبات التقديم</div><div class="row-sub">السائقين الجدد</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openReportsSheet()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--blue)"><i class="ti ti-chart-bar"></i></div>
+          <div class="row-info"><div class="row-name">تقارير سريعة</div><div class="row-sub">ملخص الأداء اليومي والشهري</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openVioSheet()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--red)"><i class="ti ti-alert-triangle"></i></div>
+          <div class="row-info"><div class="row-name">المخالفات</div><div class="row-sub">عرض وتسجيل</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openWebAdmin()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--teal)"><i class="ti ti-device-desktop"></i></div>
+          <div class="row-info"><div class="row-name">النظام الكامل (لاب توب)</div><div class="row-sub">للمحاسبة والتقارير الشاملة</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="changePin()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--violet)"><i class="ti ti-key"></i></div>
+          <div class="row-info"><div class="row-name">تغيير رمز الدخول</div><div class="row-sub">احمي وصولك للتطبيق</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="logout()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:#94a3b8"><i class="ti ti-logout"></i></div>
+          <div class="row-info"><div class="row-name">تسجيل الخروج</div><div class="row-sub">قفل التطبيق</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:11px;margin-top:20px">
+        شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>
+        تطبيق المدير v1.0
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM TAB BAR -->
+  <div class="btab">
+    <button class="btab-item on" onclick="openTab('home')"><i class="ti ti-dashboard"></i><span>الرئيسية</span></button>
+    <button class="btab-item" onclick="openTab('drivers')"><i class="ti ti-users"></i><span>السائقين</span></button>
+    <button class="btab-item" onclick="openTab('live')"><i class="ti ti-map-2"></i><span>الخريطة</span></button>
+    <button class="btab-item" onclick="openTab('msg')"><i class="ti ti-message-circle"></i><span>رسائل</span></button>
+    <button class="btab-item" onclick="openTab('more')"><i class="ti ti-menu-2"></i><span>المزيد</span></button>
+  </div>
+</div>
+
+<!-- ============ SHEETS ============ -->
+<div class="sheet" id="sheet">
+  <div class="sheet-box" id="sheet-box"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== CONFIG ====================
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+const PARTNERS = [
+  {id:'keeta',   name:'Keeta',   color:'#fbbf24'},
+  {id:'caboria', name:'Caboria', color:'#3b82f6'},
+  {id:'homy',    name:'HOMY',    color:'#10b981'},
+  {id:'imile',   name:'iMile',   color:'#a855f7'}
+];
+
+// ==================== STATE ====================
+let DRV = [];           // drivers from Supabase
+let CLOCKIN = [];       // today's clockins
+let APPS = [];          // pending applications
+let LOCATIONS = [];     // driver_locations
+let MSGS = [];          // sent messages
+let currentTab = 'home';
+let drvFilter = 'all';
+let liveMap = null, liveMarkers = {};
+
+// ==================== AUTH (PIN) ====================
+let pinBuf = '';
+const STORED_PIN = localStorage.getItem('mgr_pin') || '1234'; // default 1234
+
+function buildPinPad(){
+  const pad = document.getElementById('pinPad');
+  const dots = document.getElementById('pinDots');
+  dots.innerHTML = '';
+  for(let i=0;i<4;i++) dots.insertAdjacentHTML('beforeend','<div class="pin-dot"></div>');
+  pad.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  keys.forEach(k=>{
+    if(k===''){ pad.insertAdjacentHTML('beforeend','<div></div>'); return; }
+    const cls = k==='⌫' ? 'pin-key back' : 'pin-key';
+    pad.insertAdjacentHTML('beforeend',`<button class="${cls}" onclick="pinKey('${k}')">${k}</button>`);
+  });
+}
+function pinKey(k){
+  const err = document.getElementById('pinErr');
+  err.textContent = '';
+  if(k==='⌫'){ pinBuf = pinBuf.slice(0,-1); }
+  else if(pinBuf.length < 4){ pinBuf += k; }
+  renderDots();
+  if(pinBuf.length===4){
+    setTimeout(()=>{
+      if(pinBuf === STORED_PIN){ unlockApp(); }
+      else {
+        err.textContent = 'رمز خاطئ — حاول مرة أخرى';
+        pinBuf = '';
+        renderDots();
+        navigator.vibrate && navigator.vibrate(200);
+      }
+    }, 150);
+  }
+}
+function renderDots(){
+  const dots = document.querySelectorAll('.pin-dot');
+  dots.forEach((d,i)=> d.classList.toggle('on', i<pinBuf.length));
+}
+function unlockApp(){
+  document.getElementById('loginScreen').classList.add('gone');
+  document.getElementById('mainApp').style.display = 'flex';
+  sessionStorage.setItem('mgr_authed','1');
+  bootApp();
+}
+function logout(){
+  sessionStorage.removeItem('mgr_authed');
+  pinBuf = '';
+  renderDots();
+  document.getElementById('loginScreen').classList.remove('gone');
+  document.getElementById('mainApp').style.display = 'none';
+}
+function changePin(){
+  const o = prompt('أدخل رمز الدخول الحالي:');
+  if(o !== STORED_PIN){ alert('رمز خاطئ'); return; }
+  const n = prompt('أدخل رمز جديد (4 أرقام):');
+  if(!n || !/^\d{4}$/.test(n)){ alert('يجب أن يكون 4 أرقام'); return; }
+  localStorage.setItem('mgr_pin', n);
+  alert('تم تغيير الرمز ✅');
+  location.reload();
+}
+
+// ==================== TABS ====================
+function openTab(t){
+  currentTab = t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.getElementById('tab-'+t).classList.add('on');
+  document.querySelectorAll('.btab-item').forEach((b,i)=>{
+    const map = ['home','drivers','live','msg','more'];
+    b.classList.toggle('on', map[i]===t);
+  });
+  const titles = {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد'};
+  const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2'};
+  document.getElementById('topbar-title').innerHTML = `<i class="ti ${icons[t]}"></i> ${titles[t]}`;
+  if(t==='live') setTimeout(initLiveMap, 100);
+  if(t==='drivers') renderDriversList();
+  if(t==='msg') renderMsgList();
+}
+
+// ==================== DATA FETCH ====================
+async function api(path, opts={}){
+  const url = SUPA_URL + '/rest/v1/' + path;
+  const headers = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+  const res = await fetch(url, {...opts, headers:{...headers,...(opts.headers||{})}});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  if(res.status===204) return null;
+  return await res.json();
+}
+
+async function fetchDrivers(){
+  try { DRV = await api('drivers?select=*&order=id.asc') || []; }
+  catch(e){ console.error('drivers',e); DRV=[]; }
+}
+async function fetchClockin(){
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    CLOCKIN = await api(`clockin?created_at=gte.${today}T00:00:00&order=created_at.desc&limit=200`) || [];
+  } catch(e){ console.error('clockin',e); CLOCKIN=[]; }
+}
+async function fetchApps(){
+  try { APPS = await api('applications?status=eq.pending&order=created_at.desc') || []; }
+  catch(e){ console.error('apps',e); APPS=[]; }
+}
+async function fetchLocations(){
+  try { LOCATIONS = await api('driver_locations?order=updated_at.desc') || []; }
+  catch(e){ console.error('loc',e); LOCATIONS=[]; }
+}
+
+// ==================== RENDERS ====================
+function fmtTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
+}
+function getPartner(id){ return PARTNERS.find(p=>p.id===id) || {name:'—',color:'#7d8590'}; }
+function initials(n){ return (n||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase(); }
+
+function renderHome(){
+  // KPIs
+  const today = new Date().toISOString().split('T')[0];
+  const ciToday = CLOCKIN.length;
+  const status = {};
+  CLOCKIN.forEach(r => { if(!status[r.driver_id]) status[r.driver_id]=r; });
+  const working = Object.values(status).filter(r=>r.action==='clock_in').length;
+  const totalDrv = DRV.length;
+  const totalApps = APPS.length;
+
+  const k = document.getElementById('kpi-grid');
+  k.innerHTML = `
+    <div class="kpi-card"><div class="ic" style="background:var(--green)"><i class="ti ti-broadcast"></i></div><div class="v">${working}</div><div class="l">شغّال حالياً</div></div>
+    <div class="kpi-card"><div class="ic" style="background:var(--blue)"><i class="ti ti-users"></i></div><div class="v">${totalDrv}</div><div class="l">إجمالي السائقين</div></div>
+    <div class="kpi-card"><div class="ic" style="background:var(--amber)"><i class="ti ti-calendar-check"></i></div><div class="v">${ciToday}</div><div class="l">تسجيلات اليوم</div></div>
+    <div class="kpi-card"><div class="ic" style="background:var(--violet)"><i class="ti ti-user-plus"></i></div><div class="v">${totalApps}</div><div class="l">طلبات معلقة</div></div>
+  `;
+  document.getElementById('qa-apps-count').textContent = totalApps ? '('+totalApps+')' : '';
+
+  // Live clockin (latest 5)
+  const ci = document.getElementById('home-clockin');
+  if(!CLOCKIN.length){ ci.innerHTML = '<div class="empty"><i class="ti ti-clock-off"></i><p>لا يوجد تسجيلات اليوم</p></div>'; }
+  else {
+    const recent = CLOCKIN.slice(0,5);
+    ci.innerHTML = recent.map(r=>{
+      const ac = r.action==='clock_in' ? '🟢 دخول' : '🔴 خروج';
+      const pill = r.action==='clock_in' ? 'pill-green' : 'pill-red';
+      return `<div class="row">
+        <div class="row-av" style="background:${getPartner((DRV.find(d=>d.id===r.driver_id)||{}).partner).color}">${initials(r.driver_name)}</div>
+        <div class="row-info"><div class="row-name">${r.driver_name||r.driver_id}</div><div class="row-sub">${fmtTime(r.created_at)}</div></div>
+        <div class="row-side"><span class="row-pill ${pill}">${ac}</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  // Stats
+  const partnerCounts = PARTNERS.map(p=>({...p, n:DRV.filter(d=>d.partner===p.id).length}));
+  document.getElementById('home-stats').innerHTML = partnerCounts.filter(p=>p.n>0).map(p=>
+    `<div class="row">
+      <div class="row-av" style="background:${p.color}">${p.name.slice(0,2)}</div>
+      <div class="row-info"><div class="row-name">${p.name}</div><div class="row-sub">${p.n} سائق · ${Math.round(p.n/totalDrv*100||0)}% من الإجمالي</div></div>
+    </div>`
+  ).join('');
+}
+
+function renderDriversList(){
+  const chips = document.getElementById('drvChips');
+  chips.innerHTML = `<button class="chip ${drvFilter==='all'?'on':''}" onclick="drvFilter='all';renderDriversList()">الكل (${DRV.length})</button>`
+    + PARTNERS.map(p=>{
+      const n=DRV.filter(d=>d.partner===p.id).length;
+      return `<button class="chip ${drvFilter===p.id?'on':''}" onclick="drvFilter='${p.id}';renderDriversList()">${p.name} (${n})</button>`;
+    }).join('');
+
+  const q = (document.getElementById('drvSearch').value||'').toLowerCase().trim();
+  let list = DRV;
+  if(drvFilter!=='all') list = list.filter(d=>d.partner===drvFilter);
+  if(q) list = list.filter(d=> (d.name||'').toLowerCase().includes(q) || (d.id||'').toLowerCase().includes(q));
+
+  const c = document.getElementById('drvList');
+  if(!list.length){ c.innerHTML='<div class="empty"><i class="ti ti-users-off"></i><p>لا يوجد سائقين</p></div>'; return; }
+  c.innerHTML = list.map(d=>{
+    const p = getPartner(d.partner);
+    return `<div class="row" onclick="openDriverProfile('${d.id}')">
+      <div class="row-av" style="background:${p.color}">${initials(d.name)}</div>
+      <div class="row-info"><div class="row-name">${d.name}</div><div class="row-sub">${d.id} · ${p.name}${d.sim?' · '+d.sim:''}</div></div>
+      <i class="ti ti-chevron-left" style="color:var(--muted);font-size:18px"></i>
+    </div>`;
+  }).join('');
+}
+
+function openDriverProfile(id){
+  const d = DRV.find(x=>x.id===id);
+  if(!d) return;
+  const p = getPartner(d.partner);
+  const recent = CLOCKIN.filter(r=>r.driver_id===id).slice(0,5);
+  const html = `
+    <div class="sheet-head"><h3>بيانات السائق</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <div class="prof-head" style="background:linear-gradient(135deg,${p.color},${p.color}cc)">
+      <div class="prof-av">${initials(d.name)}</div>
+      <div class="prof-name">${d.name}</div>
+      <div class="prof-code">${d.id} · ${p.name}</div>
+    </div>
+    <div class="prof-actions">
+      ${d.sim ? `<a href="tel:${d.sim}" class="prof-act call" style="text-decoration:none;color:inherit;display:block"><i class="ti ti-phone"></i><span>اتصال</span></a>` : ''}
+      ${d.sim ? `<a href="https://wa.me/965${d.sim.replace(/\\D/g,'')}" target="_blank" class="prof-act wa" style="text-decoration:none;color:inherit;display:block"><i class="ti ti-brand-whatsapp"></i><span>واتساب</span></a>` : ''}
+      <div class="prof-act msg" onclick="closeSheet();setTimeout(()=>openSendMsgSheet('${d.id}'),300)"><i class="ti ti-message"></i><span>رسالة</span></div>
+    </div>
+    <div class="prof-info-grid">
+      <div class="prof-info"><div class="l">الجنسية</div><div class="v">${d.nationality||'—'}</div></div>
+      <div class="prof-info"><div class="l">العمر</div><div class="v">${d.age||'—'}</div></div>
+      <div class="prof-info"><div class="l">رقم السيارة</div><div class="v">${d.car||'—'}</div></div>
+      <div class="prof-info"><div class="l">الرخصة</div><div class="v">${d.license||'—'}</div></div>
+      <div class="prof-info"><div class="l">المدني</div><div class="v">${d.civil||'—'}</div></div>
+      <div class="prof-info"><div class="l">الراتب الأساسي</div><div class="v">${(d.salary_base||0).toFixed(3)} د.ك</div></div>
+    </div>
+    <div class="section" style="margin:0">
+      <div class="section-h"><h3><i class="ti ti-clock"></i> آخر تسجيلات الحضور</h3></div>
+      ${recent.length ? recent.map(r=>`
+        <div class="row">
+          <div class="row-info">
+            <div class="row-name">${r.action==='clock_in'?'🟢 دخول':'🔴 خروج'}</div>
+            <div class="row-sub">${fmtTime(r.created_at)} · ${r.latitude?'موقع متاح':'بدون موقع'}</div>
+          </div>
+        </div>`).join('') : '<div class="empty"><i class="ti ti-clock-off"></i><p>لا يوجد تسجيلات اليوم</p></div>'}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <button class="btn btn-red" onclick="closeSheet();setTimeout(()=>openAddVioSheet('${d.id}'),300)"><i class="ti ti-alert-triangle"></i> تسجيل مخالفة</button>
+      <button class="btn btn-out" onclick="closeSheet()">إغلاق</button>
+    </div>
+  `;
+  openSheet(html);
+}
+
+// ==================== LIVE MAP ====================
+async function initLiveMap(){
+  await fetchLocations();
+  if(!liveMap){
+    liveMap = L.map('map').setView([29.3759, 47.9774], 11); // Kuwait
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap', maxZoom:19}).addTo(liveMap);
+  }
+  // Clear old markers
+  Object.values(liveMarkers).forEach(m=> liveMap.removeLayer(m));
+  liveMarkers = {};
+
+  // Show only drivers active in last 60 minutes
+  const cutoff = Date.now() - 60*60*1000;
+  const active = LOCATIONS.filter(l=> l.latitude && l.longitude && new Date(l.updated_at).getTime() > cutoff);
+
+  document.getElementById('liveCount').textContent = active.length;
+
+  if(!active.length){
+    if(liveMap) liveMap.setView([29.3759, 47.9774], 10);
+    return;
+  }
+  const pts = [];
+  active.forEach(l=>{
+    const d = DRV.find(x=>x.id===l.driver_id) || {name:l.driver_id, partner:'other'};
+    const p = getPartner(d.partner);
+    const icon = L.divIcon({
+      className:'',
+      html: `<div style="background:${p.color};color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3)">${initials(d.name)}</div>`,
+      iconSize:[36,36], iconAnchor:[18,18]
+    });
+    const m = L.marker([l.latitude, l.longitude], {icon}).addTo(liveMap);
+    const tt = new Date(l.updated_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
+    m.bindPopup(`<b>${d.name}</b><br>${d.id} · ${p.name}<br>آخر تحديث: ${tt}<br>${d.sim?`<a href="tel:${d.sim}">اتصال</a>`:''}`);
+    liveMarkers[l.driver_id] = m;
+    pts.push([l.latitude, l.longitude]);
+  });
+  if(pts.length === 1) liveMap.setView(pts[0], 14);
+  else liveMap.fitBounds(pts, {padding:[40,40]});
+  setTimeout(()=> liveMap.invalidateSize(), 200);
+}
+
+// ==================== SHEETS ====================
+function openSheet(html){
+  document.getElementById('sheet-box').innerHTML = html;
+  document.getElementById('sheet').classList.add('on');
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('on');
+}
+document.addEventListener('click', e=>{
+  if(e.target.id==='sheet') closeSheet();
+});
+
+function openSendMsgSheet(driverId){
+  const opts = '<option value="all">📢 إرسال للكل</option>' +
+    DRV.map(d=>`<option value="${d.id}" ${driverId===d.id?'selected':''}>${d.id} — ${d.name}</option>`).join('');
+  const html = `
+    <div class="sheet-head"><h3>إرسال رسالة</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <div class="fg"><label>المستلم</label><select id="ms-to">${opts}</select></div>
+    <div class="fg"><label>نوع الرسالة</label>
+      <select id="ms-lvl">
+        <option value="info">معلومة (أزرق)</option>
+        <option value="warning">تنبيه (أصفر)</option>
+        <option value="urgent">عاجل (أحمر)</option>
+      </select>
+    </div>
+    <div class="fg"><label>العنوان</label><input id="ms-title" placeholder="مثال: اجتماع غداً"></div>
+    <div class="fg"><label>نص الرسالة</label><textarea id="ms-body" placeholder="اكتب الرسالة هنا..."></textarea></div>
+    <button class="btn btn-pri btn-block" onclick="doSendMsg()"><i class="ti ti-send"></i> إرسال</button>
+  `;
+  openSheet(html);
+}
+
+async function doSendMsg(){
+  const to = document.getElementById('ms-to').value;
+  const title = document.getElementById('ms-title').value.trim();
+  const body = document.getElementById('ms-body').value.trim();
+  const level = document.getElementById('ms-lvl').value;
+  if(!title || !body){ toast('املأ العنوان والنص','e'); return; }
+  try {
+    const recipients = to==='all' ? DRV.map(d=>d.id) : [to];
+    for(const r of recipients){
+      await api('messages', {
+        method:'POST',
+        body: JSON.stringify({recipient:r, title, body, level, created_at: new Date().toISOString()}),
+        headers:{'Prefer':'return=minimal'}
+      });
+    }
+    MSGS.unshift({title, body, level, to, sent:Date.now(), count:recipients.length});
+    localStorage.setItem('mgr_msgs', JSON.stringify(MSGS.slice(0,50)));
+    closeSheet();
+    toast('تم الإرسال إلى '+recipients.length+' سائق ✅','s');
+    renderMsgList();
+  } catch(e){
+    console.error(e);
+    toast('فشل الإرسال — تأكد من جدول messages','e');
+  }
+}
+
+function openAddVioSheet(driverId){
+  const opts = '<option value="">— اختر السائق —</option>' +
+    DRV.map(d=>`<option value="${d.id}" ${driverId===d.id?'selected':''}>${d.id} — ${d.name}</option>`).join('');
+  const html = `
+    <div class="sheet-head"><h3>تسجيل مخالفة</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <div class="fg"><label>السائق</label><select id="v-drv">${opts}</select></div>
+    <div class="fg"><label>السبب</label>
+      <select id="v-reason">
+        <option>تجاوز السرعة</option>
+        <option>عدم الالتزام بالموعد</option>
+        <option>سوء معاملة عميل</option>
+        <option>إهمال السيارة</option>
+        <option>غياب بدون إذن</option>
+        <option>أخرى</option>
+      </select>
+    </div>
+    <div class="fg"><label>المبلغ (د.ك)</label><input id="v-amt" type="number" step="0.001" placeholder="مثال: 5"></div>
+    <div class="fg"><label>التاريخ</label><input id="v-date" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div class="fg"><label>ملاحظات</label><textarea id="v-note" placeholder="تفاصيل إضافية..."></textarea></div>
+    <button class="btn btn-red btn-block" onclick="doAddVio()"><i class="ti ti-check"></i> حفظ المخالفة</button>
+  `;
+  openSheet(html);
+}
+
+async function doAddVio(){
+  const drv = document.getElementById('v-drv').value;
+  const reason = document.getElementById('v-reason').value;
+  const amt = parseFloat(document.getElementById('v-amt').value) || 0;
+  const date = document.getElementById('v-date').value;
+  const note = document.getElementById('v-note').value.trim();
+  if(!drv){ toast('اختر السائق','e'); return; }
+  const d = DRV.find(x=>x.id===drv);
+  // Save to violations table (if exists) + send message
+  try {
+    // Try violations table
+    await api('violations', {
+      method:'POST',
+      body: JSON.stringify({driver_id:drv, driver_name:d?d.name:drv, reason, amount:amt, date, note, created_at:new Date().toISOString()}),
+      headers:{'Prefer':'return=minimal'}
+    }).catch(()=>{});
+    // Notify driver via messages
+    await api('messages', {
+      method:'POST',
+      body: JSON.stringify({
+        recipient: drv,
+        title: '⚠️ تم تسجيل مخالفة',
+        body: 'السبب: '+reason+'\nالخصم: '+amt.toFixed(3)+' د.ك\nالتاريخ: '+date+(note?'\nملاحظات: '+note:''),
+        level: 'urgent',
+        created_at: new Date().toISOString()
+      }),
+      headers:{'Prefer':'return=minimal'}
+    });
+    closeSheet();
+    toast('تم التسجيل وإشعار السائق ✅','s');
+  } catch(e){
+    console.error(e);
+    toast('فشل — تأكد من الاتصال','e');
+  }
+}
+
+async function openAppsList(){
+  await fetchApps();
+  const html = `
+    <div class="sheet-head"><h3>طلبات التقديم (${APPS.length})</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    ${APPS.length ? APPS.map(a=>`
+      <div class="section" style="margin-bottom:10px">
+        <div style="font-weight:900;font-size:15px;margin-bottom:6px">${a.full_name}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.7">
+          📱 ${a.phone||'—'}<br>
+          🌍 ${a.nationality||'—'} · العمر: ${a.age||'—'}<br>
+          🪪 المدني: ${a.civil_id||'—'}<br>
+          💼 الراتب المتوقع: ${a.expected_salary||'—'} د.ك<br>
+          🚗 ${a.has_car?'لديه سيارة: '+(a.car_info||''):'لا توجد سيارة'}<br>
+          📅 ${a.created_at?new Date(a.created_at).toLocaleString('ar-KW'):''}<br>
+          ${a.notes?'📝 '+a.notes:''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+          <button class="btn btn-green" onclick="appAction('${a.id}','approved')"><i class="ti ti-check"></i> قبول</button>
+          <button class="btn btn-red" onclick="appAction('${a.id}','rejected')"><i class="ti ti-x"></i> رفض</button>
+        </div>
+      </div>
+    `).join('') : '<div class="empty"><i class="ti ti-inbox"></i><p>لا توجد طلبات معلقة</p></div>'}
+  `;
+  openSheet(html);
+}
+
+async function appAction(id, status){
+  try {
+    await api('applications?id=eq.'+id, {
+      method:'PATCH',
+      body: JSON.stringify({status}),
+      headers:{'Prefer':'return=minimal'}
+    });
+    toast(status==='approved'?'تم القبول ✅':'تم الرفض','s');
+    await fetchApps();
+    openAppsList();
+    renderHome();
+  } catch(e){
+    toast('فشل التحديث','e');
+  }
+}
+
+function openVioSheet(){
+  openSheet(`
+    <div class="sheet-head"><h3>المخالفات</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <button class="btn btn-red btn-block" onclick="closeSheet();setTimeout(openAddVioSheet,300)"><i class="ti ti-plus"></i> تسجيل مخالفة جديدة</button>
+    <div style="margin-top:14px;padding:14px;background:#fef2f2;border-radius:10px;font-size:12px;color:#7f1d1d;line-height:1.7">
+      💡 المخالفات يتم حفظها في Supabase وتُرسل تلقائياً كإشعار للسائق المعني. لعرض كل المخالفات بالتفصيل والإحصائيات استخدم النظام الكامل من اللاب توب.
+    </div>
+  `);
+}
+
+function openReportsSheet(){
+  // Quick stats based on current data
+  const today = new Date().toISOString().split('T')[0];
+  const ciToday = CLOCKIN.length;
+  const status = {};
+  CLOCKIN.forEach(r => { if(!status[r.driver_id]) status[r.driver_id]=r; });
+  const working = Object.values(status).filter(r=>r.action==='clock_in').length;
+
+  const html = `
+    <div class="sheet-head"><h3>تقرير سريع — اليوم</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="ic" style="background:var(--green)"><i class="ti ti-users"></i></div><div class="v">${DRV.length}</div><div class="l">إجمالي السائقين</div></div>
+      <div class="kpi-card"><div class="ic" style="background:var(--blue)"><i class="ti ti-broadcast"></i></div><div class="v">${working}</div><div class="l">شغّال حالياً</div></div>
+      <div class="kpi-card"><div class="ic" style="background:var(--amber)"><i class="ti ti-clock"></i></div><div class="v">${ciToday}</div><div class="l">تسجيلات اليوم</div></div>
+      <div class="kpi-card"><div class="ic" style="background:var(--violet)"><i class="ti ti-user-plus"></i></div><div class="v">${APPS.length}</div><div class="l">طلبات معلقة</div></div>
+    </div>
+    <div class="section">
+      <div class="section-h"><h3><i class="ti ti-chart-pie"></i> توزيع السائقين بالشركاء</h3></div>
+      ${PARTNERS.map(p=>{const n=DRV.filter(d=>d.partner===p.id).length;const pc=DRV.length?Math.round(n/DRV.length*100):0;return n>0?`
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:800">${p.name}</span><span>${n} (${pc}%)</span></div>
+          <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden"><div style="width:${pc}%;height:100%;background:${p.color}"></div></div>
+        </div>`:''}).join('')}
+    </div>
+    <button class="btn btn-pri btn-block" onclick="shareReport()"><i class="ti ti-share"></i> مشاركة عبر واتساب</button>
+    <div style="margin-top:14px;padding:12px;background:#f0f9ff;border-radius:10px;font-size:11px;color:#075985;line-height:1.7">
+      💡 للتقارير المالية الشاملة (P&L، تحليل الشركاء، رواتب) افتح النظام الكامل من اللاب توب.
+    </div>
+  `;
+  openSheet(html);
+}
+
+function shareReport(){
+  const today = new Date().toLocaleDateString('ar-KW');
+  const working = Object.values((CLOCKIN.reduce((a,r)=>{if(!a[r.driver_id])a[r.driver_id]=r;return a;},{}))).filter(r=>r.action==='clock_in').length;
+  const text = `📊 *تقرير السلاسل — ${today}*\n\n` +
+    `👥 إجمالي السائقين: ${DRV.length}\n` +
+    `🟢 شغّال حالياً: ${working}\n` +
+    `⏰ تسجيلات اليوم: ${CLOCKIN.length}\n` +
+    `📝 طلبات معلقة: ${APPS.length}\n\n` +
+    `*التوزيع:*\n` +
+    PARTNERS.map(p=>{const n=DRV.filter(d=>d.partner===p.id).length;return n?`• ${p.name}: ${n}`:''}).filter(Boolean).join('\n') +
+    `\n\n— شركة السلاسل لتوصيل الطلبات الاستهلاكية`;
+  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+function renderMsgList(){
+  MSGS = JSON.parse(localStorage.getItem('mgr_msgs')||'[]');
+  const el = document.getElementById('msgList');
+  if(!MSGS.length){ el.innerHTML='<div class="empty"><i class="ti ti-message-2-off"></i><p>لم ترسل أي رسائل بعد</p></div>'; return; }
+  el.innerHTML = MSGS.map(m=>{
+    const color = m.level==='urgent'?'var(--red)':m.level==='warning'?'var(--amber)':'var(--blue)';
+    const toLabel = m.to==='all' ? '📢 الكل' : (DRV.find(d=>d.id===m.to)||{name:m.to}).name;
+    return `<div class="row">
+      <div class="row-av" style="background:${color}"><i class="ti ti-message"></i></div>
+      <div class="row-info">
+        <div class="row-name">${m.title}</div>
+        <div class="row-sub">إلى ${toLabel} · ${m.count} مستلم · ${new Date(m.sent).toLocaleString('ar-KW')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openWebAdmin(){
+  alert('النظام الكامل يفتح من اللاب توب أو الكمبيوتر — ملف "السلاسل_نظام_ادارة_السائقين_28.html" داخل مجلد alsalasil.');
+}
+
+// ==================== TOAST ====================
+function toast(msg, type=''){
+  const t = document.getElementById('toast');
+  t.innerHTML = `<i class="ti ti-${type==='s'?'check':type==='e'?'alert-circle':'info-circle'}"></i> ${msg}`;
+  t.className = 'toast on '+type;
+  setTimeout(()=> t.classList.remove('on'), 2500);
+}
+
+// ==================== REFRESH ====================
+async function refreshAll(){
+  await Promise.all([fetchDrivers(), fetchClockin(), fetchApps()]);
+  renderHome();
+  if(currentTab==='drivers') renderDriversList();
+  if(currentTab==='live') initLiveMap();
+}
+async function refreshClockin(){ await fetchClockin(); renderHome(); }
+async function manualRefresh(){
+  toast('جاري التحديث...');
+  await refreshAll();
+  toast('تم التحديث ✅','s');
+}
+
+// ==================== BOOT ====================
+async function bootApp(){
+  await refreshAll();
+  // Auto refresh every 60 seconds
+  setInterval(refreshAll, 60000);
+}
+
+buildPinPad();
+// Auto-unlock if session is still valid
+if(sessionStorage.getItem('mgr_authed') === '1'){
+  unlockApp();
+}
+
+// Register service worker for offline + install
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw-manager.js').catch(e=>console.warn('SW reg fail',e));
+}
+</script>
+</body>
+</html>
