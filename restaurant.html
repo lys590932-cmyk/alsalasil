@@ -227,9 +227,14 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
             </div>
           </div>
 
-          <div class="fg" style="margin-bottom:0"><label>تفاصيل إضافية</label>
+          <div class="fg"><label>تفاصيل إضافية</label>
             <textarea id="o-addr-extra" rows="2" placeholder="شقة 5، الطابق الثاني، بجانب البقالة، علامة مميزة..."></textarea>
           </div>
+
+          <button type="button" class="btn btn-pri btn-block" id="geocodeBtn" onclick="autoLocate()" style="margin-bottom:0;background:linear-gradient(135deg,#3b82f6,#1e40af)">
+            <i class="ti ti-target"></i> تحديد الموقع تلقائياً على الخريطة من العنوان
+          </button>
+          <div id="geocode-status" style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;min-height:14px"></div>
         </div>
 
         <div class="fg">
@@ -651,6 +656,83 @@ function onAreaChange(){
     placeMarker(found.lat, found.lng);
     document.getElementById('mh').textContent = 'تم الانتقال لمنطقة ' + a + ' — اضغط على موقع العميل بدقة';
   }
+}
+
+/* ==================== AUTO GEOCODING ====================
+   تحويل العنوان النصي لإحداثيات تلقائياً عن طريق Nominatim (OpenStreetMap)
+   يحاول عدة صيغ بحث للحصول على أدق نتيجة ممكنة في الكويت
+=================================================== */
+async function autoLocate(){
+  const area   = document.getElementById('o-area').value;
+  const block  = document.getElementById('o-block').value.trim();
+  const street = document.getElementById('o-street').value.trim();
+  const gov    = document.getElementById('o-gov').value;
+  const status = document.getElementById('geocode-status');
+  const btn    = document.getElementById('geocodeBtn');
+
+  if(!area){ status.textContent='⚠️ اختر المنطقة أولاً'; status.style.color='#dc2626'; return; }
+  if(!block){ status.textContent='⚠️ اكتب رقم القطعة أولاً'; status.style.color='#dc2626'; return; }
+
+  // Build progressive search queries (most specific → least specific)
+  const queries = [];
+  if(area && block && street) queries.push(`${area}, block ${block}, street ${street}, Kuwait`);
+  if(area && block && street) queries.push(`${area} ${block} ${street} الكويت`);
+  if(area && block)           queries.push(`${area}, block ${block}, Kuwait`);
+  if(area && block)           queries.push(`${area} قطعة ${block} الكويت`);
+  if(area)                    queries.push(`${area}, Kuwait`);
+  if(area)                    queries.push(`${area} الكويت`);
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin" style="width:18px;height:18px;border-width:2px;border-top-color:#fff"></div> جاري البحث...';
+  status.textContent = '🔍 البحث في OpenStreetMap...'; status.style.color='var(--muted)';
+
+  let found = null, usedQuery = '';
+  for(const q of queries){
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) +
+                  '&format=json&countrycodes=kw&limit=1&accept-language=ar,en';
+      const res = await fetch(url, { headers: {'Accept':'application/json'} });
+      if(!res.ok) continue;
+      const data = await res.json();
+      if(data && data.length){
+        found = data[0];
+        usedQuery = q;
+        break;
+      }
+      // small wait to be polite with Nominatim (1 req/sec)
+      await new Promise(r=>setTimeout(r, 350));
+    } catch(e){ console.warn('geocode try', q, e); }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-target"></i> تحديد الموقع تلقائياً على الخريطة من العنوان';
+
+  if(!found){
+    // Fallback: use area center
+    const areas = KW_AREAS[gov] || [];
+    const a = areas.find(x => x.n === area);
+    if(a){
+      pickMap.setView([a.lat, a.lng], 15);
+      placeMarker(a.lat, a.lng);
+      status.innerHTML = '⚠️ لم يتم العثور على عنوان دقيق — تم تحديد مركز ' + area + '. عدّل يدوياً بالضغط على الخريطة';
+      status.style.color='#d97706';
+    } else {
+      status.textContent = '❌ تعذّر تحديد الموقع. اضغط على الخريطة يدوياً.';
+      status.style.color='#dc2626';
+    }
+    return;
+  }
+
+  // Place marker on found location
+  const lat = parseFloat(found.lat), lng = parseFloat(found.lon);
+  pickMap.setView([lat, lng], 17);
+  placeMarker(lat, lng);
+
+  // Show result with confidence indicator
+  const displayName = (found.display_name || '').split(',').slice(0,3).join(',');
+  status.innerHTML = '✅ تم تحديد الموقع بنجاح<br><span style="color:var(--muted);font-size:10px">' + displayName + '</span>';
+  status.style.color = '#059669';
+  document.getElementById('mh').textContent = '📍 تم التحديد تلقائياً — تقدر تعدّل بالضغط على الخريطة';
 }
 
 // ==================== NEAREST DRIVER ====================
