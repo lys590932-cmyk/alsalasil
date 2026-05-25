@@ -193,9 +193,43 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
           <input id="o-phone" type="tel" inputmode="tel" placeholder="9XXXXXXX">
         </div>
 
-        <div class="fg"><label>عنوان العميل <span class="req">*</span></label>
-          <textarea id="o-addr" placeholder="مثال: السالمية، شارع الخليج، عمارة 12، شقة 5"></textarea>
-          <div class="fg-hint">اضغط على الخريطة تحت لتحديد الموقع بدقة</div>
+        <!-- ===== KUWAIT FINDER-STYLE ADDRESS ===== -->
+        <div style="background:#fef9f7;padding:12px;border-radius:12px;border:1px solid var(--line);margin-bottom:14px">
+          <div style="font-size:12px;font-weight:800;color:var(--red);margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-map-pin"></i> عنوان العميل (نظام كويت فايندر)</div>
+
+          <div class="fg"><label>المحافظة <span class="req">*</span></label>
+            <select id="o-gov" onchange="onGovChange()">
+              <option value="">— اختر المحافظة —</option>
+            </select>
+          </div>
+
+          <div class="fg"><label>المنطقة <span class="req">*</span></label>
+            <select id="o-area" onchange="onAreaChange()" disabled>
+              <option value="">— اختر المحافظة أولاً —</option>
+            </select>
+          </div>
+
+          <div class="fgrid">
+            <div class="fg"><label>القطعة <span class="req">*</span></label>
+              <input id="o-block" type="text" inputmode="numeric" placeholder="مثال: 5">
+            </div>
+            <div class="fg"><label>الشارع <span class="req">*</span></label>
+              <input id="o-street" type="text" placeholder="مثال: 12 أو الخليج">
+            </div>
+          </div>
+
+          <div class="fgrid">
+            <div class="fg"><label>الجادة</label>
+              <input id="o-avenue" type="text" placeholder="مثال: 3 (اختياري)">
+            </div>
+            <div class="fg"><label>رقم المنزل</label>
+              <input id="o-house" type="text" placeholder="مثال: 8">
+            </div>
+          </div>
+
+          <div class="fg" style="margin-bottom:0"><label>تفاصيل إضافية</label>
+            <textarea id="o-addr-extra" rows="2" placeholder="شقة 5، الطابق الثاني، بجانب البقالة، علامة مميزة..."></textarea>
+          </div>
         </div>
 
         <div class="fg">
@@ -316,6 +350,118 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
 const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 
+// ==================== KUWAIT AREAS (Kuwait Finder hierarchy) ====================
+// محافظات الكويت + المناطق + إحداثيات تقريبية لمركز كل منطقة
+const KW_AREAS = {
+  'العاصمة': [
+    {n:'شرق',          lat:29.378, lng:47.991},
+    {n:'مرقاب',        lat:29.376, lng:47.994},
+    {n:'قبلة',         lat:29.371, lng:47.985},
+    {n:'الصالحية',     lat:29.378, lng:47.993},
+    {n:'دسمان',        lat:29.385, lng:48.005},
+    {n:'بنيد القار',   lat:29.388, lng:48.002},
+    {n:'الدسمة',       lat:29.367, lng:47.997},
+    {n:'الفيحاء',      lat:29.349, lng:47.994},
+    {n:'كيفان',        lat:29.347, lng:47.984},
+    {n:'الشامية',      lat:29.345, lng:47.978},
+    {n:'النزهة',       lat:29.357, lng:47.984},
+    {n:'العديلية',     lat:29.339, lng:47.977},
+    {n:'الخالدية',     lat:29.341, lng:47.989},
+    {n:'القادسية',     lat:29.355, lng:47.974},
+    {n:'الروضة',       lat:29.323, lng:47.974},
+    {n:'اليرموك',      lat:29.316, lng:47.978},
+    {n:'السرة',        lat:29.306, lng:47.965},
+    {n:'قرطبة',        lat:29.298, lng:47.953},
+    {n:'صبحان',        lat:29.300, lng:48.030},
+    {n:'الدوحة',       lat:29.385, lng:47.955},
+    {n:'الصليبيخات',   lat:29.355, lng:47.910},
+    {n:'الشويخ',       lat:29.345, lng:47.935},
+    {n:'غرناطة',       lat:29.330, lng:47.940},
+    {n:'النهضة',       lat:29.347, lng:47.927},
+    {n:'الفردوس',      lat:29.290, lng:47.917}
+  ],
+  'حولي': [
+    {n:'حولي',          lat:29.333, lng:48.028},
+    {n:'السالمية',      lat:29.339, lng:48.075},
+    {n:'الرميثية',      lat:29.319, lng:48.075},
+    {n:'الجابرية',      lat:29.318, lng:48.027},
+    {n:'بيان',          lat:29.301, lng:48.046},
+    {n:'مشرف',          lat:29.302, lng:48.065},
+    {n:'سلوى',          lat:29.291, lng:48.078},
+    {n:'شعب',           lat:29.359, lng:48.043},
+    {n:'حطين',          lat:29.282, lng:48.030},
+    {n:'مبارك العبدالله', lat:29.286, lng:48.024},
+    {n:'الزهراء',       lat:29.276, lng:48.010},
+    {n:'البدع',         lat:29.351, lng:48.058},
+    {n:'النقرة',        lat:29.327, lng:48.034},
+    {n:'ميدان حولي',    lat:29.335, lng:48.022},
+    {n:'الشهداء',       lat:29.282, lng:48.030},
+    {n:'الصديق',        lat:29.314, lng:48.047}
+  ],
+  'الفروانية': [
+    {n:'الفروانية',     lat:29.277, lng:47.958},
+    {n:'خيطان',         lat:29.291, lng:47.950},
+    {n:'أبرق خيطان',    lat:29.295, lng:47.948},
+    {n:'العمرية',       lat:29.281, lng:47.948},
+    {n:'الأندلس',       lat:29.298, lng:47.929},
+    {n:'الرابية',       lat:29.279, lng:47.939},
+    {n:'الرحاب',        lat:29.305, lng:47.925},
+    {n:'إشبيلية',       lat:29.304, lng:47.939},
+    {n:'العارضية',      lat:29.310, lng:47.918},
+    {n:'الصديق',        lat:29.317, lng:47.984},
+    {n:'جليب الشيوخ',   lat:29.270, lng:47.970},
+    {n:'الرقعي',        lat:29.255, lng:47.937},
+    {n:'العمرية الصناعية', lat:29.291, lng:47.940}
+  ],
+  'مبارك الكبير': [
+    {n:'صباح السالم',   lat:29.270, lng:48.078},
+    {n:'العدان',        lat:29.258, lng:48.090},
+    {n:'القرين',        lat:29.248, lng:48.075},
+    {n:'المسيلة',       lat:29.245, lng:48.094},
+    {n:'المسايل',       lat:29.232, lng:48.078},
+    {n:'أبو فطيرة',     lat:29.227, lng:48.067},
+    {n:'فنيطيس',        lat:29.219, lng:48.110},
+    {n:'الفنيطيس الجديدة', lat:29.214, lng:48.103},
+    {n:'صبحان الصناعية', lat:29.273, lng:48.045},
+    {n:'وفرة السكنية',  lat:29.205, lng:48.040}
+  ],
+  'الأحمدي': [
+    {n:'الأحمدي',       lat:29.077, lng:48.085},
+    {n:'الفحيحيل',      lat:29.085, lng:48.135},
+    {n:'أبو حليفة',     lat:29.139, lng:48.131},
+    {n:'هدية',          lat:29.146, lng:48.122},
+    {n:'العقيلة',       lat:29.162, lng:48.115},
+    {n:'الفنطاس',       lat:29.184, lng:48.115},
+    {n:'المنقف',        lat:29.105, lng:48.135},
+    {n:'الصباحية',      lat:29.118, lng:48.083},
+    {n:'الرقة',         lat:29.155, lng:48.099},
+    {n:'المهبولة',      lat:29.155, lng:48.131},
+    {n:'علي صباح السالم', lat:29.165, lng:48.082},
+    {n:'الوفرة',        lat:28.628, lng:47.957},
+    {n:'الزور',         lat:28.700, lng:48.395},
+    {n:'النويصيب',      lat:28.418, lng:48.391},
+    {n:'الخيران',       lat:28.665, lng:48.367},
+    {n:'الجليعة',       lat:29.040, lng:48.158},
+    {n:'الشعيبة',       lat:29.054, lng:48.165}
+  ],
+  'الجهراء': [
+    {n:'الجهراء',        lat:29.337, lng:47.687},
+    {n:'النعيم',         lat:29.342, lng:47.705},
+    {n:'العيون',         lat:29.347, lng:47.696},
+    {n:'القصر',          lat:29.343, lng:47.683},
+    {n:'سعد العبدالله',  lat:29.358, lng:47.659},
+    {n:'الواحة',         lat:29.336, lng:47.668},
+    {n:'النسيم',         lat:29.327, lng:47.659},
+    {n:'الصليبية',       lat:29.318, lng:47.804},
+    {n:'الصليبية الصناعية', lat:29.310, lng:47.795},
+    {n:'كبد',            lat:29.215, lng:47.711},
+    {n:'العبدلي',        lat:29.795, lng:47.711},
+    {n:'أمغرة',          lat:29.288, lng:47.820},
+    {n:'تيماء',          lat:29.351, lng:47.668},
+    {n:'الجهراء الصناعية', lat:29.324, lng:47.700}
+  ]
+};
+
 // ==================== STATE ====================
 let REST = null;          // logged-in restaurant
 let ORDERS = [];          // all orders for this restaurant
@@ -366,6 +512,7 @@ function unlock(){
   document.getElementById('mainApp').style.display = 'flex';
   document.getElementById('tb-rest-name').textContent = REST.name;
   document.getElementById('tb-rest-sub').textContent  = REST.id + ' • السلاسل';
+  fillGovernorates();
   initPickMap();
   refreshAll();
   // Auto refresh
@@ -467,6 +614,45 @@ function setPay(p){
   document.getElementById('pay-paid').classList.toggle('on', p==='paid');
 }
 
+// ==================== KUWAIT FINDER ADDRESS LOGIC ====================
+function fillGovernorates(){
+  const sel = document.getElementById('o-gov');
+  if(!sel) return;
+  let h = '<option value="">— اختر المحافظة —</option>';
+  Object.keys(KW_AREAS).forEach(g => h += '<option value="'+g+'">'+g+'</option>');
+  sel.innerHTML = h;
+}
+
+function onGovChange(){
+  const g = document.getElementById('o-gov').value;
+  const areaSel = document.getElementById('o-area');
+  if(!g){
+    areaSel.innerHTML = '<option value="">— اختر المحافظة أولاً —</option>';
+    areaSel.disabled = true;
+    return;
+  }
+  const areas = KW_AREAS[g] || [];
+  let h = '<option value="">— اختر المنطقة —</option>';
+  areas.forEach(a => h += '<option value="'+a.n+'">'+a.n+'</option>');
+  areaSel.innerHTML = h;
+  areaSel.disabled = false;
+}
+
+function onAreaChange(){
+  const g = document.getElementById('o-gov').value;
+  const a = document.getElementById('o-area').value;
+  if(!g || !a || !pickMap) return;
+  const areas = KW_AREAS[g] || [];
+  const found = areas.find(x => x.n === a);
+  if(found){
+    // Jump map to area center and zoom in
+    pickMap.setView([found.lat, found.lng], 15);
+    // Auto-place a temporary marker on the area center so restaurant can drag/click to refine
+    placeMarker(found.lat, found.lng);
+    document.getElementById('mh').textContent = 'تم الانتقال لمنطقة ' + a + ' — اضغط على موقع العميل بدقة';
+  }
+}
+
 // ==================== NEAREST DRIVER ====================
 async function fetchActiveDrivers(){
   try {
@@ -490,14 +676,30 @@ function findNearestDriver(lat, lng){
 
 // ==================== SUBMIT ORDER ====================
 async function submitOrder(){
-  const name  = document.getElementById('o-name').value.trim();
-  const phone = document.getElementById('o-phone').value.replace(/\D/g,'');
-  const addr  = document.getElementById('o-addr').value.trim();
-  const amt   = parseFloat(document.getElementById('o-amt').value)||0;
-  const notes = document.getElementById('o-notes').value.trim();
+  const name   = document.getElementById('o-name').value.trim();
+  const phone  = document.getElementById('o-phone').value.replace(/\D/g,'');
+  const gov    = document.getElementById('o-gov').value;
+  const area   = document.getElementById('o-area').value;
+  const block  = document.getElementById('o-block').value.trim();
+  const street = document.getElementById('o-street').value.trim();
+  const avenue = document.getElementById('o-avenue').value.trim();
+  const house  = document.getElementById('o-house').value.trim();
+  const extra  = document.getElementById('o-addr-extra').value.trim();
+  const amt    = parseFloat(document.getElementById('o-amt').value)||0;
+  const notes  = document.getElementById('o-notes').value.trim();
+
+  // Build full address Kuwait Finder-style
+  const parts = [];
+  if(area)   parts.push(area);
+  if(block)  parts.push('قطعة '+block);
+  if(street) parts.push('شارع '+street);
+  if(avenue) parts.push('جادة '+avenue);
+  if(house)  parts.push('منزل '+house);
+  const addr = parts.join(' — ') + (extra?' — '+extra:'');
 
   if(!phone || phone.length<7){ toast('أدخل رقم تليفون صحيح','e'); return; }
-  if(!addr){ toast('أدخل عنوان العميل','e'); return; }
+  if(!gov || !area){ toast('اختر المحافظة والمنطقة','e'); return; }
+  if(!block || !street){ toast('اكتب القطعة والشارع','e'); return; }
   if(!pickLat || !pickLng){ toast('حدّد موقع العميل على الخريطة','e'); return; }
   if(currentDistance > 50){
     if(!confirm('المسافة '+currentDistance.toFixed(1)+' كم — هل أنت متأكد؟')) return;
@@ -572,7 +774,12 @@ async function submitOrder(){
 }
 
 function clearForm(){
-  ['o-name','o-phone','o-addr','o-amt','o-notes'].forEach(id=> document.getElementById(id).value='');
+  ['o-name','o-phone','o-block','o-street','o-avenue','o-house','o-addr-extra','o-amt','o-notes'].forEach(id=> {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  // Reset governorate/area dropdowns
+  const gov = document.getElementById('o-gov'); if(gov) gov.value='';
+  const area = document.getElementById('o-area'); if(area){ area.innerHTML='<option value="">— اختر المحافظة أولاً —</option>'; area.disabled=true; }
   document.getElementById('o-km').value='';
   if(pickMarker){ pickMap.removeLayer(pickMarker); pickMarker=null; }
   pickLat=null; pickLng=null; currentDistance=0; currentFee=0;
