@@ -231,10 +231,31 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
             <textarea id="o-addr-extra" rows="2" placeholder="شقة 5، الطابق الثاني، بجانب البقالة، علامة مميزة..."></textarea>
           </div>
 
-          <button type="button" class="btn btn-pri btn-block" id="geocodeBtn" onclick="autoLocate()" style="margin-bottom:0;background:linear-gradient(135deg,#3b82f6,#1e40af)">
-            <i class="ti ti-target"></i> تحديد الموقع تلقائياً على الخريطة من العنوان
-          </button>
-          <div id="geocode-status" style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;min-height:14px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <button type="button" class="btn btn-block" id="geocodeBtn" onclick="autoLocate()" style="background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;padding:11px;font-size:12px">
+              <i class="ti ti-target"></i> بحث تلقائي
+            </button>
+            <button type="button" class="btn btn-block" onclick="openGoogleSearch()" style="background:linear-gradient(135deg,#4285f4,#1a73e8);color:#fff;padding:11px;font-size:12px">
+              <i class="ti ti-brand-google"></i> خرائط Google
+            </button>
+          </div>
+          <div id="geocode-status" style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:10px;text-align:center;min-height:14px"></div>
+
+          <!-- ===== Paste coordinates from Google Maps ===== -->
+          <div style="background:#eff6ff;border:1px dashed #3b82f6;border-radius:10px;padding:10px;margin-bottom:0">
+            <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px;display:flex;align-items:center;gap:4px">
+              <i class="ti ti-clipboard"></i> الصق إحداثيات من Google Maps أو Kuwait Finder
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+              <input id="coord-paste" type="text" placeholder="مثال: 29.339, 48.075" style="padding:9px;font-family:'JetBrains Mono',monospace;font-size:13px;border:1.5px solid #cbd5e1;border-radius:8px">
+              <button type="button" onclick="pasteCoords()" style="padding:9px 14px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer">
+                <i class="ti ti-map-pin"></i> ضع على الخريطة
+              </button>
+            </div>
+            <div style="font-size:10px;color:#475569;margin-top:5px;line-height:1.7">
+              💡 <b>طريقة:</b> افتح Google Maps → اضغط مطوّلاً على موقع العميل → انسخ الإحداثيات (Long-press) → الصقها هنا
+            </div>
+          </div>
         </div>
 
         <div class="fg">
@@ -733,6 +754,71 @@ async function autoLocate(){
   status.innerHTML = '✅ تم تحديد الموقع بنجاح<br><span style="color:var(--muted);font-size:10px">' + displayName + '</span>';
   status.style.color = '#059669';
   document.getElementById('mh').textContent = '📍 تم التحديد تلقائياً — تقدر تعدّل بالضغط على الخريطة';
+}
+
+/* ====== Open Google Maps with the address pre-filled ====== */
+function openGoogleSearch(){
+  const area   = document.getElementById('o-area').value;
+  const block  = document.getElementById('o-block').value.trim();
+  const street = document.getElementById('o-street').value.trim();
+  const avenue = document.getElementById('o-avenue').value.trim();
+  const house  = document.getElementById('o-house').value.trim();
+  if(!area){ toast('اختر المنطقة أولاً','e'); return; }
+  // Build search query
+  const parts = [area];
+  if(block)  parts.push('block '+block);
+  if(street) parts.push('street '+street);
+  if(avenue) parts.push('avenue '+avenue);
+  if(house)  parts.push('house '+house);
+  parts.push('Kuwait');
+  const query = parts.join(' ');
+  // Open Google Maps in new tab — user can refine and copy coords back
+  const url = 'https://www.google.com/maps/search/' + encodeURIComponent(query);
+  window.open(url, '_blank');
+  // Hint
+  const st = document.getElementById('geocode-status');
+  st.innerHTML = '🗺️ افتح موقع العميل في Google Maps → اضغط مطوّلاً عليه → انسخ الإحداثيات والصقها تحت';
+  st.style.color = '#1e40af';
+}
+
+/* ====== Paste raw coordinates (lat, lng) ====== */
+function pasteCoords(){
+  const input = document.getElementById('coord-paste').value.trim();
+  if(!input){ toast('الصق الإحداثيات أولاً','e'); return; }
+  // Accept many formats: "29.339, 48.075" / "29.339,48.075" / "29.339 48.075" / "29°20'21.0\"N 48°04'30.0\"E"
+  let lat = null, lng = null;
+  // Try DD format first (most common copy from Google Maps)
+  const dd = input.match(/(-?\d+\.\d+)\s*[,\s]+\s*(-?\d+\.\d+)/);
+  if(dd){
+    lat = parseFloat(dd[1]);
+    lng = parseFloat(dd[2]);
+  } else {
+    // Try DMS format (very rare)
+    const dms = input.match(/(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([NS])\s+(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([EW])/i);
+    if(dms){
+      lat = parseInt(dms[1]) + parseInt(dms[2])/60 + parseFloat(dms[3])/3600;
+      if(dms[4].toUpperCase()==='S') lat = -lat;
+      lng = parseInt(dms[5]) + parseInt(dms[6])/60 + parseFloat(dms[7])/3600;
+      if(dms[8].toUpperCase()==='W') lng = -lng;
+    }
+  }
+  if(lat===null || lng===null || isNaN(lat) || isNaN(lng)){
+    toast('صيغة الإحداثيات غير صحيحة. مثال صحيح: 29.339, 48.075','e');
+    return;
+  }
+  // Basic sanity for Kuwait (roughly 28-30 lat, 46-49 lng)
+  if(lat < 28 || lat > 31 || lng < 46 || lng > 49){
+    if(!confirm('الإحداثيات (' + lat.toFixed(4) + ', ' + lng.toFixed(4) + ') خارج نطاق الكويت — متأكد؟')) return;
+  }
+  if(!pickMap){ toast('الخريطة لم تُحمَّل بعد','e'); return; }
+  pickMap.setView([lat, lng], 18);
+  placeMarker(lat, lng);
+  document.getElementById('coord-paste').value = '';
+  const st = document.getElementById('geocode-status');
+  st.innerHTML = '✅ تم تحديد الموقع بدقة من الإحداثيات الملصوقة';
+  st.style.color = '#059669';
+  document.getElementById('mh').textContent = '📍 تم التحديد بدقة من الإحداثيات';
+  toast('تم بنجاح ✅','s');
 }
 
 // ==================== NEAREST DRIVER ====================
