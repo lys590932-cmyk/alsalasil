@@ -379,6 +379,7 @@ button,input,select{font-family:'Cairo',sans-serif}
 
   <div class="screen" id="scrHome"></div>
   <div class="screen hide" id="scrAttendance"></div>
+  <div class="screen hide" id="scrOrders"></div>
   <div class="screen hide" id="scrSalary"></div>
   <div class="screen hide" id="scrProfile"></div>
 
@@ -388,6 +389,10 @@ button,input,select{font-family:'Cairo',sans-serif}
     </button>
     <button class="navbtn" id="navAttendance" onclick="switchTab('attendance')">
       <i class="ti ti-map-pin"></i><span data-i18n="nav_attendance">الحضور</span>
+    </button>
+    <button class="navbtn" id="navOrders" onclick="switchTab('orders')" style="position:relative">
+      <i class="ti ti-package"></i><span>أوردرات</span>
+      <span id="ordersBadge" style="display:none;position:absolute;top:4px;right:18px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:none;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
     </button>
     <button class="navbtn" id="navSalary" onclick="switchTab('salary')">
       <i class="ti ti-wallet"></i><span data-i18n="nav_salary">راتبي</span>
@@ -1098,9 +1103,9 @@ function renderNotifs(){
    ========================================================= */
 function switchTab(tab){
   currentTab=tab;
-  var screens=['Home','Attendance','Salary','Profile'];
+  var screens=['Home','Attendance','Orders','Salary','Profile'];
   screens.forEach(function(s){ $('scr'+s).classList.add('hide'); $('nav'+s).classList.remove('on'); });
-  var map={home:'Home',attendance:'Attendance',salary:'Salary',profile:'Profile'};
+  var map={home:'Home',attendance:'Attendance',orders:'Orders',salary:'Salary',profile:'Profile'};
   var s=map[tab]||'Home';
   $('scr'+s).classList.remove('hide');
   $('nav'+s).classList.add('on');
@@ -1111,6 +1116,7 @@ function renderCurrentTab(){
   if(!DRIVER) return;
   if(currentTab==='home') renderHome();
   else if(currentTab==='attendance') renderAttendance();
+  else if(currentTab==='orders') renderOrders();
   else if(currentTab==='salary') renderSalary();
   else if(currentTab==='profile') renderProfile();
 }
@@ -1542,6 +1548,169 @@ function init(){
   tryAutoLogin();
 }
 init();
+
+/* =========================================================
+   ORDERS TAB — Delivery orders from restaurants
+   ========================================================= */
+var MY_ORDERS = [];
+
+async function fetchMyOrders(){
+  if(!DRIVER || !DRIVER.id) return;
+  try {
+    var url = SUPA_URL + '/rest/v1/orders?driver_id=eq.' + DRIVER.id + '&order=created_at.desc&limit=100';
+    var res = await fetch(url, {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    if(res.ok) MY_ORDERS = await res.json();
+  } catch(e){ console.error('orders fetch', e); }
+  updateOrdersBadge();
+}
+
+function updateOrdersBadge(){
+  var pending = MY_ORDERS.filter(function(o){ return ['assigned','picked_up'].indexOf(o.status)>=0; }).length;
+  var b = $('ordersBadge');
+  if(!b) return;
+  if(pending > 0){
+    b.textContent = pending;
+    b.style.display = 'inline-flex';
+  } else {
+    b.style.display = 'none';
+  }
+}
+
+async function renderOrders(){
+  await fetchMyOrders();
+  var el = $('scrOrders');
+  var active = MY_ORDERS.filter(function(o){ return ['assigned','picked_up'].indexOf(o.status)>=0; });
+  var delivered = MY_ORDERS.filter(function(o){ return o.status==='delivered'; });
+  var cashToday = delivered.filter(function(o){
+    var today = new Date().toISOString().split('T')[0];
+    return o.payment_method==='cash' && (o.delivered_at||o.created_at||'').startsWith(today);
+  });
+  var cashSum = cashToday.reduce(function(s,o){ return s + parseFloat(o.order_amount||0); }, 0);
+
+  var html = '';
+  // Header with stats
+  html += '<div style="padding:12px;background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;border-radius:0 0 16px 16px;margin-bottom:12px">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+  html += '<h2 style="font-size:17px;font-weight:900"><i class="ti ti-package"></i> الأوردرات</h2>';
+  html += '<button onclick="renderOrders()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:8px;font-size:16px"><i class="ti ti-refresh"></i></button>';
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">';
+  html += '<div style="background:rgba(255,255,255,.15);padding:10px;border-radius:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:#fbbf24">'+active.length+'</div><div style="font-size:10px;opacity:.85">جارية</div></div>';
+  html += '<div style="background:rgba(255,255,255,.15);padding:10px;border-radius:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:#10b981">'+delivered.length+'</div><div style="font-size:10px;opacity:.85">منتهية اليوم</div></div>';
+  html += '<div style="background:rgba(255,255,255,.15);padding:10px;border-radius:10px;text-align:center"><div style="font-size:18px;font-weight:900;color:#fff;font-family:JetBrains Mono,monospace">'+cashSum.toFixed(3)+'</div><div style="font-size:10px;opacity:.85">كاش اليوم</div></div>';
+  html += '</div></div>';
+
+  html += '<div style="padding:0 12px">';
+  // Active orders section
+  if(active.length){
+    html += '<h3 style="font-size:13px;font-weight:900;color:#dc2626;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-clock-bolt"></i> الأوردرات الجارية ('+active.length+')</h3>';
+    active.forEach(function(o){ html += _renderOrderCard(o, true); });
+  } else {
+    html += '<div style="text-align:center;padding:30px 20px;color:#94a3b8;background:#f8fafc;border-radius:12px;margin-bottom:14px"><i class="ti ti-inbox" style="font-size:48px;color:#cbd5e1"></i><p style="margin-top:10px;font-size:13px">لا يوجد أوردرات جارية</p></div>';
+  }
+
+  // Delivered (recent 10)
+  if(delivered.length){
+    html += '<h3 style="font-size:13px;font-weight:900;color:#10b981;margin:18px 0 8px;display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check"></i> الأوردرات المنتهية</h3>';
+    delivered.slice(0,10).forEach(function(o){ html += _renderOrderCard(o, false); });
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function _renderOrderCard(o, active){
+  var STATUS_AR = {pending:'معلّق', assigned:'جديد ⚡', picked_up:'في الطريق', delivered:'تم التوصيل ✅', cancelled:'ملغي'};
+  var STATUS_CL = {pending:'#92400e', assigned:'#1e40af', picked_up:'#854d0e', delivered:'#065f46', cancelled:'#991b1b'};
+  var STATUS_BG = {pending:'#fef3c7', assigned:'#dbeafe', picked_up:'#fde68a', delivered:'#d1fae5', cancelled:'#fee2e2'};
+  var time = new Date(o.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
+  var amt = parseFloat(o.order_amount||0).toFixed(3);
+  var phone = (o.customer_phone||'').replace(/\D/g,'');
+  var addr = o.customer_address || '';
+  var dist = parseFloat(o.distance_km||0).toFixed(1);
+
+  var h = '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:10px;'+(active?'border-right:4px solid #1c5878':'')+'">';
+  // Header
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">';
+  h += '<div><div style="font-size:10px;color:#94a3b8;font-weight:700">#'+o.id+' • '+time+'</div>';
+  h += '<div style="font-size:14px;font-weight:900;margin-top:2px">🍽️ '+o.restaurant_name+'</div></div>';
+  h += '<span style="font-size:10px;padding:4px 10px;border-radius:10px;font-weight:800;background:'+STATUS_BG[o.status]+';color:'+STATUS_CL[o.status]+'">'+STATUS_AR[o.status]+'</span>';
+  h += '</div>';
+
+  // Customer info
+  h += '<div style="background:#f8fafc;padding:10px;border-radius:10px;margin-bottom:10px">';
+  h += '<div style="font-size:13px;font-weight:800;margin-bottom:4px">👤 '+(o.customer_name||o.customer_phone)+'</div>';
+  h += '<div style="font-size:11px;color:#64748b;line-height:1.6">📍 '+addr+'</div>';
+  if(o.notes) h += '<div style="font-size:11px;color:#92400e;margin-top:4px;background:#fffbeb;padding:6px 8px;border-radius:6px">📝 '+o.notes+'</div>';
+  h += '</div>';
+
+  // Amount + payment
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:12px">';
+  h += '<div style="background:#f0fdf4;padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">المبلغ</div><div style="font-weight:900;color:#065f46">'+amt+' د.ك</div></div>';
+  h += '<div style="background:'+(o.payment_method==='cash'?'#fef3c7':'#dbeafe')+';padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">الدفع</div><div style="font-weight:900;color:'+(o.payment_method==='cash'?'#92400e':'#1e40af')+'">'+(o.payment_method==='cash'?'💵 كاش':'💳 مدفوع')+'</div></div>';
+  h += '</div>';
+
+  // Action buttons
+  if(active){
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">';
+    // Maps button
+    if(o.customer_lat && o.customer_lng){
+      h += '<a href="https://www.google.com/maps/dir/?api=1&destination='+o.customer_lat+','+o.customer_lng+'&travelmode=driving" target="_blank" style="background:#3b82f6;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-navigation"></i> اتجاهات</a>';
+    } else {
+      h += '<a href="https://www.google.com/maps/search/'+encodeURIComponent(addr)+'" target="_blank" style="background:#3b82f6;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-navigation"></i> بحث</a>';
+    }
+    // Call button
+    if(phone) h += '<a href="tel:'+phone+'" style="background:#10b981;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-phone"></i> اتصال</a>';
+    h += '</div>';
+    // WhatsApp + Status update
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+    if(phone){
+      var waNum = phone.length===8 ? '965'+phone : phone;
+      h += '<a href="https://wa.me/'+waNum+'" target="_blank" style="background:#25d366;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-brand-whatsapp"></i> واتساب</a>';
+    }
+    if(o.status==='assigned'){
+      h += '<button onclick="updateOrderStatus('+o.id+',\'picked_up\')" style="background:#f59e0b;color:#fff;padding:10px;border-radius:8px;border:none;font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-package"></i> استلمت من المطعم</button>';
+    } else if(o.status==='picked_up'){
+      h += '<button onclick="updateOrderStatus('+o.id+',\'delivered\')" style="background:#10b981;color:#fff;padding:10px;border-radius:8px;border:none;font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-check"></i> تم التوصيل</button>';
+    }
+    h += '</div>';
+  } else {
+    h += '<div style="font-size:11px;color:#64748b;display:flex;justify-content:space-between"><span>📏 '+dist+' كم</span><span>أجر التوصيل: '+parseFloat(o.delivery_fee||0).toFixed(3)+' د.ك</span></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+async function updateOrderStatus(orderId, newStatus){
+  var ok = confirm(newStatus==='picked_up' ? 'تأكيد استلام الأوردر من المطعم؟' : 'تأكيد توصيل الأوردر للعميل؟');
+  if(!ok) return;
+  try {
+    var body = {status:newStatus};
+    if(newStatus==='picked_up')  body.picked_at = new Date().toISOString();
+    if(newStatus==='delivered')  body.delivered_at = new Date().toISOString();
+    var res = await fetch(SUPA_URL+'/rest/v1/orders?id=eq.'+orderId, {
+      method:'PATCH',
+      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify(body)
+    });
+    if(res.ok){
+      toast(newStatus==='delivered'?'تم التوصيل ✅':'تم الاستلام ✅');
+      renderOrders();
+    } else {
+      toast('فشل التحديث');
+    }
+  } catch(e){ console.error(e); toast('فشل: '+e.message.slice(0,40)); }
+}
+
+// Auto-refresh orders every 30s if on orders tab or there are pending orders
+setInterval(function(){
+  if(!DRIVER) return;
+  if(currentTab === 'orders'){ renderOrders(); }
+  else { fetchMyOrders(); }
+}, 30000);
+
+// Fetch orders on login
+var _origTryAutoLogin = tryAutoLogin;
 </script>
 </body>
 </html>

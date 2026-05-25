@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#8e2235">
+<title>السلاسل — تطبيق المطعم</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="السلاسل مطعم">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="restaurant-manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#fef9f7; --surf:#fff; --red:#8e2235; --red-dk:#6b1929; --teal:#1c5878;
+  --green:#10b981; --amber:#f59e0b; --blue:#3b82f6;
+  --text:#1a1a1a; --muted:#64748b; --line:#e9d8d0;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14px}
+
+/* ===== LOGIN ===== */
+.login{position:fixed;inset:0;background:linear-gradient(135deg,#6b1929 0%,#8e2235 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;z-index:9999}
+.login.gone{display:none}
+.login-logo{width:90px;height:90px;background:#fff;border-radius:24px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.login-logo i{font-size:48px;color:var(--red)}
+.login h1{color:#fff;font-size:22px;font-weight:900;margin-bottom:6px}
+.login p{color:rgba(255,255,255,.85);font-size:13px;margin-bottom:24px;text-align:center}
+.login-form{width:100%;max-width:340px}
+.login-form input{width:100%;padding:14px;border:none;border-radius:12px;font-family:inherit;font-size:15px;margin-bottom:12px;text-align:center;font-weight:700}
+.login-form button{width:100%;padding:15px;background:#fbbf24;color:#6b1929;border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:900;cursor:pointer}
+.login-err{color:#fca5a5;font-size:12px;margin-top:10px;text-align:center;min-height:18px;font-weight:700}
+
+/* ===== APP ===== */
+.app{display:flex;flex-direction:column;height:100vh;padding-top:var(--safe-top);padding-bottom:calc(70px + var(--safe-bot))}
+.topbar{background:var(--red);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.15);z-index:50}
+.topbar h2{font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px}
+.topbar h2 .ic{width:30px;height:30px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.topbar-rest{font-size:11px;opacity:.9}
+.tba-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.tba-btn:active{background:rgba(255,255,255,.3)}
+
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tab{display:none;padding:14px;animation:fadeUp .25s ease}
+.tab.on{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== BOTTOM TAB BAR ===== */
+.btab{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + var(--safe-bot));z-index:100;box-shadow:0 -4px 14px rgba(0,0,0,.05)}
+.btab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit}
+.btab-item i{font-size:22px}
+.btab-item span{font-size:10px;font-weight:700}
+.btab-item.on{color:var(--red)}
+.btab-item.on i{transform:scale(1.1)}
+
+/* ===== KPI ===== */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.kpi-card{background:var(--surf);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid var(--line)}
+.kpi-card .v{font-size:22px;font-weight:900;line-height:1.1}
+.kpi-card .l{font-size:10px;color:var(--muted);margin-top:3px;font-weight:700}
+
+/* ===== SECTIONS / CARDS ===== */
+.section{background:var(--surf);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid var(--line)}
+.section-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.section-h h3{font-size:14px;font-weight:900;display:flex;align-items:center;gap:8px}
+.section-h h3 i{color:var(--red)}
+
+/* ===== FORMS ===== */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;font-weight:800;color:var(--red);margin-bottom:6px}
+.fg label .req{color:#dc2626}
+.fg input,.fg select,.fg textarea{width:100%;padding:13px;border:1.5px solid var(--line);border-radius:11px;font-family:inherit;font-size:15px;background:#fff;outline:none;color:var(--text)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(142,34,53,.1)}
+.fg textarea{resize:vertical;min-height:60px}
+.fg-hint{font-size:11px;color:var(--muted);margin-top:5px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ===== PAYMENT TOGGLE ===== */
+.pay-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pay-opt{padding:14px;background:#f8fafc;border:2px solid var(--line);border-radius:12px;cursor:pointer;text-align:center;font-family:inherit;font-weight:800;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.pay-opt i{font-size:24px}
+.pay-opt.on{border-color:var(--red);background:#fef2f2;color:var(--red)}
+.pay-opt.on i{color:var(--red)}
+
+/* ===== MAP PICKER ===== */
+.map-box{height:240px;border-radius:12px;overflow:hidden;border:1.5px solid var(--line);position:relative}
+.map-box-hint{position:absolute;top:10px;left:10px;right:10px;background:rgba(0,0,0,.7);color:#fff;padding:6px 10px;border-radius:8px;font-size:11px;text-align:center;z-index:1000;pointer-events:none}
+
+/* ===== DELIVERY FEE PREVIEW ===== */
+.fee-box{background:linear-gradient(135deg,#fef9f7,#fef2f2);border:1.5px solid var(--red);border-radius:12px;padding:14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.fee-box-l{font-size:12px;color:var(--muted);font-weight:700}
+.fee-box-v{font-size:24px;font-weight:900;color:var(--red);font-family:'JetBrains Mono',monospace}
+.fee-box-d{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ===== BUTTONS ===== */
+.btn{padding:14px;border:none;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn-pri{background:var(--red);color:#fff}
+.btn-out{background:#fff;color:var(--red);border:1.5px solid var(--red)}
+.btn-green{background:var(--green);color:#fff}
+.btn-block{width:100%}
+
+/* ===== ORDER ROW ===== */
+.order-row{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.order-row-h{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.order-row-id{font-size:11px;color:var(--muted);font-weight:700}
+.order-row-cust{font-size:15px;font-weight:900;margin-top:2px}
+.order-row-addr{font-size:12px;color:var(--muted);margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.order-pill{font-size:10px;padding:4px 9px;border-radius:10px;font-weight:800;white-space:nowrap}
+.pill-pending  {background:#fef3c7;color:#92400e}
+.pill-assigned {background:#dbeafe;color:#1e40af}
+.pill-pickedup {background:#fde68a;color:#854d0e}
+.pill-delivered{background:#d1fae5;color:#065f46}
+.pill-cancelled{background:#fee2e2;color:#991b1b}
+.order-row-info{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.order-row-info b{color:var(--text)}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;top:calc(var(--safe-top) + 70px);left:50%;transform:translateX(-50%) translateY(-100px);background:var(--text);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 22px rgba(0,0,0,.3);transition:transform .3s ease;display:flex;align-items:center;gap:8px}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast.s{background:#065f46}
+.toast.e{background:#991b1b}
+
+/* ===== EMPTY ===== */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty i{font-size:48px;color:#cbd5e1;margin-bottom:10px}
+.empty p{font-size:13px}
+
+/* ===== LOADER ===== */
+.loader{display:flex;justify-content:center;padding:30px}
+.spin{width:30px;height:30px;border:3px solid #cbd5e1;border-top-color:var(--red);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== SHEET ===== */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:flex-end}
+.sheet.on{display:flex}
+.sheet-box{background:#fff;width:100%;border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;padding:20px;padding-bottom:calc(20px + var(--safe-bot));animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.sheet-head h3{font-size:18px;font-weight:900}
+.sheet-x{background:#f1f5f9;border:none;width:34px;height:34px;border-radius:50%;font-size:20px;color:var(--muted);cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login" id="loginScreen">
+  <div class="login-logo"><i class="ti ti-tools-kitchen-2"></i></div>
+  <h1>السلاسل — تطبيق المطعم</h1>
+  <p>سجّل دخول مطعمك لاستقبال خدمات التوصيل</p>
+  <div class="login-form">
+    <input id="li-id" placeholder="كود المطعم (مثل R001)" autocomplete="off" autocapitalize="characters">
+    <input id="li-pin" type="password" inputmode="numeric" placeholder="الرمز السري" autocomplete="off">
+    <button onclick="doLogin()"><i class="ti ti-login"></i> دخول</button>
+    <div class="login-err" id="li-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="mainApp" style="display:none">
+  <div class="topbar">
+    <h2>
+      <div class="ic"><i class="ti ti-tools-kitchen-2"></i></div>
+      <div>
+        <div id="tb-rest-name">المطعم</div>
+        <div class="topbar-rest" id="tb-rest-sub">السلاسل لتوصيل الطلبات</div>
+      </div>
+    </h2>
+    <button class="tba-btn" onclick="refreshAll()"><i class="ti ti-refresh"></i></button>
+  </div>
+
+  <div class="content" id="content">
+
+    <!-- ===== TAB: NEW ORDER ===== -->
+    <div class="tab on" id="tab-new">
+      <div class="section">
+        <div class="section-h"><h3><i class="ti ti-plus-circle"></i> أوردر جديد</h3></div>
+
+        <div class="fg"><label>اسم العميل</label>
+          <input id="o-name" placeholder="مثال: أحمد محمد">
+        </div>
+
+        <div class="fg"><label>رقم تليفون العميل <span class="req">*</span></label>
+          <input id="o-phone" type="tel" inputmode="tel" placeholder="9XXXXXXX">
+        </div>
+
+        <div class="fg"><label>عنوان العميل <span class="req">*</span></label>
+          <textarea id="o-addr" placeholder="مثال: السالمية، شارع الخليج، عمارة 12، شقة 5"></textarea>
+          <div class="fg-hint">اضغط على الخريطة تحت لتحديد الموقع بدقة</div>
+        </div>
+
+        <div class="fg">
+          <label><i class="ti ti-map-pin"></i> تحديد موقع العميل على الخريطة</label>
+          <div class="map-box">
+            <div class="map-box-hint" id="mh">اضغط في أي مكان على الخريطة لتحديد موقع العميل</div>
+            <div id="map-pick" style="height:100%"></div>
+          </div>
+          <div class="fg-hint" id="map-coords">المسافة: — • أجر التوصيل: —</div>
+        </div>
+
+        <div class="fgrid">
+          <div class="fg"><label>قيمة الطلب (د.ك)</label>
+            <input id="o-amt" type="number" step="0.001" inputmode="decimal" placeholder="0.000">
+          </div>
+          <div class="fg"><label>المسافة (كم)</label>
+            <input id="o-km" type="number" step="0.1" readonly style="background:#f8fafc">
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>طريقة الدفع</label>
+          <div class="pay-toggle">
+            <div class="pay-opt on" id="pay-cash" onclick="setPay('cash')">
+              <i class="ti ti-cash"></i><span>كاش</span>
+            </div>
+            <div class="pay-opt" id="pay-paid" onclick="setPay('paid')">
+              <i class="ti ti-credit-card"></i><span>مدفوع مسبقاً</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="fee-box">
+          <div>
+            <div class="fee-box-l">أجر التوصيل المستحق على المطعم</div>
+            <div class="fee-box-d" id="fee-note">حدد موقع العميل لحساب الأجر</div>
+          </div>
+          <div class="fee-box-v" id="fee-display">—</div>
+        </div>
+
+        <div class="fg"><label>ملاحظات</label>
+          <textarea id="o-notes" placeholder="مثلاً: العمارة على الناصية، أو اتصل قبل الوصول..."></textarea>
+        </div>
+
+        <button class="btn btn-pri btn-block" id="o-submit" onclick="submitOrder()">
+          <i class="ti ti-send"></i> إرسال الأوردر للسائق
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== TAB: ORDERS LIST ===== -->
+    <div class="tab" id="tab-orders">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="v" style="color:var(--amber)" id="k-pending">0</div><div class="l">معلّقة</div></div>
+        <div class="kpi-card"><div class="v" style="color:var(--blue)" id="k-active">0</div><div class="l">جارية</div></div>
+        <div class="kpi-card"><div class="v" style="color:var(--green)" id="k-done">0</div><div class="l">مكتملة</div></div>
+      </div>
+      <div id="orders-list"><div class="loader"><div class="spin"></div></div></div>
+    </div>
+
+    <!-- ===== TAB: STATS ===== -->
+    <div class="tab" id="tab-stats">
+      <div class="section">
+        <div class="section-h"><h3><i class="ti ti-chart-bar"></i> ملخص اليوم</h3></div>
+        <div id="stats-today"></div>
+      </div>
+      <div class="section">
+        <div class="section-h"><h3><i class="ti ti-cash"></i> الكاش المستحق على السائقين</h3></div>
+        <div id="stats-cash"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;padding:10px;background:#fef9f7;border-radius:8px">💡 الكاش يحصّله السائق من العميل ويسلمه للمطعم عند الزيارة التالية</div>
+      </div>
+      <div class="section">
+        <div class="section-h"><h3><i class="ti ti-receipt-2"></i> أجور التوصيل المستحقة لشركة السلاسل</h3></div>
+        <div id="stats-fees"></div>
+      </div>
+    </div>
+
+    <!-- ===== TAB: MORE ===== -->
+    <div class="tab" id="tab-more">
+      <div class="section" style="padding:0">
+        <div onclick="openPricingSheet()" style="padding:14px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--line);cursor:pointer">
+          <div style="width:42px;height:42px;border-radius:10px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-list-numbers" style="font-size:20px"></i></div>
+          <div style="flex:1"><div style="font-weight:800">جدول أجور التوصيل</div><div style="font-size:11px;color:var(--muted)">حسب المسافة من المطعم</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div onclick="openSetupRestSheet()" style="padding:14px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--line);cursor:pointer">
+          <div style="width:42px;height:42px;border-radius:10px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-map-pin-cog" style="font-size:20px"></i></div>
+          <div style="flex:1"><div style="font-weight:800">تحديد موقع المطعم</div><div style="font-size:11px;color:var(--muted)">المرجع لحساب المسافات</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div onclick="logout()" style="padding:14px;display:flex;align-items:center;gap:11px;cursor:pointer">
+          <div style="width:42px;height:42px;border-radius:10px;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ti ti-logout" style="font-size:20px"></i></div>
+          <div style="flex:1"><div style="font-weight:800">تسجيل الخروج</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:11px;margin-top:20px">
+        شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>تطبيق المطعم v1.0
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM TAB BAR -->
+  <div class="btab">
+    <button class="btab-item on" onclick="openTab('new')"><i class="ti ti-plus-circle"></i><span>أوردر</span></button>
+    <button class="btab-item" onclick="openTab('orders')"><i class="ti ti-list-check"></i><span>القائمة</span></button>
+    <button class="btab-item" onclick="openTab('stats')"><i class="ti ti-chart-bar"></i><span>الإحصائيات</span></button>
+    <button class="btab-item" onclick="openTab('more')"><i class="ti ti-menu-2"></i><span>المزيد</span></button>
+  </div>
+</div>
+
+<!-- SHEET / TOAST -->
+<div class="sheet" id="sheet"><div class="sheet-box" id="sheet-box"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== CONFIG ====================
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+// ==================== STATE ====================
+let REST = null;          // logged-in restaurant
+let ORDERS = [];          // all orders for this restaurant
+let DRIVERS = [];         // active drivers (for nearest-driver assignment)
+let LOCATIONS = [];       // driver_locations
+let pickMap = null, pickMarker = null;
+let pickLat = null, pickLng = null;
+let currentPay = 'cash';
+let currentDistance = 0, currentFee = 0;
+
+// ==================== API HELPER ====================
+async function api(path, opts={}){
+  const url = SUPA_URL + '/rest/v1/' + path;
+  const headers = {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json'};
+  const res = await fetch(url, {...opts, headers:{...headers,...(opts.headers||{})}});
+  if(!res.ok){
+    const txt = await res.text().catch(()=>'');
+    throw new Error('HTTP '+res.status+' '+txt.slice(0,200));
+  }
+  if(res.status===204) return null;
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+// ==================== AUTH ====================
+async function doLogin(){
+  const id  = document.getElementById('li-id').value.trim().toUpperCase();
+  const pin = document.getElementById('li-pin').value.trim();
+  const err = document.getElementById('li-err');
+  err.textContent = '';
+  if(!id || !pin){ err.textContent='أدخل الكود والرمز'; return; }
+  try {
+    const list = await api(`restaurants?id=eq.${id}&active=eq.true`);
+    if(!list || !list.length){ err.textContent='كود المطعم غير موجود أو غير مفعّل'; return; }
+    const r = list[0];
+    if(r.pin !== pin){ err.textContent='الرمز السري خطأ'; return; }
+    REST = r;
+    localStorage.setItem('rest_session', JSON.stringify(r));
+    unlock();
+  } catch(e){
+    console.error(e);
+    err.textContent = 'فشل الاتصال: '+e.message.slice(0,80);
+  }
+}
+
+function unlock(){
+  document.getElementById('loginScreen').classList.add('gone');
+  document.getElementById('mainApp').style.display = 'flex';
+  document.getElementById('tb-rest-name').textContent = REST.name;
+  document.getElementById('tb-rest-sub').textContent  = REST.id + ' • السلاسل';
+  initPickMap();
+  refreshAll();
+  // Auto refresh
+  setInterval(refreshAll, 60000);
+}
+
+function logout(){
+  localStorage.removeItem('rest_session');
+  REST = null;
+  document.getElementById('loginScreen').classList.remove('gone');
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+// ==================== TABS ====================
+function openTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.getElementById('tab-'+t).classList.add('on');
+  const map = ['new','orders','stats','more'];
+  document.querySelectorAll('.btab-item').forEach((b,i)=> b.classList.toggle('on', map[i]===t));
+  if(t==='orders') renderOrdersList();
+  if(t==='stats')  renderStats();
+  if(t==='new')    setTimeout(()=> pickMap && pickMap.invalidateSize(), 100);
+}
+
+// ==================== PRICING (delivery fee) ====================
+function calcFee(km){
+  km = parseFloat(km) || 0;
+  if(km <= 0) return 0;
+  if(km <= 7)  return 0.900;
+  if(km <= 15) return 1.500;
+  if(km <= 25) return 2.000;
+  // beyond 25km: +0.500 per 10km tier
+  const extra = Math.ceil((km - 25) / 10);  // 1 for 25-35, 2 for 35-45, etc.
+  return 2.000 + (extra * 0.500);
+}
+function feeBreakdown(km){
+  if(km<=0) return '';
+  if(km<=7)  return '(0–7 كم)';
+  if(km<=15) return '(7–15 كم)';
+  if(km<=25) return '(15–25 كم)';
+  return '(أكثر من 25 كم)';
+}
+// Haversine — straight-line distance
+function distanceKm(lat1,lng1,lat2,lng2){
+  const R = 6371;
+  const toRad = d => d * Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ==================== MAP PICKER ====================
+function initPickMap(){
+  setTimeout(()=>{
+    if(pickMap) return;
+    const center = (REST.latitude && REST.longitude) ? [REST.latitude, REST.longitude] : [29.3759, 47.9774];
+    pickMap = L.map('map-pick',{zoomControl:true,attributionControl:false}).setView(center, 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(pickMap);
+    // Restaurant marker
+    if(REST.latitude && REST.longitude){
+      L.marker([REST.latitude, REST.longitude], {
+        icon: L.divIcon({
+          className:'',
+          html:'<div style="background:#8e2235;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3)">🍽️</div>',
+          iconSize:[30,30], iconAnchor:[15,15]
+        })
+      }).bindTooltip('المطعم', {permanent:false}).addTo(pickMap);
+    }
+    pickMap.on('click', e => placeMarker(e.latlng.lat, e.latlng.lng));
+    setTimeout(()=> pickMap.invalidateSize(), 200);
+  }, 100);
+}
+
+function placeMarker(lat, lng){
+  pickLat = lat; pickLng = lng;
+  if(pickMarker) pickMap.removeLayer(pickMarker);
+  pickMarker = L.marker([lat,lng],{
+    icon: L.divIcon({
+      className:'',
+      html:'<div style="background:#10b981;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);font-size:18px">📍</div>',
+      iconSize:[34,34], iconAnchor:[17,17]
+    })
+  }).addTo(pickMap);
+
+  if(REST.latitude && REST.longitude){
+    currentDistance = distanceKm(REST.latitude, REST.longitude, lat, lng);
+    currentFee = calcFee(currentDistance);
+    document.getElementById('o-km').value = currentDistance.toFixed(2);
+    document.getElementById('fee-display').textContent = currentFee.toFixed(3) + ' د.ك';
+    document.getElementById('fee-note').textContent = `المسافة ${currentDistance.toFixed(2)} كم ${feeBreakdown(currentDistance)}`;
+    document.getElementById('map-coords').innerHTML = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)} • المسافة ${currentDistance.toFixed(2)} كم • أجر ${currentFee.toFixed(3)} د.ك`;
+    document.getElementById('mh').textContent = '✓ تم تحديد الموقع — تقدر تعدّل بالضغط في مكان آخر';
+  }
+}
+
+function setPay(p){
+  currentPay = p;
+  document.getElementById('pay-cash').classList.toggle('on', p==='cash');
+  document.getElementById('pay-paid').classList.toggle('on', p==='paid');
+}
+
+// ==================== NEAREST DRIVER ====================
+async function fetchActiveDrivers(){
+  try {
+    DRIVERS = await api('drivers?select=*') || [];
+    LOCATIONS = await api('driver_locations?order=updated_at.desc') || [];
+  } catch(e){ DRIVERS=[]; LOCATIONS=[]; console.error(e); }
+}
+function findNearestDriver(lat, lng){
+  if(!lat || !lng) return null;
+  const cutoff = Date.now() - 60*60*1000; // active within last hour
+  const candidates = LOCATIONS.filter(l => l.latitude && l.longitude && new Date(l.updated_at).getTime() > cutoff)
+    .map(l => ({
+      ...l,
+      driver: DRIVERS.find(d=>d.id===l.driver_id),
+      dist: distanceKm(lat, lng, l.latitude, l.longitude)
+    }))
+    .filter(x => x.driver)
+    .sort((a,b)=> a.dist - b.dist);
+  return candidates[0] || null;
+}
+
+// ==================== SUBMIT ORDER ====================
+async function submitOrder(){
+  const name  = document.getElementById('o-name').value.trim();
+  const phone = document.getElementById('o-phone').value.replace(/\D/g,'');
+  const addr  = document.getElementById('o-addr').value.trim();
+  const amt   = parseFloat(document.getElementById('o-amt').value)||0;
+  const notes = document.getElementById('o-notes').value.trim();
+
+  if(!phone || phone.length<7){ toast('أدخل رقم تليفون صحيح','e'); return; }
+  if(!addr){ toast('أدخل عنوان العميل','e'); return; }
+  if(!pickLat || !pickLng){ toast('حدّد موقع العميل على الخريطة','e'); return; }
+  if(currentDistance > 50){
+    if(!confirm('المسافة '+currentDistance.toFixed(1)+' كم — هل أنت متأكد؟')) return;
+  }
+
+  const btn = document.getElementById('o-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin" style="width:18px;height:18px;border-width:2px;border-top-color:#fff"></div> جاري الإرسال...';
+
+  try {
+    // Find nearest driver
+    await fetchActiveDrivers();
+    const nearest = findNearestDriver(pickLat, pickLng);
+
+    // Build order
+    const payload = {
+      restaurant_id: REST.id,
+      restaurant_name: REST.name,
+      customer_name: name,
+      customer_phone: phone,
+      customer_address: addr,
+      customer_lat: pickLat,
+      customer_lng: pickLng,
+      order_amount: amt,
+      payment_method: currentPay,
+      delivery_fee: currentFee,
+      distance_km: currentDistance,
+      notes: notes,
+      status: nearest ? 'assigned' : 'pending',
+      driver_id: nearest ? nearest.driver.id : null,
+      driver_name: nearest ? nearest.driver.name : null,
+      assigned_at: nearest ? new Date().toISOString() : null
+    };
+
+    const result = await api('orders', {
+      method:'POST',
+      body: JSON.stringify(payload),
+      headers:{'Prefer':'return=representation'}
+    });
+    const orderId = result && result[0] ? result[0].id : '';
+
+    // Notify driver via messages table (if assigned)
+    if(nearest){
+      await api('messages', {
+        method:'POST',
+        body: JSON.stringify({
+          recipient: nearest.driver.id,
+          title: '📦 أوردر جديد — ' + REST.name,
+          body: 'العميل: ' + (name||phone) + '\nالعنوان: ' + addr + '\nالمبلغ: ' + amt.toFixed(3) + ' د.ك (' + (currentPay==='cash'?'كاش':'مدفوع') + ')\nالمسافة: ' + currentDistance.toFixed(1) + ' كم',
+          level: 'urgent',
+          created_at: new Date().toISOString()
+        }),
+        headers:{'Prefer':'return=minimal'}
+      }).catch(()=>{});
+    }
+
+    // Reset form
+    clearForm();
+    if(nearest){
+      toast('✅ تم — السائق: '+nearest.driver.name+' ('+nearest.dist.toFixed(1)+' كم)','s');
+    } else {
+      toast('⚠️ تم الحفظ — لا يوجد سائق قريب. الإدارة ستوزّعه يدوياً','e');
+    }
+    refreshAll();
+  } catch(e){
+    console.error(e);
+    toast('فشل: '+e.message.slice(0,80),'e');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send"></i> إرسال الأوردر للسائق';
+  }
+}
+
+function clearForm(){
+  ['o-name','o-phone','o-addr','o-amt','o-notes'].forEach(id=> document.getElementById(id).value='');
+  document.getElementById('o-km').value='';
+  if(pickMarker){ pickMap.removeLayer(pickMarker); pickMarker=null; }
+  pickLat=null; pickLng=null; currentDistance=0; currentFee=0;
+  document.getElementById('fee-display').textContent='—';
+  document.getElementById('fee-note').textContent='حدد موقع العميل لحساب الأجر';
+  document.getElementById('map-coords').textContent='المسافة: — • أجر التوصيل: —';
+  document.getElementById('mh').textContent='اضغط في أي مكان على الخريطة لتحديد موقع العميل';
+  setPay('cash');
+}
+
+// ==================== FETCH + RENDER ORDERS ====================
+async function fetchOrders(){
+  try {
+    ORDERS = await api(`orders?restaurant_id=eq.${REST.id}&order=created_at.desc&limit=200`) || [];
+  } catch(e){ ORDERS=[]; console.error(e); }
+}
+
+function renderOrdersList(){
+  const el = document.getElementById('orders-list');
+  const pending = ORDERS.filter(o=>o.status==='pending').length;
+  const active  = ORDERS.filter(o=>['assigned','picked_up'].includes(o.status)).length;
+  const done    = ORDERS.filter(o=>o.status==='delivered').length;
+  document.getElementById('k-pending').textContent = pending;
+  document.getElementById('k-active').textContent  = active;
+  document.getElementById('k-done').textContent    = done;
+
+  if(!ORDERS.length){ el.innerHTML='<div class="empty"><i class="ti ti-inbox"></i><p>لا توجد أوردرات بعد</p></div>'; return; }
+
+  const STATUS_AR = {pending:'معلّق', assigned:'مع السائق', picked_up:'في الطريق', delivered:'تم التوصيل', cancelled:'ملغي'};
+  const STATUS_CL = {pending:'pill-pending', assigned:'pill-assigned', picked_up:'pill-pickedup', delivered:'pill-delivered', cancelled:'pill-cancelled'};
+
+  el.innerHTML = ORDERS.map(o=>{
+    const time = new Date(o.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
+    const date = new Date(o.created_at).toLocaleDateString('ar-KW');
+    return `<div class="order-row" onclick="openOrderDetail(${o.id})">
+      <div class="order-row-h">
+        <div>
+          <div class="order-row-id">#${o.id} • ${date} ${time}</div>
+          <div class="order-row-cust">${o.customer_name||o.customer_phone}</div>
+          <div class="order-row-addr">${o.customer_address||''}</div>
+        </div>
+        <span class="order-pill ${STATUS_CL[o.status]||''}">${STATUS_AR[o.status]||o.status}</span>
+      </div>
+      <div class="order-row-info">
+        <div>المبلغ: <b>${parseFloat(o.order_amount||0).toFixed(3)} د.ك</b></div>
+        <div>الأجر: <b style="color:var(--red)">${parseFloat(o.delivery_fee||0).toFixed(3)}</b></div>
+        <div>${o.payment_method==='cash'?'💵 كاش':'💳 مدفوع'}</div>
+        <div>${parseFloat(o.distance_km||0).toFixed(1)} كم</div>
+        ${o.driver_name?`<div style="margin-right:auto;color:var(--text)">🏍️ <b>${o.driver_name.split(' ').slice(0,2).join(' ')}</b></div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openOrderDetail(id){
+  const o = ORDERS.find(x=>x.id===id);
+  if(!o) return;
+  const STATUS_AR = {pending:'معلّق', assigned:'مع السائق', picked_up:'في الطريق', delivered:'تم التوصيل', cancelled:'ملغي'};
+  const time = new Date(o.created_at).toLocaleString('ar-KW');
+  const canCancel = ['pending','assigned'].includes(o.status);
+  const html = `
+    <div class="sheet-head"><h3>تفاصيل الأوردر #${o.id}</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <div style="background:#fef9f7;padding:14px;border-radius:12px;margin-bottom:14px">
+      <div style="font-size:18px;font-weight:900;margin-bottom:4px">${o.customer_name||o.customer_phone}</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7">
+        📞 <a href="tel:${o.customer_phone}" style="color:var(--red);font-weight:700">${o.customer_phone}</a><br>
+        📍 ${o.customer_address}<br>
+        📅 ${time}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:#f8fafc;padding:10px;border-radius:10px"><div style="font-size:10px;color:var(--muted)">قيمة الطلب</div><div style="font-weight:900">${parseFloat(o.order_amount||0).toFixed(3)} د.ك</div></div>
+      <div style="background:#f8fafc;padding:10px;border-radius:10px"><div style="font-size:10px;color:var(--muted)">أجر التوصيل</div><div style="font-weight:900;color:var(--red)">${parseFloat(o.delivery_fee||0).toFixed(3)} د.ك</div></div>
+      <div style="background:#f8fafc;padding:10px;border-radius:10px"><div style="font-size:10px;color:var(--muted)">طريقة الدفع</div><div style="font-weight:900">${o.payment_method==='cash'?'💵 كاش':'💳 مدفوع'}</div></div>
+      <div style="background:#f8fafc;padding:10px;border-radius:10px"><div style="font-size:10px;color:var(--muted)">المسافة</div><div style="font-weight:900">${parseFloat(o.distance_km||0).toFixed(2)} كم</div></div>
+      <div style="background:#f8fafc;padding:10px;border-radius:10px;grid-column:span 2"><div style="font-size:10px;color:var(--muted)">الحالة</div><div style="font-weight:900">${STATUS_AR[o.status]||o.status}${o.driver_name?' — '+o.driver_name:''}</div></div>
+    </div>
+    ${o.notes?`<div style="background:#fffbeb;padding:10px;border-radius:10px;margin-bottom:14px;font-size:12px"><b>📝 ملاحظات:</b> ${o.notes}</div>`:''}
+    ${canCancel?`<button class="btn btn-out" style="width:100%;color:#dc2626;border-color:#dc2626" onclick="cancelOrder(${o.id})"><i class="ti ti-x"></i> إلغاء الأوردر</button>`:''}
+  `;
+  openSheet(html);
+}
+
+async function cancelOrder(id){
+  if(!confirm('تأكيد إلغاء الأوردر؟')) return;
+  try {
+    await api('orders?id=eq.'+id, {
+      method:'PATCH',
+      body: JSON.stringify({status:'cancelled', cancelled_at: new Date().toISOString(), cancel_reason:'ألغاه المطعم'}),
+      headers:{'Prefer':'return=minimal'}
+    });
+    closeSheet();
+    toast('تم الإلغاء','s');
+    await fetchOrders();
+    renderOrdersList();
+  } catch(e){ toast('فشل: '+e.message.slice(0,80),'e'); }
+}
+
+// ==================== STATS ====================
+function renderStats(){
+  const today = new Date().toISOString().split('T')[0];
+  const todayOrders = ORDERS.filter(o=> o.created_at.startsWith(today));
+  const done = todayOrders.filter(o=>o.status==='delivered');
+  const cash = done.filter(o=>o.payment_method==='cash');
+  const totalCash = cash.reduce((s,o)=>s+parseFloat(o.order_amount||0),0);
+  const totalFees = todayOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+parseFloat(o.delivery_fee||0),0);
+
+  document.getElementById('stats-today').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:#f8fafc;padding:14px;border-radius:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:var(--blue)">${todayOrders.length}</div><div style="font-size:11px;color:var(--muted)">إجمالي أوردرات اليوم</div></div>
+      <div style="background:#f8fafc;padding:14px;border-radius:10px;text-align:center"><div style="font-size:24px;font-weight:900;color:var(--green)">${done.length}</div><div style="font-size:11px;color:var(--muted)">تم التوصيل</div></div>
+    </div>
+  `;
+
+  // Cash by driver (today, delivered cash orders)
+  const cashByDrv = {};
+  cash.forEach(o=>{
+    if(!o.driver_id) return;
+    if(!cashByDrv[o.driver_id]) cashByDrv[o.driver_id] = {name:o.driver_name||o.driver_id, total:0, count:0};
+    cashByDrv[o.driver_id].total += parseFloat(o.order_amount||0);
+    cashByDrv[o.driver_id].count++;
+  });
+  const cashList = Object.values(cashByDrv);
+  document.getElementById('stats-cash').innerHTML = cashList.length ? cashList.map(d=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div><div style="font-weight:800;font-size:13px">${d.name}</div><div style="font-size:11px;color:var(--muted)">${d.count} أوردر كاش</div></div>
+      <div style="font-weight:900;color:var(--red);font-family:JetBrains Mono,monospace">${d.total.toFixed(3)} د.ك</div>
+    </div>
+  `).join('') + `<div style="text-align:left;padding-top:10px;font-size:14px;font-weight:900">الإجمالي: ${totalCash.toFixed(3)} د.ك</div>`
+   : '<div style="text-align:center;color:var(--muted);padding:14px">لا يوجد كاش مستحق اليوم</div>';
+
+  document.getElementById('stats-fees').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fef2f2;border-radius:10px">
+      <div><div style="font-size:12px;color:var(--muted);font-weight:700">إجمالي أجور توصيل اليوم</div><div style="font-size:11px;color:var(--muted);margin-top:3px">يدفعها المطعم لشركة السلاسل</div></div>
+      <div style="font-size:22px;font-weight:900;color:var(--red);font-family:JetBrains Mono,monospace">${totalFees.toFixed(3)}</div>
+    </div>
+  `;
+}
+
+// ==================== SHEETS ====================
+function openSheet(html){
+  document.getElementById('sheet-box').innerHTML = html;
+  document.getElementById('sheet').classList.add('on');
+}
+function closeSheet(){ document.getElementById('sheet').classList.remove('on'); }
+document.addEventListener('click', e=>{ if(e.target.id==='sheet') closeSheet(); });
+
+function openPricingSheet(){
+  openSheet(`
+    <div class="sheet-head"><h3>جدول أجور التوصيل</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead><tr style="background:#fef2f2"><th style="padding:10px;text-align:right">المسافة (كم)</th><th style="padding:10px;text-align:left">الأجر (د.ك)</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:12px;border-bottom:1px solid var(--line)">0 — 7 كم</td><td style="padding:12px;text-align:left;font-weight:800;color:var(--red);border-bottom:1px solid var(--line)">0.900</td></tr>
+        <tr><td style="padding:12px;border-bottom:1px solid var(--line)">7 — 15 كم</td><td style="padding:12px;text-align:left;font-weight:800;color:var(--red);border-bottom:1px solid var(--line)">1.500</td></tr>
+        <tr><td style="padding:12px;border-bottom:1px solid var(--line)">15 — 25 كم</td><td style="padding:12px;text-align:left;font-weight:800;color:var(--red);border-bottom:1px solid var(--line)">2.000</td></tr>
+        <tr><td style="padding:12px;border-bottom:1px solid var(--line)">25 — 35 كم</td><td style="padding:12px;text-align:left;font-weight:800;color:var(--red);border-bottom:1px solid var(--line)">2.500</td></tr>
+        <tr><td style="padding:12px;border-bottom:1px solid var(--line)">35 — 45 كم</td><td style="padding:12px;text-align:left;font-weight:800;color:var(--red);border-bottom:1px solid var(--line)">3.000</td></tr>
+        <tr><td style="padding:12px">+0.500 د.ك / كل 10 كم تالية</td><td style="padding:12px;text-align:left;color:var(--muted);font-size:11px">احتسبت تلقائياً</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px;padding:12px;background:#fef9f7;border-radius:10px;font-size:12px;color:var(--muted);line-height:1.7">💡 المسافة تُحسب بخط مستقيم من المطعم لموقع العميل على الخريطة. الأجر يحسب تلقائياً عند تحديد العميل.</div>
+  `);
+}
+
+function openSetupRestSheet(){
+  let tempMap = null, tempMarker = null, tempLat = REST.latitude, tempLng = REST.longitude;
+  openSheet(`
+    <div class="sheet-head"><h3>تحديد موقع المطعم</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">اضغط على موقع مطعمك بالظبط على الخريطة. هذا هو المرجع لحساب المسافة لكل العملاء.</p>
+    <div id="setup-map" style="height:300px;border-radius:12px;border:1.5px solid var(--line);margin-bottom:12px"></div>
+    <div id="setup-coords" style="font-size:12px;color:var(--muted);margin-bottom:12px;text-align:center">الإحداثيات الحالية: ${REST.latitude?REST.latitude.toFixed(5)+', '+REST.longitude.toFixed(5):'غير محددة'}</div>
+    <button class="btn btn-pri btn-block" onclick="saveRestLoc()" id="save-rest-btn"><i class="ti ti-check"></i> حفظ الموقع</button>
+  `);
+  setTimeout(()=>{
+    const center = (tempLat && tempLng) ? [tempLat, tempLng] : [29.3759, 47.9774];
+    tempMap = L.map('setup-map').setView(center, 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(tempMap);
+    if(tempLat && tempLng) tempMarker = L.marker([tempLat, tempLng]).addTo(tempMap);
+    tempMap.on('click', e=>{
+      tempLat = e.latlng.lat; tempLng = e.latlng.lng;
+      if(tempMarker) tempMap.removeLayer(tempMarker);
+      tempMarker = L.marker([tempLat,tempLng]).addTo(tempMap);
+      document.getElementById('setup-coords').textContent = 'الموقع الجديد: ' + tempLat.toFixed(5) + ', ' + tempLng.toFixed(5);
+    });
+    window._tempLat = ()=> tempLat; window._tempLng = ()=> tempLng;
+  }, 150);
+}
+
+async function saveRestLoc(){
+  const lat = window._tempLat ? window._tempLat() : null;
+  const lng = window._tempLng ? window._tempLng() : null;
+  if(!lat || !lng){ toast('اضغط على الخريطة أولاً','e'); return; }
+  try {
+    await api('restaurants?id=eq.'+REST.id, {
+      method:'PATCH',
+      body: JSON.stringify({latitude:lat, longitude:lng}),
+      headers:{'Prefer':'return=minimal'}
+    });
+    REST.latitude = lat; REST.longitude = lng;
+    localStorage.setItem('rest_session', JSON.stringify(REST));
+    closeSheet();
+    toast('تم حفظ موقع المطعم ✅','s');
+    // re-init pick map with new center
+    if(pickMap){ pickMap.remove(); pickMap=null; }
+    initPickMap();
+  } catch(e){ toast('فشل: '+e.message.slice(0,80),'e'); }
+}
+
+// ==================== TOAST ====================
+function toast(msg, type=''){
+  const t = document.getElementById('toast');
+  t.innerHTML = `<i class="ti ti-${type==='s'?'check':type==='e'?'alert-circle':'info-circle'}"></i> ${msg}`;
+  t.className = 'toast on '+type;
+  setTimeout(()=> t.classList.remove('on'), 3000);
+}
+
+// ==================== REFRESH ====================
+async function refreshAll(){
+  if(!REST) return;
+  await fetchOrders();
+  renderOrdersList();
+  renderStats();
+}
+
+// ==================== BOOT ====================
+const saved = localStorage.getItem('rest_session');
+if(saved){
+  try { REST = JSON.parse(saved); unlock(); }
+  catch(e){ localStorage.removeItem('rest_session'); }
+}
+
+// Service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw-restaurant.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

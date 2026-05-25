@@ -305,12 +305,27 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
     </div>
   </div>
 
+  <!-- ORDERS TAB -->
+  <div class="tab" id="tab-orders">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="ic" style="background:var(--amber)"><i class="ti ti-clock"></i></div><div class="v" id="mo-pending">0</div><div class="l">معلّقة</div></div>
+      <div class="kpi-card"><div class="ic" style="background:var(--blue)"><i class="ti ti-bike"></i></div><div class="v" id="mo-active">0</div><div class="l">جارية</div></div>
+      <div class="kpi-card"><div class="ic" style="background:var(--green)"><i class="ti ti-check"></i></div><div class="v" id="mo-done">0</div><div class="l">منتهية</div></div>
+      <div class="kpi-card"><div class="ic" style="background:var(--red)"><i class="ti ti-cash"></i></div><div class="v" id="mo-cash">0</div><div class="l">كاش اليوم</div></div>
+    </div>
+    <div class="chips" id="mo-chips"></div>
+    <div id="mo-list"><div class="loader"><div class="spin"></div></div></div>
+  </div>
+
   <!-- BOTTOM TAB BAR -->
   <div class="btab">
     <button class="btab-item on" onclick="openTab('home')"><i class="ti ti-dashboard"></i><span>الرئيسية</span></button>
-    <button class="btab-item" onclick="openTab('drivers')"><i class="ti ti-users"></i><span>السائقين</span></button>
+    <button class="btab-item" onclick="openTab('orders')" style="position:relative">
+      <i class="ti ti-package"></i><span>أوردرات</span>
+      <span id="ordersBadge" style="display:none;position:absolute;top:4px;right:18px;background:#ef4444;color:#fff;font-size:9px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
+    </button>
     <button class="btab-item" onclick="openTab('live')"><i class="ti ti-map-2"></i><span>الخريطة</span></button>
-    <button class="btab-item" onclick="openTab('msg')"><i class="ti ti-message-circle"></i><span>رسائل</span></button>
+    <button class="btab-item" onclick="openTab('drivers')"><i class="ti ti-users"></i><span>السائقين</span></button>
     <button class="btab-item" onclick="openTab('more')"><i class="ti ti-menu-2"></i><span>المزيد</span></button>
   </div>
 </div>
@@ -412,15 +427,16 @@ function openTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.getElementById('tab-'+t).classList.add('on');
   document.querySelectorAll('.btab-item').forEach((b,i)=>{
-    const map = ['home','drivers','live','msg','more'];
+    const map = ['home','orders','live','drivers','more'];
     b.classList.toggle('on', map[i]===t);
   });
-  const titles = {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد'};
-  const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2'};
+  const titles = {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد',orders:'الأوردرات'};
+  const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2',orders:'ti-package'};
   document.getElementById('topbar-title').innerHTML = `<i class="ti ${icons[t]}"></i> ${titles[t]}`;
   if(t==='live') setTimeout(initLiveMap, 100);
   if(t==='drivers') renderDriversList();
   if(t==='msg') renderMsgList();
+  if(t==='orders') renderOrders();
 }
 
 // ==================== DATA FETCH ====================
@@ -886,11 +902,174 @@ async function manualRefresh(){
   toast('تم التحديث ✅','s');
 }
 
+// ==================== ORDERS TAB ====================
+let ORDERS = [];
+let orderFilter = 'all'; // all | pending | active | done
+
+async function fetchOrders(){
+  try { ORDERS = await api('orders?order=created_at.desc&limit=300') || []; }
+  catch(e){ console.error('orders fetch', e); ORDERS = []; }
+  updateOrdersBadge();
+}
+
+function updateOrdersBadge(){
+  const pending = ORDERS.filter(o=>o.status==='pending').length;
+  const b = document.getElementById('ordersBadge');
+  if(!b) return;
+  if(pending > 0){ b.textContent = pending; b.style.display = 'inline-flex'; }
+  else { b.style.display = 'none'; }
+}
+
+async function renderOrders(){
+  await fetchOrders();
+  const today = new Date().toISOString().split('T')[0];
+  const pending = ORDERS.filter(o=>o.status==='pending').length;
+  const active  = ORDERS.filter(o=>['assigned','picked_up'].includes(o.status)).length;
+  const done    = ORDERS.filter(o=>o.status==='delivered' && (o.delivered_at||o.created_at||'').startsWith(today)).length;
+  const cashSum = ORDERS.filter(o=>o.status==='delivered' && o.payment_method==='cash' && (o.delivered_at||'').startsWith(today)).reduce((s,o)=>s+parseFloat(o.order_amount||0),0);
+
+  document.getElementById('mo-pending').textContent = pending;
+  document.getElementById('mo-active').textContent  = active;
+  document.getElementById('mo-done').textContent    = done;
+  document.getElementById('mo-cash').textContent    = cashSum.toFixed(0);
+
+  const chips = document.getElementById('mo-chips');
+  chips.innerHTML = `
+    <button class="chip ${orderFilter==='all'?'on':''}" onclick="orderFilter='all';renderOrders()">الكل (${ORDERS.length})</button>
+    <button class="chip ${orderFilter==='pending'?'on':''}" onclick="orderFilter='pending';renderOrders()" style="${orderFilter==='pending'?'background:#f59e0b;border-color:#f59e0b':''}">⏳ معلّق (${pending})</button>
+    <button class="chip ${orderFilter==='active'?'on':''}" onclick="orderFilter='active';renderOrders()" style="${orderFilter==='active'?'background:#3b82f6;border-color:#3b82f6':''}">🏍️ جاري (${active})</button>
+    <button class="chip ${orderFilter==='done'?'on':''}" onclick="orderFilter='done';renderOrders()" style="${orderFilter==='done'?'background:#10b981;border-color:#10b981':''}">✅ منتهي</button>
+  `;
+
+  let list = ORDERS;
+  if(orderFilter==='pending') list = list.filter(o=>o.status==='pending');
+  else if(orderFilter==='active') list = list.filter(o=>['assigned','picked_up'].includes(o.status));
+  else if(orderFilter==='done') list = list.filter(o=>o.status==='delivered');
+
+  const el = document.getElementById('mo-list');
+  if(!list.length){ el.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i><p>لا توجد أوردرات</p></div>'; return; }
+
+  const SAR = {pending:'معلّق',assigned:'مع السائق',picked_up:'في الطريق',delivered:'تم التوصيل',cancelled:'ملغي'};
+  const SCL = {pending:'pill-amber',assigned:'pill-blue',picked_up:'pill-amber',delivered:'pill-green',cancelled:'pill-red'};
+
+  el.innerHTML = list.map(o=>{
+    const t = new Date(o.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="section" style="padding:12px;margin-bottom:8px;cursor:pointer" onclick="openOrderSheet(${o.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <div style="font-size:10px;color:var(--muted);font-weight:700">#${o.id} • ${t}</div>
+          <div style="font-size:14px;font-weight:900;margin-top:2px">🍽️ ${o.restaurant_name}</div>
+          <div style="font-size:12px;color:var(--text);margin-top:2px">${o.customer_name||''} • ${o.customer_phone}</div>
+        </div>
+        <span class="row-pill ${SCL[o.status]||''}">${SAR[o.status]||o.status}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--line);margin-top:6px">
+        <span>${o.driver_name?'🏍️ '+o.driver_name.split(' ').slice(0,2).join(' '):'⚠️ بدون سائق'}</span>
+        <span>${parseFloat(o.order_amount||0).toFixed(3)} د.ك • ${o.payment_method==='cash'?'💵':'💳'} • ${parseFloat(o.distance_km||0).toFixed(1)} كم</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openOrderSheet(id){
+  const o = ORDERS.find(x=>x.id===id);
+  if(!o) return;
+  const SAR = {pending:'معلّق',assigned:'مع السائق',picked_up:'في الطريق',delivered:'تم التوصيل',cancelled:'ملغي'};
+  const time = new Date(o.created_at).toLocaleString('ar-KW');
+  const phone = (o.customer_phone||'').replace(/\D/g,'');
+  const waNum = phone.length===8 ? '965'+phone : phone;
+
+  let assignSection = '';
+  if(o.status === 'pending' || o.status === 'assigned'){
+    const opts = DRV.map(d=>`<option value="${d.id}" ${o.driver_id===d.id?'selected':''}>${d.id} — ${d.name}</option>`).join('');
+    assignSection = `
+      <div style="background:#fef9f7;padding:12px;border-radius:10px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;margin-bottom:6px">تعيين سائق:</div>
+        <select id="oa-drv" style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;margin-bottom:8px"><option value="">— اختر سائق —</option>${opts}</select>
+        <button class="btn btn-pri" onclick="assignOrderDriver(${o.id})" style="width:100%"><i class="ti ti-user-check"></i> تعيين</button>
+      </div>
+    `;
+  }
+
+  const html = `
+    <div class="sheet-head"><h3>أوردر #${o.id}</h3><button class="sheet-x" onclick="closeSheet()">×</button></div>
+    <div style="background:#f8fafc;padding:14px;border-radius:12px;margin-bottom:14px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${time}</div>
+      <div style="font-size:17px;font-weight:900;margin-bottom:6px">🍽️ ${o.restaurant_name}</div>
+      <div style="border-top:1px solid var(--line);padding-top:10px;font-size:13px;line-height:1.7">
+        <div><b>العميل:</b> ${o.customer_name||'—'}</div>
+        <div>📞 <a href="tel:${o.customer_phone}" style="color:var(--teal);font-weight:700">${o.customer_phone}</a></div>
+        <div>📍 ${o.customer_address}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:#f0fdf4;padding:10px;border-radius:10px;text-align:center"><div style="font-size:10px;color:var(--muted)">المبلغ</div><div style="font-weight:900;color:#065f46">${parseFloat(o.order_amount||0).toFixed(3)} د.ك</div></div>
+      <div style="background:#fef2f2;padding:10px;border-radius:10px;text-align:center"><div style="font-size:10px;color:var(--muted)">أجر التوصيل</div><div style="font-weight:900;color:var(--red)">${parseFloat(o.delivery_fee||0).toFixed(3)} د.ك</div></div>
+      <div style="background:#fffbeb;padding:10px;border-radius:10px;text-align:center"><div style="font-size:10px;color:var(--muted)">الدفع</div><div style="font-weight:900;color:#92400e">${o.payment_method==='cash'?'💵 كاش':'💳 مدفوع'}</div></div>
+      <div style="background:#dbeafe;padding:10px;border-radius:10px;text-align:center"><div style="font-size:10px;color:var(--muted)">المسافة</div><div style="font-weight:900;color:#1e40af">${parseFloat(o.distance_km||0).toFixed(2)} كم</div></div>
+      <div style="background:#f1f5f9;padding:10px;border-radius:10px;grid-column:span 2;text-align:center"><div style="font-size:10px;color:var(--muted)">الحالة</div><div style="font-weight:900">${SAR[o.status]||o.status}${o.driver_name?' — '+o.driver_name:''}</div></div>
+    </div>
+    ${o.notes?`<div style="background:#fffbeb;padding:10px;border-radius:10px;margin-bottom:12px;font-size:12px"><b>📝</b> ${o.notes}</div>`:''}
+    ${assignSection}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${o.customer_lat},${o.customer_lng}" target="_blank" class="btn" style="background:#3b82f6;color:#fff;text-decoration:none"><i class="ti ti-navigation"></i> الخريطة</a>
+      <a href="https://wa.me/${waNum}" target="_blank" class="btn" style="background:#25d366;color:#fff;text-decoration:none"><i class="ti ti-brand-whatsapp"></i> واتساب</a>
+    </div>
+    ${o.status!=='delivered'&&o.status!=='cancelled'?`<button class="btn btn-out" style="width:100%;margin-top:8px;color:#dc2626;border-color:#dc2626" onclick="cancelManagerOrder(${o.id})"><i class="ti ti-x"></i> إلغاء الأوردر</button>`:''}
+  `;
+  openSheet(html);
+}
+
+async function assignOrderDriver(orderId){
+  const drvId = document.getElementById('oa-drv').value;
+  if(!drvId){ toast('اختر سائق','e'); return; }
+  const drv = DRV.find(d=>d.id===drvId);
+  try {
+    await api('orders?id=eq.'+orderId, {
+      method:'PATCH',
+      body: JSON.stringify({status:'assigned', driver_id:drvId, driver_name:drv?drv.name:drvId, assigned_at: new Date().toISOString()}),
+      headers:{'Prefer':'return=minimal'}
+    });
+    // Notify the driver
+    const o = ORDERS.find(x=>x.id===orderId);
+    if(o){
+      await api('messages', {
+        method:'POST',
+        body: JSON.stringify({
+          recipient: drvId,
+          title: '📦 أوردر جديد — ' + o.restaurant_name,
+          body: 'العميل: ' + (o.customer_name||o.customer_phone) + '\nالعنوان: ' + o.customer_address + '\nالمبلغ: ' + parseFloat(o.order_amount||0).toFixed(3) + ' د.ك (' + (o.payment_method==='cash'?'كاش':'مدفوع') + ')',
+          level: 'urgent', created_at: new Date().toISOString()
+        }),
+        headers:{'Prefer':'return=minimal'}
+      }).catch(()=>{});
+    }
+    closeSheet();
+    toast('تم تعيين السائق ✅','s');
+    renderOrders();
+  } catch(e){ toast('فشل: '+e.message.slice(0,80),'e'); }
+}
+
+async function cancelManagerOrder(id){
+  if(!confirm('تأكيد إلغاء الأوردر؟')) return;
+  try {
+    await api('orders?id=eq.'+id, {
+      method:'PATCH',
+      body: JSON.stringify({status:'cancelled', cancelled_at: new Date().toISOString(), cancel_reason:'ألغى المدير'}),
+      headers:{'Prefer':'return=minimal'}
+    });
+    closeSheet();
+    toast('تم الإلغاء','s');
+    renderOrders();
+  } catch(e){ toast('فشل: '+e.message.slice(0,80),'e'); }
+}
+
 // ==================== BOOT ====================
 async function bootApp(){
   await refreshAll();
+  await fetchOrders();
   // Auto refresh every 60 seconds
-  setInterval(refreshAll, 60000);
+  setInterval(()=>{ refreshAll(); fetchOrders(); }, 60000);
 }
 
 buildPinPad();
