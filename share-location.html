@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#8e2235">
+<title>مشاركة موقعك — السلاسل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:'Cairo',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+body{background:linear-gradient(135deg,#6b1929 0%,#8e2235 50%,#a8324f 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:#fff;overflow-x:hidden}
+.card{background:#fff;color:#1a1a1a;border-radius:24px;padding:32px 24px;max-width:420px;width:100%;box-shadow:0 25px 70px rgba(0,0,0,.35);text-align:center;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,#8e2235,#fbbf24,#10b981)}
+.logo{width:80px;height:80px;background:linear-gradient(135deg,#1c5878,#0d9488);border-radius:22px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(28,88,120,.35)}
+.logo i{font-size:42px;color:#fff}
+h1{font-size:22px;font-weight:900;margin-bottom:8px;color:#0f3a52}
+.sub{font-size:13px;color:#64748b;margin-bottom:24px;line-height:1.7}
+.rest-name{background:linear-gradient(135deg,#fef9f7,#fef2f2);border:1px dashed #8e2235;border-radius:14px;padding:12px;margin-bottom:22px;font-size:14px;font-weight:800;color:#8e2235}
+.btn{width:100%;padding:18px;border:none;border-radius:14px;font-family:inherit;font-weight:900;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s ease;box-shadow:0 8px 22px rgba(28,88,120,.25)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.7;cursor:wait}
+.btn-pri{background:linear-gradient(135deg,#1c5878,#0d9488);color:#fff}
+.btn-pri:hover{box-shadow:0 12px 30px rgba(28,88,120,.4)}
+.btn i{font-size:22px}
+.steps{text-align:right;background:#f8fafc;border-radius:14px;padding:14px;margin-bottom:22px;font-size:12px;color:#475569;line-height:2}
+.steps b{color:#0f3a52}
+.success{display:none}
+.success.on{display:block;animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(0)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.success .ic{width:90px;height:90px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 12px 30px rgba(16,185,129,.4)}
+.success .ic i{font-size:52px;color:#fff}
+.success h2{font-size:22px;color:#065f46;font-weight:900;margin-bottom:10px}
+.success p{font-size:14px;color:#64748b;line-height:1.8;margin-bottom:14px}
+.coords{font-family:'JetBrains Mono',monospace;background:#f0fdf4;border:1px solid #10b981;border-radius:10px;padding:10px;font-size:12px;color:#065f46;margin-top:10px}
+.err{display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:12px;border-radius:10px;font-size:13px;margin-top:12px;text-align:right}
+.err.on{display:block}
+.foot{margin-top:18px;text-align:center;color:rgba(255,255,255,.7);font-size:11px}
+.foot a{color:#fff;text-decoration:none}
+.spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <div id="askScreen">
+    <div class="logo"><i class="ti ti-map-pin-share"></i></div>
+    <h1>مرحباً بك</h1>
+    <p class="sub">المطعم محتاج موقعك بدقة عشان السائق يوصلك بأسرع وقت</p>
+    <div class="rest-name" id="restName">جاري التحميل...</div>
+    <div class="steps">
+      <b>📍 الخطوات:</b><br>
+      ١. اضغط زر "أرسل موقعي الحالي" تحت<br>
+      ٢. هيظهرلك سؤال من المتصفح "يسمح بالوصول للموقع؟"<br>
+      ٣. اضغط <b>"السماح / Allow"</b><br>
+      ٤. خلاص — هتروح للمطعم تلقائياً
+    </div>
+    <button class="btn btn-pri" id="shareBtn" onclick="shareLocation()">
+      <i class="ti ti-current-location"></i> أرسل موقعي الحالي
+    </button>
+    <div class="err" id="errBox"></div>
+  </div>
+
+  <div class="success" id="successScreen">
+    <div class="ic"><i class="ti ti-check"></i></div>
+    <h2>تم بنجاح ✅</h2>
+    <p>تم إرسال موقعك للمطعم.<br>الأوردر هيوصلك خلال وقت قصير.</p>
+    <div class="coords" id="coordsBox"></div>
+  </div>
+</div>
+
+<div class="foot">
+  شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>
+  Al-Salasil Consumer Delivery Services
+</div>
+
+<script>
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+const params = new URLSearchParams(location.search);
+const TOKEN = params.get('t');
+
+async function loadRequest(){
+  if(!TOKEN){ showErr('الرابط غير صالح — اطلب من المطعم رابط جديد'); return; }
+  try {
+    const res = await fetch(SUPA_URL+'/rest/v1/location_requests?token=eq.'+encodeURIComponent(TOKEN), {
+      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(!data || !data.length){ showErr('الطلب غير موجود أو انتهت صلاحيته'); return; }
+    const r = data[0];
+    if(r.received_at){
+      // Already received — show success
+      document.getElementById('coordsBox').textContent = 'الإحداثيات: ' + parseFloat(r.latitude).toFixed(5) + ', ' + parseFloat(r.longitude).toFixed(5);
+      showSuccess();
+      return;
+    }
+    if(r.expires_at && new Date(r.expires_at) < new Date()){
+      showErr('الرابط انتهت صلاحيته — اطلب من المطعم رابط جديد');
+      return;
+    }
+    document.getElementById('restName').innerHTML = '🍽️ <b>' + (r.restaurant_name||'مطعمك') + '</b>';
+  } catch(e){
+    console.error(e);
+    showErr('فشل التحميل — حاول تحديث الصفحة');
+  }
+}
+
+async function shareLocation(){
+  const btn = document.getElementById('shareBtn');
+  const err = document.getElementById('errBox');
+  err.classList.remove('on');
+  if(!navigator.geolocation){ showErr('متصفحك ما يدعم تحديد الموقع'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> جاري تحديد الموقع...';
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const acc = pos.coords.accuracy;
+      try {
+        const res = await fetch(SUPA_URL+'/rest/v1/location_requests?token=eq.'+encodeURIComponent(TOKEN), {
+          method:'PATCH',
+          headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+          body: JSON.stringify({
+            latitude: lat, longitude: lng, accuracy_meters: acc, received_at: new Date().toISOString()
+          })
+        });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        document.getElementById('coordsBox').textContent = 'الإحداثيات: ' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ' (دقة ' + Math.round(acc) + ' متر)';
+        showSuccess();
+      } catch(e){
+        console.error(e);
+        showErr('فشل الإرسال للمطعم: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-current-location"></i> أرسل موقعي الحالي';
+      }
+    },
+    (perr) => {
+      let msg = 'تعذّر تحديد الموقع';
+      if(perr.code === perr.PERMISSION_DENIED) msg = '🚫 رفضت السماح للوصول للموقع. اضغط على أيقونة القفل في شريط العنوان وفعّلها وحاول مرة أخرى.';
+      else if(perr.code === perr.POSITION_UNAVAILABLE) msg = '📡 الموقع غير متاح حالياً. تأكد من تشغيل GPS وحاول مرة أخرى.';
+      else if(perr.code === perr.TIMEOUT) msg = '⏱️ انتهت المهلة — حاول مرة أخرى في مكان مفتوح.';
+      showErr(msg);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-current-location"></i> أرسل موقعي الحالي';
+    },
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+  );
+}
+
+function showSuccess(){
+  document.getElementById('askScreen').style.display = 'none';
+  document.getElementById('successScreen').classList.add('on');
+}
+
+function showErr(msg){
+  const e = document.getElementById('errBox');
+  e.textContent = msg;
+  e.classList.add('on');
+}
+
+loadRequest();
+</script>
+</body>
+</html>
