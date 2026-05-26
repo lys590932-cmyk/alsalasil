@@ -241,21 +241,36 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
           </div>
           <div id="geocode-status" style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:10px;text-align:center;min-height:14px"></div>
 
-          <!-- ===== Paste coordinates from Google Maps ===== -->
-          <div style="background:#eff6ff;border:1px dashed #3b82f6;border-radius:10px;padding:10px;margin-bottom:0">
-            <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px;display:flex;align-items:center;gap:4px">
-              <i class="ti ti-clipboard"></i> الصق إحداثيات من Google Maps أو Kuwait Finder
+          <!-- ===== WhatsApp Location Request (BEST METHOD) ===== -->
+          <div style="background:linear-gradient(135deg,#dcfce7,#f0fdf4);border:2px solid #10b981;border-radius:12px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:-8px;left:-8px;background:#10b981;color:#fff;font-size:9px;font-weight:900;padding:3px 10px 5px;border-radius:0 0 10px 0">⭐ الأدق</div>
+            <div style="font-size:13px;font-weight:900;color:#065f46;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+              <i class="ti ti-brand-whatsapp" style="font-size:20px;color:#25d366"></i> اطلب موقع العميل عبر واتساب
             </div>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+            <div style="font-size:11px;color:#065f46;line-height:1.7;margin-bottom:10px">
+              العميل بيضغط لينك → يضغط زر واحد → موقعه يفغل عندك تلقائياً بدقة GPS كاملة
+            </div>
+            <button type="button" class="btn btn-block" onclick="requestCustomerLocation()" style="background:#25d366;color:#fff;padding:12px;font-size:13px;font-weight:900">
+              <i class="ti ti-brand-whatsapp"></i> إرسال لينك للعميل
+            </button>
+            <div id="loc-req-status" style="font-size:11px;margin-top:8px;text-align:center;min-height:14px;font-weight:700"></div>
+          </div>
+
+          <!-- ===== Paste coordinates from Google Maps (backup method) ===== -->
+          <details style="background:#eff6ff;border:1px dashed #3b82f6;border-radius:10px;padding:10px;margin-bottom:0">
+            <summary style="font-size:11px;font-weight:800;color:#1e40af;cursor:pointer;display:flex;align-items:center;gap:4px">
+              <i class="ti ti-clipboard"></i> أو الصق إحداثيات يدوياً (Google Maps)
+            </summary>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px">
               <input id="coord-paste" type="text" placeholder="مثال: 29.339, 48.075" style="padding:9px;font-family:'JetBrains Mono',monospace;font-size:13px;border:1.5px solid #cbd5e1;border-radius:8px">
               <button type="button" onclick="pasteCoords()" style="padding:9px 14px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer">
-                <i class="ti ti-map-pin"></i> ضع على الخريطة
+                <i class="ti ti-map-pin"></i> ضع
               </button>
             </div>
             <div style="font-size:10px;color:#475569;margin-top:5px;line-height:1.7">
-              💡 <b>طريقة:</b> افتح Google Maps → اضغط مطوّلاً على موقع العميل → انسخ الإحداثيات (Long-press) → الصقها هنا
+              💡 افتح Google Maps → اضغط مطوّلاً على موقع العميل → انسخ الإحداثيات → الصقها هنا
             </div>
-          </div>
+          </details>
         </div>
 
         <div class="fg">
@@ -781,6 +796,97 @@ function openGoogleSearch(){
   st.style.color = '#1e40af';
 }
 
+/* ============================================================
+   WHATSAPP LOCATION REQUEST (Customer GPS share)
+   ============================================================ */
+let locReqToken = null;       // current pending request
+let locReqPoller = null;      // polling interval
+
+function _genToken(){
+  return 'tk_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+}
+
+async function requestCustomerLocation(){
+  const phone = document.getElementById('o-phone').value.replace(/\D/g,'');
+  const name  = document.getElementById('o-name').value.trim();
+  const status = document.getElementById('loc-req-status');
+  if(!phone || phone.length < 7){ toast('اكتب رقم تليفون العميل أولاً','e'); return; }
+
+  // Generate unique token & create the request in DB
+  const token = _genToken();
+  status.innerHTML = '<span style="color:var(--muted)">⏳ جاري الإعداد...</span>';
+
+  try {
+    await api('location_requests', {
+      method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        token, restaurant_id: REST.id, restaurant_name: REST.name,
+        customer_phone: phone, customer_name: name||null,
+        created_at: new Date().toISOString()
+      })
+    });
+  } catch(e){
+    console.error(e);
+    status.innerHTML = '<span style="color:#dc2626">⚠️ فشل الإنشاء — شغّل ملف SQL أولاً</span>';
+    return;
+  }
+
+  // Build share URL
+  const origin = location.origin + location.pathname.replace(/[^/]+$/, '');
+  const shareUrl = origin + 'share-location.html?t=' + encodeURIComponent(token);
+
+  // Build WhatsApp message
+  const msg = '🍽️ مرحباً' + (name?' '+name:'') + '،\n\nمطعم *' + REST.name + '* يطلب موقعك بدقة عشان نوصلك بأسرع وقت.\n\nاضغط على الرابط ده وشارك موقعك بضغطة زر واحدة:\n\n' + shareUrl + '\n\nشكراً لك 💚\nشركة السلاسل';
+  const waNum = phone.length === 8 ? '965'+phone : phone;
+  const waUrl = 'https://wa.me/' + waNum + '?text=' + encodeURIComponent(msg);
+
+  // Open WhatsApp in new tab
+  window.open(waUrl, '_blank');
+
+  // Save token & start polling
+  locReqToken = token;
+  status.innerHTML = '<span style="color:#059669">📤 تم فتح الواتساب — في انتظار العميل ليشارك موقعه...</span>';
+
+  // Stop previous poller if any
+  if(locReqPoller) clearInterval(locReqPoller);
+  let attempts = 0;
+  locReqPoller = setInterval(async () => {
+    attempts++;
+    try {
+      const res = await api('location_requests?token=eq.'+encodeURIComponent(token)+'&select=*');
+      if(res && res.length){
+        const r = res[0];
+        if(r.received_at && r.latitude && r.longitude){
+          // GOT IT!
+          clearInterval(locReqPoller);
+          locReqPoller = null;
+          const lat = parseFloat(r.latitude), lng = parseFloat(r.longitude);
+          pickMap.setView([lat, lng], 18);
+          placeMarker(lat, lng);
+          status.innerHTML = '<span style="color:#059669">✅ تم استلام الموقع بدقة GPS (' + Math.round(r.accuracy_meters||0) + ' متر)</span>';
+          toast('تم استلام موقع العميل ✅','s');
+          document.getElementById('mh').textContent = '📍 تم استلام الموقع من العميل بدقة عالية';
+          // also update the geocode status (for backwards-compat)
+          const gs = document.getElementById('geocode-status');
+          if(gs){ gs.innerHTML = '✅ تم استلام الموقع من العميل عبر واتساب'; gs.style.color='#059669'; }
+        }
+      }
+    } catch(e){ console.warn('poll err', e); }
+    // Update waiting text every ~10s with countdown
+    if(attempts % 5 === 0 && locReqPoller){
+      const seconds = attempts * 2;
+      status.innerHTML = '<span style="color:#d97706">⏳ في انتظار العميل ('+seconds+' ث) — اطلب منه فتح الرابط</span>';
+    }
+    // Stop polling after 5 minutes
+    if(attempts > 150){
+      clearInterval(locReqPoller);
+      locReqPoller = null;
+      status.innerHTML = '<span style="color:#dc2626">⏱️ انتهت المهلة — العميل ما فتحش الرابط. حاول مرة أخرى أو استخدم لصق الإحداثيات</span>';
+    }
+  }, 2000);
+}
+
 /* ====== Paste raw coordinates (lat, lng) ====== */
 function pasteCoords(){
   const input = document.getElementById('coord-paste').value.trim();
@@ -942,7 +1048,12 @@ async function submitOrder(){
 }
 
 function clearForm(){
-  ['o-name','o-phone','o-block','o-street','o-avenue','o-house','o-addr-extra','o-amt','o-notes'].forEach(id=> {
+  // Stop any active location-request poller
+  if(locReqPoller){ clearInterval(locReqPoller); locReqPoller=null; }
+  locReqToken = null;
+  const lrStatus = document.getElementById('loc-req-status'); if(lrStatus) lrStatus.innerHTML='';
+  const gs = document.getElementById('geocode-status'); if(gs){ gs.textContent=''; }
+  ['o-name','o-phone','o-block','o-street','o-avenue','o-house','o-addr-extra','o-amt','o-notes','coord-paste'].forEach(id=> {
     const el = document.getElementById(id); if(el) el.value='';
   });
   // Reset governorate/area dropdowns
