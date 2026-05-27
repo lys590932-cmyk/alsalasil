@@ -1316,3 +1316,17 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
+==== BOOT ====================
+const saved = localStorage.getItem('rest_session');
+if(saved){
+  try { REST = JSON.parse(saved); unlock(); }
+  catch(e){ localStorage.removeItem('rest_session'); }
+}
+
+// Service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw-restaurant.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
