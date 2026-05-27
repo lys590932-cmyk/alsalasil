@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1c5878">
+<title>نتيجة الدفع — السلاسل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'Cairo',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+body{background:linear-gradient(135deg,#0f3a52 0%,#1c5878 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;color:#fff}
+.card{background:#fff;color:#1a1a1a;border-radius:24px;padding:36px 26px;max-width:440px;width:100%;box-shadow:0 25px 70px rgba(0,0,0,.35);text-align:center;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:6px}
+.card.success::before{background:linear-gradient(90deg,#10b981,#059669)}
+.card.fail::before{background:linear-gradient(90deg,#dc2626,#7f1d1d)}
+.card.checking::before{background:linear-gradient(90deg,#3b82f6,#1e40af)}
+.ic{width:100px;height:100px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center}
+.ic.success{background:#10b981;animation:pop .5s ease}
+.ic.fail{background:#dc2626;animation:shake .5s ease}
+.ic.checking{background:#3b82f6}
+.ic i{font-size:54px;color:#fff}
+@keyframes pop{0%{transform:scale(0)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+h1{font-size:24px;font-weight:900;margin-bottom:8px}
+.success h1{color:#065f46}
+.fail h1{color:#7f1d1d}
+.checking h1{color:#1e40af}
+.sub{font-size:14px;color:#64748b;line-height:1.8;margin-bottom:18px}
+.details{background:#f8fafc;border-radius:12px;padding:14px;margin-bottom:18px;text-align:right;font-size:13px;line-height:2;color:#475569}
+.details b{color:#0f1729;font-weight:800}
+.amount{background:linear-gradient(135deg,#dcfce7,#f0fdf4);border:1.5px solid #10b981;border-radius:12px;padding:18px;text-align:center;margin-bottom:18px}
+.amount .lbl{font-size:11px;color:#065f46;font-weight:700;margin-bottom:4px}
+.amount .v{font-size:32px;font-weight:900;color:#065f46;font-family:'JetBrains Mono',monospace}
+.spin{display:inline-block;width:60px;height:60px;border:5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.foot{margin-top:18px;text-align:center;color:rgba(255,255,255,.7);font-size:11px}
+.btn{display:inline-block;padding:12px 22px;background:linear-gradient(135deg,#1c5878,#0d9488);color:#fff;border-radius:10px;text-decoration:none;font-weight:800;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="card checking" id="card">
+  <div class="ic checking"><div class="spin" style="width:50px;height:50px"></div></div>
+  <h1>جاري التحقق من الدفع...</h1>
+  <p class="sub">من فضلك انتظر بينما نتحقق من المعاملة</p>
+</div>
+
+<div class="foot">
+  شركة السلاسل لتوصيل الطلبات الاستهلاكية
+</div>
+
+<script>
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+async function api(path, opts={}){
+  const url = SUPA_URL + '/rest/v1/' + path;
+  const headers = {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json'};
+  const res = await fetch(url, {...opts, headers:{...headers,...(opts.headers||{})}});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  if(res.status===204) return null;
+  return await res.json();
+}
+
+const params = new URLSearchParams(location.search);
+const paymentId = params.get('paymentId'); // MyFatoorah sends this
+const orderRef  = params.get('Id') || params.get('id') || params.get('ref'); // custom reference
+
+async function checkPayment(){
+  if(!paymentId && !orderRef){ showFail('رابط غير صالح'); return; }
+
+  try {
+    // Lookup order by customer_ref or payment_id
+    let order = null;
+    if(orderRef){
+      const list = await api('orders?customer_ref=eq.'+encodeURIComponent(orderRef)+'&select=*&limit=1');
+      if(list && list.length) order = list[0];
+    }
+    if(!order && paymentId){
+      const list = await api('orders?payment_id=eq.'+encodeURIComponent(paymentId)+'&select=*&limit=1');
+      if(list && list.length) order = list[0];
+    }
+    if(!order){ showFail('الأوردر غير موجود'); return; }
+
+    // Get MyFatoorah API key from settings
+    const sett = await api('app_settings?key=in.(myfatoorah_api_key,myfatoorah_base_url)&select=*');
+    const settings = {};
+    (sett||[]).forEach(s => settings[s.key] = s.value);
+    const apiKey = settings.myfatoorah_api_key || '';
+    const baseUrl = settings.myfatoorah_base_url || 'https://apitest.myfatoorah.com';
+
+    if(!apiKey){
+      // Demo / not configured — show pending
+      showSuccess(order, {paid:false, demo:true});
+      return;
+    }
+
+    // Call MyFatoorah getPaymentStatus
+    const statusRes = await fetch(baseUrl + '/v2/getPaymentStatus', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+apiKey, 'Content-Type':'application/json'},
+      body: JSON.stringify({Key: paymentId || order.payment_id, KeyType:'PaymentId'})
+    });
+    const statusData = await statusRes.json();
+
+    if(statusData && statusData.IsSuccess && statusData.Data){
+      const invoice = statusData.Data;
+      const txnStatus = (invoice.InvoiceStatus||'').toLowerCase(); // paid | pending | failed | etc.
+      if(txnStatus === 'paid'){
+        // Update order
+        await api('orders?id=eq.'+order.id, {
+          method:'PATCH',
+          headers:{'Prefer':'return=minimal'},
+          body: JSON.stringify({
+            payment_status:'paid',
+            payment_paid_at: new Date().toISOString(),
+            payment_ref: (invoice.InvoiceTransactions && invoice.InvoiceTransactions[0] && invoice.InvoiceTransactions[0].TransactionId) || ''
+          })
+        });
+        showSuccess(order, {paid:true});
+      } else {
+        await api('orders?id=eq.'+order.id, {
+          method:'PATCH',
+          headers:{'Prefer':'return=minimal'},
+          body: JSON.stringify({payment_status: txnStatus === 'failed' ? 'failed' : 'pending'})
+        });
+        if(txnStatus==='failed') showFail('فشلت عملية الدفع');
+        else showPending(order);
+      }
+    } else {
+      showFail('تعذّر التحقق من حالة الدفع');
+    }
+  } catch(e){
+    console.error(e);
+    showFail('خطأ في الاتصال: '+e.message.slice(0,80));
+  }
+}
+
+function showSuccess(order, opts){
+  const card = document.getElementById('card');
+  card.className = 'card success';
+  card.innerHTML = `
+    <div class="ic success"><i class="ti ti-check"></i></div>
+    <h1>تم الدفع بنجاح ✅</h1>
+    <p class="sub">شكراً لك! الأوردر هيوصلك قريباً.</p>
+    <div class="amount">
+      <div class="lbl">المبلغ المدفوع</div>
+      <div class="v">${parseFloat(order.order_amount||0).toFixed(3)} د.ك</div>
+    </div>
+    <div class="details">
+      🍽️ <b>المطعم:</b> ${order.restaurant_name}<br>
+      📦 <b>رقم الأوردر:</b> #${order.id}<br>
+      📍 <b>عنوان التوصيل:</b> ${(order.customer_address||'').slice(0,60)}<br>
+      ${opts.demo ? '⚠️ <b style="color:#d97706">وضع تجريبي:</b> MyFatoorah API Key غير مفعّل' : ''}
+    </div>
+    <p style="font-size:11px;color:#64748b">السائق سيتم إشعاره وسيتواصل معك قريباً</p>
+  `;
+}
+
+function showFail(msg){
+  const card = document.getElementById('card');
+  card.className = 'card fail';
+  card.innerHTML = `
+    <div class="ic fail"><i class="ti ti-x"></i></div>
+    <h1>فشلت عملية الدفع</h1>
+    <p class="sub">${msg}<br>تواصل مع المطعم لإكمال الأوردر</p>
+    <a href="javascript:history.back()" class="btn"><i class="ti ti-refresh"></i> حاول مرة أخرى</a>
+  `;
+}
+
+function showPending(order){
+  const card = document.getElementById('card');
+  card.className = 'card checking';
+  card.innerHTML = `
+    <div class="ic checking"><i class="ti ti-clock"></i></div>
+    <h1>الدفع قيد المعالجة</h1>
+    <p class="sub">ستصلك رسالة فور تأكيد الدفع.<br>الأوردر: #${order.id}</p>
+  `;
+}
+
+checkPayment();
+</script>
+</body>
+</html>

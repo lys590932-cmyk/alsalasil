@@ -297,14 +297,19 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
 
         <div class="fg">
           <label>طريقة الدفع</label>
-          <div class="pay-toggle">
-            <div class="pay-opt on" id="pay-cash" onclick="setPay('cash')">
-              <i class="ti ti-cash"></i><span>كاش</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <div class="pay-opt on" id="pay-cash" onclick="setPay('cash')" style="padding:11px 6px">
+              <i class="ti ti-cash"></i><span style="font-size:12px">كاش</span>
             </div>
-            <div class="pay-opt" id="pay-paid" onclick="setPay('paid')">
-              <i class="ti ti-credit-card"></i><span>مدفوع مسبقاً</span>
+            <div class="pay-opt" id="pay-paid" onclick="setPay('paid')" style="padding:11px 6px">
+              <i class="ti ti-credit-card"></i><span style="font-size:12px">مدفوع للمطعم</span>
+            </div>
+            <div class="pay-opt" id="pay-online" onclick="setPay('online')" style="padding:11px 6px;position:relative">
+              <i class="ti ti-device-mobile"></i><span style="font-size:12px">أون لاين</span>
+              <span style="position:absolute;top:-4px;right:-4px;background:#10b981;color:#fff;font-size:8px;font-weight:900;padding:2px 6px;border-radius:10px">جديد</span>
             </div>
           </div>
+          <div class="fg-hint" id="pay-hint" style="margin-top:6px"></div>
         </div>
 
         <div class="fee-box">
@@ -657,6 +662,15 @@ function setPay(p){
   currentPay = p;
   document.getElementById('pay-cash').classList.toggle('on', p==='cash');
   document.getElementById('pay-paid').classList.toggle('on', p==='paid');
+  const onlineEl = document.getElementById('pay-online');
+  if(onlineEl) onlineEl.classList.toggle('on', p==='online');
+  // Hint
+  const hint = document.getElementById('pay-hint');
+  if(hint){
+    if(p==='cash')        hint.innerHTML = '💵 السائق يحصّل المبلغ من العميل ويسلّمه للمطعم';
+    else if(p==='paid')   hint.innerHTML = '💳 العميل دفع للمطعم مباشرة (تطبيق، تحويل، إلخ)';
+    else if(p==='online') hint.innerHTML = '📱 العميل هيستلم لينك دفع MyFatoorah على واتساب — السلاسل تحصّل وتسوّي مع المطعم لاحقاً';
+  }
 }
 
 // ==================== KUWAIT FINDER ADDRESS LOGIC ====================
@@ -798,6 +812,70 @@ function openGoogleSearch(){
   const st = document.getElementById('geocode-status');
   st.innerHTML = '🗺️ افتح موقع العميل في Google Maps → اضغط مطوّلاً عليه → انسخ الإحداثيات والصقها تحت';
   st.style.color = '#1e40af';
+}
+
+/* ============================================================
+   MYFATOORAH ONLINE PAYMENT INTEGRATION
+   ============================================================ */
+async function generatePaymentLink({orderId, customerRef, amount, customerName, customerPhone, notes}){
+  try {
+    // Fetch MyFatoorah settings from app_settings
+    const sett = await api('app_settings?key=in.(myfatoorah_api_key,myfatoorah_base_url,myfatoorah_enabled)&select=*');
+    const settings = {};
+    (sett||[]).forEach(s => settings[s.key] = s.value);
+
+    if(settings.myfatoorah_enabled !== 'true' || !settings.myfatoorah_api_key){
+      console.warn('MyFatoorah not configured');
+      return null;
+    }
+
+    const apiKey = settings.myfatoorah_api_key;
+    const baseUrl = settings.myfatoorah_base_url || 'https://apitest.myfatoorah.com';
+    const origin = location.origin + location.pathname.replace(/[^/]+$/, '');
+    const callbackUrl = origin + 'payment-result.html?ref=' + encodeURIComponent(customerRef);
+    const errorUrl = callbackUrl + '&error=1';
+
+    const phoneClean = (customerPhone||'').replace(/\D/g,'');
+    const mobile = phoneClean.length === 8 ? phoneClean : phoneClean.slice(-8);
+
+    const payload = {
+      CustomerName: customerName || 'عميل',
+      NotificationOption: 'LNK',  // Get a link back (no SMS/Email)
+      MobileCountryCode: '+965',
+      CustomerMobile: mobile,
+      InvoiceValue: parseFloat(amount.toFixed(3)),
+      DisplayCurrencyIso: 'KWD',
+      CallBackUrl: callbackUrl,
+      ErrorUrl: errorUrl,
+      Language: 'ar',
+      CustomerReference: customerRef,
+      UserDefinedField: 'order_id=' + orderId,
+      InvoiceItemsList: [
+        {ItemName: notes || ('Order #' + orderId), Quantity: 1, UnitPrice: parseFloat(amount.toFixed(3))}
+      ]
+    };
+
+    const res = await fetch(baseUrl + '/v2/SendPayment', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+apiKey, 'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data && data.IsSuccess && data.Data){
+      // Save payment_id back
+      await api('orders?id=eq.'+orderId, {
+        method:'PATCH',
+        headers:{'Prefer':'return=minimal'},
+        body: JSON.stringify({payment_id: String(data.Data.InvoiceId || '')})
+      }).catch(()=>{});
+      return data.Data.InvoiceURL;
+    }
+    console.error('MyFatoorah error:', data);
+    return null;
+  } catch(e){
+    console.error('MyFatoorah call failed', e);
+    return null;
+  }
 }
 
 /* ============================================================
@@ -996,6 +1074,8 @@ async function submitOrder(){
     const payload = {
       restaurant_id: REST.id,
       restaurant_name: REST.name,
+      restaurant_lat: REST.latitude || null,
+      restaurant_lng: REST.longitude || null,
       customer_name: name,
       customer_phone: phone,
       customer_address: addr,
@@ -1012,6 +1092,11 @@ async function submitOrder(){
       assigned_at: nearest ? new Date().toISOString() : null
     };
 
+    // Build customer reference for MyFatoorah callback matching
+    const customerRef = 'ORD-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+    payload.customer_ref = customerRef;
+    if(currentPay === 'online') payload.payment_status = 'pending';
+
     const result = await api('orders', {
       method:'POST',
       body: JSON.stringify(payload),
@@ -1019,14 +1104,39 @@ async function submitOrder(){
     });
     const orderId = result && result[0] ? result[0].id : '';
 
+    // === ONLINE PAYMENT: Generate MyFatoorah link ===
+    let onlinePayUrl = null;
+    if(currentPay === 'online' && orderId){
+      onlinePayUrl = await generatePaymentLink({
+        orderId, customerRef, amount: amt,
+        customerName: name || 'عميل',
+        customerPhone: phone,
+        notes: 'أوردر #' + orderId + ' - ' + REST.name
+      });
+      if(onlinePayUrl){
+        // Save link in order
+        await api('orders?id=eq.'+orderId, {
+          method:'PATCH',
+          headers:{'Prefer':'return=minimal'},
+          body: JSON.stringify({payment_url: onlinePayUrl})
+        }).catch(()=>{});
+
+        // Send link to customer via WhatsApp
+        const msg = '🍽️ مرحباً' + (name?' '+name:'') + '،\n\nطلبك من *' + REST.name + '*:\n💰 المبلغ: ' + amt.toFixed(3) + ' د.ك\n\nادفع أون لاين عبر MyFatoorah:\n' + onlinePayUrl + '\n\nبعد الدفع، السائق هيوصلك مباشرة 💚\n— شركة السلاسل';
+        const waNum = phone.length === 8 ? '965'+phone : phone;
+        window.open('https://wa.me/' + waNum + '?text=' + encodeURIComponent(msg), '_blank');
+      }
+    }
+
     // Notify driver via messages table (if assigned)
     if(nearest){
+      let payLabel = currentPay==='cash' ? 'كاش' : (currentPay==='online' ? '💳 دفع أون لاين (لا تحصّل!)' : 'مدفوع');
       await api('messages', {
         method:'POST',
         body: JSON.stringify({
           recipient: nearest.driver.id,
           title: '📦 أوردر جديد — ' + REST.name,
-          body: 'العميل: ' + (name||phone) + '\nالعنوان: ' + addr + '\nالمبلغ: ' + amt.toFixed(3) + ' د.ك (' + (currentPay==='cash'?'كاش':'مدفوع') + ')\nالمسافة: ' + currentDistance.toFixed(1) + ' كم',
+          body: 'العميل: ' + (name||phone) + '\nالعنوان: ' + addr + '\nالمبلغ: ' + amt.toFixed(3) + ' د.ك (' + payLabel + ')\nالمسافة: ' + currentDistance.toFixed(1) + ' كم',
           level: 'urgent',
           created_at: new Date().toISOString()
         }),
@@ -1036,7 +1146,11 @@ async function submitOrder(){
 
     // Reset form
     clearForm();
-    if(nearest){
+    if(currentPay === 'online' && onlinePayUrl){
+      toast('✅ تم إنشاء الأوردر — أُرسل لينك الدفع للعميل','s');
+    } else if(currentPay === 'online' && !onlinePayUrl){
+      toast('⚠️ الأوردر محفوظ لكن MyFatoorah غير مفعّل. اتصل بالإدارة','e');
+    } else if(nearest){
       toast('✅ تم — السائق: '+nearest.driver.name+' ('+nearest.dist.toFixed(1)+' كم)','s');
     } else {
       toast('⚠️ تم الحفظ — لا يوجد سائق قريب. الإدارة ستوزّعه يدوياً','e');

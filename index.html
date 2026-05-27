@@ -1620,62 +1620,112 @@ async function renderOrders(){
 }
 
 function _renderOrderCard(o, active){
-  var STATUS_AR = {pending:'معلّق', assigned:'جديد ⚡', picked_up:'في الطريق', delivered:'تم التوصيل ✅', cancelled:'ملغي'};
-  var STATUS_CL = {pending:'#92400e', assigned:'#1e40af', picked_up:'#854d0e', delivered:'#065f46', cancelled:'#991b1b'};
-  var STATUS_BG = {pending:'#fef3c7', assigned:'#dbeafe', picked_up:'#fde68a', delivered:'#d1fae5', cancelled:'#fee2e2'};
+  var STATUS_AR = {pending:'معلّق', assigned:'⚡ روح للمطعم', picked_up:'🚦 في الطريق للعميل', delivered:'تم التوصيل ✅', cancelled:'ملغي'};
+  var STATUS_CL = {pending:'#92400e', assigned:'#dc2626', picked_up:'#854d0e', delivered:'#065f46', cancelled:'#991b1b'};
+  var STATUS_BG = {pending:'#fef3c7', assigned:'#fee2e2', picked_up:'#fde68a', delivered:'#d1fae5', cancelled:'#fee2e2'};
   var time = new Date(o.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
   var amt = parseFloat(o.order_amount||0).toFixed(3);
   var phone = (o.customer_phone||'').replace(/\D/g,'');
   var addr = o.customer_address || '';
   var dist = parseFloat(o.distance_km||0).toFixed(1);
 
-  var h = '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:10px;'+(active?'border-right:4px solid #1c5878':'')+'">';
+  // Phase color: red for "go to restaurant", amber for "go to customer"
+  var phaseColor = o.status==='assigned' ? '#dc2626' : (o.status==='picked_up' ? '#f59e0b' : '#1c5878');
+
+  var h = '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:10px;'+(active?'border-right:5px solid '+phaseColor:'')+'">';
   // Header
   h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">';
   h += '<div><div style="font-size:10px;color:#94a3b8;font-weight:700">#'+o.id+' • '+time+'</div>';
   h += '<div style="font-size:14px;font-weight:900;margin-top:2px">🍽️ '+o.restaurant_name+'</div></div>';
-  h += '<span style="font-size:10px;padding:4px 10px;border-radius:10px;font-weight:800;background:'+STATUS_BG[o.status]+';color:'+STATUS_CL[o.status]+'">'+STATUS_AR[o.status]+'</span>';
+  h += '<span style="font-size:11px;padding:5px 11px;border-radius:10px;font-weight:900;background:'+STATUS_BG[o.status]+';color:'+STATUS_CL[o.status]+'">'+STATUS_AR[o.status]+'</span>';
   h += '</div>';
 
-  // Customer info
-  h += '<div style="background:#f8fafc;padding:10px;border-radius:10px;margin-bottom:10px">';
-  h += '<div style="font-size:13px;font-weight:800;margin-bottom:4px">👤 '+(o.customer_name||o.customer_phone)+'</div>';
-  h += '<div style="font-size:11px;color:#64748b;line-height:1.6">📍 '+addr+'</div>';
-  if(o.notes) h += '<div style="font-size:11px;color:#92400e;margin-top:4px;background:#fffbeb;padding:6px 8px;border-radius:6px">📝 '+o.notes+'</div>';
-  h += '</div>';
-
-  // Amount + payment
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:12px">';
-  h += '<div style="background:#f0fdf4;padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">المبلغ</div><div style="font-weight:900;color:#065f46">'+amt+' د.ك</div></div>';
-  h += '<div style="background:'+(o.payment_method==='cash'?'#fef3c7':'#dbeafe')+';padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">الدفع</div><div style="font-weight:900;color:'+(o.payment_method==='cash'?'#92400e':'#1e40af')+'">'+(o.payment_method==='cash'?'💵 كاش':'💳 مدفوع')+'</div></div>';
-  h += '</div>';
-
-  // Action buttons
-  if(active){
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">';
-    // Maps button
-    if(o.customer_lat && o.customer_lng){
-      h += '<a href="https://www.google.com/maps/dir/?api=1&destination='+o.customer_lat+','+o.customer_lng+'&travelmode=driving" target="_blank" style="background:#3b82f6;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-navigation"></i> اتجاهات</a>';
-    } else {
-      h += '<a href="https://www.google.com/maps/search/'+encodeURIComponent(addr)+'" target="_blank" style="background:#3b82f6;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-navigation"></i> بحث</a>';
-    }
-    // Call button
-    if(phone) h += '<a href="tel:'+phone+'" style="background:#10b981;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-phone"></i> اتصال</a>';
+  // === PHASE 1: GO TO RESTAURANT (status='assigned') ===
+  if(active && o.status==='assigned'){
+    // Big banner: "go pick up from restaurant"
+    h += '<div style="background:linear-gradient(135deg,#fee2e2,#fef2f2);border:2px solid #dc2626;border-radius:12px;padding:12px;margin-bottom:10px;text-align:center">';
+    h += '<div style="font-size:11px;color:#7f1d1d;font-weight:800;margin-bottom:4px">⚡ المرحلة 1 من 2</div>';
+    h += '<div style="font-size:16px;color:#7f1d1d;font-weight:900;margin-bottom:6px">🏪 روح المطعم استلم الأوردر</div>';
+    h += '<div style="font-size:12px;color:#991b1b;font-weight:700">'+o.restaurant_name+'</div>';
+    if(o.notes) h += '<div style="font-size:11px;color:#92400e;margin-top:8px;background:#fffbeb;padding:8px;border-radius:8px">📝 '+o.notes+'</div>';
     h += '</div>';
-    // WhatsApp + Status update
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+
+    // Amount + payment summary (driver needs to know payment method when picking up)
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:12px">';
+    h += '<div style="background:#f0fdf4;padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">قيمة الطلب</div><div style="font-weight:900;color:#065f46">'+amt+' د.ك</div></div>';
+    h += '<div style="background:'+(o.payment_method==='cash'?'#fef3c7':'#dbeafe')+';padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">طريقة الدفع</div><div style="font-weight:900;color:'+(o.payment_method==='cash'?'#92400e':'#1e40af')+'">'+(o.payment_method==='cash'?'💵 كاش (احصل من العميل)':o.payment_method==='online'?'📱 أون لاين عبر السلاسل':'💳 مدفوع للمطعم')+'</div></div>';
+    h += '</div>';
+
+    // Action: Restaurant directions + pickup confirm
+    h += '<div style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:6px">';
+    if(o.restaurant_lat && o.restaurant_lng){
+      h += '<a href="https://www.google.com/maps/dir/?api=1&destination='+o.restaurant_lat+','+o.restaurant_lng+'&travelmode=driving" target="_blank" style="background:#dc2626;color:#fff;padding:13px;border-radius:10px;text-decoration:none;text-align:center;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 12px rgba(220,38,38,0.3)"><i class="ti ti-navigation" style="font-size:18px"></i> اتجاهات للمطعم</a>';
+    } else {
+      h += '<a href="https://www.google.com/maps/search/'+encodeURIComponent(o.restaurant_name||'')+'" target="_blank" style="background:#dc2626;color:#fff;padding:13px;border-radius:10px;text-decoration:none;text-align:center;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-search" style="font-size:18px"></i> ابحث عن المطعم</a>';
+    }
+    h += '</div>';
+    h += '<button onclick="updateOrderStatus('+o.id+',\'picked_up\')" style="width:100%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:14px;border-radius:10px;border:none;font-weight:900;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 12px rgba(245,158,11,0.35)"><i class="ti ti-package" style="font-size:20px"></i> ✓ استلمت الأوردر من المطعم</button>';
+
+    // Hidden customer info banner (helps driver know there's more after pickup)
+    h += '<div style="margin-top:10px;background:#f1f5f9;border:1px dashed #94a3b8;border-radius:8px;padding:8px;text-align:center;font-size:11px;color:#475569;font-weight:700"><i class="ti ti-lock"></i> بيانات العميل وعنوانه هتظهر بعد ما تستلم من المطعم</div>';
+  }
+
+  // === PHASE 2: GO TO CUSTOMER (status='picked_up') ===
+  else if(active && o.status==='picked_up'){
+    // Big banner: "deliver to customer"
+    h += '<div style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border:2px solid #f59e0b;border-radius:12px;padding:12px;margin-bottom:10px;text-align:center">';
+    h += '<div style="font-size:11px;color:#854d0e;font-weight:800;margin-bottom:4px">🚦 المرحلة 2 من 2</div>';
+    h += '<div style="font-size:16px;color:#854d0e;font-weight:900;margin-bottom:6px">📦 وصّل الأوردر للعميل</div>';
+    h += '</div>';
+
+    // Customer info (NOW visible)
+    h += '<div style="background:#f8fafc;padding:11px;border-radius:10px;margin-bottom:10px;border-right:3px solid #f59e0b">';
+    h += '<div style="font-size:14px;font-weight:900;margin-bottom:5px">👤 '+(o.customer_name||o.customer_phone)+'</div>';
+    h += '<div style="font-size:12px;color:#475569;line-height:1.7;margin-bottom:4px">📍 '+addr+'</div>';
+    if(phone) h += '<div style="font-size:12px;color:#1c5878;font-weight:700">📞 '+o.customer_phone+'</div>';
+    if(o.notes) h += '<div style="font-size:11px;color:#92400e;margin-top:6px;background:#fffbeb;padding:6px 8px;border-radius:6px">📝 '+o.notes+'</div>';
+    h += '</div>';
+
+    // Amount + payment
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:12px">';
+    h += '<div style="background:#f0fdf4;padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">المبلغ المطلوب</div><div style="font-weight:900;color:#065f46">'+amt+' د.ك</div></div>';
+    h += '<div style="background:'+(o.payment_method==='cash'?'#fef3c7':'#dbeafe')+';padding:8px;border-radius:8px;text-align:center"><div style="color:#64748b;font-size:10px">الدفع</div><div style="font-weight:900;color:'+(o.payment_method==='cash'?'#92400e':'#1e40af')+'">'+(o.payment_method==='cash'?'💵 حصّل كاش':o.payment_method==='online'?'📱 أون لاين — لا تحصّل':'💳 مدفوع — لا تحصّل')+'</div></div>';
+    h += '</div>';
+
+    // Customer actions
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">';
+    if(o.customer_lat && o.customer_lng){
+      h += '<a href="https://www.google.com/maps/dir/?api=1&destination='+o.customer_lat+','+o.customer_lng+'&travelmode=driving" target="_blank" style="background:#3b82f6;color:#fff;padding:11px;border-radius:8px;text-decoration:none;text-align:center;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-navigation"></i> اتجاهات للعميل</a>';
+    } else {
+      h += '<a href="https://www.google.com/maps/search/'+encodeURIComponent(addr)+'" target="_blank" style="background:#3b82f6;color:#fff;padding:11px;border-radius:8px;text-decoration:none;text-align:center;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-search"></i> بحث</a>';
+    }
+    if(phone) h += '<a href="tel:'+phone+'" style="background:#10b981;color:#fff;padding:11px;border-radius:8px;text-decoration:none;text-align:center;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-phone"></i> اتصال بالعميل</a>';
+    h += '</div>';
+
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">';
     if(phone){
       var waNum = phone.length===8 ? '965'+phone : phone;
-      h += '<a href="https://wa.me/'+waNum+'" target="_blank" style="background:#25d366;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-brand-whatsapp"></i> واتساب</a>';
+      h += '<a href="https://wa.me/'+waNum+'" target="_blank" style="background:#25d366;color:#fff;padding:10px;border-radius:8px;text-decoration:none;text-align:center;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-brand-whatsapp"></i> واتساب</a>';
     }
-    if(o.status==='assigned'){
-      h += '<button onclick="updateOrderStatus('+o.id+',\'picked_up\')" style="background:#f59e0b;color:#fff;padding:10px;border-radius:8px;border:none;font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-package"></i> استلمت من المطعم</button>';
-    } else if(o.status==='picked_up'){
-      h += '<button onclick="updateOrderStatus('+o.id+',\'delivered\')" style="background:#10b981;color:#fff;padding:10px;border-radius:8px;border:none;font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px"><i class="ti ti-check"></i> تم التوصيل</button>';
-    }
+    h += '<div></div>';
     h += '</div>';
-  } else {
-    h += '<div style="font-size:11px;color:#64748b;display:flex;justify-content:space-between"><span>📏 '+dist+' كم</span><span>أجر التوصيل: '+parseFloat(o.delivery_fee||0).toFixed(3)+' د.ك</span></div>';
+
+    // Primary action: deliver
+    h += '<button onclick="updateOrderStatus('+o.id+',\'delivered\')" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:14px;border-radius:10px;border:none;font-weight:900;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 12px rgba(16,185,129,0.35)"><i class="ti ti-check" style="font-size:20px"></i> ✓ تم توصيل الأوردر للعميل</button>';
+  }
+
+  // === DELIVERED / COMPLETED ===
+  else {
+    // Show summary only — no PII when delivered, just driver record
+    h += '<div style="background:#f0fdf4;padding:10px;border-radius:10px;margin-bottom:6px;border-right:3px solid #10b981">';
+    h += '<div style="font-size:13px;font-weight:800;color:#065f46">✅ تم التوصيل بنجاح</div>';
+    if(o.customer_name) h += '<div style="font-size:11px;color:#64748b;margin-top:3px">العميل: '+o.customer_name+'</div>';
+    h += '</div>';
+    h += '<div style="font-size:11px;color:#64748b;display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid #e2e8f0">';
+    h += '<span>💰 '+amt+' د.ك '+(o.payment_method==='cash'?'(كاش محصّل)':'(مدفوع)')+'</span>';
+    h += '<span>📏 '+dist+' كم</span>';
+    h += '<span>أجر '+parseFloat(o.delivery_fee||0).toFixed(3)+'</span>';
+    h += '</div>';
   }
   h += '</div>';
   return h;
