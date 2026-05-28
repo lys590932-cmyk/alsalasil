@@ -843,10 +843,11 @@ async function generatePaymentLink({orderId, customerRef, amount, customerName, 
     };
 
     // Call Supabase Edge Function (which forwards to MyFatoorah server-side)
+    // Use apikey header (works with publishable keys), not Authorization Bearer (requires JWT)
     const res = await fetch(SUPA_URL + '/functions/v1/smart-function', {
       method:'POST',
       headers:{
-        'Authorization': 'Bearer ' + SUPA_KEY,
+        'apikey': SUPA_KEY,
         'Content-Type':'application/json'
       },
       body: JSON.stringify(payload)
