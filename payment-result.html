@@ -97,8 +97,10 @@ async function checkPayment(){
       return;
     }
 
-    // Call MyFatoorah getPaymentStatus
-    const statusRes = await fetch(baseUrl + '/v2/getPaymentStatus', {
+    // Use CORS proxy for MyFatoorah API
+    const targetUrl = baseUrl + '/v2/getPaymentStatus';
+    const proxyUrl  = 'https://corsproxy.io/?url=' + encodeURIComponent(targetUrl);
+    const statusRes = await fetch(proxyUrl, {
       method:'POST',
       headers:{'Authorization':'Bearer '+apiKey, 'Content-Type':'application/json'},
       body: JSON.stringify({Key: paymentId || order.payment_id, KeyType:'PaymentId'})
