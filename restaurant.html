@@ -824,27 +824,37 @@ async function generatePaymentLink({orderId, customerRef, amount, customerName, 
     const phoneClean = (customerPhone||'').replace(/\D/g,'');
     const mobile = phoneClean.length === 8 ? phoneClean : phoneClean.slice(-8);
 
-    // Call Supabase RPC (PostgreSQL function uses pg http extension to call MyFatoorah server-to-server)
-    const res = await fetch(SUPA_URL + '/rest/v1/rpc/generate_myfatoorah_link', {
+    // Build MyFatoorah payload — Edge Function will forward to MyFatoorah server-to-server (no CORS)
+    const payload = {
+      CustomerName: customerName || 'عميل',
+      NotificationOption: 'LNK',
+      MobileCountryCode: '+965',
+      CustomerMobile: mobile,
+      InvoiceValue: parseFloat(amount.toFixed(3)),
+      DisplayCurrencyIso: 'KWD',
+      CallBackUrl: callbackUrl,
+      ErrorUrl: callbackUrl + '&error=1',
+      Language: 'ar',
+      CustomerReference: customerRef,
+      UserDefinedField: 'order_id=' + orderId,
+      InvoiceItemsList: [
+        {ItemName: notes || ('Order #' + orderId), Quantity: 1, UnitPrice: parseFloat(amount.toFixed(3))}
+      ]
+    };
+
+    // Call Supabase Edge Function (which forwards to MyFatoorah server-side)
+    const res = await fetch(SUPA_URL + '/functions/v1/smart-function', {
       method:'POST',
       headers:{
-        'apikey': SUPA_KEY,
         'Authorization': 'Bearer ' + SUPA_KEY,
         'Content-Type':'application/json'
       },
-      body: JSON.stringify({
-        p_amount: parseFloat(amount.toFixed(3)),
-        p_customer_name: customerName || 'عميل',
-        p_customer_phone: mobile,
-        p_customer_ref: customerRef,
-        p_callback_url: callbackUrl,
-        p_invoice_label: notes || ('Order #' + orderId)
-      })
+      body: JSON.stringify(payload)
     });
 
     if(!res.ok){
       const txt = await res.text();
-      alert('❌ خطأ في استدعاء قاعدة البيانات:\n\n' + res.status + ' ' + txt.slice(0,200) + '\n\nتأكد أن دالة generate_myfatoorah_link موجودة في Supabase');
+      alert('❌ خطأ في Edge Function:\n\n' + res.status + ' ' + txt.slice(0,200) + '\n\nتأكد من Supabase → Edge Functions → smart-function');
       return null;
     }
     const data = await res.json();
