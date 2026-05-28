@@ -824,8 +824,17 @@ async function generatePaymentLink({orderId, customerRef, amount, customerName, 
     const settings = {};
     (sett||[]).forEach(s => settings[s.key] = s.value);
 
-    if(settings.myfatoorah_enabled !== 'true' || !settings.myfatoorah_api_key){
-      console.warn('MyFatoorah not configured');
+    // DIAGNOSTIC: show what was fetched
+    if(!sett || !sett.length){
+      alert('⚠️ ما لقيتش إعدادات MyFatoorah في قاعدة البيانات. شغّل ملف SQL أولاً.');
+      return null;
+    }
+    if(settings.myfatoorah_enabled !== 'true'){
+      alert('⚠️ MyFatoorah غير مفعّل.\n\nالقيمة الحالية: ' + (settings.myfatoorah_enabled || '(فارغة)') + '\n\nروح للسيستم الكبير ← الأوردرات ← إعدادات MyFatoorah ← فعّل المربع ☑️ واحفظ');
+      return null;
+    }
+    if(!settings.myfatoorah_api_key){
+      alert('⚠️ API Key مش موجود.\n\nروح للسيستم الكبير ← الأوردرات ← إعدادات MyFatoorah ← الصق المفتاح واحفظ');
       return null;
     }
 
@@ -870,10 +879,13 @@ async function generatePaymentLink({orderId, customerRef, amount, customerName, 
       }).catch(()=>{});
       return data.Data.InvoiceURL;
     }
+    // DIAGNOSTIC: Show MyFatoorah API error
     console.error('MyFatoorah error:', data);
+    alert('❌ MyFatoorah رفض الطلب:\n\n' + (data.Message || data.ValidationErrors?.[0]?.Error || JSON.stringify(data).slice(0,200)));
     return null;
   } catch(e){
     console.error('MyFatoorah call failed', e);
+    alert('❌ فشل الاتصال بـMyFatoorah:\n\n' + e.message + '\n\nده غالباً CORS أو الانترنت');
     return null;
   }
 }
@@ -1107,12 +1119,19 @@ async function submitOrder(){
     // === ONLINE PAYMENT: Generate MyFatoorah link ===
     let onlinePayUrl = null;
     if(currentPay === 'online' && orderId){
+      // Visible diagnostic
+      alert('🔧 جاري توليد لينك دفع MyFatoorah...');
       onlinePayUrl = await generatePaymentLink({
         orderId, customerRef, amount: amt,
         customerName: name || 'عميل',
         customerPhone: phone,
         notes: 'أوردر #' + orderId + ' - ' + REST.name
       });
+      if(!onlinePayUrl){
+        alert('❌ تعذّر توليد لينك الدفع.\n\nتأكد من:\n1. تفعيل MyFatoorah من إعدادات السيستم\n2. صحة API Key\n3. الاتصال بالإنترنت');
+      } else {
+        alert('✅ تم توليد اللينك بنجاح!\n\nاللينك:\n' + onlinePayUrl + '\n\nهيتفتح واتساب دلوقتي لإرسال اللينك للعميل');
+      }
       if(onlinePayUrl){
         // Save link in order
         await api('orders?id=eq.'+orderId, {
