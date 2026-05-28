@@ -1,7 +1,7 @@
 {
-  "name": "السلاسل - تطبيق السائقين",
-  "short_name": "السلاسل",
-  "description": "تطبيق سائقي شركة السلاسل - الحضور والرواتب والبيانات",
+  "name": "AL-SALASIL FLY",
+  "short_name": "AL-SALASIL FLY",
+  "description": "Driver app for Al-Salasil — تطبيق سائقي شركة السلاسل",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "./index.html",

@@ -1,7 +1,7 @@
 {
-  "name": "السلاسل — تطبيق المدير",
-  "short_name": "السلاسل مدير",
-  "description": "نظام إدارة السائقين والعمليات لشركة السلاسل",
+  "name": "AL-SALASIL ARK",
+  "short_name": "AL-SALASIL ARK",
+  "description": "Driver & operations management — إدارة السائقين والعمليات",
   "start_url": "./manager.html",
   "scope": "./",
   "display": "standalone",

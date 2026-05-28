@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#8e2235">
-<title>السلاسل — تطبيق المطعم</title>
+<title>AL-SALASIL BYTE — تطبيق المطعم</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="السلاسل مطعم">
+<meta name="apple-mobile-web-app-title" content="AL-SALASIL BYTE">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
 <link rel="icon" type="image/png" href="favicon.png">
@@ -155,7 +155,8 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
 <!-- LOGIN -->
 <div class="login" id="loginScreen">
   <div class="login-logo"><i class="ti ti-tools-kitchen-2"></i></div>
-  <h1>السلاسل — تطبيق المطعم</h1>
+  <h1>AL-SALASIL BYTE</h1>
+  <p style="font-size:13px;opacity:.85;margin:4px 0 0">تطبيق المطعم — Restaurant App</p>
   <p>سجّل دخول مطعمك لاستقبال خدمات التوصيل</p>
   <div class="login-form">
     <input id="li-id" placeholder="كود المطعم (مثل R001)" autocomplete="off" autocapitalize="characters">
@@ -179,6 +180,7 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
         <div class="topbar-rest" id="tb-rest-sub">السلاسل لتوصيل الطلبات</div>
       </div>
     </h2>
+    <button class="tba-btn" onclick="toggleByteLang()" title="Toggle language" style="font-size:11px;font-weight:900"><span id="byte-lang-txt">EN</span></button>
     <button class="tba-btn" onclick="refreshAll()"><i class="ti ti-refresh"></i></button>
   </div>
 
@@ -1424,6 +1426,22 @@ if(saved){
   catch(e){ localStorage.removeItem('rest_session'); }
 }
 
+// ==================== BILINGUAL (AR/EN) ====================
+function toggleByteLang(){
+  const cur = localStorage.getItem('ark_lang') || 'ar';
+  const next = (cur === 'ar') ? 'en' : 'ar';
+  localStorage.setItem('ark_lang', next);
+  applyByteLang();
+}
+function applyByteLang(){
+  const lang = localStorage.getItem('ark_lang') || 'ar';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+  const tt = document.getElementById('byte-lang-txt');
+  if(tt) tt.textContent = (lang === 'ar') ? 'EN' : 'AR';
+}
+applyByteLang();
+
 // Service worker
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw-restaurant.js').catch(()=>{});
@@ -1431,8 +1449,7 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
-==== BOOT ====================
-const saved = localStorage.getItem('rest_session');
+DUPLICATE_REMOVED_const saved = localStorage.getItem('rest_session');
 if(saved){
   try { REST = JSON.parse(saved); unlock(); }
   catch(e){ localStorage.removeItem('rest_session'); }

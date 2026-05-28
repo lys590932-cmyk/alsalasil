@@ -1,7 +1,7 @@
 {
-  "name": "السلاسل — تطبيق المطعم",
-  "short_name": "السلاسل مطعم",
-  "description": "نظام استقبال أوردرات التوصيل لمطاعم السلاسل",
+  "name": "AL-SALASIL BYTE",
+  "short_name": "AL-SALASIL BYTE",
+  "description": "Restaurant orders app — نظام أوردرات مطاعم السلاسل",
   "start_url": "./restaurant.html",
   "scope": "./",
   "display": "standalone",
