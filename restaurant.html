@@ -819,78 +819,41 @@ function openGoogleSearch(){
    ============================================================ */
 async function generatePaymentLink({orderId, customerRef, amount, customerName, customerPhone, notes}){
   try {
-    // Fetch MyFatoorah settings from app_settings
-    const sett = await api('app_settings?key=in.(myfatoorah_api_key,myfatoorah_base_url,myfatoorah_enabled)&select=*');
-    const settings = {};
-    (sett||[]).forEach(s => settings[s.key] = s.value);
-
-    // DIAGNOSTIC: show what was fetched
-    if(!sett || !sett.length){
-      alert('⚠️ ما لقيتش إعدادات MyFatoorah في قاعدة البيانات. شغّل ملف SQL أولاً.');
-      return null;
-    }
-    if(settings.myfatoorah_enabled !== 'true'){
-      alert('⚠️ MyFatoorah غير مفعّل.\n\nالقيمة الحالية: ' + (settings.myfatoorah_enabled || '(فارغة)') + '\n\nروح للسيستم الكبير ← الأوردرات ← إعدادات MyFatoorah ← فعّل المربع ☑️ واحفظ');
-      return null;
-    }
-    if(!settings.myfatoorah_api_key){
-      alert('⚠️ API Key مش موجود.\n\nروح للسيستم الكبير ← الأوردرات ← إعدادات MyFatoorah ← الصق المفتاح واحفظ');
-      return null;
-    }
-
-    const apiKey = settings.myfatoorah_api_key;
-    const baseUrl = settings.myfatoorah_base_url || 'https://apitest.myfatoorah.com';
     const origin = location.origin + location.pathname.replace(/[^/]+$/, '');
     const callbackUrl = origin + 'payment-result.html?ref=' + encodeURIComponent(customerRef);
-    const errorUrl = callbackUrl + '&error=1';
-
     const phoneClean = (customerPhone||'').replace(/\D/g,'');
     const mobile = phoneClean.length === 8 ? phoneClean : phoneClean.slice(-8);
 
-    const payload = {
-      CustomerName: customerName || 'عميل',
-      NotificationOption: 'LNK',  // Get a link back (no SMS/Email)
-      MobileCountryCode: '+965',
-      CustomerMobile: mobile,
-      InvoiceValue: parseFloat(amount.toFixed(3)),
-      DisplayCurrencyIso: 'KWD',
-      CallBackUrl: callbackUrl,
-      ErrorUrl: errorUrl,
-      Language: 'ar',
-      CustomerReference: customerRef,
-      UserDefinedField: 'order_id=' + orderId,
-      InvoiceItemsList: [
-        {ItemName: notes || ('Order #' + orderId), Quantity: 1, UnitPrice: parseFloat(amount.toFixed(3))}
-      ]
-    };
+    // Call Supabase RPC (PostgreSQL function uses pg http extension to call MyFatoorah server-to-server)
+    const res = await fetch(SUPA_URL + '/rest/v1/rpc/generate_myfatoorah_link', {
+      method:'POST',
+      headers:{
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type':'application/json'
+      },
+      body: JSON.stringify({
+        p_amount: parseFloat(amount.toFixed(3)),
+        p_customer_name: customerName || 'عميل',
+        p_customer_phone: mobile,
+        p_customer_ref: customerRef,
+        p_callback_url: callbackUrl,
+        p_invoice_label: notes || ('Order #' + orderId)
+      })
+    });
 
-    // Multi-proxy fallback (some proxies blocked by firewalls/antivirus)
-    const targetUrl = baseUrl + '/v2/SendPayment';
-    const proxies = [
-      'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl),
-      'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
-      'https://thingproxy.freeboard.io/fetch/' + targetUrl,
-      'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(targetUrl)
-    ];
-    let data = null, lastErr = '';
-    for(const pUrl of proxies){
-      try {
-        const r = await fetch(pUrl, {
-          method:'POST',
-          headers:{'Authorization':'Bearer '+apiKey, 'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
-        if(r.ok){
-          data = await r.json();
-          break;
-        }
-        lastErr = 'HTTP ' + r.status;
-      } catch(e){ lastErr = e.message; }
-    }
-    if(!data){
-      alert('❌ فشل الاتصال عبر كل البروكسيات\n\n' + lastErr + '\n\nقد يكون McAfee أو الجدار الناري بيمنعهم. الحل الدائم: Supabase Edge Functions');
+    if(!res.ok){
+      const txt = await res.text();
+      alert('❌ خطأ في استدعاء قاعدة البيانات:\n\n' + res.status + ' ' + txt.slice(0,200) + '\n\nتأكد أن دالة generate_myfatoorah_link موجودة في Supabase');
       return null;
     }
+    const data = await res.json();
+
+    if(data && data.error){
+      alert('⚠️ ' + data.error + '\n\nروح للسيستم الكبير ← الأوردرات ← إعدادات MyFatoorah وتأكد من المفتاح');
+      return null;
+    }
+
     if(data && data.IsSuccess && data.Data){
       // Save payment_id back
       await api('orders?id=eq.'+orderId, {
@@ -900,13 +863,14 @@ async function generatePaymentLink({orderId, customerRef, amount, customerName, 
       }).catch(()=>{});
       return data.Data.InvoiceURL;
     }
-    // DIAGNOSTIC: Show MyFatoorah API error
+
+    // MyFatoorah API returned but with error
     console.error('MyFatoorah error:', data);
-    alert('❌ MyFatoorah رفض الطلب:\n\n' + (data.Message || data.ValidationErrors?.[0]?.Error || JSON.stringify(data).slice(0,200)));
+    alert('❌ MyFatoorah رفض الطلب:\n\n' + (data?.Message || JSON.stringify(data).slice(0,300)));
     return null;
   } catch(e){
-    console.error('MyFatoorah call failed', e);
-    alert('❌ فشل الاتصال بـMyFatoorah:\n\n' + e.message + '\n\nده غالباً CORS أو الانترنت');
+    console.error('Payment link call failed', e);
+    alert('❌ فشل الاتصال:\n\n' + e.message);
     return null;
   }
 }
