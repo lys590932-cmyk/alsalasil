@@ -711,7 +711,7 @@ var MESSAGES   = [];
 var currentTab = 'home';
 var busyClock  = false;
 var liveTrackingTimer = null;
-var LIVE_TRACK_MS = 60000;
+var LIVE_TRACK_MS = 30000; // 30s — was 60s, more visible to admin
 var salMonth   = new Date().getMonth()+1;
 var salYear    = new Date().getFullYear();
 
@@ -1305,6 +1305,27 @@ function startLiveTracking(){
 function stopLiveTracking(){
   if(liveTrackingTimer){ clearInterval(liveTrackingTimer); liveTrackingTimer = null; }
 }
+
+// Wake up tracking when app comes back to foreground (background tabs are throttled)
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible' && DRIVER && isCurrentlyIn()){
+    sendLiveLocation();           // immediate ping
+    startLiveTracking();          // restart timer
+  }
+});
+// Send on any user interaction (touch, click) while clocked in — covers phones that throttle BG timers heavily
+['touchstart','click','focus'].forEach(function(ev){
+  window.addEventListener(ev, function(){
+    if(DRIVER && isCurrentlyIn()){
+      // throttle: only resend if last send was >20s ago
+      var now = Date.now();
+      if(!window._lastLiveSend || (now - window._lastLiveSend) > 20000){
+        window._lastLiveSend = now;
+        sendLiveLocation();
+      }
+    }
+  }, {passive:true});
+});
 function sendLiveLocation(){
   if(!DRIVER || !isCurrentlyIn()){ stopLiveTracking(); return; }
   if(!navigator.geolocation) return;
