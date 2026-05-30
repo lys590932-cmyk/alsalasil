@@ -380,6 +380,7 @@ button,input,select{font-family:'Cairo',sans-serif}
   <div class="screen" id="scrHome"></div>
   <div class="screen hide" id="scrAttendance"></div>
   <div class="screen hide" id="scrOrders"></div>
+  <div class="screen hide" id="scrReport"></div>
   <div class="screen hide" id="scrSalary"></div>
   <div class="screen hide" id="scrProfile"></div>
 
@@ -390,9 +391,13 @@ button,input,select{font-family:'Cairo',sans-serif}
     <button class="navbtn" id="navAttendance" onclick="switchTab('attendance')">
       <i class="ti ti-map-pin"></i><span data-i18n="nav_attendance">الحضور</span>
     </button>
+    <button class="navbtn" id="navReport" onclick="switchTab('report')" style="position:relative">
+      <i class="ti ti-file-text"></i><span>تقرير</span>
+      <span id="reportBadge" style="display:none;position:absolute;top:4px;right:18px;background:#10b981;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">✓</span>
+    </button>
     <button class="navbtn" id="navOrders" onclick="switchTab('orders')" style="position:relative">
       <i class="ti ti-package"></i><span>أوردرات</span>
-      <span id="ordersBadge" style="display:none;position:absolute;top:4px;right:18px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:none;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
+      <span id="ordersBadge" style="display:none;position:absolute;top:4px;right:18px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
     </button>
     <button class="navbtn" id="navSalary" onclick="switchTab('salary')">
       <i class="ti ti-wallet"></i><span data-i18n="nav_salary">راتبي</span>
@@ -1103,9 +1108,9 @@ function renderNotifs(){
    ========================================================= */
 function switchTab(tab){
   currentTab=tab;
-  var screens=['Home','Attendance','Orders','Salary','Profile'];
+  var screens=['Home','Attendance','Orders','Report','Salary','Profile'];
   screens.forEach(function(s){ $('scr'+s).classList.add('hide'); $('nav'+s).classList.remove('on'); });
-  var map={home:'Home',attendance:'Attendance',orders:'Orders',salary:'Salary',profile:'Profile'};
+  var map={home:'Home',attendance:'Attendance',orders:'Orders',report:'Report',salary:'Salary',profile:'Profile'};
   var s=map[tab]||'Home';
   $('scr'+s).classList.remove('hide');
   $('nav'+s).classList.add('on');
@@ -1117,6 +1122,7 @@ function renderCurrentTab(){
   if(currentTab==='home') renderHome();
   else if(currentTab==='attendance') renderAttendance();
   else if(currentTab==='orders') renderOrders();
+  else if(currentTab==='report') renderReport();
   else if(currentTab==='salary') renderSalary();
   else if(currentTab==='profile') renderProfile();
 }
@@ -1569,6 +1575,193 @@ function init(){
   tryAutoLogin();
 }
 init();
+
+/* =========================================================
+   DAILY REPORT TAB — Driver submits daily report
+   ========================================================= */
+var TODAY_REPORT = null;  // today's submitted report (if any)
+var RECENT_REPORTS = [];   // last 7 reports for history
+
+async function fetchTodayReport(){
+  if(!DRIVER) return;
+  var today = new Date().toISOString().split('T')[0];
+  try {
+    var res = await fetch(SUPA_URL+'/rest/v1/daily_reports?driver_id=eq.'+DRIVER.id+'&report_date=eq.'+today,
+      {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    var rows = await res.json();
+    TODAY_REPORT = rows && rows.length ? rows[0] : null;
+    updateReportBadge();
+  } catch(e){ console.warn('today report', e); }
+}
+
+async function fetchRecentReports(){
+  if(!DRIVER) return;
+  try {
+    var res = await fetch(SUPA_URL+'/rest/v1/daily_reports?driver_id=eq.'+DRIVER.id+'&order=report_date.desc&limit=14',
+      {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    RECENT_REPORTS = await res.json();
+  } catch(e){ RECENT_REPORTS = []; }
+}
+
+function updateReportBadge(){
+  var b = $('reportBadge');
+  if(!b) return;
+  b.style.display = TODAY_REPORT ? 'inline-flex' : 'none';
+}
+
+async function renderReport(){
+  await fetchTodayReport();
+  await fetchRecentReports();
+  var el = $('scrReport');
+  var today = new Date().toISOString().split('T')[0];
+  var todayLabel = new Date().toLocaleDateString('ar-KW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var hasToday = !!TODAY_REPORT;
+  var partnerName = (function(){
+    if(typeof PARTNERS!=='undefined' && DRIVER.partner){
+      var p = PARTNERS.find(function(x){return x.id===DRIVER.partner});
+      return p ? p.name : (DRIVER.partner||'');
+    }
+    return DRIVER.partner||'';
+  })();
+
+  var html = '';
+  // Header
+  html += '<div style="padding:14px;background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;border-radius:0 0 16px 16px;margin-bottom:14px">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+  html += '<h2 style="font-size:17px;font-weight:900"><i class="ti ti-file-text"></i> التقرير اليومي</h2>';
+  html += '<span style="font-size:11px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:10px">'+todayLabel+'</span>';
+  html += '</div>';
+  if(hasToday){
+    html += '<div style="font-size:12px;opacity:.9;background:#10b981;padding:6px 10px;border-radius:8px;margin-top:8px">✓ تم تسجيل تقرير اليوم</div>';
+  } else {
+    html += '<div style="font-size:12px;opacity:.9;background:#dc2626;padding:6px 10px;border-radius:8px;margin-top:8px">⚠️ لم تسجل تقرير اليوم بعد</div>';
+  }
+  html += '</div>';
+
+  html += '<div style="padding:0 14px">';
+
+  // Form (locked when already submitted, with option to edit)
+  var t = TODAY_REPORT || {orders_count:'', duty_from:'', duty_to:'', fuel_amount:'', card_balance:'', notes:''};
+  html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:14px">';
+  html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:10px">'+DRIVER.name+' · '+partnerName+'</div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">عدد الأوردرات 📦</label><input id="rep-orders" type="number" inputmode="numeric" placeholder="0" value="'+(t.orders_count||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px"></div>';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">رصيد الكرت 💳</label><input id="rep-balance" type="number" inputmode="decimal" step="0.001" placeholder="0.000" value="'+(t.card_balance||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px"></div>';
+  html += '</div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">بداية الوردية ⏰</label><input id="rep-from" type="number" inputmode="numeric" min="0" max="23" placeholder="5" value="'+(t.duty_from||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:center"></div>';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">نهاية الوردية ⏰</label><input id="rep-to" type="number" inputmode="numeric" min="0" max="23" placeholder="17" value="'+(t.duty_to||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:center"></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:10px"><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">قيمة الوقود (د.ك) ⛽</label><input id="rep-fuel" type="number" inputmode="decimal" step="0.001" placeholder="0.000" value="'+(t.fuel_amount||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px"></div>';
+
+  html += '<div style="margin-top:10px"><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">ملاحظات (اختياري)</label><textarea id="rep-notes" rows="2" placeholder="..." style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:14px">'+(t.notes||'')+'</textarea></div>';
+
+  // Buttons
+  html += '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px">';
+  html += '<button onclick="submitDailyReport()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:14px;border-radius:12px;border:none;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit"><i class="ti ti-cloud-upload"></i> ' + (hasToday?'تحديث التقرير':'إرسال التقرير') + '</button>';
+  html += '<button onclick="shareReportToWA()" style="background:#25d366;color:#fff;padding:12px;border-radius:12px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-brand-whatsapp"></i> مشاركة التقرير على واتساب</button>';
+  html += '</div>';
+  html += '</div>';
+
+  // Recent reports history
+  if(RECENT_REPORTS && RECENT_REPORTS.length){
+    html += '<h3 style="font-size:13px;font-weight:900;color:#0f3a52;margin:14px 0 8px"><i class="ti ti-history"></i> آخر التقارير</h3>';
+    RECENT_REPORTS.slice(0,7).forEach(function(r){
+      var dt = new Date(r.report_date).toLocaleDateString('ar-KW',{day:'2-digit',month:'short',weekday:'short'});
+      html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:800;font-size:13px">'+dt+'</div><span style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,0.15);color:#065f46;border-radius:8px;font-weight:800">'+(r.orders_count||0)+' أوردر</span></div>';
+      html += '<div style="font-size:11px;color:#475569;display:flex;gap:14px;flex-wrap:wrap">';
+      html += '<span>⏰ '+(r.duty_from||0)+' → '+(r.duty_to||0)+'</span>';
+      html += '<span>⛽ '+parseFloat(r.fuel_amount||0).toFixed(3)+' د.ك</span>';
+      html += '<span>💳 '+parseFloat(r.card_balance||0).toFixed(3)+'</span>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function submitDailyReport(){
+  var orders = parseInt(document.getElementById('rep-orders').value)||0;
+  var balance = parseFloat(document.getElementById('rep-balance').value)||0;
+  var dFrom = parseInt(document.getElementById('rep-from').value);
+  var dTo = parseInt(document.getElementById('rep-to').value);
+  var fuel = parseFloat(document.getElementById('rep-fuel').value)||0;
+  var notes = document.getElementById('rep-notes').value.trim();
+  if(isNaN(dFrom) || dFrom < 0 || dFrom > 23){ toast('بداية الوردية لازم تكون رقم 0-23'); return; }
+  if(isNaN(dTo) || dTo < 0 || dTo > 23){ toast('نهاية الوردية لازم تكون رقم 0-23'); return; }
+  // duty hours calc (handle overnight shift)
+  var hours = (dTo - dFrom);
+  if(hours <= 0) hours += 24;
+  if(hours === 0) hours = 12; // fallback for "From 5 to 5" = full 12
+
+  var today = new Date().toISOString().split('T')[0];
+  var payload = {
+    driver_id: DRIVER.id,
+    driver_name: DRIVER.name,
+    partner: DRIVER.partner||null,
+    report_date: today,
+    orders_count: orders,
+    duty_from: dFrom,
+    duty_to: dTo,
+    duty_hours: hours,
+    fuel_amount: fuel,
+    card_balance: balance,
+    notes: notes||null,
+    submitted_via: 'fly',
+    created_at: new Date().toISOString()
+  };
+  try {
+    // upsert via on_conflict
+    var res = await fetch(SUPA_URL+'/rest/v1/daily_reports?on_conflict=driver_id,report_date', {
+      method:'POST',
+      headers:{
+        apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok){ throw new Error('HTTP '+res.status); }
+    toast('✅ تم إرسال التقرير اليومي');
+    renderReport();
+  } catch(e){
+    console.error(e);
+    toast('فشل الإرسال — تأكد من الاتصال');
+  }
+}
+
+function shareReportToWA(){
+  var orders = parseInt(document.getElementById('rep-orders').value)||0;
+  var balance = parseFloat(document.getElementById('rep-balance').value)||0;
+  var dFrom = parseInt(document.getElementById('rep-from').value)||0;
+  var dTo = parseInt(document.getElementById('rep-to').value)||0;
+  var fuel = parseFloat(document.getElementById('rep-fuel').value)||0;
+  var partnerName = (function(){
+    if(typeof PARTNERS!=='undefined' && DRIVER.partner){
+      var p = PARTNERS.find(function(x){return x.id===DRIVER.partner});
+      return p ? p.name : (DRIVER.partner||'');
+    }
+    return DRIVER.partner||'';
+  })();
+  var msg = 'Daily Report 🖊\n' +
+            '. Name: '+DRIVER.name+'\n' +
+            '. Partners: '+partnerName+'\n' +
+            '. Orders: ('+orders+') 📦\n' +
+            '. Duty: From ('+dFrom+') to ('+dTo+') ⏰\n' +
+            '. Fuel: ('+fuel.toFixed(3)+' kd) ⛽\n' +
+            '. Card Balance: ('+balance.toFixed(3)+' kd) 💳';
+  var url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+}
+
+// Fetch today's report status on app load
+setTimeout(function(){ if(DRIVER) fetchTodayReport(); }, 5000);
 
 /* =========================================================
    ORDERS TAB — Delivery orders from restaurants
