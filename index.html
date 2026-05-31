@@ -371,10 +371,25 @@ button,input,select{font-family:'Cairo',sans-serif}
       <div class="ab-name" id="abName">—</div>
     </div>
     <div class="ab-lang" id="abLang" onclick="toggleLang()">EN</div>
+    <div class="ab-bell" onclick="openChat()" style="position:relative;margin-left:6px">
+      <i class="ti ti-message-circle"></i>
+      <span class="bell-dot hide" id="chatDot">0</span>
+    </div>
     <div class="ab-bell" onclick="openNotif()">
       <i class="ti ti-bell"></i>
       <span class="bell-dot hide" id="bellDot">0</span>
     </div>
+  </div>
+
+  <!-- CHAT SHEET (separate from notifications) -->
+  <div class="sheet-ov" id="chatOv" onclick="closeChat()"></div>
+  <div class="sheet" id="chatSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <h3><i class="ti ti-messages" style="color:#2563eb"></i> <span id="chatSheetTitle">المحادثة مع الإدارة</span></h3>
+      <button class="sheet-close" onclick="closeChat()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="sheet-body" id="chatBody"></div>
   </div>
 
   <div class="screen" id="scrHome"></div>
@@ -1220,16 +1235,9 @@ function computeNotifs(){
 }
 
 function openNotif(){
-  var ttl = document.getElementById('msgSheetTitle');
-  if(ttl) ttl.textContent = t('msg_title');
   $('notifOv').classList.add('on');
   $('notifSheet').classList.add('on');
-  // Always re-fetch when opening for freshest content
-  if(DRIVER){
-    fetchMessages().then(function(){ renderNotifs(); });
-  } else {
-    renderNotifs();
-  }
+  renderNotifs();
 }
 function closeNotif(){
   $('notifOv').classList.remove('on');
@@ -1245,14 +1253,55 @@ function _msgTime(iso){
   return d.toLocaleDateString(LANG==='en'?'en-US':'ar-KW',{day:'2-digit',month:'short'});
 }
 
+/* ============================================
+   NOTIFICATIONS (system alerts — bell icon)
+   ============================================ */
 function renderNotifs(){
   var el=$('notifBody');
-  if(!NOTIFS.length){
-    el.innerHTML='<div class="empty"><i class="ti ti-message-2"></i><p>'+t('msg_empty')+'</p><div class="e-sub">'+t('msg_empty_sub')+'</div></div>';
-    _ensureReplyBar();
+  // System notifications come from the SYS_NOTIFS array (local alerts about app/status)
+  // OR from messages where the user can't reply (like daily reminders)
+  if(!window.SYS_NOTIFS || !SYS_NOTIFS.length){
+    el.innerHTML='<div class="empty"><i class="ti ti-bell-check"></i><p>'+t('no_notifs')+'</p><div class="e-sub">'+t('all_good')+'</div></div>';
     return;
   }
-  // Sort chronologically (oldest at top, newest at bottom — like a chat)
+  el.innerHTML = SYS_NOTIFS.map(function(n){
+    return '<div class="nt-item">'+
+      '<div class="nt-ic" style="background:'+(n.bg||'#e0f2fe')+'"><i class="ti '+(n.ic||'ti-bell')+'" style="color:'+(n.color||'#0284c7')+'"></i></div>'+
+      '<div class="nt-body">'+
+        '<div class="nt-title">'+(n.title||'')+'</div>'+
+        '<div class="nt-desc">'+(n.desc||n.body||'')+'</div>'+
+        '<div class="nt-time">'+(n.time||_msgTime(n.created_at)||'')+'</div>'+
+      '</div></div>';
+  }).join('');
+}
+
+/* ============================================
+   CHAT (two-way messaging — chat icon)
+   ============================================ */
+function openChat(){
+  var ttl = document.getElementById('chatSheetTitle');
+  if(ttl) ttl.textContent = t('msg_title') || 'المحادثة مع الإدارة';
+  $('chatOv').classList.add('on');
+  $('chatSheet').classList.add('on');
+  if(DRIVER){
+    fetchMessages().then(function(){ renderChat(); });
+  } else {
+    renderChat();
+  }
+}
+function closeChat(){
+  $('chatOv').classList.remove('on');
+  $('chatSheet').classList.remove('on');
+}
+
+function renderChat(){
+  var el = document.getElementById('chatBody');
+  if(!el) return;
+  if(!NOTIFS.length){
+    el.innerHTML='<div class="empty"><i class="ti ti-message-2"></i><p>'+t('msg_empty')+'</p><div class="e-sub">'+t('msg_empty_sub')+'</div></div>';
+    _ensureChatReplyBar();
+    return;
+  }
   var msgs = NOTIFS.slice().sort(function(a,b){
     return new Date(a.created_at||a._raw_time||0) - new Date(b.created_at||b._raw_time||0);
   });
@@ -1265,7 +1314,7 @@ function renderNotifs(){
     var align = mine ? 'flex-end' : 'flex-start';
     var senderName = mine ? t('msg_you') : (n.from_name || t('msg_admin'));
     var br = mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px';
-    var bubble = '<div style="display:flex;flex-direction:column;align-items:'+align+';max-width:85%;'+(mine?'align-self:flex-end':'align-self:flex-start')+'">'+
+    html += '<div style="display:flex;flex-direction:column;align-items:'+align+';max-width:85%;'+(mine?'align-self:flex-end':'align-self:flex-start')+'">'+
       '<div style="font-size:10px;color:#64748b;margin:0 8px 3px;font-weight:700">'+senderName+'</div>'+
       '<div style="background:'+bg+';color:'+color+';padding:10px 14px;border-radius:'+br+';font-size:14px;line-height:1.5;word-break:break-word;box-shadow:0 2px 6px rgba(0,0,0,0.05)">'+
         ((n.title && n.title!=='رسالة دعم' && n.title!=='رد من السائق' && n.title!=='رد من الإدارة') ? '<div style="font-weight:900;margin-bottom:4px;font-size:13px">'+(n.title)+'</div>' : '')+
@@ -1273,22 +1322,81 @@ function renderNotifs(){
       '</div>'+
       '<div style="font-size:10px;color:#94a3b8;margin:3px 8px 0">'+_msgTime(n.created_at||n._raw_time)+'</div>'+
     '</div>';
-    html += bubble;
   });
   html += '</div>';
   el.innerHTML = html;
-  _ensureReplyBar();
-  // Scroll to bottom (newest)
+  _ensureChatReplyBar();
   try {
-    var sheet = document.getElementById('notifSheet');
+    var sheet = document.getElementById('chatSheet');
     if(sheet){
       var body = sheet.querySelector('.sheet-body');
       if(body) body.scrollTop = body.scrollHeight;
     }
   } catch(e){}
-
-  // Mark as read
   _markMessagesRead();
+}
+
+function _ensureChatReplyBar(){
+  var sheet = document.getElementById('chatSheet');
+  if(!sheet) return;
+  var bar = document.getElementById('chatReplyBar');
+  if(bar) return;
+  bar = document.createElement('div');
+  bar.id = 'chatReplyBar';
+  bar.style.cssText = 'position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;align-items:center;margin:0 -16px -16px';
+  bar.innerHTML = '<input id="chatReplyInput" type="text" placeholder="'+t('msg_reply_ph')+'" style="flex:1;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:22px;font-family:inherit;font-size:14px;outline:none" onkeydown="if(event.key===\'Enter\'){sendChatReply()}">'+
+    '<button onclick="sendChatReply()" style="background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(37,99,235,0.4)"><i class="ti ti-send" style="font-size:18px"></i></button>';
+  sheet.appendChild(bar);
+}
+
+async function sendChatReply(){
+  var inp = document.getElementById('chatReplyInput');
+  if(!inp) return;
+  var text = (inp.value||'').trim();
+  if(!text || !DRIVER) return;
+  inp.value = '';
+  inp.disabled = true;
+  try {
+    await fetch(SUPA_URL+'/rest/v1/messages', {
+      method:'POST',
+      headers:{
+        apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json', 'Prefer':'return=minimal'
+      },
+      body: JSON.stringify({
+        recipient: 'admin',
+        from_id: DRIVER.id,
+        from_name: DRIVER.name,
+        from_type: 'driver',
+        title: 'رد من السائق',
+        body: text,
+        level: 'info',
+        created_at: new Date().toISOString()
+      })
+    });
+    NOTIFS.push({
+      from_type:'driver', from_name:DRIVER.name, body:text,
+      created_at:new Date().toISOString(), _raw_time:new Date().toISOString()
+    });
+    renderChat();
+  } catch(e){
+    console.error(e);
+    toast(LANG==='en'?'Send failed':'فشل الإرسال');
+  }
+  inp.disabled = false;
+  inp.focus();
+}
+
+function _updateChatBadge(){
+  var dot = document.getElementById('chatDot');
+  if(!dot) return;
+  var unread = NOTIFS.filter(function(n){ return !n.read_at && n.from_type !== 'driver'; }).length;
+  if(unread > 0){
+    dot.textContent = unread > 9 ? '9+' : String(unread);
+    dot.classList.remove('hide');
+  } else {
+    dot.classList.add('hide');
+  }
 }
 
 function _ensureReplyBar(){
@@ -1500,20 +1608,23 @@ async function _markMessagesRead(){
       body: JSON.stringify({ read_at: new Date().toISOString() })
     });
     NOTIFS.forEach(function(n){ if(ids.indexOf(n.id)>=0) n.read_at = new Date().toISOString(); });
-    _updateBellBadge();
+    _updateChatBadge();
   } catch(e){}
 }
 
 function _updateBellBadge(){
+  // Bell now reflects SYSTEM notifications only (not chat messages)
   var dot = document.getElementById('bellDot');
   if(!dot) return;
-  var unread = NOTIFS.filter(function(n){ return !n.read_at && n.from_type !== 'driver'; }).length;
-  if(unread > 0){
-    dot.textContent = unread > 9 ? '9+' : String(unread);
+  var sysUnread = (window.SYS_NOTIFS||[]).filter(function(n){ return !n.read; }).length;
+  if(sysUnread > 0){
+    dot.textContent = sysUnread > 9 ? '9+' : String(sysUnread);
     dot.classList.remove('hide');
   } else {
     dot.classList.add('hide');
   }
+  // Also update chat badge based on unread messages
+  _updateChatBadge();
 }
 
 async function fetchMessages(){
@@ -1615,8 +1726,8 @@ fetchMessages = async function(){
     var senderName = n.from_name || (LANG==='en'?'Admin':'الإدارة');
     var bodyText = (n.body || '').replace(/<[^>]+>/g,'').substring(0,180);
     // Skip if app is focused AND messages sheet is open (user is reading)
-    var sheetOpen = document.getElementById('notifOv') && document.getElementById('notifOv').classList.contains('on');
-    if(document.hasFocus() && sheetOpen) return;
+    var chatOpen = document.getElementById('chatOv') && document.getElementById('chatOv').classList.contains('on');
+    if(document.hasFocus() && chatOpen) return;
     showPushNotif({
       title: senderName,
       body: bodyText,
@@ -1642,8 +1753,8 @@ setTimeout(function(){
 if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('message', function(e){
     if(e.data && e.data.type === 'OPEN_MESSAGES'){
-      // Open the messages sheet
-      if(typeof openNotif === 'function') openNotif();
+      // Open the chat sheet (the right place for messages now)
+      if(typeof openChat === 'function') openChat();
     }
   });
 }
