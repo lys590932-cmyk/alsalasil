@@ -392,7 +392,7 @@ button,input,select{font-family:'Cairo',sans-serif}
       <i class="ti ti-map-pin"></i><span data-i18n="nav_attendance">الحضور</span>
     </button>
     <button class="navbtn" id="navReport" onclick="switchTab('report')" style="position:relative">
-      <i class="ti ti-file-text"></i><span>تقرير</span>
+      <i class="ti ti-file-text"></i><span data-i18n="nav_report">تقرير</span>
       <span id="reportBadge" style="display:none;position:absolute;top:4px;right:18px;background:#10b981;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">✓</span>
     </button>
     <button class="navbtn" id="navOrders" onclick="switchTab('orders')" style="position:relative">
@@ -567,7 +567,33 @@ var I18N = {
     ntf_ded_d:function(m,tot){ return 'إجمالي الخصومات على راتب شهر '+m+': '+tot+' د.ك. راجع تفاصيلها في صفحة راتبي.'; },
     deductions_title:function(m,n){ return 'خصومات '+m+' ('+n+')'; },
     day_count:function(n){ return n===0.5 ? 'نصف يوم' : n+' يوم'; },
-    age_years:function(n){ return n+' سنة'; }
+    age_years:function(n){ return n+' سنة'; },
+    /* === Daily Report === */
+    nav_report:'تقرير',
+    rep_title:'التقرير اليومي',
+    rep_submitted:'✓ تم تسجيل تقرير اليوم',
+    rep_not_submitted:'⚠️ لم تسجل تقرير اليوم بعد',
+    rep_orders:'عدد الأوردرات',
+    rep_balance:'رصيد الكرت',
+    rep_duty_from:'بداية الوردية',
+    rep_duty_to:'نهاية الوردية',
+    rep_fuel:'قيمة الوقود (د.ك)',
+    rep_notes:'ملاحظات (اختياري)',
+    rep_send:'إرسال التقرير',
+    rep_update:'تحديث التقرير',
+    rep_share_wa:'مشاركة التقرير على واتساب',
+    rep_history:'آخر التقارير',
+    rep_no_history:'لا توجد تقارير سابقة',
+    rep_order_count:function(n){ return n+' أوردر'; },
+    rep_validate_from:'بداية الوردية لازم تكون رقم 0-23',
+    rep_validate_to:'نهاية الوردية لازم تكون رقم 0-23',
+    rep_success:'✅ تم إرسال التقرير اليومي',
+    rep_failure:'فشل الإرسال — تأكد من الاتصال',
+    rep_ph_orders:'مثال: 20',
+    rep_ph_balance:'مثال: 5.770',
+    rep_ph_hour:'مثال: 5',
+    rep_ph_fuel:'مثال: 3.225',
+    rep_ph_notes:'أي تفاصيل تحب تضيفها...'
   },
   en: {
     company:'AL-SALASIL FLY',
@@ -693,7 +719,33 @@ var I18N = {
     ntf_ded_d:function(m,tot){ return 'Total deductions on '+m+' salary: '+tot+' KWD. See details in the My Salary page.'; },
     deductions_title:function(m,n){ return m+' deductions ('+n+')'; },
     day_count:function(n){ return n===0.5 ? 'half day' : n+' day'+(n!==1?'s':''); },
-    age_years:function(n){ return n+(n===1?' year':' years'); }
+    age_years:function(n){ return n+(n===1?' year':' years'); },
+    /* === Daily Report === */
+    nav_report:'Report',
+    rep_title:'Daily Report',
+    rep_submitted:'✓ Today\'s report submitted',
+    rep_not_submitted:'⚠️ Today\'s report not submitted yet',
+    rep_orders:'Orders Count',
+    rep_balance:'Card Balance',
+    rep_duty_from:'Duty From (hour)',
+    rep_duty_to:'Duty To (hour)',
+    rep_fuel:'Fuel (KD)',
+    rep_notes:'Notes (optional)',
+    rep_send:'Submit Report',
+    rep_update:'Update Report',
+    rep_share_wa:'Share Report on WhatsApp',
+    rep_history:'Recent Reports',
+    rep_no_history:'No previous reports',
+    rep_order_count:function(n){ return n+' orders'; },
+    rep_validate_from:'Duty start must be 0-23',
+    rep_validate_to:'Duty end must be 0-23',
+    rep_success:'✅ Daily report submitted',
+    rep_failure:'Submit failed — check connection',
+    rep_ph_orders:'e.g. 20',
+    rep_ph_balance:'e.g. 5.770',
+    rep_ph_hour:'e.g. 5',
+    rep_ph_fuel:'e.g. 3.225',
+    rep_ph_notes:'Any details you want to add...'
   }
 };
 
@@ -1614,7 +1666,8 @@ async function renderReport(){
   await fetchRecentReports();
   var el = $('scrReport');
   var today = new Date().toISOString().split('T')[0];
-  var todayLabel = new Date().toLocaleDateString('ar-KW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var locale = (LANG==='en') ? 'en-US' : 'ar-KW';
+  var todayLabel = new Date().toLocaleDateString(locale,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var hasToday = !!TODAY_REPORT;
   var partnerName = (function(){
     if(typeof PARTNERS!=='undefined' && DRIVER.partner){
@@ -1623,66 +1676,73 @@ async function renderReport(){
     }
     return DRIVER.partner||'';
   })();
+  var isEn = LANG === 'en';
+  var dir = isEn ? 'ltr' : 'rtl';
+  var ta  = isEn ? 'left' : 'right';
+  // currency label
+  var KD = isEn ? 'KD' : 'د.ك';
 
   var html = '';
+  html += '<div dir="'+dir+'" style="text-align:'+ta+'">';
   // Header
   html += '<div style="padding:14px;background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;border-radius:0 0 16px 16px;margin-bottom:14px">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
-  html += '<h2 style="font-size:17px;font-weight:900"><i class="ti ti-file-text"></i> التقرير اليومي</h2>';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap">';
+  html += '<h2 style="font-size:17px;font-weight:900"><i class="ti ti-file-text"></i> '+t('rep_title')+'</h2>';
   html += '<span style="font-size:11px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:10px">'+todayLabel+'</span>';
   html += '</div>';
   if(hasToday){
-    html += '<div style="font-size:12px;opacity:.9;background:#10b981;padding:6px 10px;border-radius:8px;margin-top:8px">✓ تم تسجيل تقرير اليوم</div>';
+    html += '<div style="font-size:12px;opacity:.95;background:#10b981;padding:6px 10px;border-radius:8px;margin-top:8px">'+t('rep_submitted')+'</div>';
   } else {
-    html += '<div style="font-size:12px;opacity:.9;background:#dc2626;padding:6px 10px;border-radius:8px;margin-top:8px">⚠️ لم تسجل تقرير اليوم بعد</div>';
+    html += '<div style="font-size:12px;opacity:.95;background:#dc2626;padding:6px 10px;border-radius:8px;margin-top:8px">'+t('rep_not_submitted')+'</div>';
   }
   html += '</div>';
 
   html += '<div style="padding:0 14px">';
 
   // Form (locked when already submitted, with option to edit)
-  var t = TODAY_REPORT || {orders_count:'', duty_from:'', duty_to:'', fuel_amount:'', card_balance:'', notes:''};
+  var rp = TODAY_REPORT || {orders_count:'', duty_from:'', duty_to:'', fuel_amount:'', card_balance:'', notes:''};
   html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:14px">';
   html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:10px">'+DRIVER.name+' · '+partnerName+'</div>';
 
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
-  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">عدد الأوردرات 📦</label><input id="rep-orders" type="number" inputmode="numeric" placeholder="0" value="'+(t.orders_count||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px"></div>';
-  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">رصيد الكرت 💳</label><input id="rep-balance" type="number" inputmode="decimal" step="0.001" placeholder="0.000" value="'+(t.card_balance||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px"></div>';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">'+t('rep_orders')+' 📦</label><input id="rep-orders" type="number" inputmode="numeric" placeholder="'+t('rep_ph_orders')+'" value="'+(rp.orders_count||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:'+ta+'"></div>';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">'+t('rep_balance')+' 💳</label><input id="rep-balance" type="number" inputmode="decimal" step="0.001" placeholder="'+t('rep_ph_balance')+'" value="'+(rp.card_balance||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:'+ta+'"></div>';
   html += '</div>';
 
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">';
-  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">بداية الوردية ⏰</label><input id="rep-from" type="number" inputmode="numeric" min="0" max="23" placeholder="5" value="'+(t.duty_from||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:center"></div>';
-  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">نهاية الوردية ⏰</label><input id="rep-to" type="number" inputmode="numeric" min="0" max="23" placeholder="17" value="'+(t.duty_to||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:center"></div>';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">'+t('rep_duty_from')+' ⏰</label><input id="rep-from" type="number" inputmode="numeric" min="0" max="23" placeholder="'+t('rep_ph_hour')+'" value="'+(rp.duty_from||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:center"></div>';
+  html += '<div><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">'+t('rep_duty_to')+' ⏰</label><input id="rep-to" type="number" inputmode="numeric" min="0" max="23" placeholder="17" value="'+(rp.duty_to||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:center"></div>';
   html += '</div>';
 
-  html += '<div style="margin-top:10px"><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">قيمة الوقود (د.ك) ⛽</label><input id="rep-fuel" type="number" inputmode="decimal" step="0.001" placeholder="0.000" value="'+(t.fuel_amount||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px"></div>';
+  html += '<div style="margin-top:10px"><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">'+t('rep_fuel')+' ⛽</label><input id="rep-fuel" type="number" inputmode="decimal" step="0.001" placeholder="'+t('rep_ph_fuel')+'" value="'+(rp.fuel_amount||'')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:'+ta+'"></div>';
 
-  html += '<div style="margin-top:10px"><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">ملاحظات (اختياري)</label><textarea id="rep-notes" rows="2" placeholder="..." style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:14px">'+(t.notes||'')+'</textarea></div>';
+  html += '<div style="margin-top:10px"><label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:4px">'+t('rep_notes')+'</label><textarea id="rep-notes" rows="2" placeholder="'+t('rep_ph_notes')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:14px;text-align:'+ta+'">'+(rp.notes||'')+'</textarea></div>';
 
   // Buttons
   html += '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px">';
-  html += '<button onclick="submitDailyReport()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:14px;border-radius:12px;border:none;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit"><i class="ti ti-cloud-upload"></i> ' + (hasToday?'تحديث التقرير':'إرسال التقرير') + '</button>';
-  html += '<button onclick="shareReportToWA()" style="background:#25d366;color:#fff;padding:12px;border-radius:12px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-brand-whatsapp"></i> مشاركة التقرير على واتساب</button>';
+  html += '<button onclick="submitDailyReport()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:14px;border-radius:12px;border:none;font-weight:900;font-size:15px;cursor:pointer;font-family:inherit"><i class="ti ti-cloud-upload"></i> ' + (hasToday?t('rep_update'):t('rep_send')) + '</button>';
+  html += '<button onclick="shareReportToWA()" style="background:#25d366;color:#fff;padding:12px;border-radius:12px;border:none;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit"><i class="ti ti-brand-whatsapp"></i> '+t('rep_share_wa')+'</button>';
   html += '</div>';
   html += '</div>';
 
   // Recent reports history
   if(RECENT_REPORTS && RECENT_REPORTS.length){
-    html += '<h3 style="font-size:13px;font-weight:900;color:#0f3a52;margin:14px 0 8px"><i class="ti ti-history"></i> آخر التقارير</h3>';
+    html += '<h3 style="font-size:13px;font-weight:900;color:#0f3a52;margin:14px 0 8px"><i class="ti ti-history"></i> '+t('rep_history')+'</h3>';
     RECENT_REPORTS.slice(0,7).forEach(function(r){
-      var dt = new Date(r.report_date).toLocaleDateString('ar-KW',{day:'2-digit',month:'short',weekday:'short'});
+      var dt = new Date(r.report_date).toLocaleDateString(locale,{day:'2-digit',month:'short',weekday:'short'});
       html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:800;font-size:13px">'+dt+'</div><span style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,0.15);color:#065f46;border-radius:8px;font-weight:800">'+(r.orders_count||0)+' أوردر</span></div>';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:800;font-size:13px">'+dt+'</div><span style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,0.15);color:#065f46;border-radius:8px;font-weight:800">'+t('rep_order_count', r.orders_count||0)+'</span></div>';
       html += '<div style="font-size:11px;color:#475569;display:flex;gap:14px;flex-wrap:wrap">';
       html += '<span>⏰ '+(r.duty_from||0)+' → '+(r.duty_to||0)+'</span>';
-      html += '<span>⛽ '+parseFloat(r.fuel_amount||0).toFixed(3)+' د.ك</span>';
+      html += '<span>⛽ '+parseFloat(r.fuel_amount||0).toFixed(3)+' '+KD+'</span>';
       html += '<span>💳 '+parseFloat(r.card_balance||0).toFixed(3)+'</span>';
       html += '</div>';
       html += '</div>';
     });
   }
 
-  html += '</div>';
+  html += '</div>'; // /padding
+  html += '</div>'; // /dir
   el.innerHTML = html;
 }
 
@@ -1693,8 +1753,8 @@ async function submitDailyReport(){
   var dTo = parseInt(document.getElementById('rep-to').value);
   var fuel = parseFloat(document.getElementById('rep-fuel').value)||0;
   var notes = document.getElementById('rep-notes').value.trim();
-  if(isNaN(dFrom) || dFrom < 0 || dFrom > 23){ toast('بداية الوردية لازم تكون رقم 0-23'); return; }
-  if(isNaN(dTo) || dTo < 0 || dTo > 23){ toast('نهاية الوردية لازم تكون رقم 0-23'); return; }
+  if(isNaN(dFrom) || dFrom < 0 || dFrom > 23){ toast(t('rep_validate_from')); return; }
+  if(isNaN(dTo) || dTo < 0 || dTo > 23){ toast(t('rep_validate_to')); return; }
   // duty hours calc (handle overnight shift)
   var hours = (dTo - dFrom);
   if(hours <= 0) hours += 24;
@@ -1728,11 +1788,11 @@ async function submitDailyReport(){
       body: JSON.stringify(payload)
     });
     if(!res.ok){ throw new Error('HTTP '+res.status); }
-    toast('✅ تم إرسال التقرير اليومي');
+    toast(t('rep_success'));
     renderReport();
   } catch(e){
     console.error(e);
-    toast('فشل الإرسال — تأكد من الاتصال');
+    toast(t('rep_failure'));
   }
 }
 
