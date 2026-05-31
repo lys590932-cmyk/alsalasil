@@ -3773,13 +3773,13 @@ function renderInboxList(){
     if(m.from_type === 'admin'){
       // admin → someone
       key = m.recipient;
-      type = (key === 'ALL' || key === 'all') ? 'broadcast' : 'unknown';
-      name = key;
-      if(key === 'ALL' || key === 'all'){ name = 'إعلان للجميع'; }
+      if(key === 'ALL' || key === 'all'){ name = 'إعلان للجميع'; type = 'broadcast'; }
       else {
         var dr = (typeof DRV !== 'undefined') ? DRV.find(function(d){ return d.id === key; }) : null;
+        var rs = (typeof RESTAURANTS !== 'undefined') ? RESTAURANTS.find(function(x){ return x.id === key; }) : null;
         if(dr){ name = dr.name; type = 'driver'; }
-        else { name = key; type = 'driver'; }
+        else if(rs){ name = rs.name; type = 'restaurant'; }
+        else { name = key; type = 'unknown'; }
       }
     } else {
       // someone → admin
