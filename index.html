@@ -1923,14 +1923,9 @@ function renderCustLocForm(){
       html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:6px">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800;font-size:13px">'+(r.name||r.phone)+'</div><div style="font-size:10px;color:#94a3b8">'+date+' · '+time+'</div></div>';
       if(hasLoc){
-        html += '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+
-          '<a href="https://www.google.com/maps/dir/?api=1&destination='+r.lat+','+r.lng+'" target="_blank" title="جوجل ماب" style="background:#4285f4;color:#fff;padding:6px 9px;border-radius:8px;text-decoration:none;font-size:10px;font-weight:800;display:inline-flex;align-items:center;gap:3px">'+
-            '<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg> Maps'+
-          '</a>'+
-          '<a href="https://www.kuwaitfinder.com/?lat='+r.lat+'&lng='+r.lng+'" target="_blank" title="كويت فايندر" style="background:#e53935;color:#fff;padding:6px 9px;border-radius:8px;text-decoration:none;font-size:10px;font-weight:800;display:inline-flex;align-items:center;gap:3px">'+
-            '<i class="ti ti-map-2"></i> KF'+
-          '</a>'+
-        '</div>';
+        html += '<a href="https://www.google.com/maps/dir/?api=1&destination='+r.lat+','+r.lng+'" target="_blank" style="background:#4285f4;color:#fff;padding:6px 11px;border-radius:8px;text-decoration:none;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg> '+t('custloc_open_maps')+
+        '</a>';
       } else {
         html += '<span style="font-size:10px;color:#dc2626;font-weight:700">— لم يُستلم —</span>';
       }
@@ -2055,9 +2050,6 @@ function renderCustLocReceived(r){
   var lat = parseFloat(r.latitude), lng = parseFloat(r.longitude);
   var accuracy = r.accuracy_meters ? Math.round(r.accuracy_meters) : null;
   var mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng+'&travelmode=driving';
-  // Kuwait Finder: open via geo: URI (Android shows app chooser including KF)
-  // and fallback to KF web URL
-  var kfUrl  = 'https://www.kuwaitfinder.com/?lat='+lat+'&lng='+lng;
 
   var html = '<div style="text-align:center;padding:20px">';
   html += '<div style="width:88px;height:88px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 12px 30px rgba(16,185,129,0.4);animation:popIn .5s ease"><i class="ti ti-check" style="font-size:52px;color:#fff"></i></div>';
@@ -2067,14 +2059,9 @@ function renderCustLocReceived(r){
   html += '<div style="background:#f0fdf4;border:1px solid #10b981;border-radius:12px;padding:12px;margin-bottom:18px;font-family:JetBrains Mono,monospace;font-size:13px;color:#065f46;font-weight:800">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div>';
 
   // Google Maps button
-  html += '<a href="'+mapsUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#4285f4,#1a73e8);color:#fff;padding:14px;border-radius:12px;text-decoration:none;font-weight:900;font-size:14px;box-shadow:0 6px 18px rgba(66,133,244,0.4);margin-bottom:10px">'+
+  html += '<a href="'+mapsUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#4285f4,#1a73e8);color:#fff;padding:15px;border-radius:12px;text-decoration:none;font-weight:900;font-size:15px;box-shadow:0 6px 18px rgba(66,133,244,0.4);margin-bottom:14px">'+
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" style="flex-shrink:0"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>'+
     ' '+t('custloc_open_maps')+
-  '</a>';
-
-  // Kuwait Finder button
-  html += '<a href="'+kfUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;padding:14px;border-radius:12px;text-decoration:none;font-weight:900;font-size:14px;box-shadow:0 6px 18px rgba(229,57,53,0.4);margin-bottom:14px">'+
-    '<i class="ti ti-map-2" style="font-size:22px"></i> '+t('custloc_open_kf')+
   '</a>';
 
   html += '<button onclick="closeCustLocSheet()" style="width:100%;background:#f1f5f9;border:none;color:#475569;padding:11px;border-radius:10px;font-weight:800;cursor:pointer;font-family:inherit">'+t('custloc_close')+'</button>';
