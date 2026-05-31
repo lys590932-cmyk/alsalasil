@@ -1261,7 +1261,7 @@ function renderNotifs(){
     var bubble = '<div style="display:flex;flex-direction:column;align-items:'+align+';max-width:85%;'+(mine?'align-self:flex-end':'align-self:flex-start')+'">'+
       '<div style="font-size:10px;color:#64748b;margin:0 8px 3px;font-weight:700">'+senderName+'</div>'+
       '<div style="background:'+bg+';color:'+color+';padding:10px 14px;border-radius:'+br+';font-size:14px;line-height:1.5;word-break:break-word;box-shadow:0 2px 6px rgba(0,0,0,0.05)">'+
-        (n.title ? '<div style="font-weight:900;margin-bottom:4px;font-size:13px">'+(n.title)+'</div>' : '')+
+        ((n.title && n.title!=='رسالة دعم' && n.title!=='رد من السائق' && n.title!=='رد من الإدارة') ? '<div style="font-weight:900;margin-bottom:4px;font-size:13px">'+(n.title)+'</div>' : '')+
         '<div>'+(n.body||n.desc||'').replace(/\n/g,'<br>')+'</div>'+
       '</div>'+
       '<div style="font-size:10px;color:#94a3b8;margin:3px 8px 0">'+_msgTime(n.created_at||n._raw_time)+'</div>'+
@@ -1317,6 +1317,7 @@ async function sendReply(){
         from_id: DRIVER.id,
         from_name: DRIVER.name,
         from_type: 'driver',
+        title: 'رد من السائق',
         body: text,
         level: 'info',
         created_at: new Date().toISOString()

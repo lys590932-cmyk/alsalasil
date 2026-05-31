@@ -1542,7 +1542,7 @@ function renderSupportThread(){
     return '<div style="display:flex;flex-direction:column;align-items:'+align+';max-width:85%;'+(mine?'align-self:flex-end':'align-self:flex-start')+'">'+
       '<div style="font-size:10px;color:#64748b;margin:0 6px 3px;font-weight:700">'+(mine?(isEn?'You':'إنت'):(isEn?'Support':'الدعم'))+'</div>'+
       '<div style="background:'+bg+';color:'+color+';padding:10px 13px;border-radius:'+br+';font-size:13px;line-height:1.6;word-break:break-word;border:'+(mine?'none':'1px solid #e2e8f0')+';box-shadow:0 1px 3px rgba(0,0,0,0.04)">'+
-        (m.title ? '<div style="font-weight:800;margin-bottom:3px;font-size:12px">'+m.title+'</div>' : '')+
+        ((m.title && m.title!=='رسالة دعم' && m.title!=='رد من السائق' && m.title!=='رد من الإدارة') ? '<div style="font-weight:800;margin-bottom:3px;font-size:12px">'+m.title+'</div>' : '')+
         '<div>'+(m.body||'').replace(/\n/g,'<br>')+'</div>'+
       '</div>'+
       '<div style="font-size:9px;color:#94a3b8;margin:3px 6px 0">'+time+'</div>'+
@@ -1591,6 +1591,7 @@ async function sendSupportMsg(){
       from_id: REST.id,
       from_name: REST.name,
       from_type: 'restaurant',
+      title: 'رسالة دعم',
       body: text,
       level: 'info'
     };
