@@ -1437,7 +1437,7 @@ function _updateNotifStatusBar(){
     bar.style.borderColor = '#86efac';
     bar.style.color = '#166534';
     bar.innerHTML = '<span><i class="ti ti-bell-ringing"></i> '+(LANG==='en'?'Notifications enabled':'الإشعارات مفعّلة')+'</span>'+
-      '<button onclick="testNotif()" style="background:#16a34a;color:#fff;border:none;padding:6px 12px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer"><i class="ti ti-test-pipe"></i> '+(LANG==='en'?'Test':'اختبار')+'</button>';
+      '<div style="display:flex;gap:6px"><button onclick="diagMessages()" style="background:#0ea5e9;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">🔍 تشخيص</button><button onclick="testNotif()" style="background:#16a34a;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">'+(LANG==='en'?'Test':'اختبار')+'</button></div>';
   } else if(perm === 'default'){
     bar.style.display = 'flex';
     bar.style.background = '#fef3c7';
@@ -1630,9 +1630,12 @@ function _updateBellBadge(){
 async function fetchMessages(){
   if(!DRIVER) return;
   try {
-    var url = SUPA_URL+'/rest/v1/messages?or=(recipient.eq.'+encodeURIComponent(DRIVER.id)+',recipient.eq.all,and(from_id.eq.'+encodeURIComponent(DRIVER.id)+',recipient.eq.admin))&order=created_at.desc&limit=100&select=*';
+    // Match recipient case-insensitively for broadcast (ALL/all)
+    var url = SUPA_URL+'/rest/v1/messages?or=(recipient.eq.'+encodeURIComponent(DRIVER.id)+',recipient.eq.all,recipient.eq.ALL,and(from_id.eq.'+encodeURIComponent(DRIVER.id)+',recipient.eq.admin))&order=created_at.desc&limit=100&select=*';
+    console.log('[fetchMessages] URL:', url);
     var res = await fetch(url, {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
     var rows = await res.json();
+    console.log('[fetchMessages] got', Array.isArray(rows) ? rows.length : 0, 'rows');
     if(Array.isArray(rows)){
       NOTIFS = rows.map(function(r){
         return {
@@ -1649,8 +1652,66 @@ async function fetchMessages(){
       });
       _updateBellBadge();
     }
-  } catch(e){ console.warn('fetchMessages', e); }
+    return rows;
+  } catch(e){ console.warn('fetchMessages', e); return null; }
 }
+
+// Manual diagnostic — call from console: diagMessages()
+window.diagMessages = async function(){
+  if(!DRIVER){ alert('السائق غير مسجل دخول'); return; }
+  var report = [];
+  report.push('=== تشخيص نظام الرسائل ===');
+  report.push('DRIVER.id: '+DRIVER.id);
+  report.push('DRIVER.name: '+DRIVER.name);
+  report.push('NOTIF permission: '+(typeof Notification!=='undefined'?Notification.permission:'N/A'));
+  report.push('SUPA_URL: '+(SUPA_URL||'MISSING'));
+  report.push('');
+
+  // 1. All messages where recipient=DRIVER.id
+  var r1 = await fetch(SUPA_URL+'/rest/v1/messages?recipient=eq.'+encodeURIComponent(DRIVER.id)+'&order=created_at.desc&limit=10', {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+  var d1 = await r1.json();
+  report.push('1) رسائل لـ'+DRIVER.id+': '+(Array.isArray(d1)?d1.length:'ERR'));
+  if(Array.isArray(d1) && d1.length){
+    d1.slice(0,3).forEach(function(m){
+      report.push('  - id:'+m.id+' from:'+(m.from_type||'?')+' "'+(m.body||m.title||'').substring(0,40)+'"');
+    });
+  }
+
+  // 2. Broadcast (recipient=ALL or all)
+  var r2 = await fetch(SUPA_URL+'/rest/v1/messages?or=(recipient.eq.ALL,recipient.eq.all)&order=created_at.desc&limit=5', {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+  var d2 = await r2.json();
+  report.push('2) رسائل عامة (ALL/all): '+(Array.isArray(d2)?d2.length:'ERR'));
+
+  // 3. NOTIFS in memory
+  report.push('');
+  report.push('3) NOTIFS الحالية في الذاكرة: '+NOTIFS.length);
+  if(NOTIFS.length){
+    NOTIFS.slice(0,3).forEach(function(n){
+      report.push('  - from_type:'+n.from_type+' read:'+(!!n.read_at)+' seen:'+NOTIF_SEEN_IDS.has(n.id));
+    });
+  }
+
+  // 4. Filter check
+  var now = Date.now();
+  var fresh = NOTIFS.filter(function(n){
+    if(!n.id || !n.from_type || n.from_type === 'driver') return false;
+    if(NOTIF_SEEN_IDS.has(n.id)) return false;
+    if(n.read_at) return false;
+    var msgAge = now - new Date(n.created_at || 0).getTime();
+    return msgAge < 10 * 60 * 1000;
+  });
+  report.push('');
+  report.push('4) Fresh للإشعارات: '+fresh.length);
+
+  // 5. SW status
+  if('serviceWorker' in navigator){
+    var reg = await navigator.serviceWorker.getRegistration();
+    report.push('5) SW: '+(reg ? 'مسجّل ('+(reg.active?'نشط':'غير نشط')+')' : 'غير مسجّل'));
+  }
+
+  alert(report.join('\n'));
+  console.log(report.join('\n'));
+};
 
 // Poll for new messages every 30 seconds
 setInterval(function(){ if(DRIVER) fetchMessages(); }, 30000);
