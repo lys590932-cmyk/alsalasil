@@ -1,5 +1,5 @@
 // Service Worker — Al-Salasil Manager App
-const CACHE = 'salasil-mgr-v1';
+const CACHE = 'salasil-mgr-v2';
 const CORE = [
   './manager.html',
   './manager-manifest.json',
@@ -61,4 +61,37 @@ self.addEventListener('fetch', e => {
       }).catch(() => caches.match('./manager.html'));
     })
   );
+});
+
+/* ============= NOTIFICATIONS ============= */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './manager.html';
+  e.waitUntil(
+    self.clients.matchAll({type:'window', includeUncontrolled:true}).then(clients => {
+      for (const c of clients) {
+        if (c.url.indexOf(self.location.origin) === 0) {
+          c.postMessage({type:'OPEN_MESSAGES', data:e.notification.data});
+          return c.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
+});
+
+self.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'SHOW_NOTIFICATION') return;
+  const d = e.data.payload || {};
+  self.registration.showNotification(d.title || 'السلاسل مدير', {
+    body: d.body || '',
+    icon: d.icon || './icon-192.png',
+    badge: './icon-192.png',
+    tag: d.tag || 'msg',
+    renotify: true,
+    vibrate: [200, 100, 200],
+    dir: 'rtl',
+    lang: 'ar',
+    data: d.data || {url:'./manager.html'}
+  });
 });

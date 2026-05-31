@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f3a52">
-<title>السلاسل — تطبيق المدير</title>
+<title>AL-SALASIL ARK — Manager</title>
 
 <!-- iOS PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="السلاسل مدير">
+<meta name="apple-mobile-web-app-title" content="AL-SALASIL ARK">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
 <link rel="icon" type="image/png" href="favicon.png">
@@ -190,7 +190,8 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
 <!-- ============ LOGIN ============ -->
 <div class="login" id="loginScreen">
   <div class="login-logo"><i class="ti ti-shield-lock"></i></div>
-  <h1>السلاسل — تطبيق المدير</h1>
+  <h1>AL-SALASIL ARK</h1>
+  <p style="font-size:13px;opacity:.85;margin:4px 0 0">تطبيق المدير — Manager App</p>
   <p>أدخل رمز الدخول للمتابعة</p>
   <div class="pin-dots" id="pinDots"></div>
   <div class="pin-pad" id="pinPad"></div>
@@ -202,6 +203,7 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
   <div class="topbar">
     <h2 id="topbar-title"><i class="ti ti-dashboard"></i> الرئيسية</h2>
     <div class="topbar-actions">
+      <button class="tba-btn" onclick="toggleArkLang()" title="Toggle language" style="font-size:11px;font-weight:900"><span id="mgr-lang-txt">EN</span></button>
       <button class="tba-btn" onclick="manualRefresh()"><i class="ti ti-refresh"></i></button>
       <button class="tba-btn" onclick="openTab('more')"><i class="ti ti-dots"></i></button>
     </div>
@@ -255,14 +257,33 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
       <div class="map-overlay"><div class="dot"></div><span id="liveCount">0</span> سائق متصل</div>
     </div>
 
-    <!-- MESSAGES TAB -->
+    <!-- MESSAGES TAB — FULL CHAT INBOX -->
     <div class="tab" id="tab-msg">
-      <button class="btn btn-pri btn-block" onclick="openSendMsgSheet()" style="margin-bottom:14px"><i class="ti ti-message-plus"></i> رسالة جديدة</button>
-      <div class="section">
-        <div class="section-h"><h3><i class="ti ti-history"></i> الرسائل المرسلة</h3></div>
-        <div id="msgList"><div class="empty"><i class="ti ti-message-2-off"></i><p>لم ترسل أي رسائل بعد</p></div></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn btn-pri" onclick="openSendMsgSheet()" style="flex:1"><i class="ti ti-message-plus"></i> رسالة جديدة</button>
+        <button class="btn" onclick="mgrFetchInbox(true)" style="background:#f1f5f9;color:#1c5878;padding:10px 14px;border:none;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer"><i class="ti ti-refresh"></i></button>
+      </div>
+      <div class="section" style="padding:8px">
+        <div class="section-h" style="padding:6px 10px"><h3 style="font-size:14px"><i class="ti ti-inbox"></i> المحادثات <span id="mgrInboxCount" style="color:#94a3b8;font-weight:600"></span></h3></div>
+        <div id="mgrInboxList"><div class="empty"><i class="ti ti-message-2-off"></i><p>لا توجد محادثات بعد</p></div></div>
       </div>
     </div>
+
+    <!-- CONVERSATION VIEW MODAL -->
+    <div id="mgrConvOv" onclick="if(event.target===this)closeMgrConv()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8000;align-items:flex-end;justify-content:center">
+      <div style="background:#fff;width:100%;max-width:560px;height:92vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:mgrSlideUp .3s ease">
+        <div style="padding:13px 16px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center"><i class="ti ti-user" id="mgrConvIcon" style="font-size:18px"></i></div><div><div id="mgrConvName" style="font-size:14px;font-weight:900">المحادثة</div><div id="mgrConvType" style="font-size:10px;opacity:0.8"></div></div></div>
+          <button onclick="closeMgrConv()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px">×</button>
+        </div>
+        <div id="mgrConvBody" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:#f8fafc"></div>
+        <div id="mgrConvReplyBar" style="padding:10px;border-top:1px solid var(--line);background:#fff;display:flex;gap:8px;align-items:center">
+          <input id="mgrConvInput" type="text" placeholder="اكتب ردك..." style="flex:1;padding:11px 14px;border:1.5px solid var(--line);border-radius:22px;font-family:inherit;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')mgrSendReply()">
+          <button onclick="mgrSendReply()" style="background:linear-gradient(135deg,#1c5878,#0f3a52);color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center"><i class="ti ti-send" style="font-size:18px"></i></button>
+        </div>
+      </div>
+    </div>
+    <style>@keyframes mgrSlideUp{from{transform:translateY(100%)}to{transform:none}}</style>
 
     <!-- MORE TAB -->
     <div class="tab" id="tab-more">
@@ -430,7 +451,10 @@ function openTab(t){
     const map = ['home','orders','live','drivers','more'];
     b.classList.toggle('on', map[i]===t);
   });
-  const titles = {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد',orders:'الأوردرات'};
+  const lang = localStorage.getItem('ark_lang') || 'ar';
+  const titles = (lang==='en')
+    ? {home:'Home',drivers:'Drivers',live:'Live Map',msg:'Messages',more:'More',orders:'Orders'}
+    : {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد',orders:'الأوردرات'};
   const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2',orders:'ti-package'};
   document.getElementById('topbar-title').innerHTML = `<i class="ti ${icons[t]}"></i> ${titles[t]}`;
   if(t==='live') setTimeout(initLiveMap, 100);
@@ -860,21 +884,264 @@ function shareReport(){
 }
 
 function renderMsgList(){
-  MSGS = JSON.parse(localStorage.getItem('mgr_msgs')||'[]');
-  const el = document.getElementById('msgList');
-  if(!MSGS.length){ el.innerHTML='<div class="empty"><i class="ti ti-message-2-off"></i><p>لم ترسل أي رسائل بعد</p></div>'; return; }
-  el.innerHTML = MSGS.map(m=>{
-    const color = m.level==='urgent'?'var(--red)':m.level==='warning'?'var(--amber)':'var(--blue)';
-    const toLabel = m.to==='all' ? '📢 الكل' : (DRV.find(d=>d.id===m.to)||{name:m.to}).name;
-    return `<div class="row">
-      <div class="row-av" style="background:${color}"><i class="ti ti-message"></i></div>
-      <div class="row-info">
-        <div class="row-name">${m.title}</div>
-        <div class="row-sub">إلى ${toLabel} · ${m.count} مستلم · ${new Date(m.sent).toLocaleString('ar-KW')}</div>
-      </div>
-    </div>`;
+  // Replaced by full chat inbox — see mgrFetchInbox
+  mgrFetchInbox(false);
+}
+
+/* ============================================================
+   MANAGER FULL CHAT INBOX
+   ============================================================ */
+let MGR_INBOX = [];
+let MGR_INBOX_ACTIVE = null;  // {id, type, name}
+let MGR_NOTIF_SEEN = (function(){
+  try { return new Set(JSON.parse(localStorage.getItem('mgr_notif_seen')||'[]')); }
+  catch(e){ return new Set(); }
+})();
+function _mgrPersistSeen(){
+  try { localStorage.setItem('mgr_notif_seen', JSON.stringify(Array.from(MGR_NOTIF_SEEN).slice(-300))); } catch(e){}
+}
+
+async function mgrFetchInbox(loud){
+  try {
+    const url = SUPA_URL + '/rest/v1/messages?order=created_at.desc&limit=500&select=*';
+    const res = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+    const rows = await res.json();
+    if(Array.isArray(rows)){
+      MGR_INBOX = rows;
+      mgrRenderInbox();
+      mgrCheckForNewNotifs();
+    }
+    if(loud) toast('تم التحديث','s');
+  } catch(e){ console.warn('mgrFetchInbox', e); if(loud) toast('فشل التحديث','e'); }
+}
+
+function mgrRenderInbox(){
+  const el = document.getElementById('mgrInboxList');
+  if(!el) return;
+  // Group by counterpart
+  const convMap = {};
+  MGR_INBOX.forEach(m => {
+    let key, name, type;
+    if(m.from_type === 'admin'){
+      key = m.recipient;
+      if(key === 'ALL' || key === 'all'){ name = '📢 إعلان للجميع'; type = 'broadcast'; }
+      else {
+        const dr = (typeof DRV !== 'undefined') ? DRV.find(d => d.id === key) : null;
+        if(dr){ name = dr.name; type = 'driver'; }
+        else { name = key; type = 'unknown'; }
+      }
+    } else {
+      key = m.from_id;
+      name = m.from_name || key;
+      type = m.from_type || 'driver';
+    }
+    if(!key) return;
+    if(!convMap[key]) convMap[key] = {id:key, name:name, type:type, last:m, msgs:[], unread:0};
+    convMap[key].msgs.push(m);
+    if(new Date(m.created_at) > new Date(convMap[key].last.created_at)) convMap[key].last = m;
+    if(m.from_type && m.from_type !== 'admin' && !m.read_at && m.recipient === 'admin') convMap[key].unread++;
+  });
+
+  const convs = Object.values(convMap).sort((a,b) =>
+    new Date(b.last.created_at) - new Date(a.last.created_at)
+  );
+
+  const countEl = document.getElementById('mgrInboxCount');
+  if(countEl) countEl.textContent = convs.length ? '('+convs.length+')' : '';
+
+  if(!convs.length){
+    el.innerHTML = '<div class="empty"><i class="ti ti-message-2-off"></i><p>لا توجد محادثات بعد</p></div>';
+    return;
+  }
+  el.innerHTML = convs.map(c => {
+    const preview = (c.last.body || c.last.title || '').slice(0,55);
+    const time = new Date(c.last.created_at).toLocaleString('ar-KW',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const ic = c.type === 'driver' ? 'ti-user' : c.type === 'restaurant' ? 'ti-building-store' : 'ti-broadcast';
+    const bg = c.type === 'driver' ? '#3b82f6' : c.type === 'restaurant' ? '#f59e0b' : '#a855f7';
+    return '<div class="row" onclick="openMgrConv(\''+c.id+'\',\''+c.type+'\',\''+(c.name||'').replace(/\'/g,'')+'\')" style="cursor:pointer;padding:12px 14px">'+
+      '<div class="row-av" style="background:'+bg+'"><i class="ti '+ic+'"></i></div>'+
+      '<div class="row-info">'+
+        '<div class="row-name" style="display:flex;justify-content:space-between;align-items:center"><span>'+(c.name||c.id)+'</span>'+(c.unread>0?'<span style="background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:800">'+c.unread+'</span>':'')+'</div>'+
+        '<div class="row-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+preview+'</div>'+
+        '<div style="font-size:10px;color:#94a3b8;margin-top:2px">'+time+'</div>'+
+      '</div>'+
+    '</div>';
   }).join('');
 }
+
+function openMgrConv(id, type, name){
+  MGR_INBOX_ACTIVE = {id, type, name};
+  document.getElementById('mgrConvName').textContent = name || id;
+  document.getElementById('mgrConvType').textContent = type==='driver'?'سائق':type==='restaurant'?'مطعم':type==='broadcast'?'إعلان':type;
+  document.getElementById('mgrConvIcon').className = 'ti ' + (type==='driver'?'ti-user':type==='restaurant'?'ti-building-store':'ti-broadcast');
+  document.getElementById('mgrConvReplyBar').style.display = (id==='ALL'||id==='all') ? 'none' : 'flex';
+  renderMgrConv();
+  document.getElementById('mgrConvOv').style.display = 'flex';
+}
+function closeMgrConv(){
+  MGR_INBOX_ACTIVE = null;
+  document.getElementById('mgrConvOv').style.display = 'none';
+}
+
+function renderMgrConv(){
+  if(!MGR_INBOX_ACTIVE) return;
+  const body = document.getElementById('mgrConvBody');
+  const msgs = MGR_INBOX.filter(m => {
+    if(m.from_type === 'admin' && m.recipient === MGR_INBOX_ACTIVE.id) return true;
+    if(m.from_id === MGR_INBOX_ACTIVE.id) return true;
+    return false;
+  }).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+
+  if(!msgs.length){
+    body.innerHTML = '<div style="margin:auto;text-align:center;color:#94a3b8"><i class="ti ti-message-2" style="font-size:48px;opacity:0.4"></i><p style="margin-top:10px">لا توجد رسائل بعد</p></div>';
+    return;
+  }
+  body.innerHTML = msgs.map(m => {
+    const mine = m.from_type === 'admin';
+    const bg = mine ? 'linear-gradient(135deg,#1c5878,#0f3a52)' : '#fff';
+    const color = mine ? '#fff' : '#0f1729';
+    const align = mine ? 'flex-end' : 'flex-start';
+    const br = mine ? '14px 14px 3px 14px' : '14px 14px 14px 3px';
+    const time = new Date(m.created_at).toLocaleString('ar-KW',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const showTitle = m.title && m.title!=='رسالة دعم' && m.title!=='رد من السائق' && m.title!=='رد من الإدارة';
+    return '<div style="display:flex;flex-direction:column;align-items:'+align+';max-width:82%;'+(mine?'align-self:flex-end':'align-self:flex-start')+'">'+
+      '<div style="font-size:10px;color:#64748b;margin:0 6px 3px;font-weight:700">'+(mine?'الإدارة':(m.from_name||MGR_INBOX_ACTIVE.name))+'</div>'+
+      '<div style="background:'+bg+';color:'+color+';padding:10px 13px;border-radius:'+br+';font-size:13px;line-height:1.6;word-break:break-word;border:'+(mine?'none':'1px solid var(--line)')+';box-shadow:0 1px 3px rgba(0,0,0,0.04)">'+
+        (showTitle ? '<div style="font-weight:800;margin-bottom:3px;font-size:12px">'+m.title+'</div>' : '')+
+        '<div>'+(m.body||'').replace(/\n/g,'<br>')+'</div>'+
+      '</div>'+
+      '<div style="font-size:9px;color:#94a3b8;margin:3px 6px 0">'+time+(mine && m.read_at?' · مقروء ✓✓':mine?' · مرسلة ✓':'')+'</div>'+
+    '</div>';
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+
+  // Mark unread as read
+  const unreadIds = msgs.filter(m => m.from_type !== 'admin' && !m.read_at).map(m => m.id);
+  if(unreadIds.length){
+    fetch(SUPA_URL+'/rest/v1/messages?id=in.('+unreadIds.join(',')+')', {
+      method:'PATCH',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify({read_at: new Date().toISOString()})
+    }).then(() => {
+      MGR_INBOX.forEach(m => { if(unreadIds.indexOf(m.id)>=0) m.read_at = new Date().toISOString(); });
+      mgrRenderInbox();
+    }).catch(()=>{});
+  }
+}
+
+async function mgrSendReply(){
+  if(!MGR_INBOX_ACTIVE) return;
+  const inp = document.getElementById('mgrConvInput');
+  const text = (inp.value||'').trim();
+  if(!text) return;
+  inp.value = '';
+  inp.disabled = true;
+  try {
+    await fetch(SUPA_URL+'/rest/v1/messages', {
+      method:'POST',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        recipient: MGR_INBOX_ACTIVE.id,
+        from_id: 'admin',
+        from_name: 'الإدارة',
+        from_type: 'admin',
+        title: 'رد من الإدارة',
+        body: text,
+        level: 'info'
+      })
+    });
+    await mgrFetchInbox(false);
+    renderMgrConv();
+  } catch(e){
+    console.error(e);
+    toast('فشل الإرسال','e');
+    inp.value = text;
+  }
+  inp.disabled = false;
+  inp.focus();
+}
+
+/* ============================================================
+   PUSH NOTIFICATIONS (Web Notifications)
+   ============================================================ */
+async function mgrRequestPush(){
+  if(!('Notification' in window) || !('serviceWorker' in navigator)) return false;
+  if(Notification.permission === 'granted') return true;
+  if(Notification.permission === 'denied') return false;
+  try { return (await Notification.requestPermission()) === 'granted'; }
+  catch(e){ return false; }
+}
+
+async function mgrShowNotif(payload){
+  if(!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if(reg.active) reg.active.postMessage({type:'SHOW_NOTIFICATION', payload});
+    else if(reg.showNotification) reg.showNotification(payload.title, {
+      body:payload.body, icon:'./icon-192.png', tag:payload.tag||'msg',
+      renotify:true, vibrate:[200,100,200], dir:'rtl', data:payload.data||{}
+    });
+  } catch(e){ console.warn(e); }
+}
+
+function mgrCheckForNewNotifs(){
+  if(!MGR_INBOX.length) return;
+  const fresh = MGR_INBOX.filter(m =>
+    m.id && m.from_type && m.from_type !== 'admin' &&
+    !MGR_NOTIF_SEEN.has(m.id) && !m.read_at && m.recipient === 'admin'
+  );
+  if(!fresh.length) return;
+  // Initial load — mark all as seen silently
+  if(!window._mgrNotifInit){
+    fresh.forEach(m => MGR_NOTIF_SEEN.add(m.id));
+    _mgrPersistSeen();
+    window._mgrNotifInit = true;
+    return;
+  }
+  fresh.forEach(m => {
+    MGR_NOTIF_SEEN.add(m.id);
+    const sender = m.from_name || (m.from_type==='restaurant'?'مطعم':'سائق');
+    mgrShowNotif({
+      title: sender,
+      body: (m.body||'').replace(/<[^>]+>/g,'').substring(0,180),
+      tag: 'msg-'+m.id,
+      data: {url:'./manager.html', msgId:m.id}
+    });
+    if(navigator.vibrate) navigator.vibrate([150,80,150]);
+  });
+  _mgrPersistSeen();
+}
+
+// Listen for SW notification click
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if(e.data && e.data.type === 'OPEN_MESSAGES'){
+      if(typeof switchTab === 'function') switchTab('msg');
+      else if(document.getElementById('tab-msg')){
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+        document.getElementById('tab-msg').classList.add('on');
+      }
+      mgrFetchInbox(false);
+    }
+  });
+}
+
+// Ask permission on first interaction
+(function(){
+  let asked = false;
+  function attempt(){
+    if(asked) return; asked = true;
+    mgrRequestPush().then(ok => { if(ok) console.log('[mgr] notifications granted'); });
+  }
+  ['click','touchstart','keydown'].forEach(ev => {
+    document.addEventListener(ev, attempt, {once:true, passive:true});
+  });
+})();
+
+// Poll inbox every 25 seconds
+setInterval(() => { if(typeof SUPA_URL !== 'undefined') mgrFetchInbox(false); }, 25000);
+// Initial fetch
+setTimeout(() => { if(typeof SUPA_URL !== 'undefined') mgrFetchInbox(false); }, 2000);
 
 function openWebAdmin(){
   alert('النظام الكامل يفتح من اللاب توب أو الكمبيوتر — ملف "السلاسل_نظام_ادارة_السائقين_28.html" داخل مجلد alsalasil.');
@@ -1077,6 +1344,24 @@ buildPinPad();
 if(sessionStorage.getItem('mgr_authed') === '1'){
   unlockApp();
 }
+
+// ==================== BILINGUAL (AR/EN) ====================
+function toggleArkLang(){
+  const cur = localStorage.getItem('ark_lang') || 'ar';
+  const next = (cur === 'ar') ? 'en' : 'ar';
+  localStorage.setItem('ark_lang', next);
+  applyArkLang();
+  // Re-render current view to update titles
+  openTab(currentTab);
+}
+function applyArkLang(){
+  const lang = localStorage.getItem('ark_lang') || 'ar';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+  const tt = document.getElementById('mgr-lang-txt');
+  if(tt) tt.textContent = (lang === 'ar') ? 'EN' : 'AR';
+}
+applyArkLang();
 
 // Register service worker for offline + install
 if('serviceWorker' in navigator){

@@ -1,8 +1,9 @@
 /* ===========================================================
    شركة السلاسل — Service Worker
    يخزّن ملفات التطبيق للعمل بدون إنترنت ولتثبيته كتطبيق
+   + يدعم إشعارات الموبايل الفعلية (Web Notifications)
    =========================================================== */
-const CACHE = 'alsalasil-driver-v1';
+const CACHE = 'alsalasil-driver-v2';
 
 // ملفات هيكل التطبيق (App Shell)
 const SHELL = [
@@ -70,4 +71,45 @@ self.addEventListener('fetch', e => {
       return hit || net;
     })
   );
+});
+
+/* =========================================================
+   إشعارات الموبايل — Notifications
+   ========================================================= */
+
+// لما المستخدم يضغط على إشعار، افتح/فعّل التطبيق
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(
+    self.clients.matchAll({type:'window', includeUncontrolled:true}).then(clients => {
+      // لو في نافذة شغالة، فعّلها وابعتلها رسالة لفتح المحادثة
+      for (const c of clients) {
+        if (c.url.indexOf(self.location.origin) === 0) {
+          c.postMessage({type:'OPEN_MESSAGES', data:e.notification.data});
+          return c.focus();
+        }
+      }
+      // وإلا افتح نافذة جديدة
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
+});
+
+// رسائل من الصفحة → إظهار إشعار
+self.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'SHOW_NOTIFICATION') return;
+  const d = e.data.payload || {};
+  self.registration.showNotification(d.title || 'السلاسل فلاي', {
+    body: d.body || '',
+    icon: d.icon || './icon-192.png',
+    badge: './icon-192.png',
+    tag: d.tag || 'msg',
+    renotify: true,
+    requireInteraction: false,
+    vibrate: [200, 100, 200],
+    dir: 'rtl',
+    lang: 'ar',
+    data: d.data || {url:'./'}
+  });
 });
