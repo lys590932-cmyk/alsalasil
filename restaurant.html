@@ -1442,13 +1442,18 @@ async function refreshAll(){
 
 // ==================== SUPPORT SYSTEM ====================
 let SUPPORT_MSGS = [];
+function _supLang(){ return (localStorage.getItem('ark_lang') || 'ar') === 'en' ? 'en' : 'ar'; }
+function _supIsEn(){ return _supLang() === 'en'; }
 
 async function fetchSupportMsgs(){
   if(!REST) return;
   try {
-    // Messages where this restaurant is recipient OR sender
     const url = SUPA_URL+'/rest/v1/messages?or=(and(recipient.eq.'+encodeURIComponent(REST.id)+',from_type.eq.admin),and(from_id.eq.'+encodeURIComponent(REST.id)+',from_type.eq.restaurant))&order=created_at.asc&limit=200&select=*';
     const res = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+    if(!res.ok){
+      console.error('[Support] fetch failed', res.status, await res.text());
+      return;
+    }
     const rows = await res.json();
     if(Array.isArray(rows)) SUPPORT_MSGS = rows;
     _updateSupportBadge();
@@ -1465,8 +1470,10 @@ function _updateSupportBadge(){
 }
 
 function openSupport(){
-  if(!REST){ alert(LANG==='en'?'Login first':'سجل الدخول أولاً'); return; }
+  if(!REST){ alert(_supIsEn() ? 'Login first' : 'سجل الدخول أولاً'); return; }
   document.getElementById('supportOv').style.display = 'flex';
+  // Show loading then render
+  document.getElementById('supBody').innerHTML = '<div style="margin:auto;color:#94a3b8;text-align:center;padding:40px"><i class="ti ti-loader-2 spin" style="font-size:40px"></i><p style="margin-top:10px">'+(_supIsEn()?'Loading...':'تحميل...')+'</p></div>';
   fetchSupportMsgs().then(()=>renderSupportThread());
 }
 function closeSupport(){
@@ -1475,7 +1482,7 @@ function closeSupport(){
 
 function renderSupportThread(){
   const body = document.getElementById('supBody');
-  const isEn = (typeof LANG !== 'undefined' && LANG === 'en');
+  const isEn = _supIsEn();
 
   if(!SUPPORT_MSGS.length){
     body.innerHTML = '<div style="margin:auto;text-align:center;color:#94a3b8;padding:40px 20px"><div style="width:80px;height:80px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="ti ti-headset" style="font-size:42px;color:#3b82f6"></i></div><div style="font-size:15px;font-weight:800;color:#0f3a52;margin-bottom:6px">'+(isEn?'How can we help?':'كيف نقدر نساعدك؟')+'</div><div style="font-size:12px;color:#64748b;line-height:1.7">'+(isEn?'Send your message and our team will reply soon.':'ابعت رسالتك وفريق الدعم هيرد عليك في أسرع وقت')+'</div></div>';
@@ -1500,7 +1507,6 @@ function renderSupportThread(){
   }).join('');
   body.scrollTop = body.scrollHeight;
 
-  // Mark admin messages as read
   const unreadIds = SUPPORT_MSGS.filter(m => m.from_type === 'admin' && !m.read_at).map(m => m.id);
   if(unreadIds.length){
     fetch(SUPA_URL+'/rest/v1/messages?id=in.('+unreadIds.join(',')+')', {
@@ -1515,35 +1521,80 @@ function renderSupportThread(){
 }
 
 async function sendSupportMsg(){
-  if(!REST) return;
+  if(!REST){ alert(_supIsEn() ? 'Please login first' : 'سجل الدخول أولاً'); return; }
   const inp = document.getElementById('supInput');
   const text = (inp.value||'').trim();
   if(!text) return;
   inp.value = '';
   inp.disabled = true;
+
+  // Optimistic UI: add message immediately
+  const optimistic = {
+    id: 'tmp_'+Date.now(),
+    recipient: 'admin',
+    from_id: REST.id,
+    from_name: REST.name,
+    from_type: 'restaurant',
+    body: text,
+    created_at: new Date().toISOString(),
+    _pending: true
+  };
+  SUPPORT_MSGS.push(optimistic);
+  renderSupportThread();
+
   try {
+    const payload = {
+      recipient: 'admin',
+      from_id: REST.id,
+      from_name: REST.name,
+      from_type: 'restaurant',
+      body: text,
+      level: 'info'
+    };
     const res = await fetch(SUPA_URL+'/rest/v1/messages', {
       method:'POST',
       headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=representation'},
-      body: JSON.stringify({
-        recipient: 'admin',
-        from_id: REST.id,
-        from_name: REST.name,
-        from_type: 'restaurant',
-        body: text,
-        level: 'info'
-      })
+      body: JSON.stringify(payload)
     });
-    const created = await res.json();
-    if(Array.isArray(created) && created[0]) SUPPORT_MSGS.push(created[0]);
-    renderSupportThread();
+    if(!res.ok){
+      const errText = await res.text();
+      console.error('[Support] send failed', res.status, errText);
+      // Remove optimistic message
+      SUPPORT_MSGS = SUPPORT_MSGS.filter(m => m.id !== optimistic.id);
+      renderSupportThread();
+      // Show detailed error
+      let userErr = (_supIsEn() ? 'Send failed' : 'فشل الإرسال');
+      if(errText.indexOf('from_id') >= 0 || errText.indexOf('from_type') >= 0 || errText.indexOf('column') >= 0){
+        userErr += '\n\n' + (_supIsEn() ? 'Database not migrated. Please contact admin to run messages-twoway-setup.sql' : 'قاعدة البيانات تحتاج تحديث. الرجاء تشغيل messages-twoway-setup.sql');
+      } else if(res.status === 401 || res.status === 403){
+        userErr += '\n\n' + (_supIsEn() ? 'Permission denied (RLS)' : 'الصلاحيات مرفوضة (RLS)');
+      }
+      alert(userErr + '\n\n' + errText.substring(0,200));
+      inp.value = text;
+    } else {
+      const created = await res.json();
+      // Replace optimistic with real
+      SUPPORT_MSGS = SUPPORT_MSGS.filter(m => m.id !== optimistic.id);
+      if(Array.isArray(created) && created[0]) SUPPORT_MSGS.push(created[0]);
+      renderSupportThread();
+    }
   } catch(e){
     console.error(e);
-    alert(LANG==='en'?'Send failed':'فشل الإرسال');
+    SUPPORT_MSGS = SUPPORT_MSGS.filter(m => m.id !== optimistic.id);
+    renderSupportThread();
+    alert((_supIsEn() ? 'Network error: ' : 'خطأ في الاتصال: ') + e.message);
+    inp.value = text;
   }
   inp.disabled = false;
   inp.focus();
 }
+
+// Spinner animation
+(function(){
+  const s = document.createElement('style');
+  s.textContent = '.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+})();
 
 // Poll support every 30s
 setInterval(()=>{ if(REST) fetchSupportMsgs(); }, 30000);
