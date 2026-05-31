@@ -1358,18 +1358,95 @@ async function enableNotifs(){
 }
 
 async function testNotif(){
-  if(Notification.permission !== 'granted'){
-    var ok = await requestPushPermission();
-    if(!ok){ toast(LANG==='en'?'Enable permission first':'فعّل الإذن أولاً'); return; }
+  var log = [];
+  function addLog(msg){ log.push(msg); console.log('[NotifTest]', msg); }
+
+  // 1) Check browser support
+  if(!('Notification' in window)){
+    alert('❌ المتصفح لا يدعم الإشعارات أصلاً.\n\nجرّب Chrome أو Edge.');
+    return;
   }
-  await showPushNotif({
-    title: LANG==='en'?'Test notification':'إشعار تجريبي',
-    body: LANG==='en'?'If you can see this, notifications work!':'لو شفت ده، الإشعارات شغالة!',
-    tag: 'test-'+Date.now(),
-    data: {url:'./'}
-  });
-  if(navigator.vibrate) navigator.vibrate([200,100,200]);
-  toast(LANG==='en'?'Test sent — check your phone':'تم الإرسال — اطلع على شاشة موبايلك');
+  addLog('✓ Notification API supported');
+
+  // 2) Check Service Worker support
+  if(!('serviceWorker' in navigator)){
+    alert('❌ المتصفح لا يدعم Service Worker.\n\nلازم Chrome/Edge/Safari حديث.');
+    return;
+  }
+  addLog('✓ Service Worker supported');
+
+  // 3) Check iOS PWA requirement
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if(isIOS && !isStandalone){
+    alert('⚠️ على iPhone/iPad لازم تثبّت التطبيق على الشاشة الرئيسية الأول.\n\n1. اضغط زر المشاركة (السهم لفوق) في Safari\n2. اختار "إضافة إلى الشاشة الرئيسية"\n3. افتح التطبيق من على الشاشة الرئيسية (مش من Safari)\n4. جرّب الاختبار تاني');
+    return;
+  }
+  addLog(isIOS ? '✓ iOS PWA mode' : '✓ Non-iOS device');
+
+  // 4) Check permission
+  var perm = Notification.permission;
+  addLog('Permission state: '+perm);
+  if(perm === 'denied'){
+    alert('❌ الإشعارات محظورة من إعدادات المتصفح.\n\nللحل على Android Chrome:\n1. افتح إعدادات Chrome\n2. الموقع: ' + location.host + '\n3. الإشعارات: تفعيل\n\nأو احذف التطبيق وثبّته من جديد.');
+    return;
+  }
+  if(perm === 'default'){
+    addLog('Requesting permission...');
+    try {
+      perm = await Notification.requestPermission();
+      addLog('After request: '+perm);
+    } catch(e){
+      alert('❌ خطأ في طلب الإذن:\n'+e.message);
+      return;
+    }
+    if(perm !== 'granted'){
+      alert('❌ لم يتم منح الإذن (الحالة: '+perm+').\n\nاضغط زر "تفعيل" مرة أخرى.');
+      return;
+    }
+  }
+  addLog('✓ Permission granted');
+
+  // 5) Check SW registration
+  var reg;
+  try {
+    reg = await navigator.serviceWorker.ready;
+    addLog('✓ SW ready, scope: '+reg.scope);
+    addLog('SW active: '+!!reg.active);
+  } catch(e){
+    alert('❌ Service Worker غير جاهز:\n'+e.message+'\n\nاعمل Hard Refresh وحاول تاني.');
+    return;
+  }
+
+  // 6) Try direct showNotification via registration (most reliable)
+  try {
+    await reg.showNotification('إشعار تجريبي 🔔', {
+      body: 'لو شفت الإشعار ده، يعني كل حاجة شغالة! ✓',
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      tag: 'test-'+Date.now(),
+      renotify: true,
+      requireInteraction: true,  // Keep visible until user interacts
+      vibrate: [200, 100, 200, 100, 200],
+      dir: 'rtl',
+      lang: 'ar',
+      data: {url: './'}
+    });
+    addLog('✓ showNotification called');
+    if(navigator.vibrate) navigator.vibrate([200,100,200]);
+    setTimeout(function(){
+      // Check if any notifications are showing
+      reg.getNotifications().then(function(notifs){
+        if(notifs.length === 0){
+          alert('⚠️ تم استدعاء الإشعار بنجاح لكنه لم يظهر على الشاشة.\n\nالسبب الأكثر احتمالاً:\n1. الإشعارات محظورة من إعدادات نظام الموبايل\n2. وضع DND/Focus مفعّل\n3. التطبيق في الواجهة (وبعض الأجهزة لا تعرض إشعارات وقتها)\n\nالخطوات:\n1. اقفل التطبيق تماماً\n2. ابعت لنفسك من ARK رسالة\n3. هتلاقي الإشعار يظهر');
+        } else {
+          alert('✅ الإشعار ظاهر!\n\nعدد الإشعارات الحالية: '+notifs.length);
+        }
+      });
+    }, 1500);
+  } catch(e){
+    alert('❌ فشل عرض الإشعار:\n'+e.message+'\n\nLog:\n'+log.join('\n'));
+  }
 }
 
 async function sendReply(){
