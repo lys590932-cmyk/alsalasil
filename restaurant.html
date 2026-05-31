@@ -1469,11 +1469,54 @@ function _updateSupportBadge(){
   else { badge.style.display = 'none'; }
 }
 
-function openSupport(){
+async function _diagnoseSupportSystem(){
+  // 1) Basic table access
+  const testRes = await fetch(SUPA_URL+'/rest/v1/messages?limit=1&select=id,from_id,from_type', {
+    headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}
+  });
+  const testText = await testRes.text();
+  if(!testRes.ok){
+    if(testText.indexOf('does not exist') >= 0 || testText.indexOf('column') >= 0 || testText.indexOf('from_id') >= 0 || testText.indexOf('from_type') >= 0){
+      return {ok:false, code:'SCHEMA', detail:testText};
+    }
+    if(testRes.status === 401 || testRes.status === 403){
+      return {ok:false, code:'RLS', detail:testText};
+    }
+    return {ok:false, code:'UNKNOWN', detail:'Status '+testRes.status+': '+testText};
+  }
+  return {ok:true};
+}
+
+async function openSupport(){
   if(!REST){ alert(_supIsEn() ? 'Login first' : 'سجل الدخول أولاً'); return; }
   document.getElementById('supportOv').style.display = 'flex';
-  // Show loading then render
-  document.getElementById('supBody').innerHTML = '<div style="margin:auto;color:#94a3b8;text-align:center;padding:40px"><i class="ti ti-loader-2 spin" style="font-size:40px"></i><p style="margin-top:10px">'+(_supIsEn()?'Loading...':'تحميل...')+'</p></div>';
+  const body = document.getElementById('supBody');
+  body.innerHTML = '<div style="margin:auto;color:#94a3b8;text-align:center;padding:40px"><i class="ti ti-loader-2 spin" style="font-size:40px"></i><p style="margin-top:10px">'+(_supIsEn()?'Checking...':'فحص الاتصال...')+'</p></div>';
+
+  // Diagnose first
+  const diag = await _diagnoseSupportSystem();
+  if(!diag.ok){
+    let title = '', msg = '';
+    if(diag.code === 'SCHEMA'){
+      title = _supIsEn() ? '⚠️ Database update required' : '⚠️ قاعدة البيانات تحتاج تحديث';
+      msg = _supIsEn()
+        ? 'The database schema is outdated. Admin needs to run <b>messages-twoway-setup.sql</b> on Supabase SQL Editor once.'
+        : 'يجب على الإدارة تشغيل ملف <b>messages-twoway-setup.sql</b> على Supabase SQL Editor مرة واحدة.';
+    } else if(diag.code === 'RLS'){
+      title = _supIsEn() ? '⚠️ Permission denied' : '⚠️ الصلاحيات مرفوضة';
+      msg = _supIsEn()
+        ? 'Row-Level Security is blocking access. Admin needs to apply RLS policies in messages-twoway-setup.sql.'
+        : 'صلاحيات Row-Level Security تمنع الوصول. الإدارة تحتاج تطبيق سياسات RLS في ملف SQL.';
+    } else {
+      title = _supIsEn() ? '⚠️ Connection problem' : '⚠️ مشكلة اتصال';
+      msg = diag.detail.substring(0,300);
+    }
+    body.innerHTML = '<div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:14px;padding:20px;margin:14px"><div style="font-size:16px;font-weight:900;color:#991b1b;margin-bottom:10px">'+title+'</div><div style="font-size:13px;color:#7f1d1d;line-height:1.7">'+msg+'</div><div style="margin-top:14px;padding-top:14px;border-top:1px dashed #fca5a5;font-size:11px;color:#991b1b;font-family:monospace;background:#fff;padding:10px;border-radius:8px;word-break:break-all">'+(diag.detail||'').substring(0,200)+'</div></div>';
+    document.getElementById('supInput').disabled = true;
+    return;
+  }
+
+  document.getElementById('supInput').disabled = false;
   fetchSupportMsgs().then(()=>renderSupportThread());
 }
 function closeSupport(){
@@ -1551,35 +1594,40 @@ async function sendSupportMsg(){
       body: text,
       level: 'info'
     };
+    console.log('[Support] sending payload:', payload);
     const res = await fetch(SUPA_URL+'/rest/v1/messages', {
       method:'POST',
-      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=representation'},
+      headers:{
+        apikey:SUPA_KEY,
+        Authorization:'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'   // Don't ask for representation - avoids RLS visibility issues
+      },
       body: JSON.stringify(payload)
     });
     if(!res.ok){
       const errText = await res.text();
       console.error('[Support] send failed', res.status, errText);
-      // Remove optimistic message
       SUPPORT_MSGS = SUPPORT_MSGS.filter(m => m.id !== optimistic.id);
       renderSupportThread();
-      // Show detailed error
       let userErr = (_supIsEn() ? 'Send failed' : 'فشل الإرسال');
       if(errText.indexOf('from_id') >= 0 || errText.indexOf('from_type') >= 0 || errText.indexOf('column') >= 0){
-        userErr += '\n\n' + (_supIsEn() ? 'Database not migrated. Please contact admin to run messages-twoway-setup.sql' : 'قاعدة البيانات تحتاج تحديث. الرجاء تشغيل messages-twoway-setup.sql');
+        userErr += '\n\n' + (_supIsEn() ? 'Database not migrated. Please run messages-twoway-setup.sql' : 'قاعدة البيانات تحتاج تحديث. شغّل messages-twoway-setup.sql');
       } else if(res.status === 401 || res.status === 403){
         userErr += '\n\n' + (_supIsEn() ? 'Permission denied (RLS)' : 'الصلاحيات مرفوضة (RLS)');
       }
-      alert(userErr + '\n\n' + errText.substring(0,200));
+      alert(userErr + '\n\nHTTP ' + res.status + ':\n' + errText.substring(0,400));
       inp.value = text;
     } else {
-      const created = await res.json();
-      // Replace optimistic with real
+      console.log('[Support] sent OK, refetching...');
+      // Success! Now refetch to get the real message with its ID
+      await fetchSupportMsgs();
+      // Remove the optimistic (it was already replaced by the fetch but just to be safe)
       SUPPORT_MSGS = SUPPORT_MSGS.filter(m => m.id !== optimistic.id);
-      if(Array.isArray(created) && created[0]) SUPPORT_MSGS.push(created[0]);
       renderSupportThread();
     }
   } catch(e){
-    console.error(e);
+    console.error('[Support] exception:', e);
     SUPPORT_MSGS = SUPPORT_MSGS.filter(m => m.id !== optimistic.id);
     renderSupportThread();
     alert((_supIsEn() ? 'Network error: ' : 'خطأ في الاتصال: ') + e.message);
