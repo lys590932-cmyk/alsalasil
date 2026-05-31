@@ -181,8 +181,28 @@ body{font-family:'Cairo',-apple-system,sans-serif;background:var(--bg);color:var
       </div>
     </h2>
     <button class="tba-btn" onclick="toggleByteLang()" title="Toggle language" style="font-size:11px;font-weight:900"><span id="byte-lang-txt">EN</span></button>
+    <button class="tba-btn" onclick="openSupport()" title="الدعم الفني" style="position:relative">
+      <i class="ti ti-headset"></i>
+      <span id="supportBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,0.4)">0</span>
+    </button>
     <button class="tba-btn" onclick="refreshAll()"><i class="ti ti-refresh"></i></button>
   </div>
+
+  <!-- SUPPORT SHEET -->
+  <div id="supportOv" onclick="if(event.target===this)closeSupport()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)">
+    <div style="background:#fff;width:100%;max-width:560px;height:90vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;animation:supSlideUp .3s ease;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#0f3a52,#0a2e42);color:#fff">
+        <h3 style="margin:0;font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px"><i class="ti ti-headset" style="color:#22d3ee"></i> <span id="supTitle">الدعم الفني</span></h3>
+        <button onclick="closeSupport()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:20px;cursor:pointer">×</button>
+      </div>
+      <div id="supBody" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:#f8fafc"></div>
+      <div style="padding:10px 12px;border-top:1px solid #e2e8f0;background:#fff;display:flex;gap:8px;align-items:center">
+        <input id="supInput" type="text" placeholder="اكتب رسالتك للدعم..." style="flex:1;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:22px;font-family:inherit;font-size:14px;outline:none" onkeydown="if(event.key==='Enter')sendSupportMsg()">
+        <button onclick="sendSupportMsg()" style="background:linear-gradient(135deg,#22d3ee,#0891b2);color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(34,211,238,0.4)"><i class="ti ti-send" style="font-size:18px"></i></button>
+      </div>
+    </div>
+  </div>
+  <style>@keyframes supSlideUp{from{transform:translateY(100%)}to{transform:none}}</style>
 
   <div class="content" id="content">
 
@@ -1417,7 +1437,116 @@ async function refreshAll(){
   await fetchOrders();
   renderOrdersList();
   renderStats();
+  fetchSupportMsgs();
 }
+
+// ==================== SUPPORT SYSTEM ====================
+let SUPPORT_MSGS = [];
+
+async function fetchSupportMsgs(){
+  if(!REST) return;
+  try {
+    // Messages where this restaurant is recipient OR sender
+    const url = SUPA_URL+'/rest/v1/messages?or=(and(recipient.eq.'+encodeURIComponent(REST.id)+',from_type.eq.admin),and(from_id.eq.'+encodeURIComponent(REST.id)+',from_type.eq.restaurant))&order=created_at.asc&limit=200&select=*';
+    const res = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+    const rows = await res.json();
+    if(Array.isArray(rows)) SUPPORT_MSGS = rows;
+    _updateSupportBadge();
+    if(document.getElementById('supportOv').style.display === 'flex') renderSupportThread();
+  } catch(e){ console.warn('fetchSupportMsgs', e); }
+}
+
+function _updateSupportBadge(){
+  const badge = document.getElementById('supportBadge');
+  if(!badge) return;
+  const unread = SUPPORT_MSGS.filter(m => m.from_type === 'admin' && !m.read_at).length;
+  if(unread > 0){ badge.textContent = unread > 9 ? '9+' : String(unread); badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+
+function openSupport(){
+  if(!REST){ alert(LANG==='en'?'Login first':'سجل الدخول أولاً'); return; }
+  document.getElementById('supportOv').style.display = 'flex';
+  fetchSupportMsgs().then(()=>renderSupportThread());
+}
+function closeSupport(){
+  document.getElementById('supportOv').style.display = 'none';
+}
+
+function renderSupportThread(){
+  const body = document.getElementById('supBody');
+  const isEn = (typeof LANG !== 'undefined' && LANG === 'en');
+
+  if(!SUPPORT_MSGS.length){
+    body.innerHTML = '<div style="margin:auto;text-align:center;color:#94a3b8;padding:40px 20px"><div style="width:80px;height:80px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="ti ti-headset" style="font-size:42px;color:#3b82f6"></i></div><div style="font-size:15px;font-weight:800;color:#0f3a52;margin-bottom:6px">'+(isEn?'How can we help?':'كيف نقدر نساعدك؟')+'</div><div style="font-size:12px;color:#64748b;line-height:1.7">'+(isEn?'Send your message and our team will reply soon.':'ابعت رسالتك وفريق الدعم هيرد عليك في أسرع وقت')+'</div></div>';
+    return;
+  }
+
+  body.innerHTML = SUPPORT_MSGS.map(m => {
+    const mine = m.from_type === 'restaurant';
+    const bg = mine ? 'linear-gradient(135deg,#2563eb,#1e40af)' : '#fff';
+    const color = mine ? '#fff' : '#0f172a';
+    const align = mine ? 'flex-end' : 'flex-start';
+    const br = mine ? '14px 14px 3px 14px' : '14px 14px 14px 3px';
+    const time = new Date(m.created_at).toLocaleString(isEn?'en-US':'ar-KW',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    return '<div style="display:flex;flex-direction:column;align-items:'+align+';max-width:85%;'+(mine?'align-self:flex-end':'align-self:flex-start')+'">'+
+      '<div style="font-size:10px;color:#64748b;margin:0 6px 3px;font-weight:700">'+(mine?(isEn?'You':'إنت'):(isEn?'Support':'الدعم'))+'</div>'+
+      '<div style="background:'+bg+';color:'+color+';padding:10px 13px;border-radius:'+br+';font-size:13px;line-height:1.6;word-break:break-word;border:'+(mine?'none':'1px solid #e2e8f0')+';box-shadow:0 1px 3px rgba(0,0,0,0.04)">'+
+        (m.title ? '<div style="font-weight:800;margin-bottom:3px;font-size:12px">'+m.title+'</div>' : '')+
+        '<div>'+(m.body||'').replace(/\n/g,'<br>')+'</div>'+
+      '</div>'+
+      '<div style="font-size:9px;color:#94a3b8;margin:3px 6px 0">'+time+'</div>'+
+    '</div>';
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+
+  // Mark admin messages as read
+  const unreadIds = SUPPORT_MSGS.filter(m => m.from_type === 'admin' && !m.read_at).map(m => m.id);
+  if(unreadIds.length){
+    fetch(SUPA_URL+'/rest/v1/messages?id=in.('+unreadIds.join(',')+')', {
+      method:'PATCH',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify({ read_at: new Date().toISOString() })
+    }).then(()=>{
+      SUPPORT_MSGS.forEach(m => { if(unreadIds.indexOf(m.id)>=0) m.read_at = new Date().toISOString(); });
+      _updateSupportBadge();
+    }).catch(()=>{});
+  }
+}
+
+async function sendSupportMsg(){
+  if(!REST) return;
+  const inp = document.getElementById('supInput');
+  const text = (inp.value||'').trim();
+  if(!text) return;
+  inp.value = '';
+  inp.disabled = true;
+  try {
+    const res = await fetch(SUPA_URL+'/rest/v1/messages', {
+      method:'POST',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=representation'},
+      body: JSON.stringify({
+        recipient: 'admin',
+        from_id: REST.id,
+        from_name: REST.name,
+        from_type: 'restaurant',
+        body: text,
+        level: 'info'
+      })
+    });
+    const created = await res.json();
+    if(Array.isArray(created) && created[0]) SUPPORT_MSGS.push(created[0]);
+    renderSupportThread();
+  } catch(e){
+    console.error(e);
+    alert(LANG==='en'?'Send failed':'فشل الإرسال');
+  }
+  inp.disabled = false;
+  inp.focus();
+}
+
+// Poll support every 30s
+setInterval(()=>{ if(REST) fetchSupportMsgs(); }, 30000);
 
 // ==================== BOOT ====================
 const saved = localStorage.getItem('rest_session');

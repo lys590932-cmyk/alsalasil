@@ -408,6 +408,18 @@ button,input,select{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
+<!-- ============ CUSTOMER LOCATION REQUEST SHEET ============ -->
+<div id="custLocOv" onclick="if(event.target===this)closeCustLocSheet()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9000;align-items:flex-end;justify-content:center">
+  <div style="background:#fff;width:100%;max-width:520px;border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;padding:20px;animation:slideUpSheet .3s ease">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 id="custLocTitle" style="font-size:18px;font-weight:900;display:flex;align-items:center;gap:8px;color:#0f3a52"><i class="ti ti-map-pin-share" style="color:#25d366"></i> <span id="custLocTitleTxt">طلب موقع العميل</span></h3>
+      <button onclick="closeCustLocSheet()" style="background:#f1f5f9;border:none;width:34px;height:34px;border-radius:50%;font-size:22px;cursor:pointer;color:#64748b">×</button>
+    </div>
+    <div id="custLocBody"></div>
+  </div>
+</div>
+<style>@keyframes slideUpSheet{from{transform:translateY(100%)}to{transform:none}}</style>
+
 <!-- ============ NOTIFICATIONS SHEET ============ -->
 <div class="sheet-ov" id="notifOv" onclick="closeNotif()"></div>
 <div class="sheet" id="notifSheet">
@@ -593,7 +605,35 @@ var I18N = {
     rep_ph_balance:'مثال: 5.770',
     rep_ph_hour:'مثال: 5',
     rep_ph_fuel:'مثال: 3.225',
-    rep_ph_notes:'أي تفاصيل تحب تضيفها...'
+    rep_ph_notes:'أي تفاصيل تحب تضيفها...',
+    /* === Customer Location Request === */
+    custloc_btn:'طلب موقع العميل',
+    custloc_title:'طلب موقع العميل عبر واتساب',
+    custloc_intro:'اكتب رقم العميل، النظام يبعتله لينك على واتساب يضغط عليه لمشاركة موقعه بدقة GPS.',
+    custloc_name:'اسم العميل (اختياري)',
+    custloc_phone:'رقم تليفون العميل',
+    custloc_phone_ph:'مثال: 9XXXXXXX',
+    custloc_send:'إرسال اللينك للعميل',
+    custloc_waiting:'⏳ في انتظار العميل ليشارك موقعه...',
+    custloc_received:'✅ تم استلام موقع العميل!',
+    custloc_open_maps:'فتح في خرائط جوجل',
+    custloc_close:'إغلاق',
+    custloc_recent:'آخر الطلبات',
+    custloc_validate_phone:'أدخل رقم تليفون صحيح',
+    custloc_failure:'فشل الإرسال — تأكد من الاتصال',
+    custloc_timeout:'انتهت المهلة — العميل لم يفتح اللينك',
+    custloc_wa_msg:function(name, link){
+      return '🍽️ مرحباً '+(name||'')+'،\n\nأنا سائق التوصيل بشركة السلاسل / كابوريا 🚗\n\nعشان أوصل لك بسرعة وبدون لخبطة، من فضلك ضغط على اللينك ده وشارك موقعك:\n\n'+link+'\n\nشكراً لك 💚';
+    },
+    /* === Messaging === */
+    msg_title:'الرسائل',
+    msg_empty:'لا توجد رسائل بعد',
+    msg_empty_sub:'لما الإدارة تبعتلك رسالة هتظهر هنا',
+    msg_reply_ph:'اكتب ردك...',
+    msg_send:'إرسال',
+    msg_just_now:'الآن',
+    msg_admin:'الإدارة',
+    msg_you:'إنت'
   },
   en: {
     company:'AL-SALASIL FLY',
@@ -745,7 +785,35 @@ var I18N = {
     rep_ph_balance:'e.g. 5.770',
     rep_ph_hour:'e.g. 5',
     rep_ph_fuel:'e.g. 3.225',
-    rep_ph_notes:'Any details you want to add...'
+    rep_ph_notes:'Any details you want to add...',
+    /* === Customer Location Request === */
+    custloc_btn:'Request Customer Location',
+    custloc_title:'Request Customer Location via WhatsApp',
+    custloc_intro:'Enter the customer\'s phone — they\'ll receive a WhatsApp link to share their precise GPS location.',
+    custloc_name:'Customer Name (optional)',
+    custloc_phone:'Customer Phone',
+    custloc_phone_ph:'e.g. 9XXXXXXX',
+    custloc_send:'Send Link to Customer',
+    custloc_waiting:'⏳ Waiting for customer to share location...',
+    custloc_received:'✅ Customer location received!',
+    custloc_open_maps:'Open in Google Maps',
+    custloc_close:'Close',
+    custloc_recent:'Recent Requests',
+    custloc_validate_phone:'Please enter a valid phone number',
+    custloc_failure:'Send failed — check connection',
+    custloc_timeout:'Timeout — customer did not open the link',
+    custloc_wa_msg:function(name, link){
+      return '🍽️ Hello '+(name||'')+',\n\nI\'m your delivery driver from Al-Salasil / Caboria 🚗\n\nTo reach you quickly without getting lost, please tap the link below to share your location:\n\n'+link+'\n\nThank you! 💚';
+    },
+    /* === Messaging === */
+    msg_title:'Messages',
+    msg_empty:'No messages yet',
+    msg_empty_sub:'When admin sends you a message it will appear here',
+    msg_reply_ph:'Type your reply...',
+    msg_send:'Send',
+    msg_just_now:'Just now',
+    msg_admin:'Admin',
+    msg_you:'You'
   }
 };
 
@@ -1138,22 +1206,168 @@ function closeNotif(){
   $('notifOv').classList.remove('on');
   $('notifSheet').classList.remove('on');
 }
+function _msgTime(iso){
+  if(!iso) return '';
+  var d = new Date(iso), now = new Date();
+  var diff = Math.floor((now-d)/1000);
+  if(diff < 60) return t('msg_just_now');
+  if(diff < 3600) return Math.floor(diff/60)+(LANG==='en'?'m':'د');
+  if(diff < 86400) return Math.floor(diff/3600)+(LANG==='en'?'h':'س');
+  return d.toLocaleDateString(LANG==='en'?'en-US':'ar-KW',{day:'2-digit',month:'short'});
+}
+
 function renderNotifs(){
   var el=$('notifBody');
   if(!NOTIFS.length){
-    el.innerHTML='<div class="empty"><i class="ti ti-bell-check"></i><p>'+t('no_notifs')+'</p><div class="e-sub">'+t('all_good')+'</div></div>';
+    el.innerHTML='<div class="empty"><i class="ti ti-message-2"></i><p>'+t('msg_empty')+'</p><div class="e-sub">'+t('msg_empty_sub')+'</div></div>';
+    _ensureReplyBar();
     return;
   }
-  el.innerHTML = NOTIFS.map(function(n){
-    return '<div class="nt-item">'+
-      '<div class="nt-ic" style="background:'+n.bg+'"><i class="ti '+n.ic+'" style="color:'+n.color+'"></i></div>'+
-      '<div class="nt-body">'+
-        '<div class="nt-title">'+n.title+'</div>'+
-        '<div class="nt-desc">'+n.desc+'</div>'+
-        '<div class="nt-time">'+n.time+'</div>'+
-      '</div></div>';
-  }).join('');
+  // Sort chronologically (oldest at top, newest at bottom — like a chat)
+  var msgs = NOTIFS.slice().sort(function(a,b){
+    return new Date(a.created_at||a._raw_time||0) - new Date(b.created_at||b._raw_time||0);
+  });
+
+  var html = '<div style="display:flex;flex-direction:column;gap:10px;padding:8px 4px 14px">';
+  msgs.forEach(function(n){
+    var mine = (n.from_type === 'driver');
+    var bg = mine ? 'linear-gradient(135deg,#2563eb,#1e40af)' : '#f1f5f9';
+    var color = mine ? '#fff' : '#0f172a';
+    var align = mine ? 'flex-end' : 'flex-start';
+    var senderName = mine ? t('msg_you') : (n.from_name || t('msg_admin'));
+    var br = mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px';
+    var bubble = '<div style="display:flex;flex-direction:column;align-items:'+align+';max-width:85%;'+(mine?'align-self:flex-end':'align-self:flex-start')+'">'+
+      '<div style="font-size:10px;color:#64748b;margin:0 8px 3px;font-weight:700">'+senderName+'</div>'+
+      '<div style="background:'+bg+';color:'+color+';padding:10px 14px;border-radius:'+br+';font-size:14px;line-height:1.5;word-break:break-word;box-shadow:0 2px 6px rgba(0,0,0,0.05)">'+
+        (n.title ? '<div style="font-weight:900;margin-bottom:4px;font-size:13px">'+(n.title)+'</div>' : '')+
+        '<div>'+(n.body||n.desc||'').replace(/\n/g,'<br>')+'</div>'+
+      '</div>'+
+      '<div style="font-size:10px;color:#94a3b8;margin:3px 8px 0">'+_msgTime(n.created_at||n._raw_time)+'</div>'+
+    '</div>';
+    html += bubble;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+  _ensureReplyBar();
+  // Scroll to bottom (newest)
+  try {
+    var sheet = document.getElementById('notifSheet');
+    if(sheet){
+      var body = sheet.querySelector('.sheet-body');
+      if(body) body.scrollTop = body.scrollHeight;
+    }
+  } catch(e){}
+
+  // Mark as read
+  _markMessagesRead();
 }
+
+function _ensureReplyBar(){
+  var sheet = document.getElementById('notifSheet');
+  if(!sheet) return;
+  var bar = document.getElementById('replyBar');
+  if(bar) return;
+  bar = document.createElement('div');
+  bar.id = 'replyBar';
+  bar.style.cssText = 'position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;align-items:center;margin:0 -16px -16px';
+  bar.innerHTML = '<input id="replyInput" type="text" placeholder="'+t('msg_reply_ph')+'" style="flex:1;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:22px;font-family:inherit;font-size:14px;outline:none" onkeydown="if(event.key===\'Enter\'){sendReply()}">'+
+    '<button onclick="sendReply()" style="background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(37,99,235,0.4)"><i class="ti ti-send" style="font-size:18px"></i></button>';
+  sheet.appendChild(bar);
+}
+
+async function sendReply(){
+  var inp = document.getElementById('replyInput');
+  if(!inp) return;
+  var text = (inp.value||'').trim();
+  if(!text) return;
+  if(!DRIVER) return;
+  inp.value = '';
+  inp.disabled = true;
+  try {
+    await fetch(SUPA_URL+'/rest/v1/messages', {
+      method:'POST',
+      headers:{
+        apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json', 'Prefer':'return=minimal'
+      },
+      body: JSON.stringify({
+        recipient: 'admin',
+        from_id: DRIVER.id,
+        from_name: DRIVER.name,
+        from_type: 'driver',
+        body: text,
+        level: 'info',
+        created_at: new Date().toISOString()
+      })
+    });
+    // Optimistic add
+    NOTIFS.push({
+      from_type:'driver', from_name:DRIVER.name, body:text,
+      created_at:new Date().toISOString(), _raw_time:new Date().toISOString()
+    });
+    renderNotifs();
+  } catch(e){ console.error(e); toast(LANG==='en'?'Send failed':'فشل الإرسال'); }
+  inp.disabled = false;
+  inp.focus();
+}
+
+async function _markMessagesRead(){
+  if(!DRIVER) return;
+  try {
+    var ids = NOTIFS.filter(function(n){ return n.id && !n.read_at && n.from_type !== 'driver'; }).map(function(n){ return n.id; });
+    if(!ids.length) return;
+    await fetch(SUPA_URL+'/rest/v1/messages?id=in.('+ids.join(',')+')', {
+      method:'PATCH',
+      headers:{
+        apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json', 'Prefer':'return=minimal'
+      },
+      body: JSON.stringify({ read_at: new Date().toISOString() })
+    });
+    NOTIFS.forEach(function(n){ if(ids.indexOf(n.id)>=0) n.read_at = new Date().toISOString(); });
+    _updateBellBadge();
+  } catch(e){}
+}
+
+function _updateBellBadge(){
+  var dot = document.getElementById('bellDot');
+  if(!dot) return;
+  var unread = NOTIFS.filter(function(n){ return !n.read_at && n.from_type !== 'driver'; }).length;
+  if(unread > 0){
+    dot.textContent = unread > 9 ? '9+' : String(unread);
+    dot.classList.remove('hide');
+  } else {
+    dot.classList.add('hide');
+  }
+}
+
+async function fetchMessages(){
+  if(!DRIVER) return;
+  try {
+    var url = SUPA_URL+'/rest/v1/messages?or=(recipient.eq.'+encodeURIComponent(DRIVER.id)+',recipient.eq.all,and(from_id.eq.'+encodeURIComponent(DRIVER.id)+',recipient.eq.admin))&order=created_at.desc&limit=100&select=*';
+    var res = await fetch(url, {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    var rows = await res.json();
+    if(Array.isArray(rows)){
+      NOTIFS = rows.map(function(r){
+        return {
+          id: r.id,
+          from_id: r.from_id || 'admin',
+          from_name: r.from_name || t('msg_admin'),
+          from_type: r.from_type || 'admin',
+          title: r.title || '',
+          body: r.body || '',
+          read_at: r.read_at,
+          created_at: r.created_at,
+          _raw_time: r.created_at
+        };
+      });
+      _updateBellBadge();
+    }
+  } catch(e){ console.warn('fetchMessages', e); }
+}
+
+// Poll for new messages every 30 seconds
+setInterval(function(){ if(DRIVER) fetchMessages(); }, 30000);
 
 /* =========================================================
    TABS
@@ -1209,6 +1423,12 @@ function renderHome(){
     '<i class="ti ti-'+(inNow?'logout':'login-2')+'"></i> '+(inNow?t('clock_out'):t('clock_in'))+
   '</button>'+
   '<div class="gps-hint"><i class="ti ti-map-pin"></i> '+t('gps_hint_home')+'</div>';
+
+  // === Request Customer Location button — for Caboria drivers ===
+  html += '<button class="custloc-btn" onclick="openCustLocSheet()" style="width:100%;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;padding:14px;border-radius:14px;font-weight:900;font-size:15px;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 18px rgba(37,211,102,0.35);margin:14px 0;position:relative">'+
+    '<i class="ti ti-map-pin-share" style="font-size:20px"></i> '+t('custloc_btn')+
+    '<span id="custLocBadge" style="display:none;position:absolute;top:-4px;left:-4px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">!</span>'+
+  '</button>';
 
   if(lic.level==='bad'){
     var d1 = (lic.days<0) ? t('expired_since',Math.abs(lic.days)) : t('expires_in',lic.days);
@@ -1627,6 +1847,202 @@ function init(){
   tryAutoLogin();
 }
 init();
+
+/* =========================================================
+   CUSTOMER LOCATION REQUEST (Caboria-style, via WhatsApp)
+   ========================================================= */
+var custLocToken = null;
+var custLocPoller = null;
+var custLocStartTime = 0;
+
+function _custLocGenToken(){
+  return 'dr_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+}
+
+function openCustLocSheet(){
+  document.getElementById('custLocTitleTxt').textContent = t('custloc_title');
+  renderCustLocForm();
+  var ov = document.getElementById('custLocOv');
+  ov.style.display = 'flex';
+}
+
+function closeCustLocSheet(){
+  if(custLocPoller){ clearInterval(custLocPoller); custLocPoller = null; }
+  custLocToken = null;
+  document.getElementById('custLocOv').style.display = 'none';
+}
+
+function renderCustLocForm(){
+  var isEn = LANG === 'en';
+  var ta = isEn ? 'left' : 'right';
+  var html = '';
+  html += '<div dir="'+(isEn?'ltr':'rtl')+'" style="text-align:'+ta+'">';
+  html += '<div style="background:#f0fdf4;border-right:3px solid #25d366;padding:10px 12px;border-radius:8px;font-size:12px;color:#065f46;line-height:1.7;margin-bottom:14px">'+t('custloc_intro')+'</div>';
+
+  html += '<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:800;color:#0f3a52;display:block;margin-bottom:5px">'+t('custloc_name')+'</label>'+
+    '<input id="cust-name" type="text" placeholder="..." style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:'+ta+'"></div>';
+
+  html += '<div style="margin-bottom:14px"><label style="font-size:12px;font-weight:800;color:#0f3a52;display:block;margin-bottom:5px">'+t('custloc_phone')+'</label>'+
+    '<input id="cust-phone" type="tel" inputmode="tel" placeholder="'+t('custloc_phone_ph')+'" style="width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:15px;text-align:'+ta+';font-family:JetBrains Mono,monospace"></div>';
+
+  html += '<button onclick="sendCustLocRequest()" style="width:100%;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;padding:13px;border-radius:12px;font-weight:900;font-size:15px;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">'+
+    '<i class="ti ti-brand-whatsapp" style="font-size:20px"></i> '+t('custloc_send')+
+  '</button>';
+
+  // Recent requests (from localStorage)
+  var recent = [];
+  try { recent = JSON.parse(localStorage.getItem('fly_custloc_recent')||'[]'); } catch(e){}
+  if(recent.length){
+    html += '<h4 style="font-size:12px;font-weight:900;color:#0f3a52;margin:18px 0 8px"><i class="ti ti-history"></i> '+t('custloc_recent')+'</h4>';
+    recent.slice(0,5).forEach(function(r){
+      var time = new Date(r.time).toLocaleTimeString(isEn?'en-US':'ar-KW',{hour:'2-digit',minute:'2-digit'});
+      var date = new Date(r.time).toLocaleDateString(isEn?'en-US':'ar-KW',{day:'2-digit',month:'short'});
+      var hasLoc = r.lat && r.lng;
+      html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:6px">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800;font-size:13px">'+(r.name||r.phone)+'</div><div style="font-size:10px;color:#94a3b8">'+date+' · '+time+'</div></div>';
+      if(hasLoc){
+        html += '<a href="https://www.google.com/maps/dir/?api=1&destination='+r.lat+','+r.lng+'" target="_blank" style="background:#3b82f6;color:#fff;padding:6px 11px;border-radius:8px;text-decoration:none;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px"><i class="ti ti-navigation"></i> '+t('custloc_open_maps')+'</a>';
+      } else {
+        html += '<span style="font-size:10px;color:#dc2626;font-weight:700">— لم يُستلم —</span>';
+      }
+      html += '</div></div>';
+    });
+  }
+
+  html += '</div>';
+  document.getElementById('custLocBody').innerHTML = html;
+}
+
+function _saveCustLocHistory(entry){
+  try {
+    var arr = JSON.parse(localStorage.getItem('fly_custloc_recent')||'[]');
+    arr.unshift(entry);
+    arr = arr.slice(0, 20);
+    localStorage.setItem('fly_custloc_recent', JSON.stringify(arr));
+  } catch(e){}
+}
+
+async function sendCustLocRequest(){
+  var name = document.getElementById('cust-name').value.trim();
+  var phone = document.getElementById('cust-phone').value.replace(/\D/g,'');
+  if(!phone || phone.length < 7){ toast(t('custloc_validate_phone')); return; }
+
+  // Generate token + create record
+  var token = _custLocGenToken();
+  try {
+    await fetch(SUPA_URL+'/rest/v1/location_requests', {
+      method:'POST',
+      headers:{
+        apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json', 'Prefer':'return=minimal'
+      },
+      body: JSON.stringify({
+        token: token,
+        driver_id: DRIVER.id,
+        driver_name: DRIVER.name,
+        request_type: 'driver',
+        customer_phone: phone,
+        customer_name: name || null,
+        created_at: new Date().toISOString()
+      })
+    });
+  } catch(e){
+    console.error(e);
+    toast(t('custloc_failure'));
+    return;
+  }
+
+  // Build URL for share-location page
+  var origin = location.origin + location.pathname.replace(/[^/]+$/, '');
+  var shareUrl = origin + 'share-location.html?t=' + encodeURIComponent(token);
+
+  // Open WhatsApp with prefilled message
+  var msg = t('custloc_wa_msg', name, shareUrl);
+  var waNum = phone.length === 8 ? '965'+phone : phone;
+  var waUrl = 'https://wa.me/'+waNum+'?text='+encodeURIComponent(msg);
+  window.open(waUrl, '_blank');
+
+  // Save to history (without location yet)
+  _saveCustLocHistory({token:token, name:name, phone:phone, time:new Date().toISOString()});
+
+  // Start polling for the location
+  custLocToken = token;
+  custLocStartTime = Date.now();
+  if(custLocPoller) clearInterval(custLocPoller);
+
+  // Render waiting UI
+  renderCustLocWaiting();
+
+  var attempts = 0;
+  custLocPoller = setInterval(async function(){
+    attempts++;
+    try {
+      var res = await fetch(SUPA_URL+'/rest/v1/location_requests?token=eq.'+encodeURIComponent(token)+'&select=*',
+        {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+      var rows = await res.json();
+      if(rows && rows.length){
+        var r = rows[0];
+        if(r.received_at && r.latitude && r.longitude){
+          clearInterval(custLocPoller); custLocPoller = null;
+          // Update history with location
+          try {
+            var arr = JSON.parse(localStorage.getItem('fly_custloc_recent')||'[]');
+            for(var i=0;i<arr.length;i++){
+              if(arr[i].token === token){
+                arr[i].lat = parseFloat(r.latitude);
+                arr[i].lng = parseFloat(r.longitude);
+                arr[i].accuracy = r.accuracy_meters;
+                break;
+              }
+            }
+            localStorage.setItem('fly_custloc_recent', JSON.stringify(arr));
+          } catch(e){}
+          renderCustLocReceived(r);
+        }
+      }
+    } catch(e){ console.warn('poll err', e); }
+
+    // Timeout after 5 minutes
+    if(attempts > 150){
+      clearInterval(custLocPoller); custLocPoller = null;
+      var st = document.getElementById('custLocStatus');
+      if(st) st.innerHTML = '<span style="color:#dc2626">'+t('custloc_timeout')+'</span>';
+    }
+  }, 2000);
+}
+
+function renderCustLocWaiting(){
+  var html = '<div style="text-align:center;padding:30px 20px">';
+  html += '<div style="width:80px;height:80px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;animation:pulseBox 1.5s infinite"><i class="ti ti-clock-bolt" style="font-size:40px;color:#d97706"></i></div>';
+  html += '<div id="custLocStatus" style="font-size:14px;color:#92400e;font-weight:800;margin-bottom:8px">'+t('custloc_waiting')+'</div>';
+  html += '<div style="font-size:12px;color:#94a3b8">'+(LANG==='en'?'Waiting up to 5 minutes...':'الانتظار حتى 5 دقائق...')+'</div>';
+  html += '<button onclick="closeCustLocSheet()" style="margin-top:24px;background:#f1f5f9;border:none;color:#475569;padding:11px 22px;border-radius:10px;font-weight:800;cursor:pointer;font-family:inherit">'+t('custloc_close')+'</button>';
+  html += '</div>';
+  html += '<style>@keyframes pulseBox{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}</style>';
+  document.getElementById('custLocBody').innerHTML = html;
+}
+
+function renderCustLocReceived(r){
+  var lat = parseFloat(r.latitude), lng = parseFloat(r.longitude);
+  var accuracy = r.accuracy_meters ? Math.round(r.accuracy_meters) : null;
+  var mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng+'&travelmode=driving';
+
+  var html = '<div style="text-align:center;padding:20px">';
+  html += '<div style="width:88px;height:88px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 12px 30px rgba(16,185,129,0.4);animation:popIn .5s ease"><i class="ti ti-check" style="font-size:52px;color:#fff"></i></div>';
+  html += '<div style="font-size:18px;font-weight:900;color:#065f46;margin-bottom:6px">'+t('custloc_received')+'</div>';
+  if(accuracy) html += '<div style="font-size:12px;color:#94a3b8;margin-bottom:14px">GPS · ±'+accuracy+(LANG==='en'?' m':' متر')+'</div>';
+
+  html += '<div style="background:#f0fdf4;border:1px solid #10b981;border-radius:12px;padding:12px;margin-bottom:18px;font-family:JetBrains Mono,monospace;font-size:13px;color:#065f46;font-weight:800">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div>';
+
+  html += '<a href="'+mapsUrl+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;padding:15px;border-radius:12px;text-decoration:none;font-weight:900;font-size:15px;box-shadow:0 6px 18px rgba(59,130,246,0.4);margin-bottom:10px">'+
+    '<i class="ti ti-navigation" style="font-size:20px"></i> '+t('custloc_open_maps')+
+  '</a>';
+
+  html += '<button onclick="closeCustLocSheet()" style="width:100%;background:#f1f5f9;border:none;color:#475569;padding:11px;border-radius:10px;font-weight:800;cursor:pointer;font-family:inherit">'+t('custloc_close')+'</button>';
+  html += '</div>';
+  html += '<style>@keyframes popIn{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}</style>';
+  document.getElementById('custLocBody').innerHTML = html;
+}
 
 /* =========================================================
    DAILY REPORT TAB — Driver submits daily report
