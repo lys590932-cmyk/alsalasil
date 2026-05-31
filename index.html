@@ -425,7 +425,7 @@ button,input,select{font-family:'Cairo',sans-serif}
 <div class="sheet" id="notifSheet">
   <div class="sheet-handle"></div>
   <div class="sheet-head">
-    <h3><i class="ti ti-bell" style="color:var(--amber2)"></i> <span data-i18n="notifications">التنبيهات</span></h3>
+    <h3><i class="ti ti-messages" style="color:var(--amber2)"></i> <span id="msgSheetTitle">المحادثة</span></h3>
     <button class="sheet-close" onclick="closeNotif()"><i class="ti ti-x"></i></button>
   </div>
   <div class="sheet-body" id="notifBody"></div>
@@ -1220,9 +1220,16 @@ function computeNotifs(){
 }
 
 function openNotif(){
-  renderNotifs();
+  var ttl = document.getElementById('msgSheetTitle');
+  if(ttl) ttl.textContent = t('msg_title');
   $('notifOv').classList.add('on');
   $('notifSheet').classList.add('on');
+  // Always re-fetch when opening for freshest content
+  if(DRIVER){
+    fetchMessages().then(function(){ renderNotifs(); });
+  } else {
+    renderNotifs();
+  }
 }
 function closeNotif(){
   $('notifOv').classList.remove('on');
@@ -1288,13 +1295,81 @@ function _ensureReplyBar(){
   var sheet = document.getElementById('notifSheet');
   if(!sheet) return;
   var bar = document.getElementById('replyBar');
-  if(bar) return;
+  if(bar){
+    _updateNotifStatusBar();
+    return;
+  }
+  // Notification status banner
+  var statusBar = document.createElement('div');
+  statusBar.id = 'notifStatusBar';
+  statusBar.style.cssText = 'background:#fef3c7;border-bottom:1px solid #fcd34d;padding:10px 14px;font-size:12px;color:#92400e;display:none;align-items:center;justify-content:space-between;gap:8px;margin:0 -16px';
+  sheet.appendChild(statusBar);
+
   bar = document.createElement('div');
   bar.id = 'replyBar';
   bar.style.cssText = 'position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;align-items:center;margin:0 -16px -16px';
   bar.innerHTML = '<input id="replyInput" type="text" placeholder="'+t('msg_reply_ph')+'" style="flex:1;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:22px;font-family:inherit;font-size:14px;outline:none" onkeydown="if(event.key===\'Enter\'){sendReply()}">'+
     '<button onclick="sendReply()" style="background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(37,99,235,0.4)"><i class="ti ti-send" style="font-size:18px"></i></button>';
   sheet.appendChild(bar);
+  _updateNotifStatusBar();
+}
+
+function _updateNotifStatusBar(){
+  var bar = document.getElementById('notifStatusBar');
+  if(!bar) return;
+  if(!('Notification' in window)){
+    bar.style.display = 'flex';
+    bar.innerHTML = '<span><i class="ti ti-alert-triangle"></i> '+(LANG==='en'?'Notifications not supported on this browser':'الجهاز لا يدعم الإشعارات')+'</span>';
+    return;
+  }
+  var perm = Notification.permission;
+  if(perm === 'granted'){
+    bar.style.display = 'flex';
+    bar.style.background = '#dcfce7';
+    bar.style.borderColor = '#86efac';
+    bar.style.color = '#166534';
+    bar.innerHTML = '<span><i class="ti ti-bell-ringing"></i> '+(LANG==='en'?'Notifications enabled':'الإشعارات مفعّلة')+'</span>'+
+      '<button onclick="testNotif()" style="background:#16a34a;color:#fff;border:none;padding:6px 12px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer"><i class="ti ti-test-pipe"></i> '+(LANG==='en'?'Test':'اختبار')+'</button>';
+  } else if(perm === 'default'){
+    bar.style.display = 'flex';
+    bar.style.background = '#fef3c7';
+    bar.style.borderColor = '#fcd34d';
+    bar.style.color = '#92400e';
+    bar.innerHTML = '<span><i class="ti ti-bell-off"></i> '+(LANG==='en'?'Tap to enable notifications':'فعّل الإشعارات للسائق')+'</span>'+
+      '<button onclick="enableNotifs()" style="background:#d97706;color:#fff;border:none;padding:6px 12px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">'+(LANG==='en'?'Enable':'تفعيل')+'</button>';
+  } else if(perm === 'denied'){
+    bar.style.display = 'flex';
+    bar.style.background = '#fee2e2';
+    bar.style.borderColor = '#fca5a5';
+    bar.style.color = '#991b1b';
+    bar.innerHTML = '<span><i class="ti ti-bell-x"></i> '+(LANG==='en'?'Notifications blocked — enable in browser settings':'الإشعارات محظورة — فعّلها من إعدادات المتصفح')+'</span>';
+  }
+}
+
+async function enableNotifs(){
+  var ok = await requestPushPermission();
+  _updateNotifStatusBar();
+  if(ok){
+    toast(LANG==='en'?'Notifications enabled ✓':'تم تفعيل الإشعارات ✓');
+    setTimeout(function(){ testNotif(); }, 600);
+  } else {
+    toast(LANG==='en'?'Permission denied':'تم رفض الإذن');
+  }
+}
+
+async function testNotif(){
+  if(Notification.permission !== 'granted'){
+    var ok = await requestPushPermission();
+    if(!ok){ toast(LANG==='en'?'Enable permission first':'فعّل الإذن أولاً'); return; }
+  }
+  await showPushNotif({
+    title: LANG==='en'?'Test notification':'إشعار تجريبي',
+    body: LANG==='en'?'If you can see this, notifications work!':'لو شفت ده، الإشعارات شغالة!',
+    tag: 'test-'+Date.now(),
+    data: {url:'./'}
+  });
+  if(navigator.vibrate) navigator.vibrate([200,100,200]);
+  toast(LANG==='en'?'Test sent — check your phone':'تم الإرسال — اطلع على شاشة موبايلك');
 }
 
 async function sendReply(){
@@ -1391,6 +1466,128 @@ async function fetchMessages(){
 
 // Poll for new messages every 30 seconds
 setInterval(function(){ if(DRIVER) fetchMessages(); }, 30000);
+
+/* =========================================================
+   PUSH NOTIFICATIONS — إشعارات الموبايل الفعلية
+   ========================================================= */
+var NOTIF_SEEN_IDS = (function(){
+  try { return new Set(JSON.parse(localStorage.getItem('fly_notif_seen')||'[]')); }
+  catch(e){ return new Set(); }
+})();
+
+function _persistSeenIds(){
+  try {
+    var arr = Array.from(NOTIF_SEEN_IDS).slice(-200);
+    localStorage.setItem('fly_notif_seen', JSON.stringify(arr));
+  } catch(e){}
+}
+
+async function requestPushPermission(){
+  if(!('Notification' in window) || !('serviceWorker' in navigator)) return false;
+  if(Notification.permission === 'granted') return true;
+  if(Notification.permission === 'denied') return false;
+  try {
+    var res = await Notification.requestPermission();
+    return res === 'granted';
+  } catch(e){ return false; }
+}
+
+// Show a notification via the active service worker
+async function showPushNotif(payload){
+  if(!('serviceWorker' in navigator)) return;
+  if(Notification.permission !== 'granted') return;
+  try {
+    var reg = await navigator.serviceWorker.ready;
+    // Try sending message to SW first
+    if(reg.active){
+      reg.active.postMessage({type:'SHOW_NOTIFICATION', payload:payload});
+    } else if('showNotification' in reg){
+      // Fallback: show directly via registration
+      reg.showNotification(payload.title, {
+        body: payload.body,
+        icon: payload.icon || './icon-192.png',
+        badge: './icon-192.png',
+        tag: payload.tag || 'msg',
+        renotify: true,
+        vibrate: [200, 100, 200],
+        dir: 'rtl',
+        data: payload.data || {}
+      });
+    }
+  } catch(e){ console.warn('showPushNotif', e); }
+}
+
+// Hook into fetchMessages — when new admin/restaurant messages arrive, notify
+var _origFetchMessages = fetchMessages;
+fetchMessages = async function(){
+  await _origFetchMessages();
+  // Find unread admin/restaurant messages we haven't notified about yet
+  var now = Date.now();
+  var fresh = NOTIFS.filter(function(n){
+    if(!n.id || !n.from_type || n.from_type === 'driver') return false;
+    if(NOTIF_SEEN_IDS.has(n.id)) return false;
+    if(n.read_at) return false;
+    // Only fire notification for messages received in the last 10 minutes
+    var msgAge = now - new Date(n.created_at || n._raw_time || 0).getTime();
+    return msgAge < 10 * 60 * 1000;  // 10 minutes
+  });
+  if(!fresh.length){ _updateBellBadge(); return; }
+  // Show notification for each fresh message
+  fresh.forEach(function(n){
+    NOTIF_SEEN_IDS.add(n.id);
+    var senderName = n.from_name || (LANG==='en'?'Admin':'الإدارة');
+    var bodyText = (n.body || '').replace(/<[^>]+>/g,'').substring(0,180);
+    // Skip if app is focused AND messages sheet is open (user is reading)
+    var sheetOpen = document.getElementById('notifOv') && document.getElementById('notifOv').classList.contains('on');
+    if(document.hasFocus() && sheetOpen) return;
+    showPushNotif({
+      title: senderName,
+      body: bodyText,
+      tag: 'msg-'+n.id,
+      data: {url:'./', msgId:n.id, openMessages:true}
+    });
+    if(navigator.vibrate) navigator.vibrate([150, 80, 150]);
+  });
+  _persistSeenIds();
+  _updateBellBadge();
+};
+
+// Mark all CURRENT existing messages as seen on first load (skip the welcome blast)
+setTimeout(function(){
+  if(NOTIFS && NOTIFS.length){
+    NOTIFS.forEach(function(n){ if(n.id) NOTIF_SEEN_IDS.add(n.id); });
+    _persistSeenIds();
+    console.log('[Notif] initial baseline set:', NOTIF_SEEN_IDS.size, 'msgs marked seen');
+  }
+}, 4000);
+
+// Listen for clicks on notifications (from service worker)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'OPEN_MESSAGES'){
+      // Open the messages sheet
+      if(typeof openNotif === 'function') openNotif();
+    }
+  });
+}
+
+// Try to ask for permission on first user interaction (browsers require user gesture)
+function _askPermissionOnGesture(){
+  var asked = false;
+  function attempt(){
+    if(asked) return;
+    asked = true;
+    requestPushPermission().then(function(granted){
+      if(granted){
+        console.log('[Notifications] permission granted');
+      }
+    });
+  }
+  ['click','touchstart','keydown'].forEach(function(ev){
+    document.addEventListener(ev, attempt, {once:true, passive:true});
+  });
+}
+_askPermissionOnGesture();
 
 /* =========================================================
    TABS
