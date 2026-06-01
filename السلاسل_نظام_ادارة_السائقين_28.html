@@ -1097,6 +1097,7 @@ table td{padding:11px 12px!important;font-size:13px!important}
     <button class="tbtn" onclick="syncDriversToSupabase()" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)" title="Sync drivers to app"><i class="ti ti-arrows-exchange"></i> <span data-i18n="btn_sync_app">مزامنة App</span></button>
     <button class="tbtn" onclick="openSendMsgModal()" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)"><i class="ti ti-message-circle"></i> <span data-i18n="btn_send_msg">إرسال رسالة</span></button>
     <button class="tbtn" onclick="openInboxModal()" style="color:#22d3ee;border-color:rgba(34,211,238,0.35);position:relative"><i class="ti ti-inbox"></i> <span data-i18n="btn_inbox">صندوق الوارد</span><span id="inboxBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,0.4)">0</span></button>
+    <button class="tbtn" onclick="openSocietiesModal()" style="color:#c29449;border-color:rgba(194,148,73,0.45)"><i class="ti ti-building-bank"></i> الجمعيات</button>
     <button class="tbtn" onclick="manualSaveFile()" style="color:#fbbf24;border-color:rgba(251,191,36,0.35)"><i class="ti ti-device-floppy"></i> <span data-i18n="btn_save_file">حفظ الملف</span></button>
     <button class="tbtn" onclick="openBackupModal()" style="color:#22c55e;border-color:rgba(34,197,94,0.4);position:relative" title="نسخة احتياطية على السحابة">
       <i class="ti ti-cloud-upload"></i> <span data-i18n="btn_backup">نسخ احتياطي</span>
@@ -1487,6 +1488,41 @@ function onStaffTypeChange(){
     <div class="macts">
       <button class="btn btn-c" onclick="closeModal('sendMsgModal')">إلغاء</button>
       <button class="btn btn-s" onclick="sendMessage()"><i class="ti ti-send"></i> إرسال</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOCIETIES MODAL -->
+<div class="ov" id="societiesModal" onclick="if(event.target===this)closeModal('societiesModal')">
+  <div class="modal" style="max-width:780px">
+    <h2><i class="ti ti-building-bank" style="color:#c29449"></i> إدارة الجمعيات التعاونية</h2>
+    <div style="display:flex;gap:8px;margin:10px 0 14px">
+      <button class="btn btn-s" onclick="openAddSocietyModal()"><i class="ti ti-plus"></i> إضافة جمعية</button>
+      <button class="tbtn" onclick="fetchSocieties()" style="color:#22d3ee"><i class="ti ti-refresh"></i> تحديث</button>
+    </div>
+    <div id="societiesList" style="max-height:500px;overflow-y:auto"></div>
+    <div class="macts">
+      <button class="btn btn-c" onclick="closeModal('societiesModal')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT SOCIETY MODAL -->
+<div class="ov" id="societyEditModal" onclick="if(event.target===this)closeModal('societyEditModal')">
+  <div class="modal" style="max-width:560px">
+    <h2><i class="ti ti-building-bank" style="color:#c29449"></i> <span id="socEditTitle">إضافة جمعية</span></h2>
+    <input type="hidden" id="soc-edit-orig-id">
+    <div class="fg full"><label>كود الجمعية (يستخدم لتسجيل الدخول)</label><input id="soc-id" placeholder="مثال: FAHAHEEL"></div>
+    <div class="fg full"><label>الاسم بالعربي</label><input id="soc-name" placeholder="جمعية الفحيحيل التعاونية"></div>
+    <div class="fg full"><label>الاسم بالإنجليزي</label><input id="soc-name-en" placeholder="Fahaheel Cooperative Society"></div>
+    <div class="fg"><label>المنطقة</label><input id="soc-area"></div>
+    <div class="fg"><label>اسم المدير</label><input id="soc-manager"></div>
+    <div class="fg"><label>هاتف المدير</label><input id="soc-phone"></div>
+    <div class="fg"><label>الرمز السري</label><input id="soc-pin" placeholder="1234"></div>
+    <div class="fg"><label>لون الهوية</label><input id="soc-color" type="color" value="#0F3A52"></div>
+    <div class="macts">
+      <button class="btn btn-c" onclick="closeModal('societyEditModal')">إلغاء</button>
+      <button class="btn btn-s" onclick="saveSociety()"><i class="ti ti-check"></i> حفظ</button>
     </div>
   </div>
 </div>
@@ -3722,6 +3758,121 @@ async function syncDriversToSupabase() {
 // SEND MESSAGES TO DRIVERS
 // ============================================================
 /* =========================================================
+   SOCIETIES MANAGEMENT
+   ========================================================= */
+let SOCIETIES = [];
+
+async function fetchSocieties(){
+  try {
+    const r = await fetch(SUPA_URL+'/rest/v1/societies?order=name.asc', {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+    const rows = await r.json();
+    if(Array.isArray(rows)){
+      SOCIETIES = rows;
+      renderSocietiesList();
+    }
+  } catch(e){ console.warn('fetchSocieties', e); }
+}
+
+function openSocietiesModal(){
+  fetchSocieties().then(()=> document.getElementById('societiesModal').classList.add('on'));
+}
+
+function renderSocietiesList(){
+  const el = document.getElementById('societiesList');
+  if(!el) return;
+  if(!SOCIETIES.length){
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted2)"><i class="ti ti-building-bank" style="font-size:48px;opacity:0.3"></i><p style="margin-top:10px">لا توجد جمعيات مسجلة بعد. اضغط "إضافة جمعية".</p><p style="font-size:11px;margin-top:6px">تأكد من تشغيل ملف societies-setup.sql أولاً.</p></div>';
+    return;
+  }
+  el.innerHTML = SOCIETIES.map(s => {
+    const ordersCount = (typeof ORDERS_ALL !== 'undefined') ? ORDERS_ALL.filter(o=>o.society_id===s.id).length : 0;
+    return `<div class="row" style="cursor:pointer;padding:12px;border-bottom:1px solid var(--br);display:flex;align-items:center;gap:12px">
+      <div style="width:44px;height:44px;border-radius:12px;background:${s.brand_color||'#0F3A52'};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px">${(s.id||'').substring(0,2)}</div>
+      <div style="flex:1">
+        <div style="font-weight:800;color:var(--text)">${s.name}</div>
+        <div style="font-size:11px;color:var(--muted2)">${s.id} · ${s.area||'-'} · ${ordersCount} طلب · ${s.active?'<span style="color:#10b981">نشط</span>':'<span style="color:#ef4444">معطّل</span>'}</div>
+      </div>
+      <button class="tbtn" onclick="event.stopPropagation();editSociety('${s.id}')" style="color:#3b82f6;padding:6px 10px"><i class="ti ti-edit"></i></button>
+      <button class="tbtn" onclick="event.stopPropagation();toggleSocietyActive('${s.id}',${!s.active})" style="color:${s.active?'#ef4444':'#10b981'};padding:6px 10px"><i class="ti ti-${s.active?'ban':'check'}"></i></button>
+    </div>`;
+  }).join('');
+}
+
+function openAddSocietyModal(){
+  document.getElementById('socEditTitle').textContent = 'إضافة جمعية';
+  ['soc-edit-orig-id','soc-id','soc-name','soc-name-en','soc-area','soc-manager','soc-phone','soc-pin'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('soc-color').value = '#0F3A52';
+  document.getElementById('societyEditModal').classList.add('on');
+}
+
+function editSociety(id){
+  const s = SOCIETIES.find(x => x.id === id);
+  if(!s) return;
+  document.getElementById('socEditTitle').textContent = 'تعديل جمعية';
+  document.getElementById('soc-edit-orig-id').value = s.id;
+  document.getElementById('soc-id').value = s.id;
+  document.getElementById('soc-name').value = s.name||'';
+  document.getElementById('soc-name-en').value = s.name_en||'';
+  document.getElementById('soc-area').value = s.area||'';
+  document.getElementById('soc-manager').value = s.manager_name||'';
+  document.getElementById('soc-phone').value = s.manager_phone||'';
+  document.getElementById('soc-pin').value = s.pin||'';
+  document.getElementById('soc-color').value = s.brand_color||'#0F3A52';
+  document.getElementById('societyEditModal').classList.add('on');
+}
+
+async function saveSociety(){
+  const origId = document.getElementById('soc-edit-orig-id').value;
+  const id = document.getElementById('soc-id').value.trim().toUpperCase();
+  const name = document.getElementById('soc-name').value.trim();
+  const pin = document.getElementById('soc-pin').value.trim();
+  if(!id || !name || !pin){ toast('الكود والاسم والرمز السري مطلوبة','e'); return; }
+
+  const payload = {
+    id, name,
+    name_en: document.getElementById('soc-name-en').value || null,
+    area: document.getElementById('soc-area').value || null,
+    manager_name: document.getElementById('soc-manager').value || null,
+    manager_phone: document.getElementById('soc-phone').value || null,
+    pin: pin,
+    brand_color: document.getElementById('soc-color').value || '#0F3A52',
+    active: true
+  };
+
+  let url = SUPA_URL+'/rest/v1/societies';
+  let method = 'POST';
+  if(origId){
+    url += '?id=eq.'+encodeURIComponent(origId);
+    method = 'PATCH';
+  }
+  const res = await fetch(url, {
+    method, headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+    body: JSON.stringify(payload)
+  });
+  if(res.ok){
+    toast('تم الحفظ ✓','s');
+    closeModal('societyEditModal');
+    fetchSocieties();
+  } else {
+    const err = await res.text();
+    toast('فشل: '+err.substring(0,80),'e');
+  }
+}
+
+async function toggleSocietyActive(id, newState){
+  await fetch(SUPA_URL+'/rest/v1/societies?id=eq.'+encodeURIComponent(id), {
+    method:'PATCH',
+    headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+    body: JSON.stringify({active: newState})
+  });
+  toast('تم التحديث','s');
+  fetchSocieties();
+}
+
+// Load societies on startup
+setTimeout(fetchSocieties, 3000);
+
+/* =========================================================
    INBOX — Two-way conversation system
    ========================================================= */
 var INBOX_MSGS = [];
@@ -3777,8 +3928,10 @@ function renderInboxList(){
       else {
         var dr = (typeof DRV !== 'undefined') ? DRV.find(function(d){ return d.id === key; }) : null;
         var rs = (typeof RESTAURANTS !== 'undefined') ? RESTAURANTS.find(function(x){ return x.id === key; }) : null;
+        var sc = (typeof SOCIETIES !== 'undefined') ? SOCIETIES.find(function(x){ return x.id === key; }) : null;
         if(dr){ name = dr.name; type = 'driver'; }
         else if(rs){ name = rs.name; type = 'restaurant'; }
+        else if(sc){ name = sc.name; type = 'society'; }
         else { name = key; type = 'unknown'; }
       }
     } else {
@@ -3806,8 +3959,8 @@ function renderInboxList(){
   el.innerHTML = convs.map(function(c){
     var preview = (c.last.body || c.last.title || '').slice(0, 50);
     var time = new Date(c.last.created_at).toLocaleString('ar-KW',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    var icon = c.type === 'driver' ? 'ti-user' : c.type === 'restaurant' ? 'ti-building-store' : 'ti-broadcast';
-    var iconBg = c.type === 'driver' ? '#3b82f6' : c.type === 'restaurant' ? '#f59e0b' : '#a78bfa';
+    var icon = c.type === 'driver' ? 'ti-user' : c.type === 'restaurant' ? 'ti-building-store' : c.type === 'society' ? 'ti-building-bank' : 'ti-broadcast';
+    var iconBg = c.type === 'driver' ? '#3b82f6' : c.type === 'restaurant' ? '#f59e0b' : c.type === 'society' ? '#c29449' : '#a78bfa';
     var active = INBOX_ACTIVE && INBOX_ACTIVE.id === c.id ? 'background:rgba(34,211,238,0.15);border-right:3px solid #22d3ee' : '';
     return '<div onclick="openInboxConv(\''+c.id+'\',\''+c.type+'\',\''+(c.name||'').replace(/\'/g,'')+'\')" style="padding:12px 14px;border-bottom:1px solid var(--br);cursor:pointer;display:flex;gap:10px;align-items:center;'+active+';transition:background .15s" onmouseover="this.style.background=\'rgba(34,211,238,0.08)\'" onmouseout="this.style.background=\''+(INBOX_ACTIVE && INBOX_ACTIVE.id === c.id ? 'rgba(34,211,238,0.15)' : 'transparent')+'\'">'+
       '<div style="width:38px;height:38px;border-radius:50%;background:'+iconBg+';display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0"><i class="ti '+icon+'" style="font-size:18px"></i></div>'+
