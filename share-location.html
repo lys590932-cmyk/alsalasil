@@ -61,6 +61,37 @@ h1{font-size:22px;font-weight:900;margin-bottom:8px;color:#0f3a52}
       <i class="ti ti-current-location"></i> أرسل موقعي الحالي
     </button>
     <div class="err" id="errBox"></div>
+
+    <!-- Fallback: paste coordinates from Google Maps -->
+    <div id="fallbackBox" style="display:none;background:#FEF9E7;border:2px dashed #F59E0B;border-radius:14px;padding:16px;margin-top:14px;font-family:inherit">
+      <div style="font-weight:900;color:#B45309;font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-bulb" style="font-size:22px"></i> الطريقة البديلة (مضمونة 100%)
+      </div>
+      <div style="font-size:13px;color:#78350F;line-height:1.8;margin-bottom:12px">
+        <b>الخطوات:</b><br>
+        1️⃣ افتح <b>Google Maps</b> على موبايلك<br>
+        2️⃣ هيبيّن مكانك بنقطة زرقاء 🔵<br>
+        3️⃣ <b>اضغط مطوّل</b> على النقطة الزرقاء (ثانيتين)<br>
+        4️⃣ هتظهر إحداثيات فوق (مثلاً: 29.36482, 47.97810)<br>
+        5️⃣ <b>اضغطها وانسخها</b><br>
+        6️⃣ الصقها هنا تحت:
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input id="mLat" placeholder="lat (مثل: 29.3648)" inputmode="decimal" style="flex:1;padding:11px;border:1.5px solid #FCD34D;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:14px;text-align:center;outline:none">
+        <input id="mLng" placeholder="lng (مثل: 47.9781)" inputmode="decimal" style="flex:1;padding:11px;border:1.5px solid #FCD34D;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:14px;text-align:center;outline:none">
+      </div>
+      <div style="font-size:11px;color:#92400E;margin-bottom:10px;text-align:center">
+        💡 لو نسخت الإحداثيات الزوج كامل (29.36, 47.97) الصقهم في خانة lat والثاني يتعبّأ تلقائياً
+      </div>
+      <button type="button" onclick="submitManualCoords()" style="width:100%;background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff;border:none;padding:13px;border-radius:12px;font-family:inherit;font-weight:900;font-size:14px;cursor:pointer">
+        <i class="ti ti-send"></i> إرسال الإحداثيات للمطعم
+      </button>
+      <div style="margin-top:12px;text-align:center">
+        <a href="https://www.google.com/maps" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #FCD34D;color:#B45309;padding:9px 16px;border-radius:10px;font-weight:800;font-size:13px;text-decoration:none">
+          <i class="ti ti-external-link"></i> فتح Google Maps الآن
+        </a>
+      </div>
+    </div>
   </div>
 
   <div class="success" id="successScreen">
@@ -144,7 +175,15 @@ async function shareLocation(){
     },
     (perr) => {
       let msg = 'تعذّر تحديد الموقع';
-      if(perr.code === perr.PERMISSION_DENIED) msg = '🚫 رفضت السماح للوصول للموقع. اضغط على أيقونة القفل في شريط العنوان وفعّلها وحاول مرة أخرى.';
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if(perr.code === perr.PERMISSION_DENIED){
+        if(isIOS){
+          msg = '<b>🚫 الإذن مرفوض على الـiPhone</b><br><br>لتفعيله:<br>1️⃣ افتح <b>الإعدادات</b><br>2️⃣ ابحث عن <b>Safari</b> → <b>الموقع</b><br>3️⃣ غيّره من "لا تسمح" إلى <b>"اسأل" أو "السماح"</b><br>4️⃣ ارجع لهذه الصفحة وحدّثها (اسحب لتحت ⬇️)<br><br>أو استخدم <b>الطريقة البديلة</b> ↓';
+        } else {
+          msg = '🚫 رفضت السماح للوصول للموقع.<br><br>على Android:<br>1️⃣ اضغط على أيقونة القفل 🔒 جنب الرابط فوق<br>2️⃣ اضغط <b>الأذونات</b> أو <b>Permissions</b><br>3️⃣ فعّل <b>الموقع/Location</b><br>4️⃣ حدّث الصفحة<br><br>أو استخدم <b>الطريقة البديلة</b> ↓';
+        }
+        showFallback();
+      }
       else if(perr.code === perr.POSITION_UNAVAILABLE) msg = '📡 الموقع غير متاح حالياً. تأكد من تشغيل GPS وحاول مرة أخرى.';
       else if(perr.code === perr.TIMEOUT) msg = '⏱️ انتهت المهلة — حاول مرة أخرى في مكان مفتوح.';
       showErr(msg);
@@ -153,6 +192,61 @@ async function shareLocation(){
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
   );
+}
+
+function showFallback(){
+  const wrap = document.getElementById('fallbackBox');
+  if(wrap) wrap.style.display = 'block';
+}
+
+// Auto-split if user pastes "29.36, 47.97" or "29.36 47.97" in lat field
+document.addEventListener('DOMContentLoaded', ()=>{
+  const lat = document.getElementById('mLat');
+  if(lat){
+    lat.addEventListener('input', ()=>{
+      const v = lat.value.trim();
+      const m = v.match(/^([\-0-9.]+)[,\s]+([\-0-9.]+)$/);
+      if(m){
+        lat.value = m[1];
+        const lng = document.getElementById('mLng');
+        if(lng) lng.value = m[2];
+      }
+    });
+  }
+});
+
+async function submitManualCoords(){
+  // Re-split in case user just typed the comma version
+  const latRaw = document.getElementById('mLat').value.trim();
+  const m = latRaw.match(/^([\-0-9.]+)[,\s]+([\-0-9.]+)$/);
+  if(m){
+    document.getElementById('mLat').value = m[1];
+    document.getElementById('mLng').value = m[2];
+  }
+  const lat = parseFloat(document.getElementById('mLat').value);
+  const lng = parseFloat(document.getElementById('mLng').value);
+  if(!lat || !lng || isNaN(lat) || isNaN(lng)){
+    alert('أدخل الإحداثيات بشكل صحيح');
+    return;
+  }
+  if(lat < 28 || lat > 31 || lng < 46 || lng > 50){
+    if(!confirm('الإحداثيات خارج الكويت — هل أنت متأكد؟')) return;
+  }
+  try {
+    const res = await fetch(SUPA_URL+'/rest/v1/location_requests?token=eq.'+encodeURIComponent(TOKEN), {
+      method:'PATCH',
+      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({
+        latitude: lat, longitude: lng, accuracy_meters: 0,
+        received_at: new Date().toISOString()
+      })
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    document.getElementById('coordsBox').textContent = 'الإحداثيات: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+    showSuccess();
+  } catch(e){
+    alert('فشل الإرسال: '+e.message);
+  }
 }
 
 function showSuccess(){
