@@ -177,10 +177,31 @@ async function shareLocation(){
       let msg = 'تعذّر تحديد الموقع';
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if(perr.code === perr.PERMISSION_DENIED){
+        // Detect which browser is being used
+        const ua = navigator.userAgent;
+        const isChrome = /CriOS|Chrome/.test(ua);
+        const isSafari = /Safari/.test(ua) && !isChrome;
         if(isIOS){
-          msg = '<b>🚫 الإذن مرفوض على الـiPhone</b><br><br>لتفعيله:<br>1️⃣ افتح <b>الإعدادات</b><br>2️⃣ ابحث عن <b>Safari</b> → <b>الموقع</b><br>3️⃣ غيّره من "لا تسمح" إلى <b>"اسأل" أو "السماح"</b><br>4️⃣ ارجع لهذه الصفحة وحدّثها (اسحب لتحت ⬇️)<br><br>أو استخدم <b>الطريقة البديلة</b> ↓';
+          msg = '<b>🚫 الإذن مرفوض على الـiPhone</b><br><br>'+
+                '<b>لو فاتح بـSafari:</b><br>'+
+                '1️⃣ افتح <b>الإعدادات</b> → <b>Safari</b><br>'+
+                '2️⃣ <b>الموقع</b> → غيّره لـ "اسأل" أو "السماح"<br><br>'+
+                '<b>لو فاتح بـChrome:</b><br>'+
+                '1️⃣ افتح <b>الإعدادات</b> → <b>Chrome</b><br>'+
+                '2️⃣ <b>الموقع</b> → فعّله<br><br>'+
+                '✅ بعدين ارجع للصفحة وحدّثها (اسحب لتحت ⬇️)<br><br>'+
+                'أو استخدم <b>الطريقة البديلة</b> ↓';
         } else {
-          msg = '🚫 رفضت السماح للوصول للموقع.<br><br>على Android:<br>1️⃣ اضغط على أيقونة القفل 🔒 جنب الرابط فوق<br>2️⃣ اضغط <b>الأذونات</b> أو <b>Permissions</b><br>3️⃣ فعّل <b>الموقع/Location</b><br>4️⃣ حدّث الصفحة<br><br>أو استخدم <b>الطريقة البديلة</b> ↓';
+          msg = '<b>🚫 الإذن مرفوض</b><br><br>'+
+                '<b>على Chrome / Edge:</b><br>'+
+                '1️⃣ اضغط على أيقونة 🔒 أو ℹ️ جنب الرابط فوق<br>'+
+                '2️⃣ <b>الأذونات / Permissions</b><br>'+
+                '3️⃣ فعّل <b>الموقع / Location</b><br>'+
+                '4️⃣ حدّث الصفحة<br><br>'+
+                '<b>على Samsung Internet:</b><br>'+
+                '1️⃣ اضغط ⓘ جنب الرابط<br>'+
+                '2️⃣ فعّل أذونات الموقع<br><br>'+
+                'أو استخدم <b>الطريقة البديلة</b> ↓';
         }
         showFallback();
       }
