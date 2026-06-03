@@ -4899,6 +4899,15 @@ const EXP_CATS = {
 
 function _matchMonth(dateStr, m, y){
   if(!dateStr) return false;
+  // Parse YYYY-MM-DD directly to avoid timezone issues
+  const s = String(dateStr).slice(0,10);  // YYYY-MM-DD
+  const parts = s.split('-');
+  if(parts.length >= 3){
+    const yy = parseInt(parts[0],10);
+    const mm = parseInt(parts[1],10);
+    return mm === m && yy === y;
+  }
+  // Fallback to Date parsing
   const dt = new Date(dateStr);
   return dt.getMonth()+1===m && dt.getFullYear()===y;
 }
