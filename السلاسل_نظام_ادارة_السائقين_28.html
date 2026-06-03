@@ -4933,10 +4933,19 @@ function saveIncome(){
   const note = document.getElementById('inc-note').value.trim();
   if(!date){ toast('أدخل التاريخ','e'); return; }
   if(!amt || amt<=0){ toast('أدخل مبلغ صحيح','e'); return; }
+  // Parse date in a timezone-safe way (split YYYY-MM-DD)
+  const [y, m, d] = date.split('-').map(n=>parseInt(n,10));
   INCOMES.push({id:'I'+Date.now(), date, amount:amt, source:src, driverId:drv, note});
   saveInc();
   closeModal('incomeModal');
-  toast('تم إضافة الإيراد ✅','s');
+  // Jump view to the month of the income just added
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  if(accMonth !== m || accYear !== y){
+    accMonth = m; accYear = y;
+    toast('تم إضافة الإيراد ✅ — تم الانتقال لشهر '+months[m-1]+' '+y,'s');
+  } else {
+    toast('تم إضافة الإيراد ✅','s');
+  }
   renderAccounting();
 }
 
@@ -4958,10 +4967,17 @@ function saveExpense(){
   const note = document.getElementById('exp-note').value.trim();
   if(!date){ toast('أدخل التاريخ','e'); return; }
   if(!amt || amt<=0){ toast('أدخل مبلغ صحيح','e'); return; }
+  const [y, m, d] = date.split('-').map(n=>parseInt(n,10));
   EXPENSES.push({id:'E'+Date.now(), date, amount:amt, category:cat, driverId:drv, note});
   saveExp();
   closeModal('expenseModal');
-  toast('تم إضافة المصروف ✅','s');
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  if(accMonth !== m || accYear !== y){
+    accMonth = m; accYear = y;
+    toast('تم إضافة المصروف ✅ — تم الانتقال لشهر '+months[m-1]+' '+y,'s');
+  } else {
+    toast('تم إضافة المصروف ✅','s');
+  }
   renderAccounting();
 }
 
