@@ -2633,10 +2633,18 @@ async function renderReport(){
     return y+'-'+m+'-'+da;
   })();
   var locale = (LANG==='en') ? 'en-US' : 'ar-KW';
+  var isEnLang = LANG === 'en';
   // Date object for selected date (parse safely)
   var selParts = selDate.split('-');
   var selDateObj = new Date(parseInt(selParts[0]), parseInt(selParts[1])-1, parseInt(selParts[2]));
-  var todayLabel = selDateObj.toLocaleDateString(locale,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  // Format header date manually to ensure language consistency
+  var _DAY_FULL_AR = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  var _DAY_FULL_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var _MON_FULL_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  var _MON_FULL_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var todayLabel = isEnLang
+    ? (_DAY_FULL_EN[selDateObj.getDay()]+', '+selDateObj.getDate()+' '+_MON_FULL_EN[selDateObj.getMonth()]+' '+selDateObj.getFullYear())
+    : (_DAY_FULL_AR[selDateObj.getDay()]+'، '+selDateObj.getDate()+' '+_MON_FULL_AR[selDateObj.getMonth()]+' '+selDateObj.getFullYear());
   var hasToday = !!TODAY_REPORT;
   var partnerName = (function(){
     if(typeof PARTNERS!=='undefined' && DRIVER.partner){
@@ -2668,15 +2676,40 @@ async function renderReport(){
 
   html += '<div style="padding:0 14px">';
 
-  // Date picker — allow driver to switch date (up to 7 days back)
+  // Date picker — quick buttons for last 7 days + native date input fallback
   html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px;margin-bottom:10px">'+
-    '<label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:6px"><i class="ti ti-calendar"></i> '+(isEn?'Report date':'تاريخ التقرير')+'</label>'+
-    '<div style="display:flex;gap:8px;align-items:center">'+
-      '<input id="rep-date" type="date" value="'+selDate+'" min="'+minDate+'" max="'+today+'" onchange="setReportDate(this.value)" style="flex:1;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:14px;text-align:center;color:#0f3a52;font-weight:800">'+
-      (!isToday ? '<button onclick="setReportDate(\''+today+'\')" style="background:#0f3a52;color:#fff;border:none;padding:11px 14px;border-radius:10px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap">'+(isEn?'Today':'اليوم')+'</button>' : '')+
-    '</div>'+
-    (!isToday ? '<div style="font-size:11px;color:#d97706;margin-top:8px;background:#fef3c7;padding:6px 10px;border-radius:6px;border-right:3px solid #d97706"><i class="ti ti-info-circle"></i> '+(isEn?'You are editing a previous date':'إنت بتعدّل تقرير ليوم سابق')+'</div>' : '')+
-  '</div>';
+    '<label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:8px"><i class="ti ti-calendar"></i> '+(isEn?'Report date':'تاريخ التقرير')+'</label>';
+
+  // Quick buttons for last 7 days (newest first)
+  var DAY_AR = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  var DAY_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var MON_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  var MON_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  html += '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch">';
+  for(var i=0; i<=7; i++){
+    var dd = new Date();
+    dd.setDate(dd.getDate() - i);
+    var yy = dd.getFullYear(), mm = String(dd.getMonth()+1).padStart(2,'0'), dda = String(dd.getDate()).padStart(2,'0');
+    var dateStr = yy+'-'+mm+'-'+dda;
+    var isSel = dateStr === selDate;
+    var dayLabel = (i===0) ? (isEn?'Today':'اليوم') :
+                   (i===1) ? (isEn?'Yesterday':'أمس') :
+                   (isEn ? DAY_EN[dd.getDay()] : DAY_AR[dd.getDay()]);
+    var dayNum = dd.getDate() + ' ' + (isEn ? MON_EN[dd.getMonth()] : MON_AR[dd.getMonth()]);
+    var bg = isSel ? 'linear-gradient(135deg,#0f3a52,#1c5878)' : '#f1f5f9';
+    var color = isSel ? '#fff' : '#0f3a52';
+    var border = isSel ? '2px solid #0f3a52' : '1.5px solid #e2e8f0';
+    html += '<button onclick="setReportDate(\''+dateStr+'\')" style="flex-shrink:0;background:'+bg+';color:'+color+';border:'+border+';padding:10px 12px;border-radius:12px;font-family:inherit;cursor:pointer;text-align:center;min-width:78px;box-shadow:'+(isSel?'0 4px 12px rgba(15,58,82,0.3)':'none')+'">'+
+      '<div style="font-size:11px;font-weight:900;margin-bottom:2px">'+dayLabel+'</div>'+
+      '<div style="font-size:10px;opacity:0.85">'+dayNum+'</div>'+
+    '</button>';
+  }
+  html += '</div>';
+
+  if(!isToday){
+    html += '<div style="font-size:11px;color:#d97706;margin-top:8px;background:#fef3c7;padding:6px 10px;border-radius:6px;border-right:3px solid #d97706"><i class="ti ti-info-circle"></i> '+(isEn?'You are editing a previous date':'إنت بتعدّل تقرير ليوم سابق')+'</div>';
+  }
+  html += '</div>';
 
   // Form (locked when already submitted, with option to edit)
   var rp = TODAY_REPORT || {orders_count:'', duty_from:'', duty_to:'', fuel_amount:'', card_balance:'', notes:''};
