@@ -1339,14 +1339,65 @@ function renderChat(){
 function _ensureChatReplyBar(){
   var sheet = document.getElementById('chatSheet');
   if(!sheet) return;
+  // Status bar (notifications + diagnose buttons)
+  var statusBar = document.getElementById('chatStatusBar');
+  if(!statusBar){
+    statusBar = document.createElement('div');
+    statusBar.id = 'chatStatusBar';
+    statusBar.style.cssText = 'background:#fef3c7;border-bottom:1px solid #fcd34d;padding:10px 14px;font-size:12px;color:#92400e;display:none;align-items:center;justify-content:space-between;gap:8px;margin:0 -16px;flex-wrap:wrap';
+    // Insert at top of body
+    var sheetBody = sheet.querySelector('.sheet-body');
+    if(sheetBody && sheetBody.parentNode){
+      sheetBody.parentNode.insertBefore(statusBar, sheetBody);
+    } else {
+      sheet.insertBefore(statusBar, sheet.firstChild.nextSibling);
+    }
+  }
+  // Reply bar
   var bar = document.getElementById('chatReplyBar');
-  if(bar) return;
-  bar = document.createElement('div');
-  bar.id = 'chatReplyBar';
-  bar.style.cssText = 'position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;align-items:center;margin:0 -16px -16px';
-  bar.innerHTML = '<input id="chatReplyInput" type="text" placeholder="'+t('msg_reply_ph')+'" style="flex:1;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:22px;font-family:inherit;font-size:14px;outline:none" onkeydown="if(event.key===\'Enter\'){sendChatReply()}">'+
-    '<button onclick="sendChatReply()" style="background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(37,99,235,0.4)"><i class="ti ti-send" style="font-size:18px"></i></button>';
-  sheet.appendChild(bar);
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'chatReplyBar';
+    bar.style.cssText = 'position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:10px;display:flex;gap:8px;align-items:center;margin:0 -16px -16px';
+    bar.innerHTML = '<input id="chatReplyInput" type="text" placeholder="'+t('msg_reply_ph')+'" style="flex:1;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:22px;font-family:inherit;font-size:14px;outline:none" onkeydown="if(event.key===\'Enter\'){sendChatReply()}">'+
+      '<button onclick="sendChatReply()" style="background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(37,99,235,0.4)"><i class="ti ti-send" style="font-size:18px"></i></button>';
+    sheet.appendChild(bar);
+  }
+  _updateChatStatusBar();
+}
+
+function _updateChatStatusBar(){
+  var bar = document.getElementById('chatStatusBar');
+  if(!bar) return;
+  if(!('Notification' in window)){
+    bar.style.display = 'flex';
+    bar.innerHTML = '<span><i class="ti ti-alert-triangle"></i> '+(LANG==='en'?'Notifications not supported':'الجهاز لا يدعم الإشعارات')+'</span>'+
+      '<button onclick="diagMessages()" style="background:#0ea5e9;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">🔍 تشخيص</button>';
+    return;
+  }
+  var perm = Notification.permission;
+  if(perm === 'granted'){
+    bar.style.display = 'flex';
+    bar.style.background = '#dcfce7';
+    bar.style.borderColor = '#86efac';
+    bar.style.color = '#166534';
+    bar.innerHTML = '<span><i class="ti ti-bell-ringing"></i> '+(LANG==='en'?'Notifications enabled':'الإشعارات مفعّلة')+'</span>'+
+      '<div style="display:flex;gap:6px"><button onclick="diagMessages()" style="background:#0ea5e9;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">🔍 تشخيص</button><button onclick="testNotif()" style="background:#16a34a;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">'+(LANG==='en'?'Test':'اختبار')+'</button></div>';
+  } else if(perm === 'default'){
+    bar.style.display = 'flex';
+    bar.style.background = '#fef3c7';
+    bar.style.borderColor = '#fcd34d';
+    bar.style.color = '#92400e';
+    bar.innerHTML = '<span><i class="ti ti-bell-off"></i> '+(LANG==='en'?'Tap to enable notifications':'فعّل الإشعارات للسائق')+'</span>'+
+      '<div style="display:flex;gap:6px"><button onclick="diagMessages()" style="background:#0ea5e9;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">🔍 تشخيص</button><button onclick="enableNotifs()" style="background:#d97706;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">'+(LANG==='en'?'Enable':'تفعيل')+'</button></div>';
+  } else if(perm === 'denied'){
+    bar.style.display = 'flex';
+    bar.style.background = '#fee2e2';
+    bar.style.borderColor = '#fca5a5';
+    bar.style.color = '#991b1b';
+    bar.innerHTML = '<span><i class="ti ti-bell-x"></i> '+(LANG==='en'?'Notifications blocked':'الإشعارات محظورة — فعّلها من الإعدادات')+'</span>'+
+      '<button onclick="diagMessages()" style="background:#0ea5e9;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">🔍 تشخيص</button>';
+  }
 }
 
 async function sendChatReply(){
@@ -2520,14 +2571,27 @@ function renderCustLocReceived(r){
 /* =========================================================
    DAILY REPORT TAB — Driver submits daily report
    ========================================================= */
-var TODAY_REPORT = null;  // today's submitted report (if any)
-var RECENT_REPORTS = [];   // last 7 reports for history
+var TODAY_REPORT = null;  // selected-date submitted report (if any)
+var RECENT_REPORTS = [];   // last 14 reports for history
+var SELECTED_REPORT_DATE = null;  // date string YYYY-MM-DD (defaults to today)
+
+function _todayLocal(){ // returns YYYY-MM-DD in local timezone
+  var d = new Date();
+  var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), da = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+da;
+}
+
+function setReportDate(dateStr){
+  if(!dateStr) return;
+  SELECTED_REPORT_DATE = dateStr;
+  renderReport();
+}
 
 async function fetchTodayReport(){
   if(!DRIVER) return;
-  var today = new Date().toISOString().split('T')[0];
+  var date = SELECTED_REPORT_DATE || _todayLocal();
   try {
-    var res = await fetch(SUPA_URL+'/rest/v1/daily_reports?driver_id=eq.'+DRIVER.id+'&report_date=eq.'+today,
+    var res = await fetch(SUPA_URL+'/rest/v1/daily_reports?driver_id=eq.'+DRIVER.id+'&report_date=eq.'+date,
       {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
     var rows = await res.json();
     TODAY_REPORT = rows && rows.length ? rows[0] : null;
@@ -2547,16 +2611,32 @@ async function fetchRecentReports(){
 function updateReportBadge(){
   var b = $('reportBadge');
   if(!b) return;
-  b.style.display = TODAY_REPORT ? 'inline-flex' : 'none';
+  // Badge shows only when there's no report for TODAY specifically (regardless of selected date)
+  var todayStr = _todayLocal();
+  var hasTodayReport = !!(RECENT_REPORTS||[]).find(function(r){ return r.report_date === todayStr; });
+  b.style.display = hasTodayReport ? 'inline-flex' : 'none';
 }
 
 async function renderReport(){
+  // Initialize selected date to today on first render
+  if(!SELECTED_REPORT_DATE) SELECTED_REPORT_DATE = _todayLocal();
   await fetchTodayReport();
   await fetchRecentReports();
   var el = $('scrReport');
-  var today = new Date().toISOString().split('T')[0];
+  var today = _todayLocal();
+  var selDate = SELECTED_REPORT_DATE;
+  var isToday = (selDate === today);
+  // Calculate min date (7 days back)
+  var minDate = (function(){
+    var d = new Date(); d.setDate(d.getDate() - 7);
+    var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+da;
+  })();
   var locale = (LANG==='en') ? 'en-US' : 'ar-KW';
-  var todayLabel = new Date().toLocaleDateString(locale,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  // Date object for selected date (parse safely)
+  var selParts = selDate.split('-');
+  var selDateObj = new Date(parseInt(selParts[0]), parseInt(selParts[1])-1, parseInt(selParts[2]));
+  var todayLabel = selDateObj.toLocaleDateString(locale,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var hasToday = !!TODAY_REPORT;
   var partnerName = (function(){
     if(typeof PARTNERS!=='undefined' && DRIVER.partner){
@@ -2587,6 +2667,16 @@ async function renderReport(){
   html += '</div>';
 
   html += '<div style="padding:0 14px">';
+
+  // Date picker — allow driver to switch date (up to 7 days back)
+  html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px;margin-bottom:10px">'+
+    '<label style="font-size:11px;font-weight:800;color:#0f3a52;display:block;margin-bottom:6px"><i class="ti ti-calendar"></i> '+(isEn?'Report date':'تاريخ التقرير')+'</label>'+
+    '<div style="display:flex;gap:8px;align-items:center">'+
+      '<input id="rep-date" type="date" value="'+selDate+'" min="'+minDate+'" max="'+today+'" onchange="setReportDate(this.value)" style="flex:1;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:14px;text-align:center;color:#0f3a52;font-weight:800">'+
+      (!isToday ? '<button onclick="setReportDate(\''+today+'\')" style="background:#0f3a52;color:#fff;border:none;padding:11px 14px;border-radius:10px;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap">'+(isEn?'Today':'اليوم')+'</button>' : '')+
+    '</div>'+
+    (!isToday ? '<div style="font-size:11px;color:#d97706;margin-top:8px;background:#fef3c7;padding:6px 10px;border-radius:6px;border-right:3px solid #d97706"><i class="ti ti-info-circle"></i> '+(isEn?'You are editing a previous date':'إنت بتعدّل تقرير ليوم سابق')+'</div>' : '')+
+  '</div>';
 
   // Form (locked when already submitted, with option to edit)
   var rp = TODAY_REPORT || {orders_count:'', duty_from:'', duty_to:'', fuel_amount:'', card_balance:'', notes:''};
@@ -2649,12 +2739,12 @@ async function submitDailyReport(){
   if(hours <= 0) hours += 24;
   if(hours === 0) hours = 12; // fallback for "From 5 to 5" = full 12
 
-  var today = new Date().toISOString().split('T')[0];
+  var reportDate = SELECTED_REPORT_DATE || _todayLocal();
   var payload = {
     driver_id: DRIVER.id,
     driver_name: DRIVER.name,
     partner: DRIVER.partner||null,
-    report_date: today,
+    report_date: reportDate,
     orders_count: orders,
     duty_from: dFrom,
     duty_to: dTo,
