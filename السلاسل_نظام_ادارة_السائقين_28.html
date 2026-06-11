@@ -1098,6 +1098,7 @@ table td{padding:11px 12px!important;font-size:13px!important}
     <button class="tbtn" onclick="openSendMsgModal()" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)"><i class="ti ti-message-circle"></i> <span data-i18n="btn_send_msg">إرسال رسالة</span></button>
     <button class="tbtn" onclick="openInboxModal()" style="color:#22d3ee;border-color:rgba(34,211,238,0.35);position:relative"><i class="ti ti-inbox"></i> <span data-i18n="btn_inbox">صندوق الوارد</span><span id="inboxBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,0.4)">0</span></button>
     <button class="tbtn" onclick="openSocietiesModal()" style="color:#c29449;border-color:rgba(194,148,73,0.45)"><i class="ti ti-building-bank"></i> الجمعيات</button>
+    <button class="tbtn" onclick="openDriverReportModal()" style="color:#ec4899;border-color:rgba(236,72,153,0.45);font-weight:900"><i class="ti ti-file-analytics"></i> تقرير السائقين</button>
     <button class="tbtn" onclick="manualSaveFile()" style="color:#fbbf24;border-color:rgba(251,191,36,0.35)"><i class="ti ti-device-floppy"></i> <span data-i18n="btn_save_file">حفظ الملف</span></button>
     <button class="tbtn" onclick="openBackupModal()" style="color:#22c55e;border-color:rgba(34,197,94,0.4);position:relative" title="نسخة احتياطية على السحابة">
       <i class="ti ti-cloud-upload"></i> <span data-i18n="btn_backup">نسخ احتياطي</span>
@@ -1523,6 +1524,78 @@ function onStaffTypeChange(){
     <div class="macts">
       <button class="btn btn-c" onclick="closeModal('societyEditModal')">إلغاء</button>
       <button class="btn btn-s" onclick="saveSociety()"><i class="ti ti-check"></i> حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRIVER REPORT MODAL -->
+<div class="ov" id="driverReportModal" onclick="if(event.target===this)closeModal('driverReportModal')">
+  <div class="modal" style="max-width:1200px;max-height:92vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--br);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#0f3a52,#1c5878)">
+      <h2 style="margin:0;color:#fff"><i class="ti ti-file-analytics" style="color:#ec4899"></i> تقرير السائقين الشامل</h2>
+      <div style="display:flex;gap:8px">
+        <button class="tbtn" onclick="exportDriverReportExcel()" style="color:#10b981;border-color:rgba(16,185,129,0.4)"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button class="tbtn" onclick="printDriverReport()" style="color:#ec4899;border-color:rgba(236,72,153,0.4)"><i class="ti ti-printer"></i> طباعة / PDF</button>
+        <button onclick="closeModal('driverReportModal')" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer">×</button>
+      </div>
+    </div>
+
+    <!-- Filters bar -->
+    <div style="padding:12px 18px;background:var(--s2);border-bottom:1px solid var(--br);display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;color:var(--muted2);font-weight:700;display:block;margin-bottom:3px">الشهر</label>
+        <select id="drep-month" onchange="renderDriverReport()" style="padding:7px 10px;background:var(--s1);border:1px solid var(--br);color:var(--text);border-radius:6px;font-family:inherit;font-size:13px">
+          <option value="0">يناير</option><option value="1">فبراير</option><option value="2">مارس</option><option value="3">أبريل</option>
+          <option value="4">مايو</option><option value="5">يونيو</option><option value="6">يوليو</option><option value="7">أغسطس</option>
+          <option value="8">سبتمبر</option><option value="9">أكتوبر</option><option value="10">نوفمبر</option><option value="11">ديسمبر</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted2);font-weight:700;display:block;margin-bottom:3px">السنة</label>
+        <select id="drep-year" onchange="renderDriverReport()" style="padding:7px 10px;background:var(--s1);border:1px solid var(--br);color:var(--text);border-radius:6px;font-family:inherit;font-size:13px"></select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted2);font-weight:700;display:block;margin-bottom:3px">الشريك</label>
+        <select id="drep-partner-filter" onchange="renderDriverReport()" style="padding:7px 10px;background:var(--s1);border:1px solid var(--br);color:var(--text);border-radius:6px;font-family:inherit;font-size:13px;min-width:140px">
+          <option value="all">الكل</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted2);font-weight:700;display:block;margin-bottom:3px">بحث</label>
+        <input id="drep-search" oninput="renderDriverReport()" placeholder="اسم أو رقم وظيفي..." style="padding:7px 10px;background:var(--s1);border:1px solid var(--br);color:var(--text);border-radius:6px;font-family:inherit;font-size:13px;min-width:160px">
+      </div>
+      <button class="tbtn" onclick="refreshDriverReport()" style="color:#22d3ee;border-color:rgba(34,211,238,0.35);margin-bottom:0"><i class="ti ti-refresh"></i> تحديث</button>
+    </div>
+
+    <!-- KPIs -->
+    <div id="drep-kpis" style="padding:14px 18px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;background:var(--s1);border-bottom:1px solid var(--br)"></div>
+
+    <!-- Table -->
+    <div style="flex:1;overflow:auto;padding:14px 18px">
+      <table id="drep-table" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead style="background:var(--primary);color:#fff;position:sticky;top:0;z-index:5">
+          <tr>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">#</th>
+            <th style="padding:10px 8px;text-align:right;border:1px solid var(--br)">الكود</th>
+            <th style="padding:10px 8px;text-align:right;border:1px solid var(--br)">الاسم</th>
+            <th style="padding:10px 8px;text-align:right;border:1px solid var(--br)">الشريك</th>
+            <th style="padding:10px 8px;text-align:right;border:1px solid var(--br)">الهاتف</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">انتهاء الرخصة</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">عدد الطلبات</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">ساعات العمل</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">الوقود (د.ك)</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">حضور</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">غياب</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">مخالفات</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">قيمة المخالفات</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">الراتب الأساسي</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br)">إجمالي الخصومات</th>
+            <th style="padding:10px 8px;text-align:center;border:1px solid var(--br);background:#15803d">صافي الراتب</th>
+          </tr>
+        </thead>
+        <tbody id="drep-tbody"></tbody>
+        <tfoot id="drep-tfoot" style="background:var(--s2);font-weight:900"></tfoot>
+      </table>
     </div>
   </div>
 </div>
@@ -3773,6 +3846,337 @@ async function fetchSocieties(){
   } catch(e){ console.warn('fetchSocieties', e); }
 }
 
+/* =========================================================
+   DRIVER COMPREHENSIVE REPORT
+   ========================================================= */
+let DREP_FULL_DATA = [];
+
+async function openDriverReportModal(){
+  // Populate filters
+  const yEl = document.getElementById('drep-year');
+  const now = new Date();
+  yEl.innerHTML = '';
+  for(let y = now.getFullYear()-1; y <= now.getFullYear()+1; y++){
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if(y === now.getFullYear()) opt.selected = true;
+    yEl.appendChild(opt);
+  }
+  document.getElementById('drep-month').value = now.getMonth();
+  // Partners
+  const pEl = document.getElementById('drep-partner-filter');
+  pEl.innerHTML = '<option value="all">الكل</option>';
+  if(typeof PARTNERS !== 'undefined'){
+    PARTNERS.forEach(p=>{
+      const o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name;
+      pEl.appendChild(o);
+    });
+  }
+  await refreshDriverReport();
+  document.getElementById('driverReportModal').classList.add('on');
+}
+
+async function refreshDriverReport(){
+  const month = parseInt(document.getElementById('drep-month').value, 10);
+  const year = parseInt(document.getElementById('drep-year').value, 10);
+  const from = new Date(year, month, 1).toISOString().split('T')[0];
+  const to = new Date(year, month+1, 0).toISOString().split('T')[0];
+
+  // Fetch daily reports
+  let dailyRows = [];
+  try {
+    const url = SUPA_URL+'/rest/v1/daily_reports?report_date=gte.'+from+'&report_date=lte.'+to+'&limit=5000';
+    const r = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+    if(r.ok) dailyRows = await r.json();
+  } catch(e){ console.warn(e); }
+
+  // Fetch clockin records
+  let clockinRows = [];
+  try {
+    const url = SUPA_URL+'/rest/v1/clockin?date=gte.'+from+'&date=lte.'+to+'&limit=10000';
+    const r = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+    if(r.ok) clockinRows = await r.json();
+  } catch(e){ console.warn(e); }
+
+  // Aggregate per driver
+  const result = [];
+  const drivers = DRV.filter(d => d.staff_type !== 'admin');
+  drivers.forEach(d => {
+    const dailies = dailyRows.filter(r => r.driver_id === d.id);
+    const orders = dailies.reduce((s,r)=>s+(parseInt(r.orders_count)||0), 0);
+    const hours = dailies.reduce((s,r)=>s+(parseFloat(r.duty_hours)||0), 0);
+    const fuel = dailies.reduce((s,r)=>s+(parseFloat(r.fuel_amount)||0), 0);
+
+    const presentDays = clockinRows.filter(c => c.driver_id === d.id && c.in_time).length;
+    // Calculate expected days in month vs present
+    const totalDays = new Date(year, month+1, 0).getDate();
+    const absentDays = Math.max(0, totalDays - presentDays);
+
+    // Violations for this driver in this period
+    const violations = (typeof VIOLATIONS !== 'undefined' ? VIOLATIONS : []).filter(v => {
+      if(v.driverId !== d.id) return false;
+      if(!v.date) return false;
+      const vd = new Date(v.date);
+      return vd.getFullYear() === year && vd.getMonth() === month;
+    });
+    const violCount = violations.length;
+    const violAmount = violations.reduce((s,v)=>s+(parseFloat(v.amount)||0), 0);
+
+    // Salary
+    let baseSalary = 0, deductions = 0, netSalary = 0;
+    if(typeof getSalData === 'function'){
+      const sal = getSalData(d.id);
+      baseSalary = parseFloat(sal.base) || 0;
+      deductions = (sal.deductions||[]).filter(x => (+x.month) === (month+1) && (+x.year) === year)
+                                       .reduce((s,x)=>s+(parseFloat(x.amount)||0), 0);
+      netSalary = baseSalary - deductions;
+    }
+
+    result.push({
+      code: d.id, name: d.name, partner: d.partner||'-', phone: d.sim||'-',
+      license_exp: d.exp || '-',
+      orders, hours, fuel, presentDays, absentDays,
+      violCount, violAmount, baseSalary, deductions, netSalary,
+    });
+  });
+
+  DREP_FULL_DATA = result;
+  renderDriverReport();
+}
+
+function renderDriverReport(){
+  const partner = document.getElementById('drep-partner-filter').value;
+  const search = (document.getElementById('drep-search').value || '').trim().toLowerCase();
+
+  let list = DREP_FULL_DATA.slice();
+  if(partner !== 'all') list = list.filter(r => r.partner === partner);
+  if(search) list = list.filter(r => (r.name||'').toLowerCase().includes(search) || (r.code||'').toLowerCase().includes(search));
+  // Sort by orders desc
+  list.sort((a,b) => b.orders - a.orders);
+
+  // KPIs
+  const totalDrivers = list.length;
+  const totalOrders = list.reduce((s,r)=>s+r.orders, 0);
+  const totalHours = list.reduce((s,r)=>s+r.hours, 0);
+  const totalFuel = list.reduce((s,r)=>s+r.fuel, 0);
+  const totalNet = list.reduce((s,r)=>s+r.netSalary, 0);
+
+  document.getElementById('drep-kpis').innerHTML = `
+    <div style="background:linear-gradient(135deg,#0f3a52,#1c5878);padding:14px;border-radius:10px;color:#fff">
+      <div style="font-size:11px;opacity:0.8">عدد السائقين</div>
+      <div style="font-size:24px;font-weight:900">${totalDrivers}</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#3b82f6,#1e40af);padding:14px;border-radius:10px;color:#fff">
+      <div style="font-size:11px;opacity:0.8">إجمالي الطلبات</div>
+      <div style="font-size:24px;font-weight:900">${totalOrders.toLocaleString()}</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:14px;border-radius:10px;color:#fff">
+      <div style="font-size:11px;opacity:0.8">إجمالي الساعات</div>
+      <div style="font-size:24px;font-weight:900">${totalHours.toFixed(0)}</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#ef4444,#991b1b);padding:14px;border-radius:10px;color:#fff">
+      <div style="font-size:11px;opacity:0.8">إجمالي الوقود</div>
+      <div style="font-size:24px;font-weight:900">${totalFuel.toFixed(0)}</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#10b981,#059669);padding:14px;border-radius:10px;color:#fff">
+      <div style="font-size:11px;opacity:0.8">إجمالي الرواتب</div>
+      <div style="font-size:24px;font-weight:900">${totalNet.toFixed(3)}</div>
+    </div>
+  `;
+
+  // Table body
+  const tbody = document.getElementById('drep-tbody');
+  if(!list.length){
+    tbody.innerHTML = '<tr><td colspan="16" style="padding:40px;text-align:center;color:var(--muted2)">لا توجد بيانات</td></tr>';
+  } else {
+    tbody.innerHTML = list.map((r, i) => {
+      const altBg = i % 2 === 0 ? 'var(--s1)' : 'var(--s2)';
+      const violBg = r.violCount > 0 ? 'background:#fee2e2;color:#991b1b;font-weight:800' : '';
+      const netColor = r.netSalary >= r.baseSalary * 0.9 ? '#15803d' : r.netSalary >= r.baseSalary * 0.7 ? '#d97706' : '#991b1b';
+      return `<tr style="background:${altBg}">
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);font-weight:800">${i+1}</td>
+        <td style="padding:8px;text-align:right;border:1px solid var(--br);font-family:monospace;font-weight:700">${r.code}</td>
+        <td style="padding:8px;text-align:right;border:1px solid var(--br);font-weight:700">${r.name}</td>
+        <td style="padding:8px;text-align:right;border:1px solid var(--br)">${r.partner}</td>
+        <td style="padding:8px;text-align:right;border:1px solid var(--br);font-family:monospace">${r.phone}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);font-size:11px">${r.license_exp}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);font-weight:800;color:#3b82f6">${r.orders}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br)">${r.hours.toFixed(1)}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);color:#f59e0b">${r.fuel.toFixed(2)}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);color:#10b981;font-weight:700">${r.presentDays}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);color:#ef4444;font-weight:700">${r.absentDays}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);${violBg}">${r.violCount}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);${violBg}">${r.violAmount.toFixed(3)}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);font-weight:700">${r.baseSalary.toFixed(3)}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);color:#ef4444">${r.deductions.toFixed(3)}</td>
+        <td style="padding:8px;text-align:center;border:1px solid var(--br);background:rgba(16,185,129,0.1);color:${netColor};font-weight:900;font-size:13px">${r.netSalary.toFixed(3)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Footer totals
+  document.getElementById('drep-tfoot').innerHTML = `
+    <tr style="background:#0f3a52;color:#fff">
+      <td colspan="6" style="padding:10px 8px;text-align:right;font-weight:900;border:1px solid #1c5878">الإجمالي</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${totalOrders.toLocaleString()}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${totalHours.toFixed(0)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${totalFuel.toFixed(2)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${list.reduce((s,r)=>s+r.presentDays,0)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${list.reduce((s,r)=>s+r.absentDays,0)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${list.reduce((s,r)=>s+r.violCount,0)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${list.reduce((s,r)=>s+r.violAmount,0).toFixed(3)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${list.reduce((s,r)=>s+r.baseSalary,0).toFixed(3)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878">${list.reduce((s,r)=>s+r.deductions,0).toFixed(3)}</td>
+      <td style="padding:10px 8px;text-align:center;border:1px solid #1c5878;background:#15803d">${totalNet.toFixed(3)}</td>
+    </tr>
+  `;
+}
+
+function exportDriverReportExcel(){
+  const month = parseInt(document.getElementById('drep-month').value, 10);
+  const year = parseInt(document.getElementById('drep-year').value, 10);
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const partner = document.getElementById('drep-partner-filter').value;
+  const search = (document.getElementById('drep-search').value || '').trim().toLowerCase();
+
+  let list = DREP_FULL_DATA.slice();
+  if(partner !== 'all') list = list.filter(r => r.partner === partner);
+  if(search) list = list.filter(r => (r.name||'').toLowerCase().includes(search) || (r.code||'').toLowerCase().includes(search));
+  list.sort((a,b) => b.orders - a.orders);
+
+  const headers = ['#','الكود','الاسم','الشريك','الهاتف','انتهاء الرخصة','عدد الطلبات','ساعات العمل','الوقود','الحضور','الغياب','المخالفات','قيمة المخالفات','الراتب الأساسي','الخصومات','صافي الراتب'];
+  const rows = list.map((r, i) => [
+    i+1, r.code, r.name, r.partner, r.phone, r.license_exp,
+    r.orders, r.hours.toFixed(1), r.fuel.toFixed(2),
+    r.presentDays, r.absentDays, r.violCount, r.violAmount.toFixed(3),
+    r.baseSalary.toFixed(3), r.deductions.toFixed(3), r.netSalary.toFixed(3)
+  ]);
+  // Totals row
+  rows.push([
+    'الإجمالي', '', '', '', '', '',
+    list.reduce((s,r)=>s+r.orders,0),
+    list.reduce((s,r)=>s+r.hours,0).toFixed(1),
+    list.reduce((s,r)=>s+r.fuel,0).toFixed(2),
+    list.reduce((s,r)=>s+r.presentDays,0),
+    list.reduce((s,r)=>s+r.absentDays,0),
+    list.reduce((s,r)=>s+r.violCount,0),
+    list.reduce((s,r)=>s+r.violAmount,0).toFixed(3),
+    list.reduce((s,r)=>s+r.baseSalary,0).toFixed(3),
+    list.reduce((s,r)=>s+r.deductions,0).toFixed(3),
+    list.reduce((s,r)=>s+r.netSalary,0).toFixed(3)
+  ]);
+
+  const csv = '﻿' + [headers, ...rows].map(r => r.map(c => '"'+(c==null?'':String(c).replace(/"/g,'""'))+'"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `تقرير_السائقين_${months[month]}_${year}.csv`;
+  a.click();
+  toast('تم تنزيل التقرير ✓','s');
+}
+
+function printDriverReport(){
+  const month = parseInt(document.getElementById('drep-month').value, 10);
+  const year = parseInt(document.getElementById('drep-year').value, 10);
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const partner = document.getElementById('drep-partner-filter').value;
+  const partnerLabel = partner === 'all' ? 'كل الشركاء' : (PARTNERS.find(p=>p.id===partner)||{}).name || partner;
+
+  let list = DREP_FULL_DATA.slice();
+  if(partner !== 'all') list = list.filter(r => r.partner === partner);
+  const search = (document.getElementById('drep-search').value || '').trim().toLowerCase();
+  if(search) list = list.filter(r => (r.name||'').toLowerCase().includes(search) || (r.code||'').toLowerCase().includes(search));
+  list.sort((a,b) => b.orders - a.orders);
+
+  const totals = {
+    orders: list.reduce((s,r)=>s+r.orders,0),
+    hours: list.reduce((s,r)=>s+r.hours,0),
+    fuel: list.reduce((s,r)=>s+r.fuel,0),
+    present: list.reduce((s,r)=>s+r.presentDays,0),
+    absent: list.reduce((s,r)=>s+r.absentDays,0),
+    viol: list.reduce((s,r)=>s+r.violCount,0),
+    violAmt: list.reduce((s,r)=>s+r.violAmount,0),
+    base: list.reduce((s,r)=>s+r.baseSalary,0),
+    ded: list.reduce((s,r)=>s+r.deductions,0),
+    net: list.reduce((s,r)=>s+r.netSalary,0),
+  };
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <title>تقرير السائقين - ${months[month]} ${year}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Cairo,sans-serif;padding:20px;color:#0f172a;font-size:11px}
+      .hdr{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:18px;border-radius:12px;margin-bottom:14px;text-align:center}
+      .hdr h1{font-size:24px;margin-bottom:4px;color:#fff}
+      .hdr .sub{color:#c29449;font-size:14px;font-weight:700}
+      .meta{display:flex;justify-content:space-between;margin-bottom:14px;font-size:12px;color:#64748b}
+      table{width:100%;border-collapse:collapse;margin-bottom:14px}
+      th{background:#0f3a52;color:#fff;padding:8px 6px;text-align:center;font-size:11px;border:1px solid #1c5878}
+      td{padding:6px;border:1px solid #e2e8f0;text-align:center;font-size:10px}
+      tr:nth-child(even) td{background:#f8fafc}
+      tfoot{background:#0f3a52;color:#fff;font-weight:900}
+      tfoot td{border:1px solid #1c5878;padding:9px 6px}
+      .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+      .kpi{padding:12px;border-radius:8px;color:#fff;text-align:center}
+      .kpi .v{font-size:20px;font-weight:900}
+      .kpi .l{font-size:10px;opacity:0.85}
+      @media print{ body{padding:10px} .noprint{display:none} }
+    </style></head><body>
+    <div class="hdr">
+      <h1>تقرير السائقين الشامل</h1>
+      <div class="sub">${months[month]} ${year}</div>
+    </div>
+    <div class="meta">
+      <div>الشركاء: <b>${partnerLabel}</b></div>
+      <div>عدد السائقين: <b>${list.length}</b></div>
+      <div>تاريخ الإصدار: <b>${new Date().toLocaleDateString('ar-KW')}</b></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi" style="background:#3b82f6"><div class="v">${totals.orders.toLocaleString()}</div><div class="l">إجمالي الطلبات</div></div>
+      <div class="kpi" style="background:#f59e0b"><div class="v">${totals.hours.toFixed(0)}</div><div class="l">ساعات العمل</div></div>
+      <div class="kpi" style="background:#ef4444"><div class="v">${totals.fuel.toFixed(0)}</div><div class="l">الوقود (د.ك)</div></div>
+      <div class="kpi" style="background:#a855f7"><div class="v">${totals.viol}</div><div class="l">المخالفات</div></div>
+      <div class="kpi" style="background:#10b981"><div class="v">${totals.net.toFixed(0)}</div><div class="l">صافي الرواتب</div></div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>الكود</th><th>الاسم</th><th>الشريك</th><th>الهاتف</th>
+        <th>الطلبات</th><th>الساعات</th><th>الوقود</th><th>حضور</th><th>غياب</th>
+        <th>مخالفات</th><th>قيمة</th><th>الأساسي</th><th>خصومات</th><th>الصافي</th>
+      </tr></thead>
+      <tbody>${list.map((r,i)=>`<tr>
+        <td>${i+1}</td><td>${r.code}</td><td style="text-align:right;font-weight:700">${r.name}</td>
+        <td>${r.partner}</td><td>${r.phone}</td>
+        <td style="font-weight:800;color:#3b82f6">${r.orders}</td>
+        <td>${r.hours.toFixed(1)}</td><td>${r.fuel.toFixed(2)}</td>
+        <td style="color:#10b981">${r.presentDays}</td><td style="color:#ef4444">${r.absentDays}</td>
+        <td>${r.violCount}</td><td>${r.violAmount.toFixed(3)}</td>
+        <td>${r.baseSalary.toFixed(3)}</td><td style="color:#ef4444">${r.deductions.toFixed(3)}</td>
+        <td style="font-weight:900;color:#15803d">${r.netSalary.toFixed(3)}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr>
+        <td colspan="5">الإجمالي</td>
+        <td>${totals.orders.toLocaleString()}</td>
+        <td>${totals.hours.toFixed(0)}</td>
+        <td>${totals.fuel.toFixed(2)}</td>
+        <td>${totals.present}</td>
+        <td>${totals.absent}</td>
+        <td>${totals.viol}</td>
+        <td>${totals.violAmt.toFixed(3)}</td>
+        <td>${totals.base.toFixed(3)}</td>
+        <td>${totals.ded.toFixed(3)}</td>
+        <td style="background:#15803d">${totals.net.toFixed(3)}</td>
+      </tr></tfoot>
+    </table>
+    <div class="noprint" style="text-align:center;margin-top:20px"><button onclick="window.print()" style="background:#0f3a52;color:#fff;border:none;padding:12px 30px;border-radius:8px;font-family:Cairo,sans-serif;font-weight:900;cursor:pointer;font-size:14px">🖨️ طباعة / حفظ كـPDF</button></div>
+    <script>setTimeout(()=>window.print(), 600);<\/script>
+    </body></html>`);
+  w.document.close();
+}
+
 function openSocietiesModal(){
   fetchSocieties().then(()=> document.getElementById('societiesModal').classList.add('on'));
 }
@@ -4942,16 +5346,15 @@ function saveIncome(){
   const note = document.getElementById('inc-note').value.trim();
   if(!date){ toast('أدخل التاريخ','e'); return; }
   if(!amt || amt<=0){ toast('أدخل مبلغ صحيح','e'); return; }
-  // Parse date in a timezone-safe way (split YYYY-MM-DD)
   const [y, m, d] = date.split('-').map(n=>parseInt(n,10));
-  INCOMES.push({id:'I'+Date.now(), date, amount:amt, source:src, driverId:drv, note});
+  const newEntry = {id:'I'+Date.now(), date, amount:amt, source:src, driverId:drv, note};
+  INCOMES.push(newEntry);
   saveInc();
+  console.log('[INCOME ADDED]', newEntry, 'Total INCOMES:', INCOMES.length);
   closeModal('incomeModal');
-  // Jump view to the month of the income just added
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   if(accMonth !== m || accYear !== y){
-    accMonth = m; accYear = y;
-    toast('تم إضافة الإيراد ✅ — تم الانتقال لشهر '+months[m-1]+' '+y,'s');
+    toast('تم إضافة الإيراد في '+months[m-1]+' '+y+' ✅ (إنت بتشوف '+months[accMonth-1]+' '+accYear+')','s');
   } else {
     toast('تم إضافة الإيراد ✅','s');
   }
