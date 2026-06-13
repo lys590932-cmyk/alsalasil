@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0F3A52">
+<title>BYTE 3.0 — منصة المطاعم</title>
+
+<link rel="manifest" href="restaurant-manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BYTE">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="favicon.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#0F3A52; --primary-2:#1C5878; --primary-dark:#0A2837;
+  --gold:#C29449; --gold-2:#9F7635;
+  --green:#10B981; --green-2:#059669;
+  --amber:#F59E0B; --red:#EF4444; --blue:#3B82F6;
+  --wa:#25D366; --wa-2:#128C7E;
+  --bg:#F4F6FA; --surf:#FFF; --text:#0F172A;
+  --muted:#64748B; --line:#E2E8F0; --line-2:#F1F5F9;
+  --safe-top:env(safe-area-inset-top,0); --safe-bot:env(safe-area-inset-bottom,0);
+}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overscroll-behavior:none;font-size:14px}
+
+/* ===== LOGIN ===== */
+.login{position:fixed;inset:0;background:linear-gradient(135deg,#0F3A52,#1C5878);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;z-index:9999}
+.login.gone{display:none}
+.login-logo{width:110px;height:110px;background:#fff;border-radius:30px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 25px 60px rgba(0,0,0,.35)}
+.login-logo i{font-size:60px;color:var(--gold)}
+.login h1{color:#fff;font-size:32px;font-weight:900;margin-bottom:6px;letter-spacing:-0.5px}
+.login .brand{color:var(--gold);font-size:14px;font-weight:700;margin-bottom:30px;letter-spacing:4px}
+.login-card{width:100%;max-width:420px;background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:24px}
+.login-card label{display:block;color:rgba(255,255,255,0.85);font-weight:700;font-size:13px;margin:10px 0 6px}
+.login-card input{width:100%;padding:13px 14px;border:1.5px solid rgba(255,255,255,0.2);border-radius:12px;background:rgba(255,255,255,0.05);color:#fff;font-family:inherit;font-size:15px;font-weight:700;outline:none}
+.login-card input::placeholder{color:rgba(255,255,255,0.4)}
+.login-card input:focus{border-color:var(--gold)}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#fff;border:none;padding:14px;border-radius:12px;font-family:inherit;font-weight:900;font-size:15px;cursor:pointer;margin-top:16px;box-shadow:0 10px 25px rgba(194,148,73,0.4)}
+.login-err{color:#FCA5A5;font-size:13px;margin-top:10px;text-align:center;font-weight:700;min-height:18px}
+
+/* ===== APP SHELL ===== */
+.app{padding-top:var(--safe-top);padding-bottom:calc(80px + var(--safe-bot));min-height:100vh;display:none}
+.app.on{display:block}
+
+.topbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.04)}
+.tb-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.tb-logo{width:40px;height:40px;background:linear-gradient(135deg,var(--primary),var(--primary-2));border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;flex-shrink:0}
+.tb-info{min-width:0;flex:1}
+.tb-title{font-size:14px;font-weight:900;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-sub{font-size:11px;color:var(--muted);font-weight:600}
+.tb-actions{display:flex;gap:6px;flex-shrink:0}
+.tb-btn{width:36px;height:36px;background:#F1F5F9;border:none;border-radius:50%;color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;position:relative}
+.tb-btn:active{background:#E2E8F0;transform:scale(0.95)}
+.tb-badge{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;padding:0 5px}
+
+.tab{display:none;padding:14px}
+.tab.on{display:block}
+
+/* ===== HOME ===== */
+.hero{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;padding:18px;border-radius:18px;margin-bottom:14px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-30px;right:-30px;width:130px;height:130px;background:rgba(194,148,73,0.18);border-radius:50%}
+.hero h2{font-size:18px;font-weight:900;margin-bottom:4px;position:relative}
+.hero .sub{font-size:12px;opacity:0.9;position:relative;font-weight:600}
+.hero-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:var(--gold);color:#fff;padding:10px 16px;border-radius:24px;font-size:13px;font-weight:900;border:none;cursor:pointer;position:relative;box-shadow:0 6px 16px rgba(194,148,73,0.4)}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(15,58,82,0.05)}
+.kpi-ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0}
+.kpi-v{font-size:21px;font-weight:900;color:var(--primary);line-height:1;font-family:'JetBrains Mono','Courier New',monospace}
+.kpi-l{font-size:11px;color:var(--muted);font-weight:700;margin-top:3px}
+
+.section{background:#fff;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(15,58,82,0.04)}
+.section-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+.section-h h3{font-size:14px;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:6px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-radius:12px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;border:none;text-decoration:none;transition:transform .12s}
+.btn:active{transform:scale(0.98)}
+.btn-pri{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#fff}
+.btn-green{background:linear-gradient(135deg,var(--green),var(--green-2));color:#fff}
+.btn-wa{background:linear-gradient(135deg,var(--wa),var(--wa-2));color:#fff}
+.btn-block{width:100%}
+.btn-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+.btn-c{background:#F1F5F9;color:var(--text)}
+
+/* ===== NEW ORDER (REDESIGNED) ===== */
+.order-form{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(15,58,82,0.06)}
+.order-step{padding:16px;border-bottom:1px solid var(--line-2)}
+.order-step:last-child{border-bottom:none}
+.step-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.step-num{width:30px;height:30px;border-radius:50%;background:var(--line);color:var(--muted);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.step-num.done{background:var(--green);color:#fff}
+.step-num.active{background:var(--primary);color:#fff}
+.step-title{font-size:14px;font-weight:900;color:var(--text)}
+.step-title.muted{color:var(--muted)}
+
+.input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:11px;font-family:inherit;font-size:15px;outline:none;background:#fff;color:var(--text);transition:border-color .15s}
+.input:focus{border-color:var(--primary)}
+.input::placeholder{color:#94A3B8}
+
+.input-row{display:flex;gap:8px;margin-top:8px}
+.input-row .input{flex:1}
+
+/* Customer search dropdown */
+.cust-results{background:#fff;border:1px solid var(--line);border-radius:11px;margin-top:6px;max-height:220px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,0.08)}
+.cust-result{padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--line-2);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cust-result:last-child{border-bottom:none}
+.cust-result:active{background:#F8FAFC}
+.cust-name{font-weight:800;font-size:14px;color:var(--text)}
+.cust-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.cust-chip{background:var(--green);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;white-space:nowrap}
+
+/* Customer card (filled) */
+.cust-card{background:#F0F9FF;border:2px solid #BAE6FD;border-radius:12px;padding:12px;margin-top:10px;display:flex;justify-content:space-between;align-items:center}
+.cust-card .ic{width:38px;height:38px;background:var(--primary);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.cust-card .info{flex:1;margin:0 10px;min-width:0}
+.cust-card .name{font-weight:900;font-size:14px;color:var(--primary)}
+.cust-card .meta{font-size:11px;color:#0369A1;margin-top:2px;font-weight:700}
+.cust-card .clear{background:#EF4444;color:#fff;border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Location actions */
+.loc-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.loc-btn{padding:16px 12px;border-radius:14px;border:2px dashed var(--line);background:#FAFBFC;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-family:inherit;transition:all .15s}
+.loc-btn i{font-size:28px}
+.loc-btn .t{font-size:13px;font-weight:800;color:var(--text)}
+.loc-btn .s{font-size:10px;color:var(--muted);font-weight:600;line-height:1.4}
+.loc-btn.map{border-color:#3B82F6;color:#3B82F6}
+.loc-btn.map:active{background:#EFF6FF}
+.loc-btn.wa{border-color:var(--wa);color:var(--wa)}
+.loc-btn.wa:active{background:#F0FDF4}
+
+/* Location confirmed card */
+.loc-confirmed{background:#F0FDF4;border:2px solid #86EFAC;border-radius:12px;padding:14px;margin-top:8px;display:flex;align-items:center;gap:10px}
+.loc-confirmed i{font-size:24px;color:var(--green)}
+.loc-confirmed .info{flex:1}
+.loc-confirmed .t{font-size:13px;font-weight:900;color:var(--green-2)}
+.loc-confirmed .s{font-size:11px;color:#15803D;font-weight:700;margin-top:2px}
+.loc-confirmed button{background:#10B981;color:#fff;border:none;padding:8px 12px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer}
+
+.loc-waiting{background:#FEF3C7;border:2px solid #FCD34D;border-radius:12px;padding:14px;margin-top:8px;display:flex;align-items:center;gap:10px}
+.loc-waiting i{font-size:24px;color:var(--amber);animation:spin 1.5s linear infinite}
+.loc-waiting .info{flex:1}
+.loc-waiting .t{font-size:13px;font-weight:900;color:#92400E}
+.loc-waiting .s{font-size:11px;color:#B45309;font-weight:700;margin-top:2px}
+.loc-waiting button{background:#EF4444;color:#fff;border:none;padding:8px 12px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer}
+
+/* Payment selector */
+.pay-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.pay-opt{padding:14px;border:2px solid var(--line);border-radius:12px;cursor:pointer;text-align:center;background:#fff;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s}
+.pay-opt:active{transform:scale(0.97)}
+.pay-opt.on{border-color:var(--primary);background:#F0F9FF;box-shadow:0 4px 12px rgba(15,58,82,0.12)}
+.pay-opt i{font-size:22px;color:var(--muted)}
+.pay-opt.on i{color:var(--primary)}
+.pay-opt .l{font-size:12px;font-weight:800;color:var(--text)}
+
+/* Price summary */
+.price-summary{background:linear-gradient(135deg,#0F3A52,#1C5878);color:#fff;border-radius:14px;padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}
+.price-summary .l{font-size:11px;opacity:0.85;font-weight:700}
+.price-summary .v{font-size:24px;font-weight:900;font-family:'JetBrains Mono',monospace}
+.price-summary .breakdown{font-size:10px;opacity:0.85;font-weight:600;margin-top:2px}
+
+/* Submit area */
+.submit-area{padding:14px;background:#fff;position:sticky;bottom:80px;border-top:1px solid var(--line);box-shadow:0 -8px 20px rgba(0,0,0,0.04);margin:14px -14px -14px;border-radius:0 0 18px 18px}
+.submit-btn{width:100%;background:linear-gradient(135deg,var(--green),var(--green-2));color:#fff;border:none;padding:16px;border-radius:14px;font-family:inherit;font-weight:900;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 20px rgba(16,185,129,0.35)}
+.submit-btn:disabled{background:#94A3B8;box-shadow:none;cursor:not-allowed}
+
+/* Quick area chips */
+.area-chips{display:flex;gap:6px;overflow-x:auto;padding:6px 0 8px;margin-top:6px;-webkit-overflow-scrolling:touch}
+.area-chip{padding:8px 14px;border:1.5px solid var(--line);border-radius:18px;font-size:12px;font-weight:800;color:var(--muted);background:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.area-chip.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Bottom Nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + var(--safe-bot));z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.04)}
+.bnav-btn{flex:1;background:none;border:none;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-family:inherit;position:relative}
+.bnav-btn i{font-size:22px}
+.bnav-btn span{font-size:10px;font-weight:700}
+.bnav-btn.on{color:var(--primary)}
+.bnav-btn.on i{color:var(--gold)}
+.bnav-btn.on::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:24px;height:3px;background:var(--gold);border-radius:2px}
+
+/* Sheet/Modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+.ov.on{display:flex}
+.sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.sheet-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff}
+.sheet-h h3{font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px}
+.sheet-x{background:rgba(255,255,255,0.18);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:20px}
+.sheet-body{flex:1;overflow-y:auto;padding:14px}
+
+/* Map */
+#pickMap{height:300px;border-radius:12px}
+#liveMap{height:calc(100vh - 220px);min-height:400px;border-radius:16px;overflow:hidden}
+
+/* Order card */
+.order-card{background:#fff;border-radius:12px;padding:14px;margin-bottom:8px;border:1px solid var(--line);box-shadow:0 1px 4px rgba(0,0,0,0.02);cursor:pointer}
+.order-card:active{background:#F8FAFC}
+.order-head{display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;gap:8px}
+.order-status{font-size:10px;font-weight:800;padding:4px 9px;border-radius:6px;white-space:nowrap}
+.st-pending{background:#FEF3C7;color:#92400E}
+.st-assigned, .st-active, .st-picked_up{background:#DBEAFE;color:#1E40AF}
+.st-done{background:#DCFCE7;color:#166534}
+.st-cancelled{background:#FEE2E2;color:#991B1B}
+
+/* Empty */
+.empty{padding:36px 20px;text-align:center;color:var(--muted)}
+.empty i{font-size:48px;opacity:0.3;color:var(--primary)}
+.empty p{margin-top:8px;font-size:14px;font-weight:700}
+
+/* Toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E293B;color:#fff;padding:11px 18px;border-radius:25px;font-weight:800;font-size:13px;z-index:9999;display:none;box-shadow:0 10px 25px rgba(0,0,0,0.25);max-width:90%}
+.toast.on{display:block;animation:slideUpToast .25s ease}
+.toast.success{background:#10B981}
+.toast.error{background:#EF4444}
+.toast.warn{background:#F59E0B}
+@keyframes slideUpToast{from{transform:translate(-50%,20px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Fade in */
+.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Last orders pill */
+.recent-pill{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.recent-item{flex-shrink:0;background:#F8FAFC;border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:150px;cursor:pointer}
+.recent-item:active{background:#F1F5F9}
+.recent-name{font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-meta{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login" id="loginScreen">
+  <div class="login-logo"><i class="ti ti-tools-kitchen-2"></i></div>
+  <h1>BYTE</h1>
+  <div class="brand">منصة المطاعم · v3.0</div>
+  <div class="login-card">
+    <label>كود المطعم</label>
+    <input id="li-id" placeholder="REST001" autocapitalize="characters">
+    <label>الرمز السري</label>
+    <input id="li-pin" type="password" inputmode="numeric" placeholder="••••" maxlength="6">
+    <button class="login-btn" onclick="doLogin()"><i class="ti ti-login-2"></i> دخول</button>
+    <div class="login-err" id="li-err"></div>
+  </div>
+  <div style="position:absolute;bottom:20px;color:rgba(255,255,255,0.5);font-size:11px;text-align:center;font-weight:700">
+    مدعومة من شركة السلاسل لتوصيل الطلبات
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-logo" id="tbLogo">RS</div>
+      <div class="tb-info">
+        <div class="tb-title" id="tbName">المطعم</div>
+        <div class="tb-sub" id="tbSub">جاهز للطلبات</div>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <button class="tb-btn" onclick="openSupport()" title="الدعم"><i class="ti ti-headset"></i><span class="tb-badge" id="supBadge" style="display:none">0</span></button>
+      <button class="tb-btn" onclick="refreshAll()" title="تحديث"><i class="ti ti-refresh"></i></button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="tab on" id="tab-home">
+    <div class="hero">
+      <h2>أهلاً بك في BYTE</h2>
+      <div class="sub">إنشاء طلب جديد في 30 ثانية فقط</div>
+      <button class="hero-cta" onclick="switchTab('new')"><i class="ti ti-plus"></i> أوردر جديد</button>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-ic" style="background:var(--amber)"><i class="ti ti-clock"></i></div><div><div class="kpi-v" id="k-pending">0</div><div class="kpi-l">معلّق</div></div></div>
+      <div class="kpi"><div class="kpi-ic" style="background:var(--blue)"><i class="ti ti-bike"></i></div><div><div class="kpi-v" id="k-active">0</div><div class="kpi-l">جاري</div></div></div>
+      <div class="kpi"><div class="kpi-ic" style="background:var(--green)"><i class="ti ti-check"></i></div><div><div class="kpi-v" id="k-done">0</div><div class="kpi-l">تم اليوم</div></div></div>
+      <div class="kpi"><div class="kpi-ic" style="background:var(--primary)"><i class="ti ti-coin"></i></div><div><div class="kpi-v" id="k-revenue">0</div><div class="kpi-l">دخل اليوم</div></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-h"><h3><i class="ti ti-history"></i> آخر العملاء</h3></div>
+      <div id="recent-customers" class="recent-pill"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-h"><h3><i class="ti ti-list-check"></i> آخر الطلبات</h3><button class="btn btn-pri btn-sm" onclick="switchTab('orders')">الكل</button></div>
+      <div id="recent-orders"></div>
+    </div>
+  </div>
+
+  <!-- NEW ORDER (REDESIGNED) -->
+  <div class="tab" id="tab-new">
+    <div class="order-form">
+      <!-- STEP 1: WHO -->
+      <div class="order-step">
+        <div class="step-h">
+          <div class="step-num active" id="sn1">1</div>
+          <div class="step-title" id="st1">العميل</div>
+        </div>
+        <input id="o-search" class="input" placeholder="ابحث برقم التليفون أو الاسم..." inputmode="tel" oninput="searchCustomers()" autocomplete="off">
+        <div id="cust-results" class="cust-results" style="display:none"></div>
+        <div id="cust-card" style="display:none"></div>
+        <div id="new-cust" style="display:none" class="fade-in">
+          <input id="o-name" class="input" placeholder="اسم العميل" style="margin-top:8px">
+          <input id="o-phone" class="input" placeholder="رقم التليفون" type="tel" inputmode="tel" style="margin-top:8px">
+        </div>
+      </div>
+
+      <!-- STEP 2: WHERE -->
+      <div class="order-step">
+        <div class="step-h">
+          <div class="step-num" id="sn2">2</div>
+          <div class="step-title muted" id="st2">العنوان والموقع</div>
+        </div>
+        <div id="loc-section" style="display:none" class="fade-in">
+          <!-- Area chips -->
+          <div class="area-chips" id="areaChips"></div>
+          <!-- Address fields -->
+          <div class="input-row">
+            <input id="o-block" class="input" placeholder="قطعة" inputmode="numeric">
+            <input id="o-street" class="input" placeholder="شارع" inputmode="numeric">
+            <input id="o-house" class="input" placeholder="منزل" inputmode="numeric">
+          </div>
+          <input id="o-extra" class="input" placeholder="تفاصيل إضافية (اختياري)" style="margin-top:8px">
+
+          <!-- Location buttons -->
+          <div class="loc-actions">
+            <button type="button" class="loc-btn map" onclick="openMapPicker()">
+              <i class="ti ti-map-pin"></i>
+              <div class="t">من الخريطة</div>
+              <div class="s">حدد الموقع بنفسك</div>
+            </button>
+            <button type="button" class="loc-btn wa" onclick="requestCustomerLocation()">
+              <i class="ti ti-brand-whatsapp"></i>
+              <div class="t">عبر واتساب</div>
+              <div class="s">العميل يرسل موقعه</div>
+            </button>
+          </div>
+          <div id="loc-status"></div>
+        </div>
+      </div>
+
+      <!-- STEP 3: WHAT -->
+      <div class="order-step">
+        <div class="step-h">
+          <div class="step-num" id="sn3">3</div>
+          <div class="step-title muted" id="st3">تفاصيل الطلب</div>
+        </div>
+        <div id="order-section" style="display:none" class="fade-in">
+          <input id="o-amount" class="input" type="number" step="0.001" placeholder="قيمة الطلب (د.ك)" inputmode="decimal" oninput="updateSummary()">
+          <input id="o-notes" class="input" placeholder="ملاحظات (اختياري)" style="margin-top:8px">
+
+          <!-- Payment -->
+          <div style="font-size:12px;font-weight:800;color:var(--muted);margin-top:12px;margin-bottom:4px">طريقة الدفع</div>
+          <div class="pay-options">
+            <div class="pay-opt on" id="pay-cash" onclick="setPay('cash')">
+              <i class="ti ti-cash"></i>
+              <div class="l">كاش</div>
+            </div>
+            <div class="pay-opt" id="pay-online" onclick="setPay('online')">
+              <i class="ti ti-credit-card"></i>
+              <div class="l">إلكتروني</div>
+            </div>
+          </div>
+
+          <!-- Price summary -->
+          <div class="price-summary">
+            <div>
+              <div class="l">الإجمالي</div>
+              <div class="v" id="o-total">0.000 KD</div>
+              <div class="breakdown" id="o-breakdown"></div>
+            </div>
+            <i class="ti ti-receipt-2" style="font-size:32px;opacity:0.6"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-area">
+        <button class="submit-btn" id="submitBtn" onclick="submitOrder()" disabled>
+          <i class="ti ti-send"></i> إرسال الطلب
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="tab" id="tab-orders">
+    <div class="section">
+      <div class="section-h">
+        <h3><i class="ti ti-list-check"></i> الطلبات</h3>
+        <select id="filterStatus" onchange="renderOrders()" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:12px;font-weight:700">
+          <option value="all">الكل</option>
+          <option value="pending">معلّق</option>
+          <option value="active">جاري</option>
+          <option value="done">منتهي</option>
+        </select>
+      </div>
+      <div id="orders-list"></div>
+    </div>
+  </div>
+
+  <!-- LIVE MAP -->
+  <div class="tab" id="tab-live">
+    <div class="section" style="padding:10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:13px;font-weight:800;color:var(--primary)"><i class="ti ti-map-2"></i> السائقون والطلبات</div>
+        <button class="btn btn-pri btn-sm" onclick="initLiveMap()"><i class="ti ti-refresh"></i></button>
+      </div>
+    </div>
+    <div id="liveMap"></div>
+  </div>
+
+  <!-- MORE -->
+  <div class="tab" id="tab-more">
+    <div class="section">
+      <div class="section-h"><h3><i class="ti ti-settings"></i> المزيد</h3></div>
+      <div onclick="switchTab('customers')" style="display:flex;align-items:center;gap:12px;padding:14px;background:#F8FAFC;border-radius:10px;margin-bottom:8px;cursor:pointer">
+        <div style="width:42px;height:42px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff"><i class="ti ti-users" style="font-size:20px"></i></div>
+        <div style="flex:1"><div style="font-weight:800;font-size:14px">قاعدة العملاء</div><div style="font-size:11px;color:var(--muted);margin-top:2px">إدارة العملاء المتكررين</div></div>
+        <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+      </div>
+      <div onclick="exportCSV()" style="display:flex;align-items:center;gap:12px;padding:14px;background:#F8FAFC;border-radius:10px;margin-bottom:8px;cursor:pointer">
+        <div style="width:42px;height:42px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff"><i class="ti ti-file-spreadsheet" style="font-size:20px"></i></div>
+        <div style="flex:1"><div style="font-weight:800;font-size:14px">تصدير تقرير Excel</div><div style="font-size:11px;color:var(--muted);margin-top:2px">كل طلبات الشهر</div></div>
+        <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+      </div>
+      <div onclick="openSupport()" style="display:flex;align-items:center;gap:12px;padding:14px;background:#F8FAFC;border-radius:10px;margin-bottom:8px;cursor:pointer">
+        <div style="width:42px;height:42px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff"><i class="ti ti-headset" style="font-size:20px"></i></div>
+        <div style="flex:1"><div style="font-weight:800;font-size:14px">الدعم الفني</div><div style="font-size:11px;color:var(--muted);margin-top:2px">تواصل مع السلاسل</div></div>
+        <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+      </div>
+      <div onclick="logout()" style="display:flex;align-items:center;gap:12px;padding:14px;background:#F8FAFC;border-radius:10px;cursor:pointer">
+        <div style="width:42px;height:42px;background:#94A3B8;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff"><i class="ti ti-logout" style="font-size:20px"></i></div>
+        <div style="flex:1"><div style="font-weight:800;font-size:14px">تسجيل الخروج</div><div style="font-size:11px;color:var(--muted);margin-top:2px">قفل التطبيق</div></div>
+        <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+      </div>
+    </div>
+    <div style="text-align:center;color:var(--muted);font-size:11px;font-weight:700;margin-top:20px">
+      BYTE v3.0 · شركة السلاسل
+    </div>
+  </div>
+
+  <!-- CUSTOMERS -->
+  <div class="tab" id="tab-customers">
+    <div class="section">
+      <div class="section-h">
+        <h3><i class="ti ti-users"></i> قاعدة العملاء</h3>
+      </div>
+      <input id="custSearchList" placeholder="بحث..." oninput="renderCustomers()" class="input" style="margin-bottom:10px">
+      <div id="customers-list"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <button class="bnav-btn on" onclick="switchTab('home')" id="nav-home"><i class="ti ti-home"></i><span>الرئيسية</span></button>
+    <button class="bnav-btn" onclick="switchTab('new')" id="nav-new"><i class="ti ti-plus-circle"></i><span>طلب</span></button>
+    <button class="bnav-btn" onclick="switchTab('orders')" id="nav-orders"><i class="ti ti-list-check"></i><span>الطلبات</span></button>
+    <button class="bnav-btn" onclick="switchTab('live')" id="nav-live"><i class="ti ti-map-2"></i><span>الخريطة</span></button>
+    <button class="bnav-btn" onclick="switchTab('more')" id="nav-more"><i class="ti ti-menu-2"></i><span>المزيد</span></button>
+  </div>
+</div>
+
+<!-- SUPPORT SHEET -->
+<div class="ov" id="supOv" onclick="if(event.target===this)closeSupport()">
+  <div class="sheet">
+    <div class="sheet-h">
+      <h3><i class="ti ti-headset"></i> الدعم الفني</h3>
+      <button class="sheet-x" onclick="closeSupport()">×</button>
+    </div>
+    <div id="supBody" class="sheet-body" style="background:#F8FAFC;display:flex;flex-direction:column;gap:8px"></div>
+    <div style="padding:10px;border-top:1px solid var(--line);display:flex;gap:8px">
+      <input id="supIn" class="input" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendSupport()">
+      <button onclick="sendSupport()" style="background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;border:none;width:42px;height:42px;border-radius:50%;cursor:pointer"><i class="ti ti-send"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- MAP PICKER -->
+<div class="ov" id="mapPickOv" onclick="if(event.target===this)closeMapPicker()">
+  <div class="sheet" style="max-height:88vh">
+    <div class="sheet-h">
+      <h3><i class="ti ti-map-pin"></i> حدّد موقع العميل</h3>
+      <button class="sheet-x" onclick="closeMapPicker()">×</button>
+    </div>
+    <div class="sheet-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">📍 اضغط أو اسحب الإصبع على الخريطة لتحديد الموقع</p>
+      <div id="pickMap"></div>
+      <div id="pickInfo" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin:10px 0;min-height:30px"></div>
+      <button class="btn btn-pri btn-block" onclick="confirmMapPick()"><i class="ti ti-check"></i> تأكيد الموقع</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORDER DETAIL -->
+<div class="ov" id="orderOv" onclick="if(event.target===this)closeOrderDetail()">
+  <div class="sheet">
+    <div class="sheet-h">
+      <h3><i class="ti ti-package"></i> تفاصيل الطلب</h3>
+      <button class="sheet-x" onclick="closeOrderDetail()">×</button>
+    </div>
+    <div class="sheet-body" id="orderDetailBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============== CONFIG ============== */
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+const AREAS = ['الفحيحيل','منطقة عاشرة','صباح الأحمد','الخيران','المنقف','أبو حليفة','المهبولة','الفنطاس','المسيلة','الأحمدي','السالمية','الفروانية','حولي','الجابرية','مدينة الكويت'];
+
+let REST = null;
+let ORDERS = [];
+let CUSTOMERS = [];
+let DRIVERS = [];
+let DRV_LOCATIONS = [];
+
+let currentPay = 'cash';
+let currentArea = '';
+let pickLat = null, pickLng = null;
+let currentDistance = 0, currentFee = 0;
+let selectedCustomerId = null;
+let locationToken = null;
+
+let liveMap = null, pickMap = null, pickMarker = null;
+let pollTimer = null, supPollTimer = null, locPoller = null;
+let SUP_MSGS = [];
+
+/* ============== DISTANCE & FEE ============== */
+function distanceKm(lat1, lng1, lat2, lng2){
+  if(!lat1||!lng1||!lat2||!lng2) return 0;
+  const R = 6371, toRad = d=>d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function calcFee(km){
+  km = parseFloat(km)||0;
+  if(km <= 0) return 0;
+  if(km <= 7)  return 0.900;
+  if(km <= 15) return 1.500;
+  if(km <= 25) return 2.000;
+  const extra = Math.ceil((km - 25) / 10);
+  return 2.000 + (extra * 0.500);
+}
+
+function recalcFee(){
+  if(!REST?.latitude || !REST?.longitude || !pickLat || !pickLng){
+    currentDistance = 0; currentFee = 0;
+    return;
+  }
+  currentDistance = distanceKm(REST.latitude, REST.longitude, pickLat, pickLng);
+  currentFee = calcFee(currentDistance);
+  updateSummary();
+}
+
+/* ============== HELPERS ============== */
+async function api(path, opts={}){
+  try {
+    const r = await fetch(SUPA_URL+'/rest/v1/'+path, {
+      ...opts,
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', ...(opts.headers||{})}
+    });
+    if(!r.ok){ console.error(path, r.status, await r.text()); return null; }
+    if(opts.method && opts.method !== 'GET' && (opts.headers||{})['Prefer'] === 'return=minimal') return true;
+    return await r.json();
+  } catch(e){
+    console.error('API error', e);
+    return null;
+  }
+}
+
+function toast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast on ' + (type||'');
+  setTimeout(()=>t.classList.remove('on'), 2800);
+}
+
+function fmtKD(n){ return (parseFloat(n)||0).toFixed(3); }
+function fmtTime(iso){ if(!iso) return '-'; return new Date(iso).toLocaleString('ar-KW',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+
+/* ============== LOGIN ============== */
+async function doLogin(){
+  const id = document.getElementById('li-id').value.trim().toUpperCase();
+  const pin = document.getElementById('li-pin').value.trim();
+  const err = document.getElementById('li-err');
+  err.textContent = '';
+  if(!id || !pin){ err.textContent='أدخل الكود والرمز'; return; }
+  try {
+    const list = await api(`restaurants?id=eq.${id}`);
+    if(!list?.length){ err.textContent='كود المطعم غير موجود'; return; }
+    const r = list[0];
+    if(r.active === false){ err.textContent='المطعم غير مفعّل'; return; }
+    if(String(r.pin) !== String(pin)){ err.textContent='الرمز السري خطأ'; return; }
+    REST = r;
+    localStorage.setItem('byte3_session', JSON.stringify({id:r.id, pin:r.pin}));
+    showApp();
+  } catch(e){ err.textContent='فشل الاتصال'; }
+}
+
+function showApp(){
+  document.getElementById('loginScreen').classList.add('gone');
+  document.getElementById('app').classList.add('on');
+  document.getElementById('tbName').textContent = REST.name;
+  document.getElementById('tbSub').textContent = '✓ جاهز للطلبات';
+  document.getElementById('tbLogo').textContent = (REST.id||'RS').substring(0,2);
+  // Render area chips
+  document.getElementById('areaChips').innerHTML = AREAS.map(a =>
+    `<button type="button" class="area-chip${a===currentArea?' on':''}" onclick="selectArea('${a}')">${a}</button>`
+  ).join('');
+  refreshAll();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refreshOrders, 25000);
+  if(supPollTimer) clearInterval(supPollTimer);
+  supPollTimer = setInterval(fetchSupport, 30000);
+  setTimeout(fetchSupport, 1500);
+}
+
+function logout(){
+  if(!confirm('تسجيل الخروج؟')) return;
+  localStorage.removeItem('byte3_session');
+  location.reload();
+}
+
+function tryAutoLogin(){
+  try {
+    const s = JSON.parse(localStorage.getItem('byte3_session')||'null');
+    if(!s) return;
+    document.getElementById('li-id').value = s.id;
+    document.getElementById('li-pin').value = s.pin;
+    doLogin();
+  } catch(e){}
+}
+
+/* ============== TABS ============== */
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('.bnav-btn').forEach(el=>el.classList.remove('on'));
+  document.getElementById('tab-'+t).classList.add('on');
+  const b = document.getElementById('nav-'+t);
+  if(b) b.classList.add('on');
+  window.scrollTo(0,0);
+  if(t==='orders') renderOrders();
+  if(t==='live') setTimeout(initLiveMap, 200);
+  if(t==='customers') renderCustomers();
+}
+
+/* ============== REFRESH ============== */
+async function refreshAll(){
+  if(!REST) return;
+  await Promise.all([refreshOrders(), refreshCustomers()]);
+  renderHome();
+}
+
+async function refreshOrders(){
+  if(!REST) return;
+  const rows = await api(`orders?restaurant_id=eq.${REST.id}&order=created_at.desc&limit=300`);
+  if(Array.isArray(rows)){
+    ORDERS = rows;
+    updateKPIs();
+    if(document.getElementById('tab-home').classList.contains('on')) renderHome();
+  }
+}
+
+async function refreshCustomers(){
+  if(!REST) return;
+  const rows = await api(`restaurant_customers?restaurant_id=eq.${REST.id}&order=last_order.desc.nullslast,name.asc&limit=500`);
+  if(Array.isArray(rows)) CUSTOMERS = rows;
+}
+
+async function fetchActiveDrivers(){
+  try {
+    DRIVERS = await api('drivers?select=id,name') || [];
+    DRV_LOCATIONS = await api('driver_locations?order=timestamp.desc&limit=200') || [];
+  } catch(e){}
+}
+
+function findNearestDriver(lat, lng){
+  if(!lat || !lng) return null;
+  const cutoff = Date.now() - 60*60*1000;
+  const seen = new Set();
+  const candidates = DRV_LOCATIONS
+    .filter(l => {
+      if(seen.has(l.driver_id)) return false;
+      seen.add(l.driver_id);
+      const ts = l.timestamp || l.updated_at;
+      return l.lat && l.lng && ts && new Date(ts).getTime() > cutoff;
+    })
+    .map(l => ({...l, driver: DRIVERS.find(d=>d.id===l.driver_id), dist: distanceKm(lat, lng, l.lat, l.lng)}))
+    .filter(x => x.driver)
+    .sort((a,b)=> a.dist - b.dist);
+  return candidates[0] || null;
+}
+
+/* ============== HOME ============== */
+function renderHome(){
+  // Recent customers
+  const top = CUSTOMERS.slice(0, 6);
+  const recentEl = document.getElementById('recent-customers');
+  if(!top.length){
+    recentEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">لا يوجد عملاء بعد</div>';
+  } else {
+    recentEl.innerHTML = top.map(c => `
+      <div class="recent-item" onclick='quickLoadCustomer(${JSON.stringify(JSON.stringify(c))})'>
+        <div class="recent-name">${c.name}</div>
+        <div class="recent-meta">${c.total_orders||0} طلب · ${fmtKD(c.total_spent)} KD</div>
+      </div>
+    `).join('');
+  }
+
+  // Recent orders
+  const recent = ORDERS.slice(0, 5);
+  const ordEl = document.getElementById('recent-orders');
+  if(!recent.length){
+    ordEl.innerHTML = '<div class="empty"><i class="ti ti-package-off"></i><p>لا توجد طلبات بعد</p></div>';
+  } else {
+    ordEl.innerHTML = recent.map(o=>orderCardHTML(o)).join('');
+  }
+}
+
+function updateKPIs(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayOrders = ORDERS.filter(o=>new Date(o.created_at)>=today);
+  document.getElementById('k-pending').textContent = ORDERS.filter(o=>o.status==='pending').length;
+  document.getElementById('k-active').textContent = ORDERS.filter(o=>['assigned','active','picked_up'].includes(o.status)).length;
+  document.getElementById('k-done').textContent = todayOrders.filter(o=>o.status==='done').length;
+  document.getElementById('k-revenue').textContent = todayOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+(parseFloat(o.order_amount)||0), 0).toFixed(3);
+}
+
+/* ============== NEW ORDER FLOW ============== */
+function quickLoadCustomer(jsonStr){
+  const c = JSON.parse(jsonStr);
+  switchTab('new');
+  setTimeout(()=>selectCustomer(c), 100);
+}
+
+let searchTimeout = null;
+function searchCustomers(){
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(_doSearch, 200);
+}
+
+function _doSearch(){
+  const q = document.getElementById('o-search').value.trim().toLowerCase();
+  const resEl = document.getElementById('cust-results');
+  if(!q || q.length<2){
+    resEl.style.display='none';
+    if(!selectedCustomerId) showNewCust();
+    return;
+  }
+  const matches = CUSTOMERS.filter(c =>
+    (c.name||'').toLowerCase().includes(q) || (c.phone||'').includes(q)
+  ).slice(0,6);
+  if(!matches.length){
+    resEl.innerHTML = `<div style="padding:14px;text-align:center;color:var(--muted);font-size:13px">عميل جديد — اكتب الاسم والتليفون تحت</div>`;
+    resEl.style.display='block';
+    showNewCust();
+    document.getElementById('o-phone').value = /^\d/.test(q) ? q : '';
+    document.getElementById('o-name').value = !/^\d/.test(q) ? q : '';
+    return;
+  }
+  resEl.innerHTML = matches.map(c => `
+    <div class="cust-result" onclick='selectCustomer(${JSON.stringify(JSON.stringify(c))})'>
+      <div style="min-width:0;flex:1">
+        <div class="cust-name">${c.name}</div>
+        <div class="cust-meta">${c.phone||''} ${c.area?'· '+c.area:''}</div>
+      </div>
+      ${c.total_orders ? `<span class="cust-chip">${c.total_orders} طلب</span>` : ''}
+    </div>
+  `).join('');
+  resEl.style.display='block';
+  hideNewCust();
+}
+
+function showNewCust(){ document.getElementById('new-cust').style.display='block'; }
+function hideNewCust(){ document.getElementById('new-cust').style.display='none'; }
+
+function selectCustomer(c){
+  if(typeof c === 'string') c = JSON.parse(c);
+  selectedCustomerId = c.id;
+  document.getElementById('cust-results').style.display='none';
+  hideNewCust();
+  document.getElementById('o-search').value = '';
+
+  // Show customer card
+  document.getElementById('cust-card').innerHTML = `
+    <div class="cust-card fade-in">
+      <div class="ic"><i class="ti ti-user-check" style="font-size:18px"></i></div>
+      <div class="info">
+        <div class="name">${c.name}</div>
+        <div class="meta">${c.phone||''} ${c.total_orders?'· '+c.total_orders+' طلب سابق':''}</div>
+      </div>
+      <button class="clear" onclick="clearCustomer()" type="button">×</button>
+    </div>
+  `;
+  document.getElementById('cust-card').style.display='block';
+
+  // Pre-fill location and address
+  if(c.area){
+    currentArea = c.area;
+    document.querySelectorAll('.area-chip').forEach(ch=>{
+      ch.classList.toggle('on', ch.textContent === c.area);
+    });
+  }
+  document.getElementById('o-block').value = c.block || '';
+  document.getElementById('o-street').value = c.street || '';
+  document.getElementById('o-house').value = c.building || '';
+  if(c.lat && c.lng){
+    pickLat = parseFloat(c.lat); pickLng = parseFloat(c.lng);
+    recalcFee();
+    showLocConfirmed();
+  } else {
+    clearLocation();
+  }
+
+  // Activate step 2
+  setStep(2);
+  document.getElementById('loc-section').style.display='block';
+
+  toast('✓ تم تحميل بيانات العميل','success');
+}
+
+function clearCustomer(){
+  selectedCustomerId = null;
+  document.getElementById('cust-card').style.display='none';
+  document.getElementById('cust-card').innerHTML='';
+  document.getElementById('o-search').value='';
+  document.getElementById('o-name').value='';
+  document.getElementById('o-phone').value='';
+  showNewCust();
+  setStep(1);
+  document.getElementById('loc-section').style.display='none';
+  document.getElementById('order-section').style.display='none';
+  clearLocation();
+}
+
+function setStep(n){
+  for(let i=1;i<=3;i++){
+    const sn = document.getElementById('sn'+i);
+    const st = document.getElementById('st'+i);
+    if(i < n){ sn.className='step-num done'; sn.innerHTML='✓'; st.classList.remove('muted'); }
+    else if(i === n){ sn.className='step-num active'; sn.textContent=n; st.classList.remove('muted'); }
+    else { sn.className='step-num'; sn.textContent=i; st.classList.add('muted'); }
+  }
+}
+
+function selectArea(a){
+  currentArea = a;
+  document.querySelectorAll('.area-chip').forEach(ch=>{
+    ch.classList.toggle('on', ch.textContent === a);
+  });
+}
+
+function setPay(p){
+  currentPay = p;
+  document.getElementById('pay-cash').classList.toggle('on', p==='cash');
+  document.getElementById('pay-online').classList.toggle('on', p==='online');
+  updateSummary();
+}
+
+function updateSummary(){
+  const amt = parseFloat(document.getElementById('o-amount').value)||0;
+  const total = amt + currentFee;
+  document.getElementById('o-total').textContent = total.toFixed(3) + ' KD';
+  const parts = [`الطلب ${amt.toFixed(3)}`];
+  if(currentFee > 0) parts.push(`توصيل ${currentFee.toFixed(3)}`);
+  if(currentDistance > 0) parts.push(`مسافة ${currentDistance.toFixed(1)} كم`);
+  document.getElementById('o-breakdown').textContent = parts.join(' · ');
+  checkSubmitReady();
+}
+
+function checkSubmitReady(){
+  const btn = document.getElementById('submitBtn');
+  const ok = (selectedCustomerId || (document.getElementById('o-name').value.trim() && document.getElementById('o-phone').value.replace(/\D/g,'').length >= 7))
+    && pickLat && pickLng
+    && parseFloat(document.getElementById('o-amount').value) > 0;
+  btn.disabled = !ok;
+}
+
+/* ============== MAP PICKER ============== */
+function openMapPicker(){
+  document.getElementById('mapPickOv').classList.add('on');
+  setTimeout(()=>{
+    if(pickMap){ pickMap.invalidateSize(); return; }
+    const center = (REST?.latitude && REST?.longitude) ? [REST.latitude, REST.longitude] : [29.0837, 48.1302];
+    pickMap = L.map('pickMap', {zoomControl:true, attributionControl:false}).setView(center, 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(pickMap);
+    if(REST?.latitude && REST?.longitude){
+      L.marker([REST.latitude, REST.longitude], {
+        icon: L.divIcon({className:'',html:'<div style="background:#0F3A52;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:18px">🍽️</div>',iconSize:[36,36],iconAnchor:[18,18]})
+      }).addTo(pickMap);
+    }
+    pickMap.on('click', e => placePinAt(e.latlng.lat, e.latlng.lng));
+    // Try geolocation
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(p => {
+        pickMap.setView([p.coords.latitude, p.coords.longitude], 14);
+      }, ()=>{}, {timeout:5000});
+    }
+  }, 150);
+}
+
+function placePinAt(lat, lng){
+  pickLat = lat; pickLng = lng;
+  if(pickMarker) pickMap.removeLayer(pickMarker);
+  pickMarker = L.marker([lat, lng], {
+    icon: L.divIcon({className:'',html:'<div style="background:#10B981;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);font-size:16px">📍</div>',iconSize:[32,32],iconAnchor:[16,16]})
+  }).addTo(pickMap);
+  const km = distanceKm(REST?.latitude||0, REST?.longitude||0, lat, lng);
+  const fee = calcFee(km);
+  document.getElementById('pickInfo').innerHTML =
+    `📍 <b>${lat.toFixed(5)}, ${lng.toFixed(5)}</b><br>` +
+    (REST?.latitude ? `🛣️ المسافة <b>${km.toFixed(2)} كم</b> · رسوم <b>${fee.toFixed(3)} د.ك</b>` : '');
+}
+
+function closeMapPicker(){ document.getElementById('mapPickOv').classList.remove('on'); }
+
+function confirmMapPick(){
+  if(!pickLat || !pickLng){ toast('اضغط على الخريطة أولاً','warn'); return; }
+  recalcFee();
+  showLocConfirmed();
+  closeMapPicker();
+  document.getElementById('order-section').style.display='block';
+  setStep(3);
+  toast('✓ تم تأكيد الموقع','success');
+}
+
+function showLocConfirmed(){
+  document.getElementById('loc-status').innerHTML = `
+    <div class="loc-confirmed fade-in">
+      <i class="ti ti-circle-check-filled"></i>
+      <div class="info">
+        <div class="t">الموقع محدد</div>
+        <div class="s">المسافة ${currentDistance.toFixed(2)} كم · رسوم ${currentFee.toFixed(3)} د.ك</div>
+      </div>
+      <button onclick="clearLocation()">تغيير</button>
+    </div>
+  `;
+  document.getElementById('order-section').style.display='block';
+  setStep(3);
+  checkSubmitReady();
+}
+
+function clearLocation(){
+  pickLat = null; pickLng = null; currentDistance = 0; currentFee = 0;
+  document.getElementById('loc-status').innerHTML = '';
+  updateSummary();
+  if(locPoller){ clearInterval(locPoller); locPoller = null; }
+}
+
+/* ============== WHATSAPP LOCATION ============== */
+async function requestCustomerLocation(){
+  const phone = (document.getElementById('o-phone').value || '').replace(/\D/g,'');
+  const name = document.getElementById('o-name').value.trim()
+    || (selectedCustomerId ? (CUSTOMERS.find(c=>c.id===selectedCustomerId)||{}).name : '');
+  const phoneFromCust = selectedCustomerId ? (CUSTOMERS.find(c=>c.id===selectedCustomerId)||{}).phone : '';
+  const finalPhone = phone || phoneFromCust || '';
+  if(!finalPhone || finalPhone.length<7){
+    toast('أدخل رقم العميل أولاً','error');
+    return;
+  }
+  const token = 'r_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+  try {
+    await fetch(SUPA_URL+'/rest/v1/location_requests', {
+      method:'POST',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        token, restaurant_id: REST.id, restaurant_name: REST.name,
+        customer_phone: finalPhone, customer_name: name||null,
+        request_type: 'restaurant'
+      })
+    });
+    locationToken = token;
+    const origin = location.origin + location.pathname.replace(/[^/]+$/, '');
+    const shareUrl = origin + 'share-location.html?t=' + encodeURIComponent(token);
+    const msg = '🍽️ مرحباً '+(name||'')+'،\n\nأنا من مطعم '+REST.name+'\n\nعشان طلبك يوصل بسرعة، شارك موقعك من اللينك:\n\n👉 '+shareUrl+'\n\nشكراً 💚';
+    const waNum = finalPhone.length===8 ? '965'+finalPhone : finalPhone;
+    window.open('https://wa.me/'+waNum+'?text='+encodeURIComponent(msg), '_blank');
+    showLocWaiting();
+    // Poll
+    let attempts = 0;
+    if(locPoller) clearInterval(locPoller);
+    locPoller = setInterval(async()=>{
+      attempts++;
+      const list = await api(`location_requests?token=eq.${encodeURIComponent(token)}&select=latitude,longitude,received_at`);
+      if(Array.isArray(list) && list[0]?.received_at){
+        clearInterval(locPoller); locPoller = null;
+        pickLat = parseFloat(list[0].latitude);
+        pickLng = parseFloat(list[0].longitude);
+        recalcFee();
+        showLocConfirmed();
+        toast('✓ وصل موقع العميل','success');
+      }
+      if(attempts>120){
+        clearInterval(locPoller); locPoller = null;
+        document.getElementById('loc-status').innerHTML = '<div style="color:var(--red);font-size:12px;margin-top:8px;text-align:center;font-weight:700">انتهت المهلة — جرب الخريطة اليدوية</div>';
+      }
+    }, 2500);
+  } catch(e){
+    console.error(e);
+    toast('فشل إرسال الطلب','error');
+  }
+}
+
+function showLocWaiting(){
+  document.getElementById('loc-status').innerHTML = `
+    <div class="loc-waiting fade-in">
+      <i class="ti ti-loader-2"></i>
+      <div class="info">
+        <div class="t">في انتظار العميل</div>
+        <div class="s">حتى 5 دقائق · WhatsApp مفتوح</div>
+      </div>
+      <button onclick="cancelLocationWait()">إلغاء</button>
+    </div>
+  `;
+}
+
+function cancelLocationWait(){
+  if(locPoller){ clearInterval(locPoller); locPoller = null; }
+  locationToken = null;
+  document.getElementById('loc-status').innerHTML = '';
+}
+
+/* ============== SUBMIT ORDER ============== */
+async function submitOrder(){
+  const btn = document.getElementById('submitBtn');
+  if(btn.disabled) return;
+
+  // Gather
+  let name, phone;
+  if(selectedCustomerId){
+    const c = CUSTOMERS.find(x => x.id === selectedCustomerId);
+    name = c?.name; phone = c?.phone;
+  } else {
+    name = document.getElementById('o-name').value.trim();
+    phone = document.getElementById('o-phone').value.replace(/\D/g,'');
+  }
+
+  const block = document.getElementById('o-block').value;
+  const street = document.getElementById('o-street').value;
+  const house = document.getElementById('o-house').value;
+  const extra = document.getElementById('o-extra').value;
+  const amt = parseFloat(document.getElementById('o-amount').value) || 0;
+  const notes = document.getElementById('o-notes').value;
+
+  // Build address
+  const addrParts = [currentArea, block?'قطعة '+block:'', street?'شارع '+street:'', house?'منزل '+house:'', extra].filter(Boolean);
+  const addr = addrParts.join(' · ');
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin" style="width:18px;height:18px;border:2.5px solid #fff;border-top-color:transparent;border-radius:50%"></div> جاري الإسناد...';
+
+  // Find nearest driver (don't block)
+  let assignedDriver = null;
+  try {
+    await fetchActiveDrivers();
+    assignedDriver = findNearestDriver(pickLat, pickLng);
+  } catch(e){}
+
+  const customerRef = 'ORD-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+
+  const payload = {
+    restaurant_id: REST.id,
+    restaurant_name: REST.name,
+    restaurant_lat: REST.latitude || null,
+    restaurant_lng: REST.longitude || null,
+    customer_name: name,
+    customer_phone: phone,
+    customer_address: addr,
+    customer_lat: pickLat,
+    customer_lng: pickLng,
+    order_amount: amt,
+    payment_method: currentPay,
+    delivery_fee: currentFee,
+    distance_km: currentDistance || null,
+    notes: notes || null,
+    status: assignedDriver ? 'assigned' : 'pending',
+    driver_id: assignedDriver ? assignedDriver.driver.id : null,
+    driver_name: assignedDriver ? assignedDriver.driver.name : null,
+    assigned_at: assignedDriver ? new Date().toISOString() : null,
+    customer_ref: customerRef,
+    source: 'restaurant'
+  };
+  if(currentPay === 'online') payload.payment_status = 'pending';
+
+  try {
+    const res = await fetch(SUPA_URL+'/rest/v1/orders', {
+      method:'POST',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error(await res.text());
+
+    // Notify the assigned driver
+    if(assignedDriver?.driver){
+      fetch(SUPA_URL+'/rest/v1/messages', {
+        method:'POST',
+        headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+        body: JSON.stringify({
+          recipient: assignedDriver.driver.id,
+          from_id: REST.id, from_name: REST.name, from_type: 'restaurant',
+          title: '📦 طلب جديد — '+REST.name,
+          body: 'العميل: '+name+'\nالهاتف: '+phone+'\nالعنوان: '+addr+'\nالمبلغ: '+amt.toFixed(3)+' دك ('+(currentPay==='cash'?'كاش':'إلكتروني')+')\nالمسافة: '+currentDistance.toFixed(1)+' كم',
+          level: 'important'
+        })
+      }).catch(()=>{});
+    }
+
+    // Save customer
+    saveCustomerFromOrder({
+      name, phone, area:currentArea, block, street, building:house,
+      lat:pickLat, lng:pickLng, notes:extra
+    }, amt);
+
+    // Success feedback
+    if(assignedDriver){
+      toast(`✓ تم الإسناد للسائق ${assignedDriver.driver.name} (${assignedDriver.dist.toFixed(1)} كم)`, 'success');
+    } else {
+      toast('✓ تم إرسال الطلب — جاري البحث عن سائق', 'success');
+    }
+
+    // Reset form
+    resetOrderForm();
+    refreshOrders().then(()=>switchTab('orders'));
+  } catch(e){
+    console.error(e);
+    toast('فشل الإرسال — حاول مرة أخرى', 'error');
+    btn.innerHTML = '<i class="ti ti-send"></i> إرسال الطلب';
+    btn.disabled = false;
+  }
+}
+
+function resetOrderForm(){
+  clearCustomer();
+  ['o-search','o-name','o-phone','o-block','o-street','o-house','o-extra','o-amount','o-notes'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  currentArea = '';
+  document.querySelectorAll('.area-chip').forEach(ch=>ch.classList.remove('on'));
+  pickLat = null; pickLng = null; currentDistance = 0; currentFee = 0;
+  document.getElementById('o-total').textContent = '0.000 KD';
+  document.getElementById('o-breakdown').textContent = '';
+  setPay('cash');
+  setStep(1);
+  const sb = document.getElementById('submitBtn');
+  sb.innerHTML = '<i class="ti ti-send"></i> إرسال الطلب';
+  sb.disabled = true;
+}
+
+async function saveCustomerFromOrder(d, amt){
+  if(!d.phone) return;
+  const existing = CUSTOMERS.find(c => c.phone === d.phone);
+  const payload = {
+    restaurant_id: REST.id, name: d.name, phone: d.phone, area: d.area,
+    block: d.block || null, street: d.street || null, building: d.building || null,
+    lat: d.lat || null, lng: d.lng || null, notes: d.notes || null,
+    last_order: new Date().toISOString(),
+    total_orders: (existing ? existing.total_orders : 0) + 1,
+    total_spent: (existing ? parseFloat(existing.total_spent) : 0) + amt
+  };
+  if(existing){
+    await fetch(SUPA_URL+'/rest/v1/restaurant_customers?id=eq.'+existing.id, {
+      method:'PATCH',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify(payload)
+    }).catch(()=>{});
+  } else {
+    await fetch(SUPA_URL+'/rest/v1/restaurant_customers', {
+      method:'POST',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify(payload)
+    }).catch(()=>{});
+  }
+  refreshCustomers();
+}
+
+// Auto-validate on input
+document.addEventListener('input', e => {
+  if(['o-amount','o-name','o-phone'].includes(e.target.id)){
+    checkSubmitReady();
+    if(e.target.id !== 'o-amount') updateSummary();
+  }
+});
+
+/* ============== ORDERS LIST ============== */
+function orderCardHTML(o){
+  const stMap = {pending:['st-pending','معلّق'], assigned:['st-active','مُسند'], active:['st-active','جاري'], picked_up:['st-active','تم الاستلام'], done:['st-done','تم'], cancelled:['st-cancelled','ملغي']};
+  const st = stMap[o.status] || ['st-pending', o.status||'?'];
+  return `<div class="order-card" onclick='showOrderDetail(${JSON.stringify(JSON.stringify(o))})'>
+    <div class="order-head">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:800;margin-bottom:3px">${o.customer_name||'-'}</div>
+        <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.customer_phone||''} · ${o.customer_address||''}</div>
+      </div>
+      <span class="order-status ${st[0]}">${st[1]}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">
+      <span style="font-size:11px;color:var(--muted)">${fmtTime(o.created_at)}</span>
+      <span style="font-weight:800;color:var(--primary);font-family:'JetBrains Mono',monospace;font-size:13px">${fmtKD(o.order_amount)} KD</span>
+    </div>
+  </div>`;
+}
+
+function renderOrders(){
+  const filter = document.getElementById('filterStatus').value;
+  let list = ORDERS;
+  if(filter !== 'all'){
+    if(filter === 'active') list = list.filter(o=>['assigned','active','picked_up'].includes(o.status));
+    else list = list.filter(o=>o.status===filter);
+  }
+  const el = document.getElementById('orders-list');
+  el.innerHTML = list.length ? list.map(o=>orderCardHTML(o)).join('') : '<div class="empty"><i class="ti ti-package-off"></i><p>لا توجد طلبات</p></div>';
+}
+
+function showOrderDetail(jsonStr){
+  const o = JSON.parse(jsonStr);
+  const body = document.getElementById('orderDetailBody');
+  const stMap = {pending:'معلّق', assigned:'مُسند', active:'جاري', picked_up:'تم الاستلام', done:'تم التسليم', cancelled:'ملغي'};
+  let html = `<div style="background:#F0F9FF;border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
+    <div style="font-size:11px;color:#0369A1;font-weight:700">حالة الطلب</div>
+    <div style="font-size:22px;font-weight:900;color:var(--primary);margin-top:4px">${stMap[o.status]||o.status}</div>
+  </div>`;
+  const rows = [
+    ['العميل', o.customer_name],
+    ['الهاتف', o.customer_phone],
+    ['العنوان', o.customer_address],
+    ['قيمة الطلب', fmtKD(o.order_amount)+' KD'],
+    ['رسوم التوصيل', fmtKD(o.delivery_fee)+' KD'],
+    ['طريقة الدفع', o.payment_method==='cash'?'كاش':'إلكتروني'],
+    ['السائق', o.driver_name||'-'],
+    ['وقت الطلب', fmtTime(o.created_at)],
+    ['ملاحظات', o.notes||'-'],
+  ];
+  html += rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted);font-weight:700;font-size:13px">${r[0]}</span><span style="font-weight:800;font-size:13px;text-align:left">${r[1]}</span></div>`).join('');
+  if(o.customer_lat && o.customer_lng){
+    html += `<a href="https://www.google.com/maps/dir/?api=1&destination=${o.customer_lat},${o.customer_lng}" target="_blank" class="btn btn-pri btn-block" style="margin-top:14px"><i class="ti ti-navigation"></i> فتح الموقع في الخريطة</a>`;
+  }
+  if(o.customer_phone){
+    html += `<a href="tel:${o.customer_phone}" class="btn btn-green btn-block" style="margin-top:10px"><i class="ti ti-phone"></i> اتصال بالعميل</a>`;
+  }
+  body.innerHTML = html;
+  document.getElementById('orderOv').classList.add('on');
+}
+function closeOrderDetail(){ document.getElementById('orderOv').classList.remove('on'); }
+
+/* ============== LIVE MAP ============== */
+async function initLiveMap(){
+  if(!document.getElementById('liveMap')) return;
+  if(liveMap) liveMap.remove();
+  liveMap = L.map('liveMap', {zoomControl:true, attributionControl:false}).setView([29.0837, 48.1302], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(liveMap);
+  const markers = [];
+  const active = ORDERS.filter(o=>['pending','assigned','active','picked_up'].includes(o.status));
+  active.forEach(o=>{
+    if(o.customer_lat && o.customer_lng){
+      const m = L.marker([o.customer_lat, o.customer_lng]).bindPopup(`<b>${o.customer_name}</b><br>${o.status}<br>${fmtKD(o.order_amount)} KD`);
+      m.addTo(liveMap); markers.push(m);
+    }
+  });
+  if(REST?.latitude && REST?.longitude){
+    const icon = L.divIcon({className:'',html:'<div style="width:36px;height:36px;background:var(--primary);border:3px solid #fff;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff">🍽️</div>'});
+    const m = L.marker([REST.latitude, REST.longitude], {icon}).bindPopup('<b>'+REST.name+'</b>');
+    m.addTo(liveMap); markers.push(m);
+  }
+  const drivers = await api('driver_locations?select=driver_id,lat,lng,timestamp&order=timestamp.desc&limit=200');
+  if(Array.isArray(drivers)){
+    const seen = new Set();
+    drivers.forEach(d=>{
+      if(seen.has(d.driver_id)) return;
+      seen.add(d.driver_id);
+      const icon = L.divIcon({className:'',html:'<div style="width:30px;height:30px;background:var(--blue);border:3px solid #fff;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:#fff">🚴</div>'});
+      const m = L.marker([d.lat, d.lng], {icon});
+      m.addTo(liveMap); markers.push(m);
+    });
+  }
+  if(markers.length){
+    const group = L.featureGroup(markers);
+    liveMap.fitBounds(group.getBounds().pad(0.2));
+  }
+}
+
+/* ============== CUSTOMERS ============== */
+function renderCustomers(){
+  const q = (document.getElementById('custSearchList').value||'').trim().toLowerCase();
+  const list = q ? CUSTOMERS.filter(c=>(c.name||'').toLowerCase().includes(q) || (c.phone||'').includes(q)) : CUSTOMERS;
+  const el = document.getElementById('customers-list');
+  if(!list.length){
+    el.innerHTML = '<div class="empty"><i class="ti ti-users-minus"></i><p>لا يوجد عملاء بعد</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(c=>`<div class="order-card" onclick='quickLoadCustomer(${JSON.stringify(JSON.stringify(c))})'>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:800;margin-bottom:3px">${c.name}</div>
+        <div style="font-size:12px;color:var(--muted)">${c.phone||''} ${c.area?'· '+c.area:''}</div>
+      </div>
+      <div style="text-align:left">
+        <span class="cust-chip">${c.total_orders||0} طلب</span>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace">${fmtKD(c.total_spent)} KD</div>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+/* ============== EXPORT ============== */
+function exportCSV(){
+  const rows = [['التاريخ','العميل','الهاتف','العنوان','قيمة الطلب','رسوم التوصيل','الإجمالي','الدفع','الحالة','السائق']];
+  ORDERS.forEach(o=>rows.push([
+    fmtTime(o.created_at), o.customer_name||'', o.customer_phone||'', o.customer_address||'',
+    fmtKD(o.order_amount), fmtKD(o.delivery_fee),
+    (parseFloat(o.order_amount||0)+parseFloat(o.delivery_fee||0)).toFixed(3),
+    o.payment_method==='cash'?'كاش':'إلكتروني', o.status, o.driver_name||''
+  ]));
+  const csv = rows.map(r=>r.map(c=>'"'+(c||'').toString().replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = REST.id+'_orders_'+new Date().toISOString().substring(0,10)+'.csv';
+  a.click();
+  toast('✓ تم تنزيل التقرير','success');
+}
+
+/* ============== SUPPORT ============== */
+async function fetchSupport(){
+  if(!REST) return;
+  const url = SUPA_URL+`/rest/v1/messages?or=(and(recipient.eq.${encodeURIComponent(REST.id)},from_type.eq.admin),and(from_id.eq.${encodeURIComponent(REST.id)},from_type.eq.restaurant))&order=created_at.asc&limit=200`;
+  const r = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+  if(!r.ok) return;
+  SUP_MSGS = await r.json();
+  const b = document.getElementById('supBadge');
+  const unread = SUP_MSGS.filter(m=>m.from_type==='admin' && !m.read_at).length;
+  if(unread>0){ b.style.display='inline-flex'; b.textContent = unread; }
+  else { b.style.display='none'; }
+  if(document.getElementById('supOv').classList.contains('on')) renderSupport();
+}
+
+function renderSupport(){
+  const body = document.getElementById('supBody');
+  if(!SUP_MSGS.length){
+    body.innerHTML = '<div class="empty"><i class="ti ti-headset"></i><p>الدعم في خدمتك</p></div>';
+    return;
+  }
+  body.innerHTML = SUP_MSGS.map(m=>{
+    const mine = m.from_type==='restaurant';
+    const bg = mine?'linear-gradient(135deg,var(--primary),var(--primary-2))':'#fff';
+    const color = mine?'#fff':'var(--text)';
+    const align = mine?'flex-end':'flex-start';
+    const br = mine?'14px 14px 4px 14px':'14px 14px 14px 4px';
+    return `<div style="display:flex;flex-direction:column;align-items:${align};max-width:85%;${mine?'align-self:flex-end':'align-self:flex-start'}">
+      <div style="font-size:10px;color:var(--muted);margin:0 6px 3px;font-weight:700">${mine?'إنت':'الدعم'}</div>
+      <div style="background:${bg};color:${color};padding:10px 14px;border-radius:${br};font-size:13px;line-height:1.6;word-break:break-word;border:${mine?'none':'1px solid var(--line)'}">${(m.body||'').replace(/\n/g,'<br>')}</div>
+      <div style="font-size:10px;color:var(--muted);margin:3px 6px 0">${fmtTime(m.created_at)}</div>
+    </div>`;
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+  const unread = SUP_MSGS.filter(m=>m.from_type==='admin' && !m.read_at).map(m=>m.id);
+  if(unread.length){
+    fetch(SUPA_URL+'/rest/v1/messages?id=in.('+unread.join(',')+')', {
+      method:'PATCH',
+      headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+      body: JSON.stringify({read_at: new Date().toISOString()})
+    }).then(()=>{ SUP_MSGS.forEach(m=>{ if(unread.includes(m.id)) m.read_at = new Date().toISOString(); }); fetchSupport(); });
+  }
+}
+
+function openSupport(){
+  document.getElementById('supOv').classList.add('on');
+  fetchSupport().then(renderSupport);
+}
+function closeSupport(){ document.getElementById('supOv').classList.remove('on'); }
+
+async function sendSupport(){
+  const inp = document.getElementById('supIn');
+  const text = inp.value.trim();
+  if(!text || !REST) return;
+  inp.value = '';
+  await fetch(SUPA_URL+'/rest/v1/messages', {
+    method:'POST',
+    headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+    body: JSON.stringify({
+      recipient:'admin', from_id: REST.id, from_name: REST.name, from_type:'restaurant',
+      title:'رسالة دعم', body: text, level:'info'
+    })
+  });
+  await fetchSupport();
+  renderSupport();
+}
+
+/* ============== INIT ============== */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw-restaurant.js').catch(()=>{});
+}
+tryAutoLogin();
+</script>
+</body>
+</html>
