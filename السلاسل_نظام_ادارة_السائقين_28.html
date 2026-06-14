@@ -8855,6 +8855,10 @@ function closeOrdRepModal(){ const m=document.getElementById('ordRepOv'); if(m)m
 
 // === MYFATOORAH SETTINGS MODAL ===
 async function openMyFatoorahModal(){
+  // Close any existing modal first
+  const existing = document.getElementById('mfOv');
+  if(existing) existing.remove();
+
   // Fetch current settings
   let settings = {};
   try {
@@ -8866,43 +8870,92 @@ async function openMyFatoorahModal(){
   const apiKey  = settings.myfatoorah_api_key || '';
   const baseUrl = settings.myfatoorah_base_url || 'https://apitest.myfatoorah.com';
   const enabled = settings.myfatoorah_enabled === 'true';
-  const keyPreview = apiKey ? '••••••••' + apiKey.slice(-6) : '(غير مُحدّد)';
+  const keyPreview = apiKey ? ('••••••••' + apiKey.slice(-6)) : '(غير مُحدّد)';
+  const isSandbox = baseUrl.indexOf('apitest') >= 0;
 
-  let html = '<div class="ov on" id="mfOv" onclick="if(event.target===this)closeMfModal()">';
-  html += '<div class="modal" style="max-width:620px;max-height:92vh;overflow-y:auto">';
-  html += '<h2 style="display:flex;justify-content:space-between;align-items:center"><span><i class="ti ti-credit-card" style="color:#0d9488"></i> إعدادات MyFatoorah</span><button onclick="closeMfModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:24px">×</button></h2>';
+  // Build overlay with inline styles (no CSS class dependencies)
+  const overlay = document.createElement('div');
+  overlay.id = 'mfOv';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:20px;font-family:Cairo,sans-serif;direction:rtl';
+  overlay.onclick = function(e){ if(e.target === overlay) closeMfModal(); };
 
-  html += '<div style="background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.3);border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.8">';
-  html += '<b style="color:#0d9488">📋 خطوات الإعداد:</b><br>';
-  html += '١. سجّل حساب تجاري على <a href="https://portal.myfatoorah.com" target="_blank" style="color:#0d9488;font-weight:800">portal.myfatoorah.com</a><br>';
-  html += '٢. من الـDashboard ← Vendor Profile ← Integration Setting<br>';
-  html += '٣. انسخ <b>API Key</b> (Test أو Production)<br>';
-  html += '٤. الصقه تحت + فعّل الخدمة<br>';
-  html += '٥. جرّب أوردر تجريبي من تطبيق المطعم';
-  html += '</div>';
+  // Modal container
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;max-width:620px;width:100%;max-height:92vh;overflow-y:auto;border-radius:18px;box-shadow:0 25px 60px rgba(0,0,0,0.4);direction:rtl;color:#0f172a';
 
-  html += '<div class="fg"><label>الحالة الحالية: '+(enabled && apiKey ? '<span style="color:#10b981">✅ مفعّل</span>' : '<span style="color:#dc2626">⛔ غير مفعّل</span>')+'</label></div>';
+  modal.innerHTML = [
+    // Header
+    '<div style="padding:18px 20px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;display:flex;justify-content:space-between;align-items:center;border-radius:18px 18px 0 0">',
+      '<div style="display:flex;align-items:center;gap:10px">',
+        '<i class="ti ti-credit-card" style="font-size:24px"></i>',
+        '<h2 style="margin:0;font-size:20px;font-weight:900;color:#fff">إعدادات MyFatoorah</h2>',
+      '</div>',
+      '<button type="button" onclick="closeMfModal()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:22px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center">×</button>',
+    '</div>',
 
-  html += '<div class="fg"><label>API Key الحالي</label><input type="text" value="'+keyPreview+'" readonly style="background:var(--s2);font-family:monospace"></div>';
+    // Body
+    '<div style="padding:20px">',
 
-  html += '<div class="fg"><label>API Key الجديد (انسخ من MyFatoorah Portal)</label>';
-  html += '<input id="mf-key-new" type="text" placeholder="ضع API Key هنا..." style="font-family:monospace;font-size:11px"></div>';
+      // Instructions box
+      '<div style="background:#F0FDFA;border:1.5px solid #5EEAD4;border-radius:12px;padding:14px;margin-bottom:18px">',
+        '<div style="font-weight:900;color:#0d9488;font-size:14px;margin-bottom:8px">📋 خطوات الإعداد:</div>',
+        '<div style="font-size:12px;line-height:1.9;color:#134E4A">',
+          '<div>1. سجّل حساب تجاري على <a href="https://portal.myfatoorah.com" target="_blank" style="color:#0d9488;font-weight:800;text-decoration:none">portal.myfatoorah.com</a></div>',
+          '<div>2. من الـDashboard ← Vendor Profile ← Integration Setting</div>',
+          '<div>3. انسخ <b>API Key</b> (Test أو Production)</div>',
+          '<div>4. الصقه تحت + فعّل الخدمة</div>',
+          '<div>5. جرّب أوردر تجريبي من تطبيق المطعم</div>',
+        '</div>',
+      '</div>',
 
-  html += '<div class="fg"><label>وضع التشغيل</label>';
-  html += '<select id="mf-mode" style="width:100%;padding:10px;background:var(--s1);border:1.5px solid var(--br);border-radius:8px;color:var(--text)">';
-  html += '<option value="https://apitest.myfatoorah.com" '+(baseUrl.includes('apitest')?'selected':'')+'>اختبار (Sandbox) — لا يتم خصم فعلي</option>';
-  html += '<option value="https://api.myfatoorah.com" '+(!baseUrl.includes('apitest')?'selected':'')+'>إنتاج (Production) — معاملات فعلية</option>';
-  html += '</select></div>';
+      // Current status
+      '<div style="display:flex;align-items:center;justify-content:space-between;background:#F8FAFC;padding:12px 14px;border-radius:10px;margin-bottom:16px;border:1px solid #E2E8F0">',
+        '<span style="font-weight:800;font-size:13px;color:#0f172a">الحالة الحالية</span>',
+        (enabled && apiKey
+          ? '<span style="background:#10b981;color:#fff;padding:5px 12px;border-radius:8px;font-weight:800;font-size:12px">✅ مفعّل</span>'
+          : '<span style="background:#dc2626;color:#fff;padding:5px 12px;border-radius:8px;font-weight:800;font-size:12px">⛔ غير مفعّل</span>'),
+      '</div>',
 
-  html += '<div class="fg"><label class="check" style="display:flex;align-items:center;gap:10px;padding:11px;background:var(--s2);border-radius:10px;cursor:pointer">';
-  html += '<input type="checkbox" id="mf-enabled" '+(enabled?'checked':'')+' style="width:20px;height:20px"> ';
-  html += '<span style="font-weight:700">تفعيل الدفع الإلكتروني (يظهر خيار "أون لاين" في تطبيق المطعم)</span></label></div>';
+      // Current API Key
+      '<div style="margin-bottom:14px">',
+        '<label style="display:block;font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px">API Key الحالي</label>',
+        '<input type="text" value="' + keyPreview + '" readonly style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-family:monospace;font-size:13px;background:#F8FAFC;color:#475569;outline:none">',
+      '</div>',
 
-  html += '<div class="modal-actions">';
-  html += '<button class="btn btn-cancel" onclick="closeMfModal()">إلغاء</button>';
-  html += '<button class="btn btn-save" onclick="saveMfSettings()" style="background:linear-gradient(135deg,#0d9488,#0f766e)"><i class="ti ti-check"></i> حفظ</button>';
-  html += '</div></div></div>';
-  document.body.insertAdjacentHTML('beforeend', html);
+      // New API Key
+      '<div style="margin-bottom:14px">',
+        '<label style="display:block;font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px">API Key الجديد <span style="color:#64748b;font-weight:600">(انسخ من MyFatoorah Portal)</span></label>',
+        '<input id="mf-key-new" type="text" placeholder="ضع API Key هنا..." style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-family:monospace;font-size:11px;outline:none;direction:ltr;text-align:left" autocomplete="off">',
+      '</div>',
+
+      // Mode
+      '<div style="margin-bottom:14px">',
+        '<label style="display:block;font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px">وضع التشغيل</label>',
+        '<select id="mf-mode" style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-family:Cairo,sans-serif;font-size:13px;outline:none;background:#fff;color:#0f172a">',
+          '<option value="https://apitest.myfatoorah.com"' + (isSandbox ? ' selected' : '') + '>اختبار (Sandbox) — لا يتم خصم فعلي</option>',
+          '<option value="https://api.myfatoorah.com"' + (!isSandbox ? ' selected' : '') + '>إنتاج (Production) — معاملات فعلية</option>',
+        '</select>',
+      '</div>',
+
+      // Enable checkbox
+      '<label style="display:flex;align-items:center;gap:12px;padding:14px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:10px;cursor:pointer;margin-bottom:18px">',
+        '<input type="checkbox" id="mf-enabled"' + (enabled ? ' checked' : '') + ' style="width:22px;height:22px;cursor:pointer;accent-color:#0d9488">',
+        '<span style="font-weight:700;font-size:13px;color:#0f172a;flex:1">تفعيل الدفع الإلكتروني <span style="color:#64748b;font-weight:600;font-size:12px">(يظهر خيار "أون لاين" في تطبيق المطعم)</span></span>',
+      '</label>',
+
+      // Actions
+      '<div style="display:flex;gap:10px;justify-content:flex-end">',
+        '<button type="button" onclick="closeMfModal()" style="background:#F1F5F9;color:#475569;border:none;padding:12px 24px;border-radius:10px;font-family:Cairo,sans-serif;font-weight:800;font-size:14px;cursor:pointer">إلغاء</button>',
+        '<button type="button" onclick="saveMfSettings()" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-family:Cairo,sans-serif;font-weight:900;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px">',
+          '<i class="ti ti-check"></i> حفظ الإعدادات',
+        '</button>',
+      '</div>',
+
+    '</div>'
+  ].join('');
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 function closeMfModal(){ const m=document.getElementById('mfOv'); if(m)m.remove(); }
 
