@@ -6700,7 +6700,8 @@ function renderReports(){
   h += '<div class="rep-section" style="padding:18px">';
   h += '<h3><i class="ti ti-file-export"></i> تصدير التقرير الشامل للفترة: '+f.bounds.label+'</h3>';
   h += '<div class="rep-actions">';
-  h += '<button class="pdf" onclick="generateFullPdfReport()"><i class="ti ti-file-type-pdf"></i> تقرير PDF شامل</button>';
+  h += '<button class="pdf" onclick="generateFullPdfReport()"><i class="ti ti-file-type-pdf"></i> تقرير PDF (English)</button>';
+  h += '<button class="pdf" onclick="generateArabicPdfReport()" style="background:linear-gradient(135deg,#0F3A52,#1C5878)"><i class="ti ti-file-type-pdf"></i> تقرير PDF (عربي)</button>';
   h += '<button class="ppt" onclick="generateFullPptxReport()"><i class="ti ti-presentation"></i> تقرير PowerPoint مع رسوم بيانية</button>';
   h += '<button class="xl" onclick="generateFullExcelReport()"><i class="ti ti-table-export"></i> Excel (كل البيانات)</button>';
   h += '</div>';
@@ -6808,6 +6809,358 @@ function _pdfName(name, code){
   if(!name) return code || '';
   if(_hasArabic(name)) return code || '[Arabic Name]';
   return _pdfSafe(name);
+}
+
+/* ====================================================
+   Arabic PDF Report — uses HTML + window.print()
+   ==================================================== */
+function generateArabicPdfReport(){
+  const f = repFinancials();
+  const ops = repOperational();
+  const partners = repPartnerMix();
+  const drivers = repDriverPerformance();
+  const fmt = n => (parseFloat(n)||0).toFixed(3);
+  const fmtI = n => Math.round(parseFloat(n)||0).toLocaleString('en-US');
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const periodLabel = f.bounds?.label || (months[accMonth-1]+' '+accYear);
+
+  // Expense categories with Arabic labels
+  const expCats = {
+    'salaries':'الرواتب', 'fuel':'الوقود', 'maintenance':'صيانة المركبات',
+    'fines':'المخالفات', 'rent':'الإيجارات', 'insurance':'التأمين',
+    'admin':'مصاريف إدارية', 'residency':'الإقامات والرخص', 'other':'أخرى'
+  };
+
+  // Group expenses by category
+  const expByCat = {};
+  (f.expenses||[]).forEach(e => {
+    const cat = e.category || 'other';
+    if(!expByCat[cat]) expByCat[cat] = 0;
+    expByCat[cat] += parseFloat(e.amount)||0;
+  });
+  // Add salary cost
+  if(f.salaryCost > 0){
+    expByCat['salaries'] = (expByCat['salaries']||0) + f.salaryCost;
+  }
+
+  // Top 10 drivers
+  const top10 = (drivers.byRevenue||[]).slice(0, 10);
+  const violators = (drivers.violators||[]).slice(0, 10);
+
+  const w = window.open('', '_blank');
+  if(!w){ toast('فشل فتح النافذة — اسمح بالنوافذ المنبثقة','e'); return; }
+
+  w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+<meta charset="utf-8">
+<title>التقرير الشامل — ${periodLabel}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Cairo,sans-serif;padding:20px;color:#0f172a;font-size:12px;background:#fff}
+  .page{max-width:1100px;margin:0 auto;page-break-after:always}
+  .page:last-child{page-break-after:auto}
+  .cover{background:linear-gradient(135deg,#0F3A52,#1C5878);color:#fff;padding:50px 30px;border-radius:14px;text-align:center;margin-bottom:24px;position:relative;overflow:hidden}
+  .cover::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(194,148,73,0.2);border-radius:50%}
+  .cover h1{font-size:32px;font-weight:900;color:#C29449;letter-spacing:3px;position:relative}
+  .cover .ar-name{font-size:24px;font-weight:800;margin-top:8px;position:relative}
+  .cover .title{font-size:38px;font-weight:900;margin-top:30px;position:relative}
+  .cover .period{font-size:20px;color:#C29449;margin-top:8px;font-weight:800;position:relative}
+  .cover .date{font-size:14px;color:#E2E8F0;margin-top:24px;position:relative}
+
+  .section{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:18px;margin-bottom:18px}
+  .section-title{font-size:18px;font-weight:900;color:#0F3A52;margin-bottom:12px;padding-bottom:8px;border-bottom:3px solid #C29449;display:flex;align-items:center;gap:8px}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+  .kpi{background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px;text-align:center}
+  .kpi.income{background:linear-gradient(135deg,#DCFCE7,#fff);border-color:#10B981}
+  .kpi.expense{background:linear-gradient(135deg,#FEE2E2,#fff);border-color:#EF4444}
+  .kpi.profit{background:linear-gradient(135deg,#FEF3C7,#fff);border-color:#F59E0B}
+  .kpi.margin{background:linear-gradient(135deg,#DBEAFE,#fff);border-color:#3B82F6}
+  .kpi .lbl{font-size:11px;color:#64748B;font-weight:700;margin-bottom:6px}
+  .kpi .val{font-size:24px;font-weight:900;font-family:'JetBrains Mono',monospace}
+  .kpi.income .val{color:#15803D}
+  .kpi.expense .val{color:#991B1B}
+  .kpi.profit .val{color:#92400E}
+  .kpi.margin .val{color:#1E40AF}
+  .kpi .sub{font-size:10px;color:#94A3B8;font-weight:600;margin-top:3px}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px}
+  th{background:#0F3A52;color:#fff;padding:10px 8px;text-align:right;font-weight:800;border:1px solid #1C5878}
+  th.center{text-align:center}
+  td{padding:8px;border:1px solid #E2E8F0;text-align:right}
+  td.center{text-align:center}
+  td.num{text-align:left;font-family:'JetBrains Mono',monospace;font-weight:700}
+  tr:nth-child(even) td{background:#F8FAFC}
+  tfoot{background:#0F3A52;color:#fff;font-weight:900}
+  tfoot td{border:1px solid #1C5878;padding:11px 8px}
+
+  .green{color:#15803D}
+  .red{color:#991B1B}
+  .gold{color:#C29449}
+
+  .meta{display:flex;justify-content:space-between;align-items:center;background:#F8FAFC;padding:14px;border-radius:10px;margin-bottom:18px;font-size:12px}
+  .meta b{color:#0F3A52;font-size:14px}
+
+  .badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800}
+  .badge.green{background:#DCFCE7;color:#15803D}
+  .badge.red{background:#FEE2E2;color:#991B1B}
+  .badge.amber{background:#FEF3C7;color:#92400E}
+
+  .signature{margin-top:30px;padding:20px;border:2px solid #C29449;border-radius:12px;background:#FDF6E9}
+  .signature .line{margin-top:14px;display:flex;gap:30px;font-size:12px}
+  .signature .line span{flex:1;border-bottom:1px solid #94A3B8;padding-bottom:6px}
+
+  .noprint{position:fixed;top:14px;left:14px;z-index:9999}
+  .print-btn{background:#0F3A52;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-family:Cairo,sans-serif;font-weight:900;cursor:pointer;font-size:14px;box-shadow:0 8px 18px rgba(15,58,82,0.3)}
+
+  @media print{
+    body{padding:10px}
+    .noprint{display:none}
+    .page{page-break-after:always}
+    .section{break-inside:avoid}
+  }
+</style>
+</head><body>
+
+<div class="noprint">
+  <button class="print-btn" onclick="window.print()">🖨️ طباعة / حفظ كـPDF</button>
+</div>
+
+<!-- ============ PAGE 1: COVER + SUMMARY ============ -->
+<div class="page">
+  <div class="cover">
+    <h1>AL-SALASIL</h1>
+    <div class="ar-name">شركة السلاسل لتوصيل الطلبات الاستهلاكية</div>
+    <div class="title">التقرير المالي الشامل</div>
+    <div class="period">${periodLabel}</div>
+    <div class="date">تاريخ الإصدار: ${new Date().toLocaleDateString('ar-KW',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📊 الملخص التنفيذي</div>
+    <div class="kpi-grid">
+      <div class="kpi income">
+        <div class="lbl">إجمالي الإيرادات</div>
+        <div class="val">${fmtI(f.totalIncome)}</div>
+        <div class="sub">د.ك · ${(f.incomes||[]).length} معاملة</div>
+      </div>
+      <div class="kpi expense">
+        <div class="lbl">إجمالي المصروفات</div>
+        <div class="val">${fmtI(f.totalExpense)}</div>
+        <div class="sub">د.ك · شامل الرواتب</div>
+      </div>
+      <div class="kpi profit">
+        <div class="lbl">صافي الربح</div>
+        <div class="val ${f.netProfit>=0?'green':'red'}">${fmtI(f.netProfit)}</div>
+        <div class="sub">د.ك</div>
+      </div>
+      <div class="kpi margin">
+        <div class="lbl">هامش الربح</div>
+        <div class="val">${f.margin.toFixed(1)}%</div>
+        <div class="sub">${f.margin>=20?'ممتاز':f.margin>=10?'جيد':'يحتاج تحسين'}</div>
+      </div>
+    </div>
+
+    <div class="meta">
+      <div>👥 السائقين النشطين: <b>${ops.activeDrivers||0}</b></div>
+      <div>📅 الفترة: <b>${periodLabel}</b></div>
+      <div>🏢 الشركاء: <b>${(partners||[]).length}</b></div>
+    </div>
+  </div>
+
+  <!-- Partner mix -->
+  <div class="section">
+    <div class="section-title">🤝 توزيع الإيرادات حسب الشركاء</div>
+    <table>
+      <thead><tr>
+        <th>الشريك</th>
+        <th class="center">عدد السائقين</th>
+        <th class="center">الإيراد (د.ك)</th>
+        <th class="center">النسبة</th>
+        <th class="center">متوسط/سائق</th>
+      </tr></thead>
+      <tbody>
+        ${(partners||[]).map(p => `<tr>
+          <td><b>${p.name}</b></td>
+          <td class="center">${p.drivers||0}</td>
+          <td class="num green">${fmt(p.revenue)}</td>
+          <td class="center"><span class="badge green">${(p.share||0).toFixed(1)}%</span></td>
+          <td class="num">${fmt(p.avgPerDriver)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td>الإجمالي</td>
+        <td class="center">${(partners||[]).reduce((s,p)=>s+(p.drivers||0),0)}</td>
+        <td class="num">${fmt((partners||[]).reduce((s,p)=>s+(p.revenue||0),0))}</td>
+        <td class="center">100%</td>
+        <td>—</td>
+      </tr></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ============ PAGE 2: EXPENSES BREAKDOWN ============ -->
+<div class="page">
+  <div class="section">
+    <div class="section-title">💸 تفصيل المصاريف حسب البند</div>
+    <table>
+      <thead><tr>
+        <th>البند</th>
+        <th class="center">المبلغ (د.ك)</th>
+        <th class="center">النسبة من المصاريف</th>
+      </tr></thead>
+      <tbody>
+        ${Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt]) => {
+          const pct = f.totalExpense > 0 ? (amt/f.totalExpense)*100 : 0;
+          const cls = pct >= 40 ? 'red' : pct >= 15 ? 'amber' : 'green';
+          return `<tr>
+            <td><b>${expCats[cat]||cat}</b></td>
+            <td class="num red">${fmt(amt)}</td>
+            <td class="center"><span class="badge ${cls}">${pct.toFixed(1)}%</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td>إجمالي المصاريف</td>
+        <td class="num">${fmt(f.totalExpense)}</td>
+        <td class="center">100%</td>
+      </tr></tfoot>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">💰 معاملات الإيرادات</div>
+    <table>
+      <thead><tr>
+        <th>التاريخ</th>
+        <th>المصدر</th>
+        <th>السائق</th>
+        <th class="center">المبلغ (د.ك)</th>
+        <th>ملاحظات</th>
+      </tr></thead>
+      <tbody>
+        ${(f.incomes||[]).slice(0,30).map(inc => {
+          const dr = inc.driverId ? (DRV.find(d=>d.id===inc.driverId)||{}).name||inc.driverId : '—';
+          const src = (PARTNERS.find(p=>p.id===inc.source)||{}).name || inc.source || '—';
+          return `<tr>
+            <td class="center">${inc.date||'-'}</td>
+            <td><b>${src}</b></td>
+            <td>${dr}</td>
+            <td class="num green">${fmt(inc.amount)}</td>
+            <td style="font-size:11px;color:#64748B">${inc.note||'—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="3">الإجمالي</td>
+        <td class="num">${fmt(f.totalIncome)}</td>
+        <td>${(f.incomes||[]).length} معاملة</td>
+      </tr></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ============ PAGE 3: DRIVERS ============ -->
+<div class="page">
+  <div class="section">
+    <div class="section-title">🏆 أفضل 10 سائقين أداءً</div>
+    <table>
+      <thead><tr>
+        <th class="center">الترتيب</th>
+        <th>الكود</th>
+        <th>الاسم</th>
+        <th>الشريك</th>
+        <th class="center">الإيراد (د.ك)</th>
+        <th class="center">الراتب (د.ك)</th>
+        <th class="center">الصافي (د.ك)</th>
+      </tr></thead>
+      <tbody>
+        ${top10.map((d, i) => {
+          const rank = ['🥇','🥈','🥉','🏅','🏅','🏅','🏅','🏅','🏅','🏅'][i] || (i+1);
+          const partnerName = (PARTNERS.find(p=>p.id===d.partner)||{}).name||d.partner||'—';
+          return `<tr>
+            <td class="center"><b>${rank}</b></td>
+            <td class="center">${d.id}</td>
+            <td><b>${d.name||'—'}</b></td>
+            <td>${partnerName}</td>
+            <td class="num green">${fmt(d.revenue)}</td>
+            <td class="num">${fmt(d.salary)}</td>
+            <td class="num ${(d.net||0)>=0?'green':'red'}">${fmt(d.net||(d.revenue-d.salary))}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  ${violators.length > 0 ? `
+  <div class="section">
+    <div class="section-title">⚠️ السائقين أصحاب المخالفات</div>
+    <table>
+      <thead><tr>
+        <th>الكود</th>
+        <th>الاسم</th>
+        <th class="center">عدد المخالفات</th>
+        <th class="center">إجمالي المخالفات (د.ك)</th>
+        <th class="center">إجمالي الخصومات (د.ك)</th>
+      </tr></thead>
+      <tbody>
+        ${violators.map(d => `<tr>
+          <td class="center">${d.id}</td>
+          <td><b>${d.name||'—'}</b></td>
+          <td class="center"><span class="badge red">${d.vioCount||0}</span></td>
+          <td class="num red">${fmt(d.vioAmount)}</td>
+          <td class="num red">${fmt(d.deductions)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  <div class="section">
+    <div class="section-title">📈 المؤشرات التشغيلية</div>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="lbl">السائقين النشطين</div>
+        <div class="val gold">${ops.activeDrivers||0}</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">إجمالي الحضور</div>
+        <div class="val">${ops.totalAttendance||0}</div>
+        <div class="sub">يوم</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">المخالفات</div>
+        <div class="val red">${ops.totalViolations||0}</div>
+        <div class="sub">حالة</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">متوسط ساعات العمل</div>
+        <div class="val">${(ops.avgHours||0).toFixed(1)}</div>
+        <div class="sub">ساعة/يوم</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signature -->
+  <div class="signature">
+    <div style="font-weight:900;color:#0F3A52;font-size:14px;margin-bottom:8px">التصديق والاعتماد</div>
+    <div style="font-size:12px;color:#64748B">شركة السلاسل لتوصيل الطلبات الاستهلاكية</div>
+    <div class="line">
+      <span>الاسم: ___________________________</span>
+      <span>الصفة: ___________________________</span>
+    </div>
+    <div class="line">
+      <span>التوقيع: ___________________________</span>
+      <span>الختم: ___________________________</span>
+    </div>
+    <div style="text-align:center;color:#94A3B8;font-size:11px;margin-top:14px">تم إصدار هذا التقرير من نظام AL-SALASIL ARK</div>
+  </div>
+</div>
+
+<script>
+  setTimeout(() => { window.print(); }, 800);
+</script>
+</body></html>`);
+  w.document.close();
 }
 
 function generateFullPdfReport(){
