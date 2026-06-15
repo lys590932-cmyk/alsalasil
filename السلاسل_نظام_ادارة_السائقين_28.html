@@ -6700,8 +6700,7 @@ function renderReports(){
   h += '<div class="rep-section" style="padding:18px">';
   h += '<h3><i class="ti ti-file-export"></i> تصدير التقرير الشامل للفترة: '+f.bounds.label+'</h3>';
   h += '<div class="rep-actions">';
-  h += '<button class="pdf" onclick="generateFullPdfReport()"><i class="ti ti-file-type-pdf"></i> تقرير PDF (English)</button>';
-  h += '<button class="pdf" onclick="generateArabicPdfReport()" style="background:linear-gradient(135deg,#0F3A52,#1C5878)"><i class="ti ti-file-type-pdf"></i> تقرير PDF (عربي)</button>';
+  h += '<button class="pdf" onclick="generateFullPdfReport()"><i class="ti ti-file-type-pdf"></i> تقرير PDF شامل</button>';
   h += '<button class="ppt" onclick="generateFullPptxReport()"><i class="ti ti-presentation"></i> تقرير PowerPoint مع رسوم بيانية</button>';
   h += '<button class="xl" onclick="generateFullExcelReport()"><i class="ti ti-table-export"></i> Excel (كل البيانات)</button>';
   h += '</div>';
@@ -6809,358 +6808,6 @@ function _pdfName(name, code){
   if(!name) return code || '';
   if(_hasArabic(name)) return code || '[Arabic Name]';
   return _pdfSafe(name);
-}
-
-/* ====================================================
-   Arabic PDF Report — uses HTML + window.print()
-   ==================================================== */
-function generateArabicPdfReport(){
-  const f = repFinancials();
-  const ops = repOperational();
-  const partners = repPartnerMix();
-  const drivers = repDriverPerformance();
-  const fmt = n => (parseFloat(n)||0).toFixed(3);
-  const fmtI = n => Math.round(parseFloat(n)||0).toLocaleString('en-US');
-  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-  const periodLabel = f.bounds?.label || (months[accMonth-1]+' '+accYear);
-
-  // Expense categories with Arabic labels
-  const expCats = {
-    'salaries':'الرواتب', 'fuel':'الوقود', 'maintenance':'صيانة المركبات',
-    'fines':'المخالفات', 'rent':'الإيجارات', 'insurance':'التأمين',
-    'admin':'مصاريف إدارية', 'residency':'الإقامات والرخص', 'other':'أخرى'
-  };
-
-  // Group expenses by category
-  const expByCat = {};
-  (f.expenses||[]).forEach(e => {
-    const cat = e.category || 'other';
-    if(!expByCat[cat]) expByCat[cat] = 0;
-    expByCat[cat] += parseFloat(e.amount)||0;
-  });
-  // Add salary cost
-  if(f.salaryCost > 0){
-    expByCat['salaries'] = (expByCat['salaries']||0) + f.salaryCost;
-  }
-
-  // Top 10 drivers
-  const top10 = (drivers.byRevenue||[]).slice(0, 10);
-  const violators = (drivers.violators||[]).slice(0, 10);
-
-  const w = window.open('', '_blank');
-  if(!w){ toast('فشل فتح النافذة — اسمح بالنوافذ المنبثقة','e'); return; }
-
-  w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head>
-<meta charset="utf-8">
-<title>التقرير الشامل — ${periodLabel}</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Cairo,sans-serif;padding:20px;color:#0f172a;font-size:12px;background:#fff}
-  .page{max-width:1100px;margin:0 auto;page-break-after:always}
-  .page:last-child{page-break-after:auto}
-  .cover{background:linear-gradient(135deg,#0F3A52,#1C5878);color:#fff;padding:50px 30px;border-radius:14px;text-align:center;margin-bottom:24px;position:relative;overflow:hidden}
-  .cover::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(194,148,73,0.2);border-radius:50%}
-  .cover h1{font-size:32px;font-weight:900;color:#C29449;letter-spacing:3px;position:relative}
-  .cover .ar-name{font-size:24px;font-weight:800;margin-top:8px;position:relative}
-  .cover .title{font-size:38px;font-weight:900;margin-top:30px;position:relative}
-  .cover .period{font-size:20px;color:#C29449;margin-top:8px;font-weight:800;position:relative}
-  .cover .date{font-size:14px;color:#E2E8F0;margin-top:24px;position:relative}
-
-  .section{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:18px;margin-bottom:18px}
-  .section-title{font-size:18px;font-weight:900;color:#0F3A52;margin-bottom:12px;padding-bottom:8px;border-bottom:3px solid #C29449;display:flex;align-items:center;gap:8px}
-
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
-  .kpi{background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px;text-align:center}
-  .kpi.income{background:linear-gradient(135deg,#DCFCE7,#fff);border-color:#10B981}
-  .kpi.expense{background:linear-gradient(135deg,#FEE2E2,#fff);border-color:#EF4444}
-  .kpi.profit{background:linear-gradient(135deg,#FEF3C7,#fff);border-color:#F59E0B}
-  .kpi.margin{background:linear-gradient(135deg,#DBEAFE,#fff);border-color:#3B82F6}
-  .kpi .lbl{font-size:11px;color:#64748B;font-weight:700;margin-bottom:6px}
-  .kpi .val{font-size:24px;font-weight:900;font-family:'JetBrains Mono',monospace}
-  .kpi.income .val{color:#15803D}
-  .kpi.expense .val{color:#991B1B}
-  .kpi.profit .val{color:#92400E}
-  .kpi.margin .val{color:#1E40AF}
-  .kpi .sub{font-size:10px;color:#94A3B8;font-weight:600;margin-top:3px}
-
-  table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px}
-  th{background:#0F3A52;color:#fff;padding:10px 8px;text-align:right;font-weight:800;border:1px solid #1C5878}
-  th.center{text-align:center}
-  td{padding:8px;border:1px solid #E2E8F0;text-align:right}
-  td.center{text-align:center}
-  td.num{text-align:left;font-family:'JetBrains Mono',monospace;font-weight:700}
-  tr:nth-child(even) td{background:#F8FAFC}
-  tfoot{background:#0F3A52;color:#fff;font-weight:900}
-  tfoot td{border:1px solid #1C5878;padding:11px 8px}
-
-  .green{color:#15803D}
-  .red{color:#991B1B}
-  .gold{color:#C29449}
-
-  .meta{display:flex;justify-content:space-between;align-items:center;background:#F8FAFC;padding:14px;border-radius:10px;margin-bottom:18px;font-size:12px}
-  .meta b{color:#0F3A52;font-size:14px}
-
-  .badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800}
-  .badge.green{background:#DCFCE7;color:#15803D}
-  .badge.red{background:#FEE2E2;color:#991B1B}
-  .badge.amber{background:#FEF3C7;color:#92400E}
-
-  .signature{margin-top:30px;padding:20px;border:2px solid #C29449;border-radius:12px;background:#FDF6E9}
-  .signature .line{margin-top:14px;display:flex;gap:30px;font-size:12px}
-  .signature .line span{flex:1;border-bottom:1px solid #94A3B8;padding-bottom:6px}
-
-  .noprint{position:fixed;top:14px;left:14px;z-index:9999}
-  .print-btn{background:#0F3A52;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-family:Cairo,sans-serif;font-weight:900;cursor:pointer;font-size:14px;box-shadow:0 8px 18px rgba(15,58,82,0.3)}
-
-  @media print{
-    body{padding:10px}
-    .noprint{display:none}
-    .page{page-break-after:always}
-    .section{break-inside:avoid}
-  }
-</style>
-</head><body>
-
-<div class="noprint">
-  <button class="print-btn" onclick="window.print()">🖨️ طباعة / حفظ كـPDF</button>
-</div>
-
-<!-- ============ PAGE 1: COVER + SUMMARY ============ -->
-<div class="page">
-  <div class="cover">
-    <h1>AL-SALASIL</h1>
-    <div class="ar-name">شركة السلاسل لتوصيل الطلبات الاستهلاكية</div>
-    <div class="title">التقرير المالي الشامل</div>
-    <div class="period">${periodLabel}</div>
-    <div class="date">تاريخ الإصدار: ${new Date().toLocaleDateString('ar-KW',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">📊 الملخص التنفيذي</div>
-    <div class="kpi-grid">
-      <div class="kpi income">
-        <div class="lbl">إجمالي الإيرادات</div>
-        <div class="val">${fmtI(f.totalIncome)}</div>
-        <div class="sub">د.ك · ${(f.incomes||[]).length} معاملة</div>
-      </div>
-      <div class="kpi expense">
-        <div class="lbl">إجمالي المصروفات</div>
-        <div class="val">${fmtI(f.totalExpense)}</div>
-        <div class="sub">د.ك · شامل الرواتب</div>
-      </div>
-      <div class="kpi profit">
-        <div class="lbl">صافي الربح</div>
-        <div class="val ${f.netProfit>=0?'green':'red'}">${fmtI(f.netProfit)}</div>
-        <div class="sub">د.ك</div>
-      </div>
-      <div class="kpi margin">
-        <div class="lbl">هامش الربح</div>
-        <div class="val">${f.margin.toFixed(1)}%</div>
-        <div class="sub">${f.margin>=20?'ممتاز':f.margin>=10?'جيد':'يحتاج تحسين'}</div>
-      </div>
-    </div>
-
-    <div class="meta">
-      <div>👥 السائقين النشطين: <b>${ops.activeDrivers||0}</b></div>
-      <div>📅 الفترة: <b>${periodLabel}</b></div>
-      <div>🏢 الشركاء: <b>${(partners||[]).length}</b></div>
-    </div>
-  </div>
-
-  <!-- Partner mix -->
-  <div class="section">
-    <div class="section-title">🤝 توزيع الإيرادات حسب الشركاء</div>
-    <table>
-      <thead><tr>
-        <th>الشريك</th>
-        <th class="center">عدد السائقين</th>
-        <th class="center">الإيراد (د.ك)</th>
-        <th class="center">النسبة</th>
-        <th class="center">متوسط/سائق</th>
-      </tr></thead>
-      <tbody>
-        ${(partners||[]).map(p => `<tr>
-          <td><b>${p.name}</b></td>
-          <td class="center">${p.drivers||0}</td>
-          <td class="num green">${fmt(p.revenue)}</td>
-          <td class="center"><span class="badge green">${(p.share||0).toFixed(1)}%</span></td>
-          <td class="num">${fmt(p.avgPerDriver)}</td>
-        </tr>`).join('')}
-      </tbody>
-      <tfoot><tr>
-        <td>الإجمالي</td>
-        <td class="center">${(partners||[]).reduce((s,p)=>s+(p.drivers||0),0)}</td>
-        <td class="num">${fmt((partners||[]).reduce((s,p)=>s+(p.revenue||0),0))}</td>
-        <td class="center">100%</td>
-        <td>—</td>
-      </tr></tfoot>
-    </table>
-  </div>
-</div>
-
-<!-- ============ PAGE 2: EXPENSES BREAKDOWN ============ -->
-<div class="page">
-  <div class="section">
-    <div class="section-title">💸 تفصيل المصاريف حسب البند</div>
-    <table>
-      <thead><tr>
-        <th>البند</th>
-        <th class="center">المبلغ (د.ك)</th>
-        <th class="center">النسبة من المصاريف</th>
-      </tr></thead>
-      <tbody>
-        ${Object.entries(expByCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt]) => {
-          const pct = f.totalExpense > 0 ? (amt/f.totalExpense)*100 : 0;
-          const cls = pct >= 40 ? 'red' : pct >= 15 ? 'amber' : 'green';
-          return `<tr>
-            <td><b>${expCats[cat]||cat}</b></td>
-            <td class="num red">${fmt(amt)}</td>
-            <td class="center"><span class="badge ${cls}">${pct.toFixed(1)}%</span></td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-      <tfoot><tr>
-        <td>إجمالي المصاريف</td>
-        <td class="num">${fmt(f.totalExpense)}</td>
-        <td class="center">100%</td>
-      </tr></tfoot>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">💰 معاملات الإيرادات</div>
-    <table>
-      <thead><tr>
-        <th>التاريخ</th>
-        <th>المصدر</th>
-        <th>السائق</th>
-        <th class="center">المبلغ (د.ك)</th>
-        <th>ملاحظات</th>
-      </tr></thead>
-      <tbody>
-        ${(f.incomes||[]).slice(0,30).map(inc => {
-          const dr = inc.driverId ? (DRV.find(d=>d.id===inc.driverId)||{}).name||inc.driverId : '—';
-          const src = (PARTNERS.find(p=>p.id===inc.source)||{}).name || inc.source || '—';
-          return `<tr>
-            <td class="center">${inc.date||'-'}</td>
-            <td><b>${src}</b></td>
-            <td>${dr}</td>
-            <td class="num green">${fmt(inc.amount)}</td>
-            <td style="font-size:11px;color:#64748B">${inc.note||'—'}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-      <tfoot><tr>
-        <td colspan="3">الإجمالي</td>
-        <td class="num">${fmt(f.totalIncome)}</td>
-        <td>${(f.incomes||[]).length} معاملة</td>
-      </tr></tfoot>
-    </table>
-  </div>
-</div>
-
-<!-- ============ PAGE 3: DRIVERS ============ -->
-<div class="page">
-  <div class="section">
-    <div class="section-title">🏆 أفضل 10 سائقين أداءً</div>
-    <table>
-      <thead><tr>
-        <th class="center">الترتيب</th>
-        <th>الكود</th>
-        <th>الاسم</th>
-        <th>الشريك</th>
-        <th class="center">الإيراد (د.ك)</th>
-        <th class="center">الراتب (د.ك)</th>
-        <th class="center">الصافي (د.ك)</th>
-      </tr></thead>
-      <tbody>
-        ${top10.map((d, i) => {
-          const rank = ['🥇','🥈','🥉','🏅','🏅','🏅','🏅','🏅','🏅','🏅'][i] || (i+1);
-          const partnerName = (PARTNERS.find(p=>p.id===d.partner)||{}).name||d.partner||'—';
-          return `<tr>
-            <td class="center"><b>${rank}</b></td>
-            <td class="center">${d.id}</td>
-            <td><b>${d.name||'—'}</b></td>
-            <td>${partnerName}</td>
-            <td class="num green">${fmt(d.revenue)}</td>
-            <td class="num">${fmt(d.salary)}</td>
-            <td class="num ${(d.net||0)>=0?'green':'red'}">${fmt(d.net||(d.revenue-d.salary))}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-  </div>
-
-  ${violators.length > 0 ? `
-  <div class="section">
-    <div class="section-title">⚠️ السائقين أصحاب المخالفات</div>
-    <table>
-      <thead><tr>
-        <th>الكود</th>
-        <th>الاسم</th>
-        <th class="center">عدد المخالفات</th>
-        <th class="center">إجمالي المخالفات (د.ك)</th>
-        <th class="center">إجمالي الخصومات (د.ك)</th>
-      </tr></thead>
-      <tbody>
-        ${violators.map(d => `<tr>
-          <td class="center">${d.id}</td>
-          <td><b>${d.name||'—'}</b></td>
-          <td class="center"><span class="badge red">${d.vioCount||0}</span></td>
-          <td class="num red">${fmt(d.vioAmount)}</td>
-          <td class="num red">${fmt(d.deductions)}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-  </div>` : ''}
-
-  <div class="section">
-    <div class="section-title">📈 المؤشرات التشغيلية</div>
-    <div class="kpi-grid">
-      <div class="kpi">
-        <div class="lbl">السائقين النشطين</div>
-        <div class="val gold">${ops.activeDrivers||0}</div>
-      </div>
-      <div class="kpi">
-        <div class="lbl">إجمالي الحضور</div>
-        <div class="val">${ops.totalAttendance||0}</div>
-        <div class="sub">يوم</div>
-      </div>
-      <div class="kpi">
-        <div class="lbl">المخالفات</div>
-        <div class="val red">${ops.totalViolations||0}</div>
-        <div class="sub">حالة</div>
-      </div>
-      <div class="kpi">
-        <div class="lbl">متوسط ساعات العمل</div>
-        <div class="val">${(ops.avgHours||0).toFixed(1)}</div>
-        <div class="sub">ساعة/يوم</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Signature -->
-  <div class="signature">
-    <div style="font-weight:900;color:#0F3A52;font-size:14px;margin-bottom:8px">التصديق والاعتماد</div>
-    <div style="font-size:12px;color:#64748B">شركة السلاسل لتوصيل الطلبات الاستهلاكية</div>
-    <div class="line">
-      <span>الاسم: ___________________________</span>
-      <span>الصفة: ___________________________</span>
-    </div>
-    <div class="line">
-      <span>التوقيع: ___________________________</span>
-      <span>الختم: ___________________________</span>
-    </div>
-    <div style="text-align:center;color:#94A3B8;font-size:11px;margin-top:14px">تم إصدار هذا التقرير من نظام AL-SALASIL ARK</div>
-  </div>
-</div>
-
-<script>
-  setTimeout(() => { window.print(); }, 800);
-</script>
-</body></html>`);
-  w.document.close();
 }
 
 function generateFullPdfReport(){
@@ -8855,10 +8502,6 @@ function closeOrdRepModal(){ const m=document.getElementById('ordRepOv'); if(m)m
 
 // === MYFATOORAH SETTINGS MODAL ===
 async function openMyFatoorahModal(){
-  // Close any existing modal first
-  const existing = document.getElementById('mfOv');
-  if(existing) existing.remove();
-
   // Fetch current settings
   let settings = {};
   try {
@@ -8870,92 +8513,43 @@ async function openMyFatoorahModal(){
   const apiKey  = settings.myfatoorah_api_key || '';
   const baseUrl = settings.myfatoorah_base_url || 'https://apitest.myfatoorah.com';
   const enabled = settings.myfatoorah_enabled === 'true';
-  const keyPreview = apiKey ? ('••••••••' + apiKey.slice(-6)) : '(غير مُحدّد)';
-  const isSandbox = baseUrl.indexOf('apitest') >= 0;
+  const keyPreview = apiKey ? '••••••••' + apiKey.slice(-6) : '(غير مُحدّد)';
 
-  // Build overlay with inline styles (no CSS class dependencies)
-  const overlay = document.createElement('div');
-  overlay.id = 'mfOv';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:20px;font-family:Cairo,sans-serif;direction:rtl';
-  overlay.onclick = function(e){ if(e.target === overlay) closeMfModal(); };
+  let html = '<div class="ov on" id="mfOv" onclick="if(event.target===this)closeMfModal()">';
+  html += '<div class="modal" style="max-width:620px;max-height:92vh;overflow-y:auto">';
+  html += '<h2 style="display:flex;justify-content:space-between;align-items:center"><span><i class="ti ti-credit-card" style="color:#0d9488"></i> إعدادات MyFatoorah</span><button onclick="closeMfModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:24px">×</button></h2>';
 
-  // Modal container
-  const modal = document.createElement('div');
-  modal.style.cssText = 'background:#fff;max-width:620px;width:100%;max-height:92vh;overflow-y:auto;border-radius:18px;box-shadow:0 25px 60px rgba(0,0,0,0.4);direction:rtl;color:#0f172a';
+  html += '<div style="background:rgba(13,148,136,0.08);border:1px solid rgba(13,148,136,0.3);border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.8">';
+  html += '<b style="color:#0d9488">📋 خطوات الإعداد:</b><br>';
+  html += '١. سجّل حساب تجاري على <a href="https://portal.myfatoorah.com" target="_blank" style="color:#0d9488;font-weight:800">portal.myfatoorah.com</a><br>';
+  html += '٢. من الـDashboard ← Vendor Profile ← Integration Setting<br>';
+  html += '٣. انسخ <b>API Key</b> (Test أو Production)<br>';
+  html += '٤. الصقه تحت + فعّل الخدمة<br>';
+  html += '٥. جرّب أوردر تجريبي من تطبيق المطعم';
+  html += '</div>';
 
-  modal.innerHTML = [
-    // Header
-    '<div style="padding:18px 20px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;display:flex;justify-content:space-between;align-items:center;border-radius:18px 18px 0 0">',
-      '<div style="display:flex;align-items:center;gap:10px">',
-        '<i class="ti ti-credit-card" style="font-size:24px"></i>',
-        '<h2 style="margin:0;font-size:20px;font-weight:900;color:#fff">إعدادات MyFatoorah</h2>',
-      '</div>',
-      '<button type="button" onclick="closeMfModal()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:22px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center">×</button>',
-    '</div>',
+  html += '<div class="fg"><label>الحالة الحالية: '+(enabled && apiKey ? '<span style="color:#10b981">✅ مفعّل</span>' : '<span style="color:#dc2626">⛔ غير مفعّل</span>')+'</label></div>';
 
-    // Body
-    '<div style="padding:20px">',
+  html += '<div class="fg"><label>API Key الحالي</label><input type="text" value="'+keyPreview+'" readonly style="background:var(--s2);font-family:monospace"></div>';
 
-      // Instructions box
-      '<div style="background:#F0FDFA;border:1.5px solid #5EEAD4;border-radius:12px;padding:14px;margin-bottom:18px">',
-        '<div style="font-weight:900;color:#0d9488;font-size:14px;margin-bottom:8px">📋 خطوات الإعداد:</div>',
-        '<div style="font-size:12px;line-height:1.9;color:#134E4A">',
-          '<div>1. سجّل حساب تجاري على <a href="https://portal.myfatoorah.com" target="_blank" style="color:#0d9488;font-weight:800;text-decoration:none">portal.myfatoorah.com</a></div>',
-          '<div>2. من الـDashboard ← Vendor Profile ← Integration Setting</div>',
-          '<div>3. انسخ <b>API Key</b> (Test أو Production)</div>',
-          '<div>4. الصقه تحت + فعّل الخدمة</div>',
-          '<div>5. جرّب أوردر تجريبي من تطبيق المطعم</div>',
-        '</div>',
-      '</div>',
+  html += '<div class="fg"><label>API Key الجديد (انسخ من MyFatoorah Portal)</label>';
+  html += '<input id="mf-key-new" type="text" placeholder="ضع API Key هنا..." style="font-family:monospace;font-size:11px"></div>';
 
-      // Current status
-      '<div style="display:flex;align-items:center;justify-content:space-between;background:#F8FAFC;padding:12px 14px;border-radius:10px;margin-bottom:16px;border:1px solid #E2E8F0">',
-        '<span style="font-weight:800;font-size:13px;color:#0f172a">الحالة الحالية</span>',
-        (enabled && apiKey
-          ? '<span style="background:#10b981;color:#fff;padding:5px 12px;border-radius:8px;font-weight:800;font-size:12px">✅ مفعّل</span>'
-          : '<span style="background:#dc2626;color:#fff;padding:5px 12px;border-radius:8px;font-weight:800;font-size:12px">⛔ غير مفعّل</span>'),
-      '</div>',
+  html += '<div class="fg"><label>وضع التشغيل</label>';
+  html += '<select id="mf-mode" style="width:100%;padding:10px;background:var(--s1);border:1.5px solid var(--br);border-radius:8px;color:var(--text)">';
+  html += '<option value="https://apitest.myfatoorah.com" '+(baseUrl.includes('apitest')?'selected':'')+'>اختبار (Sandbox) — لا يتم خصم فعلي</option>';
+  html += '<option value="https://api.myfatoorah.com" '+(!baseUrl.includes('apitest')?'selected':'')+'>إنتاج (Production) — معاملات فعلية</option>';
+  html += '</select></div>';
 
-      // Current API Key
-      '<div style="margin-bottom:14px">',
-        '<label style="display:block;font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px">API Key الحالي</label>',
-        '<input type="text" value="' + keyPreview + '" readonly style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-family:monospace;font-size:13px;background:#F8FAFC;color:#475569;outline:none">',
-      '</div>',
+  html += '<div class="fg"><label class="check" style="display:flex;align-items:center;gap:10px;padding:11px;background:var(--s2);border-radius:10px;cursor:pointer">';
+  html += '<input type="checkbox" id="mf-enabled" '+(enabled?'checked':'')+' style="width:20px;height:20px"> ';
+  html += '<span style="font-weight:700">تفعيل الدفع الإلكتروني (يظهر خيار "أون لاين" في تطبيق المطعم)</span></label></div>';
 
-      // New API Key
-      '<div style="margin-bottom:14px">',
-        '<label style="display:block;font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px">API Key الجديد <span style="color:#64748b;font-weight:600">(انسخ من MyFatoorah Portal)</span></label>',
-        '<input id="mf-key-new" type="text" placeholder="ضع API Key هنا..." style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-family:monospace;font-size:11px;outline:none;direction:ltr;text-align:left" autocomplete="off">',
-      '</div>',
-
-      // Mode
-      '<div style="margin-bottom:14px">',
-        '<label style="display:block;font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px">وضع التشغيل</label>',
-        '<select id="mf-mode" style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-family:Cairo,sans-serif;font-size:13px;outline:none;background:#fff;color:#0f172a">',
-          '<option value="https://apitest.myfatoorah.com"' + (isSandbox ? ' selected' : '') + '>اختبار (Sandbox) — لا يتم خصم فعلي</option>',
-          '<option value="https://api.myfatoorah.com"' + (!isSandbox ? ' selected' : '') + '>إنتاج (Production) — معاملات فعلية</option>',
-        '</select>',
-      '</div>',
-
-      // Enable checkbox
-      '<label style="display:flex;align-items:center;gap:12px;padding:14px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:10px;cursor:pointer;margin-bottom:18px">',
-        '<input type="checkbox" id="mf-enabled"' + (enabled ? ' checked' : '') + ' style="width:22px;height:22px;cursor:pointer;accent-color:#0d9488">',
-        '<span style="font-weight:700;font-size:13px;color:#0f172a;flex:1">تفعيل الدفع الإلكتروني <span style="color:#64748b;font-weight:600;font-size:12px">(يظهر خيار "أون لاين" في تطبيق المطعم)</span></span>',
-      '</label>',
-
-      // Actions
-      '<div style="display:flex;gap:10px;justify-content:flex-end">',
-        '<button type="button" onclick="closeMfModal()" style="background:#F1F5F9;color:#475569;border:none;padding:12px 24px;border-radius:10px;font-family:Cairo,sans-serif;font-weight:800;font-size:14px;cursor:pointer">إلغاء</button>',
-        '<button type="button" onclick="saveMfSettings()" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-family:Cairo,sans-serif;font-weight:900;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px">',
-          '<i class="ti ti-check"></i> حفظ الإعدادات',
-        '</button>',
-      '</div>',
-
-    '</div>'
-  ].join('');
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  html += '<div class="modal-actions">';
+  html += '<button class="btn btn-cancel" onclick="closeMfModal()">إلغاء</button>';
+  html += '<button class="btn btn-save" onclick="saveMfSettings()" style="background:linear-gradient(135deg,#0d9488,#0f766e)"><i class="ti ti-check"></i> حفظ</button>';
+  html += '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 function closeMfModal(){ const m=document.getElementById('mfOv'); if(m)m.remove(); }
 
@@ -9300,62 +8894,13 @@ function exportPDF(rows, summary, absences, from, to){
   const sBody = summary.map(s=>[s.code, _pdfName(s.name, s.code), s.partner, s.daysWorked, s.present, s.late, s.absent, s.off, s.holiday, s.totalHours, s.totalLateMin]);
   doc.autoTable({
     startY: 44, head: sHead, body: sBody,
-    theme:'grid', styles:{fontSize:8, cellPadding:1.8}, headStyles:{fillColor:[28,88,120], textColor:255, fontSize:8.5}
+    theme:'grid',
+    styles:{fontSize:8, cellPadding:1.6},
+    headStyles:{fillColor:[28,88,120], textColor:255},
+    alternateRowStyles:{fillColor:[248,250,252]},
   });
-
-  // DAILY DETAILS
-  doc.addPage();
-  doc.setFontSize(20); doc.setTextColor(28,88,120);
-  doc.text('AL-SALASIL — Daily Attendance Details', 148, 16, {align:'center'});
-  doc.setFontSize(9); doc.setTextColor(100,100,100);
-  doc.text('Period: ' + from + '  to  ' + to, 148, 22, {align:'center'});
-  doc.setDrawColor(139,26,26); doc.line(15,26,282,26);
-
-  // Map Arabic statuses to English for PDF
-  const stMap = {'حاضر':'Present','حاضر (تلقائي)':'Present (auto)','متأخر':'Late','غائب':'Absent','إجازة (أوف)':'Off','عطلة رسمية':'Holiday','لم يُسجَّل':'Unmarked','—':'-'};
-  const schMap = {'يعمل':'Work','صباحي':'Morning','مسائي':'Evening','إجازة':'Off','عطلة رسمية':'Holiday','—':'-'};
-
-  const dHead = [['Code','Name','Date','Day','Sched','Status','In','Out','Worked','Late','Early']];
-  const dBody = rows.map(r=>[
-    r.code, _pdfName(r.name, r.code), r.date,
-    {'الأحد':'Sun','الاثنين':'Mon','الثلاثاء':'Tue','الأربعاء':'Wed','الخميس':'Thu','الجمعة':'Fri','السبت':'Sat'}[r.day]||r.day,
-    schMap[r.scheduled]||r.scheduled, stMap[r.status]||r.status,
-    r.clockIn==='—'?'-':r.clockIn, r.clockOut==='—'?'-':r.clockOut, r.worked==='—'?'-':r.worked,
-    r.late==='—'?'-':r.late.replace(' د',''), r.early==='—'?'-':r.early.replace(' د','')
-  ]);
-  doc.autoTable({
-    startY: 30, head: dHead, body: dBody,
-    theme:'striped', styles:{fontSize:7, cellPadding:1.2}, headStyles:{fillColor:[28,88,120], textColor:255, fontSize:7.5},
-    didDrawPage: function(d){
-      doc.setFontSize(8); doc.setTextColor(150,150,150);
-      doc.text('Page ' + d.pageNumber, 282, 200, {align:'right'});
-    }
-  });
-
-  // ABSENCES
-  if(absences.length){
-    doc.addPage();
-    doc.setFontSize(20); doc.setTextColor(28,88,120);
-    doc.text('AL-SALASIL — Absences & Unmarked', 148, 16, {align:'center'});
-    doc.setFontSize(9); doc.setTextColor(100,100,100);
-    doc.text('Period: ' + from + '  to  ' + to, 148, 22, {align:'center'});
-    doc.setDrawColor(220,38,38); doc.line(15,26,282,26);
-
-    const aHead = [['Code','Name','Partner','Date','Day','Status']];
-    const aBody = absences.map(r=>[r.code, _pdfName(r.name, r.code), r.partner, r.date,
-      {'الأحد':'Sun','الاثنين':'Mon','الثلاثاء':'Tue','الأربعاء':'Wed','الخميس':'Thu','الجمعة':'Fri','السبت':'Sat'}[r.day]||r.day,
-      stMap[r.status]||r.status]);
-    doc.autoTable({
-      startY: 30, head: aHead, body: aBody,
-      theme:'grid', styles:{fontSize:8, cellPadding:1.5}, headStyles:{fillColor:[220,38,38], textColor:255}
-    });
-  }
-
-  const drvTag = (expDriver && expDriver !== 'all') ? ('-' + expDriver) : '';
-  const fname = 'Attendance-Report'+drvTag+'-'+from+'-to-'+to+'.pdf';
-  doc.save(fname);
+  doc.save('attendance-'+from+'-to-'+to+'.pdf');
 }
 </script>
-
 </body>
 </html>
