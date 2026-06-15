@@ -267,11 +267,22 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="fg-row">
         <div class="fg">
           <label>المنطقة</label>
-          <select id="o-area">
-            <option value="الفحيحيل">الفحيحيل (داخل)</option>
-            <option value="منطقة عاشرة">باقي المنطقة العاشرة</option>
+          <select id="o-area" onchange="updatePrice()">
+            <option value="الفحيحيل">الفحيحيل</option>
+            <option value="الصباحية">الصباحية</option>
+            <option value="المنقف">المنقف</option>
+            <option value="أبو حليفة">أبو حليفة</option>
+            <option value="المهبولة">المهبولة</option>
+            <option value="الرقة">الرقة</option>
+            <option value="فهد الأحمد">فهد الأحمد</option>
+            <option value="الفنطاس">الفنطاس</option>
+            <option value="الأحمدي">الأحمدي</option>
+            <option value="العقيلة">العقيلة</option>
+            <option value="جابر العلي">جابر العلي</option>
+            <option value="مبارك الكبير">مبارك الكبير</option>
+            <option value="الظهر">الظهر</option>
+            <option value="علي صباح السالم">علي صباح السالم</option>
             <option value="صباح الأحمد">صباح الأحمد</option>
-            <option value="الخيران">الخيران</option>
           </select>
         </div>
         <div class="fg">
@@ -299,6 +310,25 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
       </div>
 
       <div class="fg">
+        <label><i class="ti ti-receipt"></i> قيمة الطلب (د.ك)</label>
+        <input id="o-amount" type="number" step="0.001" min="0" placeholder="0.000" oninput="updateTotalDisplay()">
+      </div>
+
+      <div class="fg">
+        <label><i class="ti ti-credit-card"></i> طريقة الدفع</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div id="pay-cash" onclick="setPaymentMethod('cash')" style="padding:14px;border:2px solid var(--primary);background:#F0F9FF;border-radius:12px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s">
+            <i class="ti ti-cash" style="font-size:24px;color:var(--primary)"></i>
+            <div style="font-size:13px;font-weight:800;color:var(--text)">كاش عند الاستلام</div>
+          </div>
+          <div id="pay-knet" onclick="setPaymentMethod('online')" style="padding:14px;border:2px solid var(--line);background:#fff;border-radius:12px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s">
+            <i class="ti ti-credit-card" style="font-size:24px;color:var(--muted)"></i>
+            <div style="font-size:13px;font-weight:800;color:var(--text)">K-Net (إلكتروني)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fg">
         <label>ملاحظات إضافية</label>
         <textarea id="o-notes" rows="2" placeholder="(اختياري)"></textarea>
       </div>
@@ -310,12 +340,19 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
         <div id="locStatus" style="margin-top:6px;font-size:12px;color:var(--muted);text-align:center"></div>
       </div>
 
-      <div style="background:#F0F9FF;border-radius:12px;padding:14px;margin:14px 0;display:flex;justify-content:space-between;align-items:center;border:1px solid #BAE6FD">
-        <div>
+      <div style="background:#F0F9FF;border-radius:12px;padding:14px;margin:14px 0;border:1px solid #BAE6FD">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div style="font-size:11px;color:#0369A1;font-weight:700">قيمة التوصيل</div>
-          <div style="font-size:22px;font-weight:900;color:var(--primary);font-family:'JetBrains Mono',monospace" id="o-price">0.650 KD</div>
+          <div style="font-size:18px;font-weight:900;color:var(--primary);font-family:'JetBrains Mono',monospace" id="o-price">0.650 KD</div>
         </div>
-        <i class="ti ti-coin" style="font-size:36px;color:#0EA5E9"></i>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:11px;color:#0369A1;font-weight:700">قيمة الطلب</div>
+          <div style="font-size:18px;font-weight:900;color:var(--text);font-family:'JetBrains Mono',monospace" id="o-amount-display">0.000 KD</div>
+        </div>
+        <div style="border-top:1.5px dashed #BAE6FD;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:12px;color:#0369A1;font-weight:900">الإجمالي</div>
+          <div style="font-size:24px;font-weight:900;color:var(--primary);font-family:'JetBrains Mono',monospace" id="o-total">0.650 KD</div>
+        </div>
       </div>
 
       <button class="btn btn-pri btn-block" onclick="submitOrder()"><i class="ti ti-send"></i> إرسال الطلب لشركة السلاسل</button>
@@ -449,9 +486,20 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="fg"><label>المنطقة</label>
         <select id="m-area">
           <option value="الفحيحيل">الفحيحيل</option>
-          <option value="منطقة عاشرة">باقي المنطقة العاشرة</option>
+          <option value="الصباحية">الصباحية</option>
+          <option value="المنقف">المنقف</option>
+          <option value="أبو حليفة">أبو حليفة</option>
+          <option value="المهبولة">المهبولة</option>
+          <option value="الرقة">الرقة</option>
+          <option value="فهد الأحمد">فهد الأحمد</option>
+          <option value="الفنطاس">الفنطاس</option>
+          <option value="الأحمدي">الأحمدي</option>
+          <option value="العقيلة">العقيلة</option>
+          <option value="جابر العلي">جابر العلي</option>
+          <option value="مبارك الكبير">مبارك الكبير</option>
+          <option value="الظهر">الظهر</option>
+          <option value="علي صباح السالم">علي صباح السالم</option>
           <option value="صباح الأحمد">صباح الأحمد</option>
-          <option value="الخيران">الخيران</option>
         </select>
       </div>
       <div class="fg-row">
@@ -494,10 +542,21 @@ let CHAT_MSGS = [];
 let CHAT_SEEN = new Set(JSON.parse(localStorage.getItem('soc_chat_seen')||'[]'));
 
 const PRICES = {
-  'الفحيحيل': {bike: 0.650, car: 0.750},
-  'منطقة عاشرة': {bike: 0.950, car: 1.150},
-  'صباح الأحمد': {bike: 2.000, car: 2.000},
-  'الخيران':    {bike: 2.000, car: 2.000}
+  'الفحيحيل':         {bike: 0.650, car: 0.750},
+  'الصباحية':         {bike: 0.700, car: 0.800},
+  'المنقف':           {bike: 0.700, car: 0.800},
+  'أبو حليفة':        {bike: 0.800, car: 0.900},
+  'المهبولة':         {bike: 0.850, car: 0.950},
+  'الرقة':            {bike: 0.900, car: 1.000},
+  'فهد الأحمد':       {bike: 0.900, car: 1.000},
+  'الفنطاس':          {bike: 0.900, car: 1.000},
+  'الأحمدي':          {bike: 0.900, car: 1.000},
+  'العقيلة':          {bike: 1.000, car: 1.100},
+  'جابر العلي':       {bike: 1.000, car: 1.100},
+  'مبارك الكبير':     {bike: 1.100, car: 1.200},
+  'الظهر':            {bike: 1.100, car: 1.200},
+  'علي صباح السالم':  {bike: 1.400, car: 1.500},
+  'صباح الأحمد':      {bike: 1.650, car: 1.750}
 };
 
 /* ==================== HELPERS ==================== */
@@ -675,11 +734,47 @@ function renderWeekChart(){
 }
 
 /* ==================== NEW ORDER ==================== */
+let currentPay = 'cash';
+
 function updatePrice(){
   const area = document.getElementById('o-area').value;
   const v = document.getElementById('o-vehicle').value;
   const price = (PRICES[area]||PRICES['الفحيحيل'])[v];
   document.getElementById('o-price').textContent = price.toFixed(3)+' KD';
+  updateTotalDisplay();
+}
+
+function updateTotalDisplay(){
+  const area = document.getElementById('o-area').value;
+  const v = document.getElementById('o-vehicle').value;
+  const deliveryFee = (PRICES[area]||PRICES['الفحيحيل'])[v];
+  const amount = parseFloat(document.getElementById('o-amount').value)||0;
+  const total = amount + deliveryFee;
+  const amtEl = document.getElementById('o-amount-display');
+  const totEl = document.getElementById('o-total');
+  if(amtEl) amtEl.textContent = amount.toFixed(3)+' KD';
+  if(totEl) totEl.textContent = total.toFixed(3)+' KD';
+}
+
+function setPaymentMethod(method){
+  currentPay = method;
+  const cashEl = document.getElementById('pay-cash');
+  const knetEl = document.getElementById('pay-knet');
+  if(method === 'cash'){
+    cashEl.style.border = '2px solid var(--primary)';
+    cashEl.style.background = '#F0F9FF';
+    cashEl.querySelector('i').style.color = 'var(--primary)';
+    knetEl.style.border = '2px solid var(--line)';
+    knetEl.style.background = '#fff';
+    knetEl.querySelector('i').style.color = 'var(--muted)';
+  } else {
+    knetEl.style.border = '2px solid var(--primary)';
+    knetEl.style.background = '#F0F9FF';
+    knetEl.querySelector('i').style.color = 'var(--primary)';
+    cashEl.style.border = '2px solid var(--line)';
+    cashEl.style.background = '#fff';
+    cashEl.querySelector('i').style.color = 'var(--muted)';
+  }
 }
 
 function searchMembers(){
@@ -757,8 +852,10 @@ async function requestCustomerLocation(){
 async function submitOrder(){
   const name = document.getElementById('o-name').value.trim();
   const phone = document.getElementById('o-phone').value.replace(/\D/g,'');
+  const amount = parseFloat(document.getElementById('o-amount').value)||0;
   if(!name){ toast('أدخل اسم العضو','e'); return; }
   if(!phone || phone.length<7){ toast('رقم الهاتف غير صحيح','e'); return; }
+  if(amount <= 0){ toast('أدخل قيمة الطلب','e'); return; }
   const area = document.getElementById('o-area').value;
   const vehicle = document.getElementById('o-vehicle').value;
   const price = (PRICES[area]||PRICES['الفحيحيل'])[vehicle];
@@ -776,8 +873,9 @@ async function submitOrder(){
     customer_lat: lastLocationData ? lastLocationData.lat : null,
     customer_lng: lastLocationData ? lastLocationData.lng : null,
     vehicle_type: vehicle,
+    order_amount: amount,
     delivery_fee: price,
-    payment_method: 'account',
+    payment_method: currentPay,
     notes: document.getElementById('o-notes').value || null,
     source: 'society',
     restaurant_id: SOC.id,
@@ -785,6 +883,7 @@ async function submitOrder(){
     status: 'pending',
     created_at: new Date().toISOString()
   };
+  if(currentPay === 'online') payload.payment_status = 'pending';
 
   const res = await fetch(SUPA_URL+'/rest/v1/orders', {
     method:'POST',
@@ -795,9 +894,11 @@ async function submitOrder(){
   if(res.ok){
     toast('تم إرسال الطلب لشركة السلاسل ✓','s');
     // Reset form
-    ['o-name','o-mid','o-phone','o-block','o-street','o-house','o-notes'].forEach(id=>document.getElementById(id).value='');
+    ['o-name','o-mid','o-phone','o-block','o-street','o-house','o-notes','o-amount'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
     lastLocationToken = null; lastLocationData = null;
     document.getElementById('locStatus').textContent = '';
+    setPaymentMethod('cash');
+    updateTotalDisplay();
     refreshOrders().then(()=>switchTab('orders'));
   } else {
     const err = await res.text();
