@@ -5431,7 +5431,8 @@ function renderAccounting(){
       '<select onchange="setAccYear(this.value)" style="padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-weight:700">'+yOpts+'</select>'+
       '<button class="tbtn" onclick="exportAccCsv()" style="color:var(--green)"><i class="ti ti-file-spreadsheet"></i> CSV</button>'+
       '<button class="tbtn" onclick="loadApril2025Manual()" style="color:#a78bfa" title="تحميل بيانات أبريل 2025"><i class="ti ti-database-import"></i> بيانات أبريل</button>'+
-      '<button class="tbtn" onclick="generateAccPdfReport()" style="color:#dc2626;border-color:rgba(220,38,38,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير PDF</button>'+
+      '<button class="tbtn" onclick="generateAccPdfReport()" style="color:#dc2626;border-color:rgba(220,38,38,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير PDF (EN)</button>'+
+      '<button class="tbtn" onclick="generateAccArabicReport()" style="color:#059669;border-color:rgba(5,150,105,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير عربي</button>'+
       '<button class="tbtn" onclick="generatePptxReport()" style="color:#f59e0b"><i class="ti ti-presentation"></i> تقرير PowerPoint</button>'+
     '</div>'+
   '</div>';
@@ -8900,6 +8901,174 @@ function exportPDF(rows, summary, absences, from, to){
     alternateRowStyles:{fillColor:[248,250,252]},
   });
   doc.save('attendance-'+from+'-to-'+to+'.pdf');
+}
+
+/* ================================================================== */
+/* ARABIC ACCOUNTING REPORT — print-friendly HTML                       */
+/* ================================================================== */
+function generateAccArabicReport(){
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const catAr = {
+    fuel:'وقود', maintenance:'صيانة', salaries:'رواتب', rent:'إيجار',
+    insurance:'تأمين', internet:'إنترنت واتصالات', supplies:'مستلزمات',
+    fines:'مخالفات ورسوم', tax:'ضرائب ورسوم', other:'أخرى', misc:'متنوعة'
+  };
+  const monthIncomes  = INCOMES.filter(x=>_matchMonth(x.date, accMonth, accYear));
+  const monthExpenses = EXPENSES.filter(x=>_matchMonth(x.date, accMonth, accYear));
+  const monthExpNS    = monthExpenses.filter(x=>x.category!=='salaries');
+  const totalIncome   = monthIncomes.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  const totalExpense  = monthExpNS.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  const salaryCost    = _monthlySalaryCost(accMonth, accYear);
+  const netProfit     = totalIncome - totalExpense - salaryCost;
+  const margin        = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
+
+  const partnerMap = {};
+  monthIncomes.forEach(inc => {
+    const src = PARTNERS.find(p=>p.id===inc.source);
+    const name = src ? src.name : (inc.source==='other' ? 'أخرى' : (inc.source||'—'));
+    const color = src ? src.color : '#64748b';
+    if(!partnerMap[name]) partnerMap[name] = {amount:0, count:0, color};
+    partnerMap[name].amount += parseFloat(inc.amount) || 0;
+    partnerMap[name].count  += 1;
+  });
+  const partnersArr = Object.entries(partnerMap)
+    .map(([name,d])=>({name, ...d, pct: totalIncome>0? d.amount/totalIncome*100 : 0}))
+    .sort((a,b)=>b.amount-a.amount);
+
+  const catMap = {};
+  monthExpNS.forEach(exp => {
+    const c = exp.category || 'other';
+    const label = catAr[c] || c;
+    if(!catMap[label]) catMap[label] = {amount:0, count:0};
+    catMap[label].amount += parseFloat(exp.amount) || 0;
+    catMap[label].count  += 1;
+  });
+  const catsArr = Object.entries(catMap)
+    .map(([name,d])=>({name, ...d, pct: totalExpense>0? d.amount/totalExpense*100 : 0}))
+    .sort((a,b)=>b.amount-a.amount);
+
+  const fmt = n => (parseFloat(n)||0).toFixed(3);
+  const fmt0 = n => Math.round(parseFloat(n)||0).toLocaleString('ar-EG');
+  const monthLabel = months[accMonth-1] + ' ' + accYear;
+  const today = new Date().toLocaleDateString('ar-EG', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const profitColor = netProfit >= 0 ? '#15803d' : '#b91c1c';
+  const profitBg    = netProfit >= 0 ? '#dcfce7' : '#fee2e2';
+
+  const incRows = monthIncomes.slice().sort((a,b)=>a.date.localeCompare(b.date)).map((inc,i) => {
+    const src = PARTNERS.find(p=>p.id===inc.source);
+    const srcName = src ? src.name : (inc.source==='other' ? 'أخرى' : inc.source);
+    const drv = inc.driverId ? DRV.find(d=>d.id===inc.driverId) : null;
+    return '<tr><td class="c">'+(i+1)+'</td><td class="c">'+inc.date+'</td><td>'+srcName+(drv?' · '+drv.name:'')+'</td><td>'+(inc.note||'—')+'</td><td class="c money">'+fmt(inc.amount)+'</td></tr>';
+  }).join('');
+
+  const expRows = monthExpNS.slice().sort((a,b)=>a.date.localeCompare(b.date)).map((exp,i) => {
+    const label = catAr[exp.category] || exp.category || '—';
+    return '<tr><td class="c">'+(i+1)+'</td><td class="c">'+exp.date+'</td><td>'+label+'</td><td>'+(exp.note||'—')+'</td><td class="c money">'+fmt(exp.amount)+'</td></tr>';
+  }).join('');
+
+  const w = window.open('', '_blank');
+  if(!w){ toast('اسمح بفتح النوافذ المنبثقة','e'); return; }
+
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar"><head><meta charset="UTF-8">
+<title>تقرير المحاسبة — ${monthLabel}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo','Tahoma',sans-serif;color:#0f172a;background:#f8fafc;padding:20px;direction:rtl}
+.page{max-width:210mm;margin:0 auto;background:#fff;padding:14mm;box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:8px}
+.cover{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:32px 24px;border-radius:8px;margin-bottom:24px;text-align:center;border-bottom:6px solid #c29449}
+.cover h1{font-size:36px;font-weight:900;letter-spacing:1px}
+.cover .sub{font-size:16px;color:#e2e8f0;margin-top:4px}
+.cover .divider{width:80px;height:3px;background:#c29449;margin:14px auto}
+.cover h2{font-size:22px;font-weight:700}
+.cover .month{background:#c29449;color:#fff;display:inline-block;padding:6px 20px;border-radius:20px;font-weight:700;margin-top:10px;font-size:15px}
+.cover .meta{margin-top:12px;font-size:12px;color:#cbd5e1}
+h2.section{font-size:20px;color:#0f3a52;border-bottom:3px solid #c29449;padding:8px 0 6px;margin:22px 0 12px;font-weight:800}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 4px}
+.kpi{padding:14px 12px;border-radius:8px;border:1px solid #e2e8f0}
+.kpi.ok{background:#dcfce7;border-color:#15803d}
+.kpi.err{background:#fee2e2;border-color:#b91c1c}
+.kpi.warn{background:#fef3c7;border-color:#b45309}
+.kpi.info{background:#dbeafe;border-color:#1e40af}
+.kpi .val{font-size:22px;font-weight:900;margin-bottom:2px}
+.kpi .lbl{font-size:11px;color:#475569;font-weight:600}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+th{background:#0f3a52;color:#fff;padding:10px 6px;text-align:right;font-weight:700;border:1px solid #0f3a52}
+th.c{text-align:center}
+td{padding:8px 6px;border:1px solid #e2e8f0;text-align:right}
+td.c{text-align:center}
+td.money{font-weight:700;color:#0f3a52}
+tr:nth-child(even) td{background:#f8fafc}
+.total-row td{background:#fdf6e9!important;font-weight:800;color:#0f3a52;font-size:13px}
+.profit-box{padding:20px;border-radius:10px;text-align:center;margin:16px 0;background:${profitBg};border:2px solid ${profitColor}}
+.profit-box .lbl{font-size:14px;color:#475569;font-weight:700}
+.profit-box .val{font-size:36px;font-weight:900;color:${profitColor};margin:6px 0}
+.profit-box .margin{font-size:13px;color:#64748b;font-weight:700}
+.footer{margin-top:26px;padding-top:12px;border-top:2px solid #c29449;text-align:center;color:#64748b;font-size:11px}
+.footer strong{color:#0f3a52}
+.print-btn{position:fixed;top:16px;left:16px;background:#0f3a52;color:#fff;border:none;padding:12px 22px;border-radius:8px;font-weight:700;cursor:pointer;font-family:'Cairo';box-shadow:0 4px 14px rgba(0,0,0,0.15);z-index:9999;font-size:14px}
+.print-btn:hover{background:#c29449}
+@media print{body{background:#fff;padding:0}.page{box-shadow:none;padding:8mm 10mm;border-radius:0;max-width:100%}.print-btn{display:none}h2.section{page-break-after:avoid}table{page-break-inside:avoid}}
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+<div class="page">
+<div class="cover"><h1>شركة السلاسل</h1><div class="sub">لتوصيل الطلبات الاستهلاكية — دولة الكويت</div><div class="divider"></div><h2>التقرير المحاسبي الشامل</h2><div class="month">${monthLabel}</div><div class="meta">تاريخ الإصدار: ${today} · أعدّه: علي شعبان — مدير العمليات</div></div>
+
+<h2 class="section">الملخص التنفيذي</h2>
+<div class="kpis">
+<div class="kpi ok"><div class="val">${fmt0(totalIncome)}</div><div class="lbl">إجمالي الإيرادات (د.ك)</div></div>
+<div class="kpi err"><div class="val">${fmt0(totalExpense)}</div><div class="lbl">إجمالي المصروفات (د.ك)</div></div>
+<div class="kpi warn"><div class="val">${fmt0(salaryCost)}</div><div class="lbl">تكلفة الرواتب (د.ك)</div></div>
+<div class="kpi info"><div class="val" style="color:${profitColor}">${fmt0(netProfit)}</div><div class="lbl">صافي الربح (د.ك)</div></div>
+</div>
+
+<div class="profit-box"><div class="lbl">صافي الربح لشهر ${monthLabel}</div><div class="val">${fmt(netProfit)} د.ك</div><div class="margin">هامش الربح: ${margin.toFixed(1)}% من الإيرادات</div></div>
+
+<h2 class="section">تحليل الإيرادات حسب الشريك</h2>
+<table><thead><tr><th class="c" style="width:60px">م</th><th>الشريك / المصدر</th><th class="c" style="width:100px">عدد الدفعات</th><th class="c" style="width:120px">القيمة (د.ك)</th><th class="c" style="width:80px">النسبة</th></tr></thead><tbody>
+${partnersArr.map((p,i)=>'<tr><td class="c">'+(i+1)+'</td><td><span style="display:inline-block;width:12px;height:12px;background:'+p.color+';border-radius:3px;margin-left:6px;vertical-align:middle"></span>'+p.name+'</td><td class="c">'+p.count+'</td><td class="c money">'+fmt(p.amount)+'</td><td class="c">'+p.pct.toFixed(1)+'%</td></tr>').join('') || '<tr><td colspan="5" class="c">لا توجد إيرادات</td></tr>'}
+<tr class="total-row"><td colspan="2" class="c">الإجمالي</td><td class="c">${monthIncomes.length}</td><td class="c money">${fmt(totalIncome)}</td><td class="c">100.0%</td></tr>
+</tbody></table>
+
+<h2 class="section">تحليل المصروفات حسب النوع</h2>
+<table><thead><tr><th class="c" style="width:60px">م</th><th>نوع المصروف</th><th class="c" style="width:100px">عدد البنود</th><th class="c" style="width:120px">القيمة (د.ك)</th><th class="c" style="width:80px">النسبة</th></tr></thead><tbody>
+${catsArr.map((c,i)=>'<tr><td class="c">'+(i+1)+'</td><td>'+c.name+'</td><td class="c">'+c.count+'</td><td class="c money" style="color:#b91c1c">('+fmt(c.amount)+')</td><td class="c">'+c.pct.toFixed(1)+'%</td></tr>').join('') || '<tr><td colspan="5" class="c">لا توجد مصروفات</td></tr>'}
+<tr class="total-row"><td colspan="2" class="c">إجمالي المصروفات التشغيلية</td><td class="c">${monthExpNS.length}</td><td class="c money" style="color:#b91c1c">(${fmt(totalExpense)})</td><td class="c">100.0%</td></tr>
+<tr class="total-row" style="background:#fef3c7!important"><td colspan="2" class="c">تكلفة الرواتب</td><td class="c">—</td><td class="c money" style="color:#b45309">(${fmt(salaryCost)})</td><td class="c">—</td></tr>
+<tr class="total-row" style="background:#5c1f1f!important"><td colspan="2" class="c" style="color:#fff">إجمالي التكاليف الشاملة</td><td class="c" style="color:#fff">—</td><td class="c money" style="color:#fff">(${fmt(totalExpense + salaryCost)})</td><td class="c" style="color:#fff">—</td></tr>
+</tbody></table>
+
+<h2 class="section">تفصيل الإيرادات — كامل الشهر (${monthIncomes.length} عملية)</h2>
+<table><thead><tr><th class="c" style="width:50px">م</th><th class="c" style="width:100px">التاريخ</th><th>المصدر / السائق</th><th>ملاحظات</th><th class="c" style="width:110px">القيمة (د.ك)</th></tr></thead><tbody>
+${incRows || '<tr><td colspan="5" class="c">—</td></tr>'}
+<tr class="total-row"><td colspan="4" class="c">الإجمالي</td><td class="c money">${fmt(totalIncome)}</td></tr>
+</tbody></table>
+
+<h2 class="section">تفصيل المصروفات — كامل الشهر (${monthExpNS.length} بند)</h2>
+<table><thead><tr><th class="c" style="width:50px">م</th><th class="c" style="width:100px">التاريخ</th><th style="width:130px">النوع</th><th>ملاحظات</th><th class="c" style="width:110px">القيمة (د.ك)</th></tr></thead><tbody>
+${expRows || '<tr><td colspan="5" class="c">—</td></tr>'}
+<tr class="total-row"><td colspan="4" class="c">الإجمالي</td><td class="c money" style="color:#b91c1c">(${fmt(totalExpense)})</td></tr>
+</tbody></table>
+
+<h2 class="section">قائمة الأرباح والخسائر (P&L)</h2>
+<table><tbody>
+<tr class="total-row" style="background:#dcfce7!important"><td>إجمالي الإيرادات</td><td class="c money" style="color:#15803d;width:180px">${fmt(totalIncome)} د.ك</td></tr>
+<tr><td>ناقص: المصروفات التشغيلية</td><td class="c money" style="color:#b91c1c">(${fmt(totalExpense)}) د.ك</td></tr>
+<tr><td>ناقص: تكلفة الرواتب</td><td class="c money" style="color:#b45309">(${fmt(salaryCost)}) د.ك</td></tr>
+<tr class="total-row" style="background:${profitBg}!important"><td style="color:${profitColor}"><strong>صافي الربح / الخسارة</strong></td><td class="c money" style="color:${profitColor};font-size:16px">${fmt(netProfit)} د.ك</td></tr>
+<tr><td>هامش الربح</td><td class="c" style="font-weight:800;color:${profitColor}">${margin.toFixed(2)}%</td></tr>
+</tbody></table>
+
+<div class="footer"><strong>شركة السلاسل لتوصيل الطلبات الاستهلاكية</strong><br>تقرير مُعدّ آلياً من نظام ARK — سري وخاص بالإدارة<br>${today}</div>
+</div>
+<script>window.addEventListener('load',()=>setTimeout(()=>window.focus(),200));<\/script>
+</body></html>`;
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  toast('التقرير جاهز — استخدم زر الطباعة أو Ctrl+P','s');
 }
 </script>
 </body>
