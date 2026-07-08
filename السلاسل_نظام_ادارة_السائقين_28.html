@@ -2756,6 +2756,141 @@ function renderDash() {
     '<div class="date-pill"><i class="ti ti-calendar"></i> '+dateStr+'</div>'+
   '</div>';
 
+  // ═══════════ BIG NAVIGATION CARDS (Grid) ═══════════
+  html += '<style>' +
+    '.nav-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}' +
+    '.nav-card{position:relative;background:var(--surface);border:2px solid var(--border);border-radius:18px;padding:22px;cursor:pointer;transition:all 0.25s;overflow:hidden;min-height:130px;display:flex;flex-direction:column;justify-content:space-between}' +
+    '.nav-card:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.15)}' +
+    '.nav-card::before{content:"";position:absolute;top:0;right:0;left:0;height:5px;background:var(--card-color, #64748b)}' +
+    '.nav-card-icon{width:64px;height:64px;border-radius:14px;background:var(--card-color, #64748b);display:grid;place-items:center;font-size:32px;color:#fff;box-shadow:0 8px 20px rgba(0,0,0,0.15)}' +
+    '.nav-card-body{margin-top:14px}' +
+    '.nav-card-title{font-size:18px;font-weight:900;color:var(--text);line-height:1.2;margin-bottom:6px}' +
+    '.nav-card-sub{font-size:12px;color:var(--muted);font-weight:600;line-height:1.4}' +
+    '.nav-card-badge{position:absolute;top:14px;left:14px;background:var(--card-color);color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:900;min-width:26px;text-align:center}' +
+    '@media(max-width:1200px){.nav-grid{grid-template-columns:repeat(3,1fr)}}' +
+    '@media(max-width:900px){.nav-grid{grid-template-columns:repeat(2,1fr)}}' +
+    '@media(max-width:520px){.nav-grid{grid-template-columns:1fr}.nav-card{padding:16px;min-height:110px}}' +
+  '</style>';
+
+  html += '<div class="nav-grid">';
+
+  // Card 1: Drivers (Purple)
+  html += '<div class="nav-card" style="--card-color:#7c3aed" onclick="setMainView(\'drivers\')">' +
+    '<div class="nav-card-badge">'+DRV.length+'</div>' +
+    '<div class="nav-card-icon"><i class="ti ti-users"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">السائقون</div>' +
+      '<div class="nav-card-sub">إدارة السائقين والملفات الشخصية</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 2: Attendance (Green)
+  html += '<div class="nav-card" style="--card-color:#10b981" onclick="setMainView(\'att\')">' +
+    '<div class="nav-card-badge">'+(present+late)+'</div>' +
+    '<div class="nav-card-icon"><i class="ti ti-calendar-check"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">الحضور</div>' +
+      '<div class="nav-card-sub">تسجيل الحضور والانصراف اليومي</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 3: Live Clock-in (Emerald)
+  html += '<div class="nav-card" style="--card-color:#059669" onclick="setMainView(\'clockin\')">' +
+    '<div class="nav-card-badge">'+ciInArr.length+'</div>' +
+    '<div class="nav-card-icon"><i class="ti ti-map-pin"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">حضور مباشر</div>' +
+      '<div class="nav-card-sub">Live Clock-in — تسجيل بالموقع</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 4: Live Map (Violet)
+  html += '<div class="nav-card" style="--card-color:#8b5cf6" onclick="setMainView(\'livemap\')">' +
+    '<div class="nav-card-badge">'+ciInArr.length+'</div>' +
+    '<div class="nav-card-icon"><i class="ti ti-map-2"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">الخريطة المباشرة</div>' +
+      '<div class="nav-card-sub">متابعة السائقين على الخريطة لحظياً</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 5: Violations (Red)
+  html += '<div class="nav-card" style="--card-color:#dc2626" onclick="setMainView(\'vio\')">' +
+    '<div class="nav-card-badge">'+monthVio.length+'</div>' +
+    '<div class="nav-card-icon"><i class="ti ti-alert-triangle"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">المخالفات</div>' +
+      '<div class="nav-card-sub">مخالفات وخصومات وجزاءات</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 6: Orders (Orange)
+  html += '<div class="nav-card" style="--card-color:#f97316" onclick="setMainView(\'orders\')">' +
+    '<div class="nav-card-badge">'+todayOrders+'</div>' +
+    '<div class="nav-card-icon"><i class="ti ti-package"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">الأوردرات</div>' +
+      '<div class="nav-card-sub">إدارة طلبات المطاعم اليومية</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 7: Accounting (Gold)
+  html += '<div class="nav-card" style="--card-color:#c29449" onclick="setMainView(\'acc\')">' +
+    '<div class="nav-card-icon"><i class="ti ti-cash-banknote"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">المحاسبة</div>' +
+      '<div class="nav-card-sub">إيرادات · مصروفات · رواتب · أرباح</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 8: Reports (Cyan)
+  html += '<div class="nav-card" style="--card-color:#0891b2" onclick="setMainView(\'reports\')">' +
+    '<div class="nav-card-icon"><i class="ti ti-chart-pie"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">تقارير الشركة</div>' +
+      '<div class="nav-card-sub">تقارير مالية وتشغيلية شاملة</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 9: Daily Reports (Indigo)
+  html += '<div class="nav-card" style="--card-color:#6366f1" onclick="setMainView(\'dreports\')">' +
+    '<div class="nav-card-icon"><i class="ti ti-report"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">تقارير يومية</div>' +
+      '<div class="nav-card-sub">تقارير السائقين اليومية</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 10: Applications (Amber)
+  html += '<div class="nav-card" style="--card-color:#f59e0b" onclick="setMainView(\'apps\')">' +
+    (pendingApps > 0 ? '<div class="nav-card-badge">'+pendingApps+'</div>' : '') +
+    '<div class="nav-card-icon"><i class="ti ti-user-plus"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">طلبات التقديم</div>' +
+      '<div class="nav-card-sub">طلبات السائقين الجدد</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 11: Restaurants (Rose)
+  html += '<div class="nav-card" style="--card-color:#e11d48" onclick="if(typeof openRestsModal===\'function\')openRestsModal()">' +
+    '<div class="nav-card-icon"><i class="ti ti-tools-kitchen-2"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">المطاعم</div>' +
+      '<div class="nav-card-sub">إدارة الأفرع والمطاعم</div>' +
+    '</div>' +
+  '</div>';
+
+  // Card 12: Societies (Teal)
+  html += '<div class="nav-card" style="--card-color:#14b8a6" onclick="if(typeof openSocietiesModal===\'function\')openSocietiesModal()">' +
+    '<div class="nav-card-icon"><i class="ti ti-building-store"></i></div>' +
+    '<div class="nav-card-body">' +
+      '<div class="nav-card-title">الجمعيات</div>' +
+      '<div class="nav-card-sub">إدارة الجمعيات التعاونية</div>' +
+    '</div>' +
+  '</div>';
+
+  html += '</div>'; // end nav-grid
+
   // KPI SECTIONS — Business Dashboard Style
   html += '<style>' +
     '.kpi-sections{display:flex;flex-direction:column;gap:14px;margin-bottom:18px}' +
@@ -9048,34 +9183,35 @@ async function doExport(fmt){
   if(!from || !to){ toast('اختر الفترة أولاً','e'); return; }
   if(new Date(from) > new Date(to)){ toast('تاريخ البداية بعد النهاية!','e'); return; }
 
-  const btn = document.getElementById(fmt==='xlsx' ? 'exp-xl-btn' : 'exp-pdf-btn');
-  const origHTML = btn.innerHTML;
+  const btn = document.getElementById('exportBtn');
+  const oldTxt = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader"></i> جاري التحميل...';
+  btn.innerHTML = '<span class="spin"></span> جاري التصدير...';
 
   try {
-    const records = await fetchClockinsRange(from, to);
-    const rows = buildReportData(records, from, to, expPartner, expDriver);
-    if(!rows.length){ toast('لا يوجد سائقين في هذا الفلتر','e'); return; }
+    const partnerFilter = document.getElementById('exp-partner').value;
+    const driverFilter = document.getElementById('exp-driver').value;
+    expDriver = driverFilter;
+    const records = _buildAttendanceRecords(from, to, partnerFilter, driverFilter);
+    const rows = buildReportData(records, from, to, partnerFilter, driverFilter);
     const summary = buildSummaryData(rows);
-    const absences = rows.filter(r=> r.status==='غائب' || r.status==='لم يُسجَّل');
+    const absences = rows.filter(r => r.status === 'غائب' || r.status === 'بدون تسجيل');
 
     if(fmt==='xlsx') exportXLSX(rows, summary, absences, from, to);
-    else             exportPDF(rows, summary, absences, from, to);
-
-    toast('تم التصدير بنجاح ✅','s');
-  } catch(e){
-    console.error(e);
-    toast('فشل التصدير: '+e.message,'e');
+    else if(fmt==='pdf') exportPDF(rows, summary, absences, from, to);
+    toast('تم التصدير بنجاح','s');
+  } catch(err) {
+    console.error(err);
+    toast('فشل التصدير','e');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = origHTML;
+    btn.innerHTML = oldTxt;
   }
 }
-
-/* EXCEL EXPORT */
-function exportXLSX(rows, summary, absences, from, to){
-  const wb = XLSX.utils.book_new();
+</script>
+</body>
+</html>
+.utils.book_new();
 
   // Sheet 1: Daily details
   const headers = ['كود','الاسم','الشريك','التاريخ','اليوم','الجدول','الحالة','كلوك إن','كلوك آوت','ساعات العمل','التأخير','خروج مبكر','ملاحظة'];
