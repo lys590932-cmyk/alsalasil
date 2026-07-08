@@ -2724,33 +2724,274 @@ function renderDash() {
   const daysArDash = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
   const dateStr = daysArDash[dt.getDay()]+'، '+dt.getDate()+' '+monthsAr[dt.getMonth()]+' '+dt.getFullYear();
 
+  // Financial calculations
+  const cm = new Date().getMonth()+1, cy = new Date().getFullYear();
+  const mIncomes = INCOMES.filter(x => {
+    const d = new Date(x.date);
+    return d.getMonth()+1 === cm && d.getFullYear() === cy;
+  });
+  const mExpenses = EXPENSES.filter(x => {
+    const d = new Date(x.date);
+    return d.getMonth()+1 === cm && d.getFullYear() === cy && x.category !== 'salaries';
+  });
+  const totalIncome = mIncomes.reduce((s,x) => s + (parseFloat(x.amount)||0), 0);
+  const totalExpense = mExpenses.reduce((s,x) => s + (parseFloat(x.amount)||0), 0);
+  const netProfit = totalIncome - totalExpense - totalSalary;
+
+  // Apps
+  let pendingApps = 0;
+  try { const apps = JSON.parse(localStorage.getItem('sl_applications') || '[]'); pendingApps = apps.filter(a => a.status === 'pending').length; } catch(e){}
+
+  // Orders
+  let todayOrders = 0;
+  try { const orders = JSON.parse(localStorage.getItem('sl_orders') || '[]'); todayOrders = orders.filter(o => o.date && o.date.startsWith(today)).length; } catch(e){}
+
+  // Nationalities
+  const nations = new Set(DRV.map(d => d.nationality).filter(Boolean));
+
   let html = '';
 
   html += '<div class="dash-head">'+
-    '<div><div class="dash-title">لوحة التحكم</div><div class="dash-sub">نظرة عامة على نشاط الشركة اليوم</div></div>'+
+    '<div><div class="dash-title">لوحة التحكم — Business KPIs</div><div class="dash-sub">نظرة شاملة على أداء الشركة</div></div>'+
     '<div class="date-pill"><i class="ti ti-calendar"></i> '+dateStr+'</div>'+
   '</div>';
 
-  html += '<div class="kpis">';
-  html += '<div class="kpi acc" onclick="setMainView(\'drivers\')">'+
-    '<div class="kpi-top"><div class="kpi-ic"><i class="ti ti-users"></i></div></div>'+
-    '<div class="kpi-val">'+DRV.length+'</div><div class="kpi-lbl">إجمالي السائقين</div></div>';
-  html += '<div class="kpi ok" onclick="setMainView(\'clockin\')">'+
-    '<div class="kpi-top"><div class="kpi-ic"><i class="ti ti-login"></i></div></div>'+
-    '<div class="kpi-val">'+ciInArr.length+'</div><div class="kpi-lbl">داخل الآن</div></div>';
-  html += '<div class="kpi warn" onclick="setMainView(\'drivers\')">'+
-    '<div class="kpi-top"><div class="kpi-ic"><i class="ti ti-id"></i></div></div>'+
-    '<div class="kpi-val">'+(expNow.length+expSoon.length)+'</div><div class="kpi-lbl">رخص محتاجة تجديد</div></div>';
-  html += '<div class="kpi err" onclick="setMainView(\'vio\')">'+
-    '<div class="kpi-top"><div class="kpi-ic"><i class="ti ti-receipt-2"></i></div></div>'+
-    '<div class="kpi-val">'+monthVio.length+'</div><div class="kpi-lbl">مخالفات الشهر</div></div>';
-  html += '<div class="kpi purple" onclick="setMainView(\'att\')">'+
-    '<div class="kpi-top"><div class="kpi-ic"><i class="ti ti-check"></i></div></div>'+
-    '<div class="kpi-val">'+(present+late)+'</div><div class="kpi-lbl">حضور اليوم</div></div>';
-  html += '<div class="kpi ok">'+
-    '<div class="kpi-top"><div class="kpi-ic"><i class="ti ti-coin"></i></div></div>'+
-    '<div class="kpi-val">'+totalSalary.toFixed(0)+'</div><div class="kpi-lbl">إجمالي الرواتب (د.ك)</div></div>';
-  html += '</div>';
+  // KPI SECTIONS — Business Dashboard Style
+  html += '<style>' +
+    '.kpi-sections{display:flex;flex-direction:column;gap:14px;margin-bottom:18px}' +
+    '.kpi-section{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center;background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);transition:all 0.2s}' +
+    '.kpi-section:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.08)}' +
+    '.kpi-sec-head{display:flex;align-items:center;gap:14px}' +
+    '.kpi-sec-icon{width:60px;height:60px;border-radius:14px;display:grid;place-items:center;font-size:28px;color:#fff;flex-shrink:0;box-shadow:0 6px 16px rgba(0,0,0,0.15)}' +
+    '.kpi-sec-title{font-size:17px;font-weight:900;color:var(--text);line-height:1.2}' +
+    '.kpi-sec-sub{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px}' +
+    '.kpi-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}' +
+    '.kpi-metric{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:all 0.18s;position:relative;overflow:hidden;border-right:4px solid transparent}' +
+    '.kpi-metric:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,0.1);background:var(--surface)}' +
+    '.kpi-metric-label{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.3px}' +
+    '.kpi-metric-value{font-size:24px;font-weight:900;color:var(--text);line-height:1;margin-bottom:4px}' +
+    '.kpi-metric-formula{font-size:9px;color:var(--muted);font-family:monospace;opacity:0.7}' +
+    '@media(max-width:900px){.kpi-section{grid-template-columns:1fr}.kpi-metrics{grid-template-columns:repeat(2,1fr)}}' +
+    '@media(max-width:520px){.kpi-metrics{grid-template-columns:1fr}}' +
+  '</style>';
+
+  html += '<div class="kpi-sections">';
+
+  // ═══════════ Section 1: Human Resources ═══════════
+  html += '<div class="kpi-section" style="border-color:#7c3aed44">' +
+    '<div class="kpi-sec-head">' +
+      '<div class="kpi-sec-icon" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)"><i class="ti ti-users"></i></div>' +
+      '<div><div class="kpi-sec-title">الموارد البشرية</div><div class="kpi-sec-sub">Human Resources · 5 مقاييس</div></div>' +
+    '</div>' +
+    '<div class="kpi-metrics">' +
+      '<div class="kpi-metric" style="border-right-color:#7c3aed" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">إجمالي السائقين</div>' +
+        '<div class="kpi-metric-value" style="color:#7c3aed">'+DRV.length+'</div>' +
+        '<div class="kpi-metric-formula">Total Drivers</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#7c3aed" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">الشركاء</div>' +
+        '<div class="kpi-metric-value" style="color:#7c3aed">'+PARTNERS.length+'</div>' +
+        '<div class="kpi-metric-formula">Partners</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#7c3aed" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">الجنسيات</div>' +
+        '<div class="kpi-metric-value" style="color:#7c3aed">'+nations.size+'</div>' +
+        '<div class="kpi-metric-formula">Nationalities</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f59e0b" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">رخص تنتهي قريباً</div>' +
+        '<div class="kpi-metric-value" style="color:#f59e0b">'+expSoon.length+'</div>' +
+        '<div class="kpi-metric-formula">≤ 90 days</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#dc2626" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">رخص منتهية</div>' +
+        '<div class="kpi-metric-value" style="color:#dc2626">'+expNow.length+'</div>' +
+        '<div class="kpi-metric-formula">Expired</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  // ═══════════ Section 2: Attendance ═══════════
+  const absent = DRV.length - (present + late);
+  const attendanceRate = DRV.length > 0 ? Math.round(((present+late)/DRV.length)*100) : 0;
+  html += '<div class="kpi-section" style="border-color:#10b98144">' +
+    '<div class="kpi-sec-head">' +
+      '<div class="kpi-sec-icon" style="background:linear-gradient(135deg,#059669,#10b981)"><i class="ti ti-calendar-check"></i></div>' +
+      '<div><div class="kpi-sec-title">الحضور والانصراف</div><div class="kpi-sec-sub">Attendance · 5 مقاييس</div></div>' +
+    '</div>' +
+    '<div class="kpi-metrics">' +
+      '<div class="kpi-metric" style="border-right-color:#10b981" onclick="setMainView(\'clockin\')">' +
+        '<div class="kpi-metric-label">داخل الآن</div>' +
+        '<div class="kpi-metric-value" style="color:#10b981">'+ciInArr.length+'</div>' +
+        '<div class="kpi-metric-formula">Currently In</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#10b981" onclick="setMainView(\'att\')">' +
+        '<div class="kpi-metric-label">حضور اليوم</div>' +
+        '<div class="kpi-metric-value" style="color:#10b981">'+present+'</div>' +
+        '<div class="kpi-metric-formula">Present Today</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f59e0b" onclick="setMainView(\'att\')">' +
+        '<div class="kpi-metric-label">تأخر</div>' +
+        '<div class="kpi-metric-value" style="color:#f59e0b">'+late+'</div>' +
+        '<div class="kpi-metric-formula">Late Today</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#dc2626" onclick="setMainView(\'att\')">' +
+        '<div class="kpi-metric-label">غياب</div>' +
+        '<div class="kpi-metric-value" style="color:#dc2626">'+(absent > 0 ? absent : 0)+'</div>' +
+        '<div class="kpi-metric-formula">Absent</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#0891b2" onclick="setMainView(\'att\')">' +
+        '<div class="kpi-metric-label">معدل الحضور</div>' +
+        '<div class="kpi-metric-value" style="color:#0891b2">'+attendanceRate+'%</div>' +
+        '<div class="kpi-metric-formula">Attendance %</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  // ═══════════ Section 3: Operations ═══════════
+  html += '<div class="kpi-section" style="border-color:#f9731644">' +
+    '<div class="kpi-sec-head">' +
+      '<div class="kpi-sec-icon" style="background:linear-gradient(135deg,#ea580c,#f97316)"><i class="ti ti-package"></i></div>' +
+      '<div><div class="kpi-sec-title">العمليات</div><div class="kpi-sec-sub">Operations · 5 مقاييس</div></div>' +
+    '</div>' +
+    '<div class="kpi-metrics">' +
+      '<div class="kpi-metric" style="border-right-color:#f97316" onclick="setMainView(\'orders\')">' +
+        '<div class="kpi-metric-label">طلبات اليوم</div>' +
+        '<div class="kpi-metric-value" style="color:#f97316">'+todayOrders+'</div>' +
+        '<div class="kpi-metric-formula">Today Orders</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f97316" onclick="setMainView(\'orders\')">' +
+        '<div class="kpi-metric-label">قيد التنفيذ</div>' +
+        '<div class="kpi-metric-value" style="color:#f97316">'+ciInArr.length+'</div>' +
+        '<div class="kpi-metric-formula">In Progress</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f97316" onclick="setMainView(\'livemap\')">' +
+        '<div class="kpi-metric-label">على الطريق</div>' +
+        '<div class="kpi-metric-value" style="color:#f97316">'+ciInArr.length+'</div>' +
+        '<div class="kpi-metric-formula">On Road</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f97316" onclick="setMainView(\'livemap\')">' +
+        '<div class="kpi-metric-label">الخريطة المباشرة</div>' +
+        '<div class="kpi-metric-value" style="color:#f97316">Live</div>' +
+        '<div class="kpi-metric-formula">Live Tracking</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f97316" onclick="setMainView(\'dreports\')">' +
+        '<div class="kpi-metric-label">تقارير يومية</div>' +
+        '<div class="kpi-metric-value" style="color:#f97316"><i class="ti ti-report" style="font-size:22px"></i></div>' +
+        '<div class="kpi-metric-formula">Daily Reports</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  // ═══════════ Section 4: Compliance & Violations ═══════════
+  const monthVioAmt = monthVio.reduce((s,v) => s + (parseFloat(v.amount)||0), 0);
+  html += '<div class="kpi-section" style="border-color:#dc262644">' +
+    '<div class="kpi-sec-head">' +
+      '<div class="kpi-sec-icon" style="background:linear-gradient(135deg,#b91c1c,#dc2626)"><i class="ti ti-alert-triangle"></i></div>' +
+      '<div><div class="kpi-sec-title">الالتزام والمخالفات</div><div class="kpi-sec-sub">Compliance · 5 مقاييس</div></div>' +
+    '</div>' +
+    '<div class="kpi-metrics">' +
+      '<div class="kpi-metric" style="border-right-color:#dc2626" onclick="setMainView(\'vio\')">' +
+        '<div class="kpi-metric-label">مخالفات الشهر</div>' +
+        '<div class="kpi-metric-value" style="color:#dc2626">'+monthVio.length+'</div>' +
+        '<div class="kpi-metric-formula">Monthly Violations</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#dc2626" onclick="setMainView(\'vio\')">' +
+        '<div class="kpi-metric-label">قيمة المخالفات</div>' +
+        '<div class="kpi-metric-value" style="color:#dc2626">'+monthVioAmt.toFixed(0)+'</div>' +
+        '<div class="kpi-metric-formula">Total KD</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f59e0b" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">رخص تحتاج تجديد</div>' +
+        '<div class="kpi-metric-value" style="color:#f59e0b">'+(expNow.length+expSoon.length)+'</div>' +
+        '<div class="kpi-metric-formula">Renewals</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#dc2626" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">إجمالي منتهية</div>' +
+        '<div class="kpi-metric-value" style="color:#dc2626">'+expNow.length+'</div>' +
+        '<div class="kpi-metric-formula">Expired</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#059669">' +
+        '<div class="kpi-metric-label">معدل الالتزام</div>' +
+        '<div class="kpi-metric-value" style="color:#059669">'+(DRV.length>0?Math.round(((DRV.length-monthVio.length)/DRV.length)*100):100)+'%</div>' +
+        '<div class="kpi-metric-formula">Compliance %</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  // ═══════════ Section 5: Finance ═══════════
+  const profitColor = netProfit >= 0 ? '#059669' : '#dc2626';
+  html += '<div class="kpi-section" style="border-color:#0891b244">' +
+    '<div class="kpi-sec-head">' +
+      '<div class="kpi-sec-icon" style="background:linear-gradient(135deg,#0369a1,#0891b2)"><i class="ti ti-cash-banknote"></i></div>' +
+      '<div><div class="kpi-sec-title">المالية والمحاسبة</div><div class="kpi-sec-sub">Finance · 5 مقاييس</div></div>' +
+    '</div>' +
+    '<div class="kpi-metrics">' +
+      '<div class="kpi-metric" style="border-right-color:#059669" onclick="setMainView(\'acc\')">' +
+        '<div class="kpi-metric-label">إيرادات الشهر</div>' +
+        '<div class="kpi-metric-value" style="color:#059669">'+totalIncome.toFixed(0)+'</div>' +
+        '<div class="kpi-metric-formula">Monthly Income</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#dc2626" onclick="setMainView(\'acc\')">' +
+        '<div class="kpi-metric-label">مصروفات الشهر</div>' +
+        '<div class="kpi-metric-value" style="color:#dc2626">'+totalExpense.toFixed(0)+'</div>' +
+        '<div class="kpi-metric-formula">Monthly Expenses</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#f59e0b" onclick="setMainView(\'drivers\')">' +
+        '<div class="kpi-metric-label">إجمالي الرواتب</div>' +
+        '<div class="kpi-metric-value" style="color:#f59e0b">'+totalSalary.toFixed(0)+'</div>' +
+        '<div class="kpi-metric-formula">Total Salaries</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:'+profitColor+'" onclick="setMainView(\'acc\')">' +
+        '<div class="kpi-metric-label">صافي الربح</div>' +
+        '<div class="kpi-metric-value" style="color:'+profitColor+'">'+netProfit.toFixed(0)+'</div>' +
+        '<div class="kpi-metric-formula">Net Profit</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#0891b2" onclick="setMainView(\'reports\')">' +
+        '<div class="kpi-metric-label">التقارير المالية</div>' +
+        '<div class="kpi-metric-value" style="color:#0891b2"><i class="ti ti-chart-pie" style="font-size:22px"></i></div>' +
+        '<div class="kpi-metric-formula">Reports</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  // ═══════════ Section 6: Applications & Growth ═══════════
+  html += '<div class="kpi-section" style="border-color:#0d948844">' +
+    '<div class="kpi-sec-head">' +
+      '<div class="kpi-sec-icon" style="background:linear-gradient(135deg,#0f766e,#14b8a6)"><i class="ti ti-user-plus"></i></div>' +
+      '<div><div class="kpi-sec-title">التوسع والنمو</div><div class="kpi-sec-sub">Growth · 5 مقاييس</div></div>' +
+    '</div>' +
+    '<div class="kpi-metrics">' +
+      '<div class="kpi-metric" style="border-right-color:#14b8a6" onclick="setMainView(\'apps\')">' +
+        '<div class="kpi-metric-label">طلبات تقديم جديدة</div>' +
+        '<div class="kpi-metric-value" style="color:#14b8a6">'+pendingApps+'</div>' +
+        '<div class="kpi-metric-formula">Pending Apps</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#14b8a6" onclick="setMainView(\'apps\')">' +
+        '<div class="kpi-metric-label">التطبيقات النشطة</div>' +
+        '<div class="kpi-metric-value" style="color:#14b8a6">5</div>' +
+        '<div class="kpi-metric-formula">ARK · FLY · BYTE · STREAM · Apply</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#14b8a6">' +
+        '<div class="kpi-metric-label">فروع الشركة</div>' +
+        '<div class="kpi-metric-value" style="color:#14b8a6">'+PARTNERS.length+'</div>' +
+        '<div class="kpi-metric-formula">Branches</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#14b8a6">' +
+        '<div class="kpi-metric-label">متوسط راتب/سائق</div>' +
+        '<div class="kpi-metric-value" style="color:#14b8a6">'+(DRV.length>0?(totalSalary/DRV.length).toFixed(0):0)+'</div>' +
+        '<div class="kpi-metric-formula">Avg Salary KD</div>' +
+      '</div>' +
+      '<div class="kpi-metric" style="border-right-color:#14b8a6">' +
+        '<div class="kpi-metric-label">هامش الربح</div>' +
+        '<div class="kpi-metric-value" style="color:'+profitColor+'">'+(totalIncome>0?Math.round((netProfit/totalIncome)*100):0)+'%</div>' +
+        '<div class="kpi-metric-formula">Profit Margin</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  html += '</div>'; // end kpi-sections
 
   // Charts row
   const days = [];
@@ -8854,12 +9095,11 @@ function exportXLSX(rows, summary, absences, from, to){
   ws2['!views'] = [{RTL:true}];
   XLSX.utils.book_append_sheet(wb, ws2, 'ملخص لكل سائق');
 
-  // Sheet 3: Absences only
-  const aHead = ['كود','الاسم','الشريك','التاريخ','اليوم','الحالة','ملاحظة'];
+  // Sheet 3: Absences only  const aHead = ['كود','الاسم','التاريخ','الحالة','الملاحظة'];
   const aAoa = [aHead];
-  absences.forEach(r=> aAoa.push([r.code, r.name, r.partner, r.date, r.day, r.status, r.note]));
+  absences.forEach(a => aAoa.push([a.code, a.name, a.date, a.status, a.note]));
   const ws3 = XLSX.utils.aoa_to_sheet(aAoa);
-  ws3['!cols'] = [{wch:9},{wch:24},{wch:12},{wch:12},{wch:10},{wch:14},{wch:24}];
+  ws3['!cols'] = [{wch:9},{wch:24},{wch:12},{wch:12},{wch:20}];
   ws3['!views'] = [{RTL:true}];
   XLSX.utils.book_append_sheet(wb, ws3, 'الغياب فقط');
 
@@ -8872,27 +9112,16 @@ function exportXLSX(rows, summary, absences, from, to){
 function exportPDF(rows, summary, absences, from, to){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-
-  // Header (English to avoid font issues)
   doc.setFontSize(20);
   doc.setTextColor(28, 88, 120);
   doc.text('AL-SALASIL', 148, 16, { align:'center' });
   doc.setFontSize(11);
   doc.setTextColor(100,100,100);
-  doc.text('Consumer Delivery Services — Attendance Report', 148, 22, { align:'center' });
+  doc.text('Attendance Report', 148, 22, { align:'center' });
   doc.setFontSize(9);
   doc.text('Period: ' + from + '  to  ' + to, 148, 28, { align:'center' });
-  doc.setDrawColor(139, 26, 26);
-  doc.setLineWidth(0.8);
-  doc.line(15, 32, 282, 32);
-
-  // SUMMARY TABLE
-  doc.setFontSize(13);
-  doc.setTextColor(28, 88, 120);
-  doc.text('Per-Driver Summary', 15, 40);
-
   const sHead = [['Code','Name','Partner','Days','Present','Late','Absent','Off','Holiday','Total Hrs','Late Min']];
-  const sBody = summary.map(s=>[s.code, _pdfName(s.name, s.code), s.partner, s.daysWorked, s.present, s.late, s.absent, s.off, s.holiday, s.totalHours, s.totalLateMin]);
+  const sBody = summary.map(s=>[s.code, s.name, s.partner, s.daysWorked, s.present, s.late, s.absent, s.off, s.holiday, s.totalHours, s.totalLateMin]);
   doc.autoTable({
     startY: 44, head: sHead, body: sBody,
     theme:'grid',
@@ -8903,16 +9132,10 @@ function exportPDF(rows, summary, absences, from, to){
   doc.save('attendance-'+from+'-to-'+to+'.pdf');
 }
 
-/* ================================================================== */
-/* ARABIC ACCOUNTING REPORT — print-friendly HTML                       */
-/* ================================================================== */
+/* ARABIC ACCOUNTING REPORT — print-friendly HTML */
 function generateAccArabicReport(){
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-  const catAr = {
-    fuel:'وقود', maintenance:'صيانة', salaries:'رواتب', rent:'إيجار',
-    insurance:'تأمين', internet:'إنترنت واتصالات', supplies:'مستلزمات',
-    fines:'مخالفات ورسوم', tax:'ضرائب ورسوم', other:'أخرى', misc:'متنوعة'
-  };
+  const catAr = {fuel:'وقود', maintenance:'صيانة', salaries:'رواتب', rent:'إيجار', insurance:'تأمين', internet:'إنترنت واتصالات', supplies:'مستلزمات', fines:'مخالفات ورسوم', tax:'ضرائب ورسوم', other:'أخرى', misc:'متنوعة'};
   const monthIncomes  = INCOMES.filter(x=>_matchMonth(x.date, accMonth, accYear));
   const monthExpenses = EXPENSES.filter(x=>_matchMonth(x.date, accMonth, accYear));
   const monthExpNS    = monthExpenses.filter(x=>x.category!=='salaries');
@@ -8921,38 +9144,33 @@ function generateAccArabicReport(){
   const salaryCost    = _monthlySalaryCost(accMonth, accYear);
   const netProfit     = totalIncome - totalExpense - salaryCost;
   const margin        = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
-
-  const partnerMap = {};
-  monthIncomes.forEach(inc => {
-    const src = PARTNERS.find(p=>p.id===inc.source);
-    const name = src ? src.name : (inc.source==='other' ? 'أخرى' : (inc.source||'—'));
-    const color = src ? src.color : '#64748b';
-    if(!partnerMap[name]) partnerMap[name] = {amount:0, count:0, color};
-    partnerMap[name].amount += parseFloat(inc.amount) || 0;
-    partnerMap[name].count  += 1;
-  });
-  const partnersArr = Object.entries(partnerMap)
-    .map(([name,d])=>({name, ...d, pct: totalIncome>0? d.amount/totalIncome*100 : 0}))
-    .sort((a,b)=>b.amount-a.amount);
-
-  const catMap = {};
-  monthExpNS.forEach(exp => {
-    const c = exp.category || 'other';
-    const label = catAr[c] || c;
-    if(!catMap[label]) catMap[label] = {amount:0, count:0};
-    catMap[label].amount += parseFloat(exp.amount) || 0;
-    catMap[label].count  += 1;
-  });
-  const catsArr = Object.entries(catMap)
-    .map(([name,d])=>({name, ...d, pct: totalExpense>0? d.amount/totalExpense*100 : 0}))
-    .sort((a,b)=>b.amount-a.amount);
-
   const fmt = n => (parseFloat(n)||0).toFixed(3);
-  const fmt0 = n => Math.round(parseFloat(n)||0).toLocaleString('ar-EG');
   const monthLabel = months[accMonth-1] + ' ' + accYear;
-  const today = new Date().toLocaleDateString('ar-EG', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const today = new Date().toLocaleDateString('ar-EG');
   const profitColor = netProfit >= 0 ? '#15803d' : '#b91c1c';
-  const profitBg    = netProfit >= 0 ? '#dcfce7' : '#fee2e2';
+  const w = window.open('', '_blank');
+  if(!w){ toast('اسمح بفتح النوافذ المنبثقة','e'); return; }
+  const html = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير المحاسبة</title>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">' +
+    '<style>body{font-family:Cairo,sans-serif;padding:20px;direction:rtl}h1{color:#0f3a52}table{width:100%;border-collapse:collapse;margin:14px 0}th{background:#0f3a52;color:#fff;padding:8px}td{padding:6px;border:1px solid #ddd}.print-btn{position:fixed;top:10px;left:10px;background:#0f3a52;color:#fff;padding:10px 18px;border:none;border-radius:6px;font-family:Cairo;cursor:pointer}@media print{.print-btn{display:none}}</style>' +
+    '</head><body><button class="print-btn" onclick="window.print()">🖨️ طباعة</button>' +
+    '<h1>تقرير المحاسبة — ' + monthLabel + '</h1>' +
+    '<p>تاريخ الإصدار: ' + today + '</p>' +
+    '<table><tr><th>البند</th><th>القيمة (د.ك)</th></tr>' +
+    '<tr><td>إجمالي الإيرادات</td><td>' + fmt(totalIncome) + '</td></tr>' +
+    '<tr><td>إجمالي المصروفات</td><td>(' + fmt(totalExpense) + ')</td></tr>' +
+    '<tr><td>تكلفة الرواتب</td><td>(' + fmt(salaryCost) + ')</td></tr>' +
+    '<tr style="background:#fdf6e9"><td><b>صافي الربح</b></td><td style="color:' + profitColor + '"><b>' + fmt(netProfit) + '</b></td></tr>' +
+    '<tr><td>هامش الربح</td><td>' + margin.toFixed(2) + '%</td></tr>' +
+    '</table></body></html>';
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  toast('التقرير جاهز','s');
+}
+</script>
+</body>
+</html>
 
   const incRows = monthIncomes.slice().sort((a,b)=>a.date.localeCompare(b.date)).map((inc,i) => {
     const src = PARTNERS.find(p=>p.id===inc.source);
