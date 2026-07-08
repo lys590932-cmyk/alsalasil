@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>اختبار تسجيل الدخول - تشخيص</title>
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#0f3a52;color:#fff;padding:20px;min-height:100vh;margin:0}
+  .container{max-width:700px;margin:0 auto;background:#fff;color:#0f172a;border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+  h1{color:#0f3a52;text-align:center;margin-bottom:20px;font-size:22px}
+  .form-group{margin-bottom:16px}
+  label{display:block;font-weight:bold;margin-bottom:6px;color:#0f3a52}
+  input{width:100%;padding:12px;border:2px solid #cbd5e1;border-radius:8px;font-size:14px;box-sizing:border-box;direction:ltr;text-align:right}
+  button{width:100%;padding:14px;background:#0f3a52;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;margin-top:10px}
+  button:hover{background:#c29449}
+  button:disabled{opacity:0.5}
+  .log{background:#f1f5f9;padding:14px;border-radius:8px;margin-top:20px;font-family:monospace;font-size:12px;max-height:400px;overflow-y:auto;direction:ltr;text-align:left}
+  .log .line{padding:6px;margin:4px 0;border-radius:4px;border-right:4px solid #cbd5e1}
+  .log .info{background:#dbeafe;border-color:#1e40af;color:#1e40af}
+  .log .success{background:#dcfce7;border-color:#15803d;color:#15803d;font-weight:bold}
+  .log .error{background:#fee2e2;border-color:#b91c1c;color:#b91c1c;font-weight:bold}
+  .log .warning{background:#fef3c7;border-color:#b45309;color:#b45309}
+  .step{margin-bottom:10px}
+  .credentials{background:#fef3c7;padding:10px;border-radius:8px;font-size:13px;margin-bottom:16px;border:2px solid #f59e0b}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔬 صفحة تشخيص تسجيل الدخول</h1>
+
+  <div class="credentials">
+    <strong>💡 استخدم بياناتك الحقيقية:</strong><br>
+    الإيميل: <code>lys590932@gmail.com</code><br>
+    الباسورد: (اللي انت عاملها)
+  </div>
+
+  <div class="form-group">
+    <label>📧 البريد الإلكتروني</label>
+    <input type="email" id="email" value="lys590932@gmail.com" autocomplete="off">
+  </div>
+
+  <div class="form-group">
+    <label>🔒 كلمة السر</label>
+    <input type="password" id="password" autocomplete="off">
+  </div>
+
+  <button id="loginBtn" onclick="testLogin()">🚀 اختبار تسجيل الدخول</button>
+  <button onclick="clearLog()" style="background:#64748b;margin-top:8px">🗑️ مسح السجل</button>
+
+  <div class="log" id="log">
+    <div class="line info">📋 اضغط "اختبار تسجيل الدخول" لبدء التشخيص...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+let supabase;
+try {
+  supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  log('info', '✅ تم تحميل مكتبة Supabase');
+} catch(e) {
+  log('error', '❌ فشل تحميل Supabase: ' + e.message);
+}
+
+function log(type, msg) {
+  const div = document.createElement('div');
+  div.className = 'line ' + type;
+  const time = new Date().toLocaleTimeString('en-GB');
+  div.textContent = '[' + time + '] ' + msg;
+  document.getElementById('log').appendChild(div);
+  document.getElementById('log').scrollTop = 999999;
+}
+
+function clearLog(){
+  document.getElementById('log').innerHTML = '<div class="line info">📋 السجل ممسوح — جرب تاني...</div>';
+}
+
+async function testLogin() {
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الاختبار...';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  log('info', '━━━━━━━━━━━━━━━━━━━━━━━━');
+  log('info', '🔍 بدء الاختبار...');
+  log('info', 'الإيميل: ' + email);
+  log('info', 'كلمة السر: ' + password.length + ' حرف');
+
+  // Step 1: Try to sign in
+  log('info', '━━━━━━━━━━━━━━━━━━━━━━━━');
+  log('info', '⏳ الخطوة 1: محاولة تسجيل الدخول...');
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      log('error', '❌ فشل تسجيل الدخول:');
+      log('error', 'رسالة الخطأ: ' + error.message);
+      log('error', 'كود الخطأ: ' + (error.status || 'N/A'));
+      log('warning', '💡 السبب المحتمل:');
+      if (error.message.includes('Invalid')) {
+        log('warning', '   → الإيميل أو الباسورد غلط');
+      } else if (error.message.includes('Email not confirmed')) {
+        log('warning', '   → الإيميل غير مؤكد — شغل SQL بتاع email_confirmed_at');
+      } else if (error.message.includes('rate')) {
+        log('warning', '   → محاولات كثيرة — استنى دقيقة');
+      } else {
+        log('warning', '   → مشكلة تانية: ' + error.message);
+      }
+      btn.disabled = false;
+      btn.textContent = '🚀 اختبار تسجيل الدخول';
+      return;
+    }
+
+    log('success', '✅ تسجيل الدخول نجح!');
+    log('info', 'User ID: ' + data.user.id);
+    log('info', 'Email: ' + data.user.email);
+
+    // Step 2: Fetch profile
+    log('info', '━━━━━━━━━━━━━━━━━━━━━━━━');
+    log('info', '⏳ الخطوة 2: قراءة بيانات المستخدم من profiles...');
+
+    const { data: profile, error: pErr } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    if (pErr) {
+      log('error', '❌ فشل قراءة البروفايل:');
+      log('error', 'رسالة الخطأ: ' + pErr.message);
+      log('error', 'كود الخطأ: ' + (pErr.code || 'N/A'));
+      log('warning', '💡 السبب المحتمل:');
+      log('warning', '   → البروفايل مش موجود (شغل SQL بتاع INSERT)');
+      log('warning', '   → أو مشكلة RLS في جدول profiles');
+      await supabase.auth.signOut();
+      btn.disabled = false;
+      btn.textContent = '🚀 اختبار تسجيل الدخول';
+      return;
+    }
+
+    log('success', '✅ البروفايل موجود!');
+    log('info', 'الاسم: ' + (profile.full_name_ar || profile.full_name));
+    log('info', 'الدور: ' + profile.role);
+    log('info', 'مفعّل: ' + profile.is_active);
+
+    // Step 3: Check active
+    log('info', '━━━━━━━━━━━━━━━━━━━━━━━━');
+    log('info', '⏳ الخطوة 3: التحقق من تفعيل الحساب...');
+
+    if (!profile.is_active) {
+      log('error', '❌ الحساب غير مفعّل!');
+      log('warning', '💡 الحل: UPDATE profiles SET is_active=true WHERE ...');
+      await supabase.auth.signOut();
+      btn.disabled = false;
+      btn.textContent = '🚀 اختبار تسجيل الدخول';
+      return;
+    }
+
+    log('success', '✅ الحساب مفعّل!');
+
+    // All good
+    log('info', '━━━━━━━━━━━━━━━━━━━━━━━━');
+    log('success', '🎉🎉🎉 كل حاجة تمام!');
+    log('success', 'اسم: ' + (profile.full_name_ar || profile.full_name));
+    log('success', 'دور: ' + profile.role);
+    log('success', 'يمكن الآن استخدام login.html بدون مشاكل ✨');
+
+  } catch (err) {
+    log('error', '❌ خطأ عام غير متوقع:');
+    log('error', err.message);
+    log('error', err.stack || 'no stack');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🚀 اختبار تسجيل الدخول';
+}
+</script>
+</body>
+</html>
