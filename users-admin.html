@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة المستخدمين — شركة السلاسل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
+  body{background:#f1f5f9;color:#0f172a;padding:20px;min-height:100vh}
+  .container{max-width:1200px;margin:0 auto}
+  .hdr{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:26px 30px;border-radius:16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;border-bottom:5px solid #c29449}
+  .hdr h1{font-size:24px;font-weight:900}
+  .hdr .subtitle{color:#e2e8f0;font-size:13px;margin-top:4px}
+  .btn{padding:12px 20px;background:#c29449;color:#fff;border:none;border-radius:10px;font-family:'Cairo';font-weight:800;cursor:pointer;font-size:13px;transition:all 0.2s}
+  .btn:hover{background:#a67a35;transform:translateY(-1px)}
+  .btn-danger{background:#dc2626}
+  .btn-danger:hover{background:#b91c1c}
+  .btn-sm{padding:6px 12px;font-size:11px}
+  .btn-secondary{background:#64748b}
+  .btn-secondary:hover{background:#475569}
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+  .stat{background:#fff;padding:16px;border-radius:12px;text-align:center;border:1px solid #e2e8f0}
+  .stat .n{font-size:28px;font-weight:900;color:#0f3a52}
+  .stat .l{font-size:11px;color:#64748b;font-weight:700;margin-top:4px}
+  .stat.admin{border-color:#dc2626}.stat.admin .n{color:#dc2626}
+  .stat.acc{border-color:#059669}.stat.acc .n{color:#059669}
+  .stat.hr{border-color:#7c3aed}.stat.hr .n{color:#7c3aed}
+  .stat.ops{border-color:#0891b2}.stat.ops .n{color:#0891b2}
+  .stat.sup{border-color:#c29449}.stat.sup .n{color:#c29449}
+  .table-wrap{background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0}
+  table{width:100%;border-collapse:collapse}
+  th{background:#0f3a52;color:#fff;padding:14px 12px;text-align:right;font-size:12px;font-weight:800}
+  td{padding:12px;border-bottom:1px solid #e2e8f0;font-size:13px;font-weight:600}
+  tr:hover{background:#f8fafc}
+  .role-badge{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;display:inline-block}
+  .role-admin{background:#fee2e2;color:#991b1b}
+  .role-accountant{background:#dcfce7;color:#166534}
+  .role-hr{background:#ede9fe;color:#6b21a8}
+  .role-operations{background:#cffafe;color:#155e75}
+  .role-supervisor{background:#fef3c7;color:#92400e}
+  .status-active{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700}
+  .status-inactive{background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000;backdrop-filter:blur(4px)}
+  .modal.on{display:flex}
+  .modal-box{background:#fff;border-radius:16px;padding:28px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;border-top:5px solid #c29449}
+  .modal h2{font-size:20px;font-weight:900;color:#0f3a52;margin-bottom:20px;text-align:center;border-bottom:2px solid #c29449;padding-bottom:10px}
+  .field{margin-bottom:14px}
+  .field label{font-size:12px;font-weight:800;color:#475569;margin-bottom:5px;display:block}
+  .field input, .field select{width:100%;padding:11px 12px;border:2px solid #e2e8f0;border-radius:10px;font-family:'Cairo';font-size:13px;font-weight:600;direction:rtl}
+  .field input:focus, .field select:focus{outline:none;border-color:#c29449}
+  .actions-row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .alert{padding:12px;border-radius:8px;margin-bottom:14px;font-size:12px;font-weight:700;text-align:center;display:none}
+  .alert.on{display:block}
+  .alert.err{background:#fee2e2;color:#991b1b}
+  .alert.ok{background:#dcfce7;color:#166534}
+  .empty{padding:60px 20px;text-align:center;color:#94a3b8;font-size:14px;font-weight:600}
+  .top-bar{display:flex;gap:10px;flex-wrap:wrap}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;margin-left:8px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hdr">
+    <div>
+      <h1>إدارة المستخدمين والصلاحيات</h1>
+      <div class="subtitle">تحكم في مستخدمي النظام وأدوارهم</div>
+    </div>
+    <div class="top-bar">
+      <button class="btn" onclick="openAddModal()">➕ مستخدم جديد</button>
+      <button class="btn btn-secondary" onclick="window.location.href='السلاسل_نظام_ادارة_السائقين_28.html'">→ العودة للنظام</button>
+      <button class="btn btn-danger" onclick="logout()">🚪 خروج</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="stat-total">0</div><div class="l">إجمالي المستخدمين</div></div>
+    <div class="stat admin"><div class="n" id="stat-admin">0</div><div class="l">المدير العام</div></div>
+    <div class="stat acc"><div class="n" id="stat-acc">0</div><div class="l">المحاسبة</div></div>
+    <div class="stat hr"><div class="n" id="stat-hr">0</div><div class="l">الموارد البشرية</div></div>
+    <div class="stat ops"><div class="n" id="stat-ops">0</div><div class="l">العمليات</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>المستخدم</th><th>البريد الإلكتروني</th><th>الدور</th><th>الهاتف</th>
+        <th>الحالة</th><th>آخر دخول</th><th style="text-align:center">إجراءات</th>
+      </tr></thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">لا يوجد مستخدمون بعد — اضغط "مستخدم جديد" للبدء</div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal" id="userModal">
+  <div class="modal-box">
+    <h2 id="modalTitle">➕ إضافة مستخدم جديد</h2>
+    <div class="alert err" id="mErr"></div>
+    <div class="alert ok" id="mOk"></div>
+
+    <div class="field">
+      <label>الاسم بالعربي *</label>
+      <input type="text" id="m-name-ar" placeholder="مثلاً: محمد أحمد">
+    </div>
+    <div class="field">
+      <label>Full Name (English)</label>
+      <input type="text" id="m-name-en" placeholder="Mohammed Ahmed">
+    </div>
+    <div class="field">
+      <label>البريد الإلكتروني *</label>
+      <input type="email" id="m-email" placeholder="user@salasil.com">
+    </div>
+    <div class="field" id="pw-field">
+      <label>كلمة السر * (8 أحرف على الأقل)</label>
+      <input type="password" id="m-pass" placeholder="********">
+    </div>
+    <div class="field">
+      <label>الهاتف</label>
+      <input type="tel" id="m-phone" placeholder="+965 xxxx xxxx">
+    </div>
+    <div class="field">
+      <label>الدور *</label>
+      <select id="m-role">
+        <option value="admin">🔴 المدير العام (Admin)</option>
+        <option value="accountant">🟢 المحاسب (Accountant)</option>
+        <option value="hr">🟣 الموارد البشرية (HR)</option>
+        <option value="operations">🔵 مدير العمليات (Operations)</option>
+        <option value="supervisor" selected>🟡 سوبر فايزر التشغيل (Supervisor)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>الحالة</label>
+      <select id="m-status"><option value="true">✅ مفعّل</option><option value="false">❌ موقوف</option></select>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+      <button class="btn" id="saveBtn" onclick="saveUser()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
+
+const roleLabels = {
+  admin:'المدير العام', accountant:'المحاسبة', hr:'الموارد البشرية',
+  operations:'العمليات', supervisor:'سوبر فايزر'
+};
+
+let editingUserId = null;
+
+// Verify admin access on load
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  const { data: profile } = await supabase.from('profiles').select('role, is_active').eq('id', session.user.id).single();
+  if (!profile || profile.role !== 'admin') {
+    alert('❌ هذه الصفحة للمدير العام فقط');
+    window.location.href = 'السلاسل_نظام_ادارة_السائقين_28.html';
+    return;
+  }
+  loadUsers();
+})();
+
+async function loadUsers(){
+  const { data: users, error } = await supabase.from('profiles')
+    .select('*').order('created_at', {ascending:false});
+  if (error) { console.error(error); return; }
+
+  const stats = {total:users.length, admin:0, accountant:0, hr:0, operations:0};
+  users.forEach(u => { if(stats[u.role] !== undefined) stats[u.role]++; });
+  document.getElementById('stat-total').textContent = stats.total;
+  document.getElementById('stat-admin').textContent = stats.admin;
+  document.getElementById('stat-acc').textContent = stats.accountant;
+  document.getElementById('stat-hr').textContent = stats.hr;
+  document.getElementById('stat-ops').textContent = stats.operations;
+
+  const tbody = document.getElementById('usersBody');
+  tbody.innerHTML = '';
+  document.getElementById('empty').style.display = users.length ? 'none' : 'block';
+
+  users.forEach(u => {
+    const initials = (u.full_name_ar || u.full_name || '?').split(' ').map(s=>s[0]||'').slice(0,2).join('');
+    const lastLogin = u.last_login_at ? new Date(u.last_login_at).toLocaleDateString('ar-EG') : '—';
+    const email = u.email || '—';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="avatar">${initials}</span>${u.full_name_ar || u.full_name}</td>
+      <td style="direction:ltr;text-align:right">${email}</td>
+      <td><span class="role-badge role-${u.role}">${roleLabels[u.role]||u.role}</span></td>
+      <td>${u.phone||'—'}</td>
+      <td>${u.is_active ? '<span class="status-active">✓ مفعّل</span>' : '<span class="status-inactive">✗ موقوف</span>'}</td>
+      <td>${lastLogin}</td>
+      <td style="text-align:center">
+        <button class="btn btn-sm" onclick="editUser('${u.id}')">✏️ تعديل</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}','${u.full_name_ar||u.full_name}')">🗑️</button>
+      </td>`;
+    // Fetch email
+    supabase.auth.admin ? null : null;
+    tbody.appendChild(tr);
+  });
+
+  // Get emails from auth.users (via view/RPC would be better; here use profile display)
+  // For now attempt via metadata — you'll see email in Supabase dashboard
+}
+
+function openAddModal(){
+  editingUserId = null;
+  document.getElementById('modalTitle').textContent = '➕ إضافة مستخدم جديد';
+  document.getElementById('pw-field').style.display = 'block';
+  ['m-name-ar','m-name-en','m-email','m-pass','m-phone'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('m-role').value = 'supervisor';
+  document.getElementById('m-status').value = 'true';
+  document.getElementById('mErr').classList.remove('on');
+  document.getElementById('mOk').classList.remove('on');
+  document.getElementById('userModal').classList.add('on');
+}
+
+async function editUser(id){
+  const { data: user } = await supabase.from('profiles').select('*').eq('id',id).single();
+  if (!user) return;
+  editingUserId = id;
+  document.getElementById('modalTitle').textContent = '✏️ تعديل بيانات المستخدم';
+  document.getElementById('pw-field').style.display = 'none';
+  document.getElementById('m-name-ar').value = user.full_name_ar || '';
+  document.getElementById('m-name-en').value = user.full_name || '';
+  document.getElementById('m-email').value = '';
+  document.getElementById('m-email').disabled = true;
+  document.getElementById('m-phone').value = user.phone || '';
+  document.getElementById('m-role').value = user.role;
+  document.getElementById('m-status').value = String(user.is_active);
+  document.getElementById('userModal').classList.add('on');
+}
+
+function closeModal(){
+  document.getElementById('userModal').classList.remove('on');
+  document.getElementById('m-email').disabled = false;
+}
+
+async function saveUser(){
+  const btn = document.getElementById('saveBtn');
+  const errBox = document.getElementById('mErr');
+  const okBox = document.getElementById('mOk');
+  errBox.classList.remove('on'); okBox.classList.remove('on');
+
+  const nameAr = document.getElementById('m-name-ar').value.trim();
+  const nameEn = document.getElementById('m-name-en').value.trim() || nameAr;
+  const email = document.getElementById('m-email').value.trim();
+  const pass = document.getElementById('m-pass').value;
+  const phone = document.getElementById('m-phone').value.trim();
+  const role = document.getElementById('m-role').value;
+  const isActive = document.getElementById('m-status').value === 'true';
+
+  if (!nameAr) { errBox.textContent = '❌ الاسم بالعربي مطلوب'; errBox.classList.add('on'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'جاري الحفظ...';
+
+  try {
+    if (editingUserId) {
+      // UPDATE
+      const { error } = await supabase.from('profiles').update({
+        full_name: nameEn, full_name_ar: nameAr, phone, role, is_active: isActive
+      }).eq('id', editingUserId);
+      if (error) throw error;
+      okBox.textContent = '✅ تم التحديث';
+      okBox.classList.add('on');
+    } else {
+      // CREATE - signup via auth
+      if (!email || !pass) throw new Error('البريد الإلكتروني وكلمة السر مطلوبان');
+      if (pass.length < 8) throw new Error('كلمة السر لا تقل عن 8 أحرف');
+
+      const { data, error } = await supabase.auth.signUp({
+        email, password: pass,
+        options: {
+          data: { full_name: nameEn, full_name_ar: nameAr, role, phone }
+        }
+      });
+      if (error) throw error;
+
+      // Set is_active + role in profiles (trigger creates row)
+      setTimeout(async () => {
+        await supabase.from('profiles').update({
+          full_name: nameEn, full_name_ar: nameAr, phone, role, is_active: isActive
+        }).eq('id', data.user.id);
+      }, 500);
+
+      okBox.textContent = '✅ تم إنشاء الحساب — الإيميل والباسورد: ' + email;
+      okBox.classList.add('on');
+    }
+    setTimeout(() => { closeModal(); loadUsers(); }, 1200);
+  } catch (err) {
+    errBox.textContent = '❌ ' + (err.message || 'فشل الحفظ');
+    errBox.classList.add('on');
+    btn.disabled = false;
+    btn.textContent = 'حفظ';
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = 'حفظ';
+}
+
+async function deleteUser(id, name){
+  if (!confirm('هل أنت متأكد من حذف "' + name + '"؟\n(سيتم إيقاف الحساب فقط - يمكن استعادته من Supabase)')) return;
+  const { error } = await supabase.from('profiles').update({is_active:false}).eq('id',id);
+  if (error) { alert('فشل: ' + error.message); return; }
+  loadUsers();
+}
+
+async function logout(){
+  await supabase.auth.signOut();
+  window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>
