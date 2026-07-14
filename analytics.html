@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{
@@ -96,6 +97,9 @@
   </div>
   <div class="actions">
     <button class="btn btn-secondary" onclick="window.location.href='السلاسل_نظام_ادارة_السائقين_28.html'"><i class="ti ti-arrow-right"></i> ARK</button>
+    <button class="btn btn-primary" onclick="document.getElementById('excelInput').click()"><i class="ti ti-upload"></i> 📥 استيراد Excel</button>
+    <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
+    <button class="btn btn-primary" onclick="downloadTemplate()"><i class="ti ti-download"></i> 📊 تحميل النموذج</button>
     <button class="btn btn-primary" onclick="window.print()"><i class="ti ti-printer"></i> طباعة</button>
   </div>
 </div>
@@ -820,6 +824,147 @@ function renderAll() {
   renderViolations();
   renderForecast();
   renderRankingTable();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// IMPORT/EXPORT
+// ═══════════════════════════════════════════════════════════════════
+
+function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+
+      // 1. Monthly Summary sheet
+      if (wb.Sheets['الملخص الشهري']) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['الملخص الشهري'], {header:1, range:3});
+        rows.forEach(r => {
+          const monthName = String(r[0]||'');
+          let key = null;
+          if (monthName.includes('أبريل')) key = '04';
+          else if (monthName.includes('مايو')) key = '05';
+          else if (monthName.includes('يونيو')) key = '06';
+          if (key && r[1] !== '' && r[1] != null) {
+            DATA.monthly[key] = {
+              revenue: Number(r[1])||0,
+              expenses: Number(r[2])||0,
+              salaries: Number(r[3])||0,
+              orders: Number(r[4])||0,
+              drivers: Number(r[5])||0,
+            };
+            DATA.violations[key] = Number(r[6])||0;
+          }
+        });
+      }
+
+      // 2. Partners sheet
+      if (wb.Sheets['الشركاء']) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['الشركاء'], {header:1, range:3});
+        const newPartners = {'04':[], '05':[], '06':[]};
+        rows.forEach(r => {
+          const monthName = String(r[0]||'');
+          let key = null;
+          if (monthName.includes('أبريل')) key = '04';
+          else if (monthName.includes('مايو')) key = '05';
+          else if (monthName.includes('يونيو')) key = '06';
+          if (key && r[1]) {
+            newPartners[key].push({name: r[1], value: Number(r[2])||0, color: r[3]||'#64748b'});
+          }
+        });
+        Object.keys(newPartners).forEach(k => {
+          if (newPartners[k].length > 0) DATA.partners[k] = newPartners[k];
+        });
+      }
+
+      // 3. Expenses sheet
+      if (wb.Sheets['المصروفات']) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['المصروفات'], {header:1, range:3});
+        const newExp = {'04':[], '05':[], '06':[]};
+        rows.forEach(r => {
+          const monthName = String(r[0]||'');
+          let key = null;
+          if (monthName.includes('أبريل')) key = '04';
+          else if (monthName.includes('مايو')) key = '05';
+          else if (monthName.includes('يونيو')) key = '06';
+          if (key && r[1]) {
+            newExp[key].push({name: r[1], value: Number(r[2])||0, color: r[3]||'#64748b', pct: 0});
+          }
+        });
+        Object.keys(newExp).forEach(k => {
+          if (newExp[k].length > 0) {
+            // Calculate percentages
+            const total = newExp[k].reduce((s,e)=>s+e.value, 0);
+            newExp[k].forEach(e => e.pct = total > 0 ? +(e.value/total*100).toFixed(1) : 0);
+            DATA.expenses[k] = newExp[k];
+          }
+        });
+      }
+
+      // 4. Drivers sheet
+      if (wb.Sheets['السائقين']) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['السائقين'], {header:1, range:3});
+        const newDrivers = [];
+        rows.forEach(r => {
+          if (r[0]) {
+            const platform = r[1] || 'كيتا';
+            const color = platform === 'كيتا' ? '#059669' : (platform === 'كابوريا' ? '#2563eb' : '#d97706');
+            newDrivers.push({
+              name: r[0],
+              platform: platform,
+              orders: Number(r[2])||0,
+              revenue: Number(r[3])||0,
+              perDay: Number(r[4])||0,
+              days: Number(r[5])||30,
+              color: color
+            });
+          }
+        });
+        if (newDrivers.length > 0) DATA.drivers = newDrivers;
+      }
+
+      // 5. Fleet & HR sheet
+      if (wb.Sheets['الأسطول والموارد']) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['الأسطول والموارد'], {header:1, range:3});
+        rows.forEach(r => {
+          if (!r[0]) return;
+          const key = r[0];
+          const val = Number(r[1])||0;
+          if (key === 'total') DATA.fleet.total = val;
+          else if (key === 'active') DATA.fleet.active = val;
+          else if (key === 'inMaintenance') DATA.fleet.inMaintenance = val;
+          else if (key === 'outOfService') DATA.fleet.outOfService = val;
+          else if (key === 'utilization') DATA.fleet.utilization = val;
+          else if (key === 'presentRate') DATA.attendance.presentRate = val;
+          else if (key === 'lateRate') DATA.attendance.lateRate = val;
+          else if (key === 'absentRate') DATA.attendance.absentRate = val;
+        });
+
+        // Nationalities (row 20+)
+        const newNats = [];
+        rows.forEach((r, i) => {
+          if (i > 15 && r[0] && r[1] != null && String(r[0]).length > 3 && !['total','active','inMaintenance','outOfService','utilization','presentRate','lateRate','absentRate'].includes(r[0])) {
+            newNats.push({name: r[0], value: Number(r[1])||0, color: r[2]||'#64748b'});
+          }
+        });
+        if (newNats.length > 0) DATA.nationalities = newNats;
+      }
+
+      alert('✅ تم استيراد البيانات بنجاح! الداشبورد سيتحدث الآن.');
+      renderAll();
+    } catch(err) {
+      alert('❌ خطأ في قراءة الملف: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function downloadTemplate() {
+  // Open the template file
+  window.open('بيانات_Analytics.xlsx', '_blank');
 }
 
 window.addEventListener('DOMContentLoaded', renderAll);
