@@ -24,7 +24,6 @@
   }
   body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-  /* HEADER */
   .topbar{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:10px}
   .topbar h1{font-size:22px;font-weight:900;display:flex;align-items:center;gap:10px}
   .topbar .sub{font-size:12px;color:#e2e8f0;margin-top:2px}
@@ -35,17 +34,14 @@
   .btn-secondary{background:rgba(255,255,255,0.15);color:#fff}
   .btn-secondary:hover{background:rgba(255,255,255,0.25)}
 
-  /* Month selector */
   .filter-bar{background:#fff;padding:12px 24px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
   .filter-bar label{font-size:13px;font-weight:800;color:var(--navy)}
   .filter-bar select{padding:8px 14px;border:2px solid var(--border);border-radius:8px;font-family:'Cairo';font-weight:700;font-size:13px}
 
-  /* Container */
   .container{padding:20px 24px}
   .section{margin-bottom:24px}
   .section-title{font-size:16px;font-weight:900;color:var(--navy);margin-bottom:12px;padding:8px 0;border-bottom:3px solid var(--gold);display:flex;align-items:center;gap:8px}
 
-  /* KPI Cards */
   .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
   .kpi{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);border-right:5px solid var(--kpi-color);transition:all 0.2s;position:relative;overflow:hidden}
   .kpi:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.1)}
@@ -55,28 +51,39 @@
   .kpi-change.up{color:var(--green)}
   .kpi-change.down{color:var(--red)}
 
-  /* Chart Cards */
   .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .charts-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
   .chart-card{background:#fff;border-radius:14px;padding:18px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.04)}
   .chart-card.wide{grid-column:1/-1}
   .chart-title{font-size:14px;font-weight:900;color:var(--navy);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
   .chart-title small{font-size:10px;color:var(--muted);font-weight:600}
   .chart-container{position:relative;height:280px}
   .chart-container.tall{height:360px}
+  .chart-container.short{height:220px}
 
-  /* Table */
   .data-table{width:100%;border-collapse:collapse;font-size:12px}
   .data-table th{background:var(--navy);color:#fff;padding:8px;text-align:right;font-weight:800}
   .data-table td{padding:8px;border-bottom:1px solid var(--border);text-align:right;font-weight:600}
   .data-table tr:nth-child(even) td{background:var(--light)}
   .data-table .medal{font-size:16px}
   .data-table .money{color:var(--green);font-weight:800}
+  .data-table .money-red{color:var(--red);font-weight:800}
   .data-table .badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:800}
   .badge-green{background:var(--green-bg);color:var(--green)}
   .badge-red{background:var(--red-bg);color:var(--red)}
   .badge-amber{background:var(--amber-bg);color:var(--amber)}
 
-  @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.charts-grid{grid-template-columns:1fr}}
+  .insight-box{background:linear-gradient(135deg,#fdf6e9,#faf3e0);border-radius:12px;padding:16px 18px;margin-bottom:20px;border-right:5px solid var(--gold);display:flex;gap:14px;align-items:start}
+  .insight-icon{background:var(--gold);color:#fff;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .insight-title{font-weight:900;color:var(--navy);margin-bottom:6px;font-size:14px}
+  .insight-text{color:var(--text);font-size:12px;line-height:1.6}
+
+  .forecast-card{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;border-radius:14px;padding:20px;margin-bottom:16px}
+  .forecast-card h3{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .forecast-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.15);font-size:13px}
+  .forecast-row:last-child{border-bottom:none;font-weight:900;color:var(--gold)}
+
+  @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.charts-grid,.charts-grid-3{grid-template-columns:1fr}}
   @media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.kpi-value{font-size:20px}}
 </style>
 </head>
@@ -84,13 +91,12 @@
 
 <div class="topbar">
   <div>
-    <h1>📊 Analytics — لوحة التحليلات</h1>
+    <h1>📊 Analytics — لوحة التحليلات الشاملة</h1>
     <div class="sub">Business Intelligence Dashboard · شركة السلاسل</div>
   </div>
   <div class="actions">
     <button class="btn btn-secondary" onclick="window.location.href='السلاسل_نظام_ادارة_السائقين_28.html'"><i class="ti ti-arrow-right"></i> ARK</button>
     <button class="btn btn-primary" onclick="window.print()"><i class="ti ti-printer"></i> طباعة</button>
-    <button class="btn btn-primary" onclick="exportPdf()"><i class="ti ti-file-type-pdf"></i> PDF</button>
   </div>
 </div>
 
@@ -111,6 +117,15 @@
 
 <div class="container">
 
+  <!-- ═══════════ SMART INSIGHT ═══════════ -->
+  <div class="insight-box">
+    <div class="insight-icon">💡</div>
+    <div>
+      <div class="insight-title">توصية ذكية / Smart Insight</div>
+      <div class="insight-text" id="smartInsight">جاري التحليل...</div>
+    </div>
+  </div>
+
   <!-- ═══════════ SECTION 1: KPIs ═══════════ -->
   <div class="section">
     <div class="section-title"><i class="ti ti-chart-line"></i> المؤشرات الرئيسية / Key Performance Indicators</div>
@@ -122,7 +137,7 @@
     <div class="section-title"><i class="ti ti-cash"></i> التحليل المالي / Financial Analysis</div>
     <div class="charts-grid">
       <div class="chart-card">
-        <div class="chart-title">📈 الإيرادات والمصروفات الشهرية <small>Monthly Revenue vs Expenses</small></div>
+        <div class="chart-title">📈 الإيرادات والمصروفات الشهرية <small>Revenue vs Expenses</small></div>
         <div class="chart-container"><canvas id="revenueChart"></canvas></div>
       </div>
       <div class="chart-card">
@@ -140,26 +155,87 @@
     </div>
   </div>
 
-  <!-- ═══════════ SECTION 3: Drivers Performance ═══════════ -->
+  <!-- ═══════════ SECTION 3: DETAILED EXPENSES ═══════════ -->
   <div class="section">
-    <div class="section-title"><i class="ti ti-users"></i> أداء السائقين / Drivers Performance</div>
+    <div class="section-title"><i class="ti ti-receipt"></i> تحليل المصاريف التفصيلي / Detailed Expenses Analysis</div>
+    <div class="charts-grid">
+      <div class="chart-card wide">
+        <div class="chart-title">📊 تطور المصاريف عبر الأشهر <small>Expenses Evolution Over Months</small></div>
+        <div class="chart-container tall"><canvas id="expenseEvolutionChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💰 نسبة المصاريف من الإيرادات <small>Expenses % of Revenue</small></div>
+        <div class="chart-container"><canvas id="expensePctChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">⛽ تكلفة الوقود التفصيلية <small>Fuel Cost Details</small></div>
+        <div class="chart-container"><canvas id="fuelChart"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card wide" style="margin-top:16px">
+      <div class="chart-title">📋 تفصيل مصاريف الشهر <small>Monthly Expense Details</small></div>
+      <table class="data-table" id="expenseTable"></table>
+    </div>
+  </div>
+
+  <!-- ═══════════ SECTION 4: FLEET ANALYSIS ═══════════ -->
+  <div class="section">
+    <div class="section-title"><i class="ti ti-car"></i> تحليل الأسطول / Fleet Analysis</div>
+    <div class="charts-grid-3">
+      <div class="chart-card">
+        <div class="chart-title">🚗 استخدام الأسطول <small>Fleet Utilization</small></div>
+        <div class="chart-container"><canvas id="fleetUtilChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🔧 تكاليف الصيانة <small>Maintenance Costs</small></div>
+        <div class="chart-container"><canvas id="maintenanceChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">⛽ استهلاك الوقود/سائق <small>Fuel Consumption per Driver</small></div>
+        <div class="chart-container"><canvas id="fuelPerDriverChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SECTION 5: HR ANALYSIS ═══════════ -->
+  <div class="section">
+    <div class="section-title"><i class="ti ti-users-group"></i> تحليل الموارد البشرية / HR Analysis</div>
+    <div class="charts-grid-3">
+      <div class="chart-card">
+        <div class="chart-title">🌍 توزيع الجنسيات <small>Nationality Distribution</small></div>
+        <div class="chart-container"><canvas id="nationalityChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">👥 توزيع السائقين على المنصات <small>Drivers by Platform</small></div>
+        <div class="chart-container"><canvas id="driversDistChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📅 معدل الحضور <small>Attendance Rate</small></div>
+        <div class="chart-container"><canvas id="attendanceChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SECTION 6: DRIVERS PERFORMANCE ═══════════ -->
+  <div class="section">
+    <div class="section-title"><i class="ti ti-trophy"></i> أداء السائقين / Drivers Performance</div>
     <div class="charts-grid">
       <div class="chart-card wide">
         <div class="chart-title">🏆 أفضل 10 سائقين — عدد الطلبات <small>Top 10 Drivers by Orders</small></div>
         <div class="chart-container tall"><canvas id="topDriversChart"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">👥 توزيع السائقين على المنصات <small>Drivers Distribution</small></div>
-        <div class="chart-container"><canvas id="driversDistChart"></canvas></div>
-      </div>
-      <div class="chart-card">
         <div class="chart-title">📊 متوسط الطلبات يومياً <small>Avg Orders per Day</small></div>
         <div class="chart-container"><canvas id="ordersPerDayChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💰 الإيراد لكل سائق <small>Revenue per Driver</small></div>
+        <div class="chart-container"><canvas id="revenuePerDriverChart"></canvas></div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════ SECTION 4: Operations ═══════════ -->
+  <!-- ═══════════ SECTION 7: OPERATIONS ═══════════ -->
   <div class="section">
     <div class="section-title"><i class="ti ti-package"></i> العمليات / Operations</div>
     <div class="charts-grid">
@@ -174,9 +250,24 @@
     </div>
   </div>
 
-  <!-- ═══════════ SECTION 5: Data Tables ═══════════ -->
+  <!-- ═══════════ SECTION 8: FORECASTING ═══════════ -->
   <div class="section">
-    <div class="section-title"><i class="ti ti-table"></i> ترتيب الأداء / Performance Ranking</div>
+    <div class="section-title"><i class="ti ti-crystal-ball"></i> التوقعات المالية / Financial Forecasting</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">🔮 توقعات الإيرادات (3 أشهر قادمة) <small>Revenue Forecast (Next 3 Months)</small></div>
+        <div class="chart-container tall"><canvas id="forecastChart"></canvas></div>
+      </div>
+      <div class="forecast-card">
+        <h3>📅 التوقعات للأشهر القادمة / Next Months</h3>
+        <div id="forecastList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SECTION 9: RANKING TABLE ═══════════ -->
+  <div class="section">
+    <div class="section-title"><i class="ti ti-table"></i> ترتيب الأداء التفصيلي / Performance Ranking</div>
     <div class="chart-card wide">
       <table class="data-table" id="rankingTable">
         <thead>
@@ -187,7 +278,7 @@
             <th>الطلبات</th>
             <th>الإيراد (د.ك)</th>
             <th>طلبات/يوم</th>
-            <th>الحالة</th>
+            <th>التقييم</th>
           </tr>
         </thead>
         <tbody id="rankingBody"></tbody>
@@ -203,28 +294,45 @@
 // ═══════════════════════════════════════════════════════════════════
 
 const DATA = {
-  // Monthly summaries
   monthly: {
     '04': { revenue: 12200, expenses: 3377, salaries: 7200, orders: 5400, drivers: 24 },
     '05': { revenue: 13458, expenses: 4440, salaries: 7865, orders: 6081, drivers: 26 },
     '06': { revenue: 13526, expenses: 5800, salaries: 6260, orders: 7760, drivers: 41 },
   },
 
-  // Revenue by partner (June)
   partners: {
     '04': [{name:'Keeta', value:4200, color:'#059669'}, {name:'Caboria', value:4200, color:'#2563eb'}, {name:'HOMY', value:3800, color:'#d97706'}],
     '05': [{name:'Keeta', value:4830, color:'#059669'}, {name:'Caboria', value:4428, color:'#2563eb'}, {name:'HOMY', value:4200, color:'#d97706'}],
     '06': [{name:'Keeta', value:5032, color:'#059669'}, {name:'Caboria', value:4428, color:'#2563eb'}, {name:'HOMY', value:4066, color:'#d97706'}],
   },
 
-  // Expenses breakdown (June)
   expenses: {
-    '04': [{name:'وقود', value:1630, color:'#dc2626'}, {name:'صيانة', value:357, color:'#f59e0b'}, {name:'إقامات', value:200, color:'#7c3aed'}, {name:'إيجار', value:930, color:'#0891b2'}, {name:'مخالفات', value:180, color:'#e11d48'}, {name:'أخرى', value:80, color:'#64748b'}],
-    '05': [{name:'وقود', value:2280, color:'#dc2626'}, {name:'صيانة', value:380, color:'#f59e0b'}, {name:'إقامات', value:550, color:'#7c3aed'}, {name:'إيجار', value:930, color:'#0891b2'}, {name:'مخالفات', value:210, color:'#e11d48'}, {name:'أخرى', value:90, color:'#64748b'}],
-    '06': [{name:'وقود', value:2604, color:'#dc2626'}, {name:'صيانة', value:471, color:'#f59e0b'}, {name:'إقامات', value:1220, color:'#7c3aed'}, {name:'إيجار', value:930, color:'#0891b2'}, {name:'مخالفات', value:445, color:'#e11d48'}, {name:'أخرى', value:129.5, color:'#64748b'}],
+    '04': [
+      {name:'وقود', value:1630, color:'#dc2626', pct:48.3},
+      {name:'صيانة', value:357, color:'#f59e0b', pct:10.6},
+      {name:'إقامات', value:200, color:'#7c3aed', pct:5.9},
+      {name:'إيجار', value:930, color:'#0891b2', pct:27.5},
+      {name:'مخالفات', value:180, color:'#e11d48', pct:5.3},
+      {name:'أخرى', value:80, color:'#64748b', pct:2.4},
+    ],
+    '05': [
+      {name:'وقود', value:2280, color:'#dc2626', pct:51.4},
+      {name:'صيانة', value:380, color:'#f59e0b', pct:8.6},
+      {name:'إقامات', value:550, color:'#7c3aed', pct:12.4},
+      {name:'إيجار', value:930, color:'#0891b2', pct:20.9},
+      {name:'مخالفات', value:210, color:'#e11d48', pct:4.7},
+      {name:'أخرى', value:90, color:'#64748b', pct:2.0},
+    ],
+    '06': [
+      {name:'وقود', value:2604, color:'#dc2626', pct:44.9},
+      {name:'صيانة', value:471, color:'#f59e0b', pct:8.1},
+      {name:'إقامات', value:1220, color:'#7c3aed', pct:21.0},
+      {name:'إيجار', value:930, color:'#0891b2', pct:16.0},
+      {name:'مخالفات', value:445, color:'#e11d48', pct:7.7},
+      {name:'أخرى', value:129.5, color:'#64748b', pct:2.2},
+    ],
   },
 
-  // Top drivers (June - all platforms)
   drivers: [
     {name:'Kumar Raj', platform:'كيتا', orders:379, revenue:405.56, perDay:12.6, days:30, color:'#059669'},
     {name:'Ali Hashmat', platform:'كيتا', orders:384, revenue:401.21, perDay:12.8, days:30, color:'#059669'},
@@ -243,30 +351,73 @@ const DATA = {
     {name:'Rathod Vishnu', platform:'كيتا', orders:360, revenue:365.49, perDay:12.0, days:30, color:'#059669'},
   ],
 
-  // Violations
-  violations: {
-    '04': 180, '05': 210, '06': 445
-  }
+  violations: { '04': 180, '05': 210, '06': 445 },
+
+  nationalities: [
+    {name:'الهند / India', value:15, color:'#059669'},
+    {name:'باكستان / Pakistan', value:6, color:'#2563eb'},
+    {name:'بنغلاديش / Bangladesh', value:9, color:'#d97706'},
+    {name:'نيجيريا / Nigeria', value:6, color:'#7c3aed'},
+    {name:'مصر / Egypt', value:3, color:'#e11d48'},
+    {name:'سيريلانكا / Sri Lanka', value:2, color:'#0891b2'},
+  ],
+
+  fleet: {
+    total: 41,
+    active: 38,
+    inMaintenance: 2,
+    outOfService: 1,
+    fuelPerDriver: 63.5, // KD/month
+    maintenancePerDriver: 11.5,
+    utilization: 92.7, // %
+  },
+
+  attendance: {
+    presentRate: 94.5,
+    lateRate: 3.2,
+    absentRate: 2.3,
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// CHARTS
+// UTILS
 // ═══════════════════════════════════════════════════════════════════
 
 let charts = {};
-
-function destroyChart(id) {
-  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
-}
-
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 function getMonth() { return document.getElementById('monthSelect').value; }
 function getPrev(m) { return m === '06' ? '05' : (m === '05' ? '04' : '04'); }
-
 function fmtKD(n) { return (n||0).toLocaleString('en-US'); }
-function pct(cur, prev) {
-  if (!prev) return 0;
-  return ((cur - prev) / prev * 100).toFixed(1);
+function pct(cur, prev) { if (!prev) return 0; return ((cur - prev) / prev * 100).toFixed(1); }
+
+// ═══════════════════════════════════════════════════════════════════
+// SMART INSIGHT
+// ═══════════════════════════════════════════════════════════════════
+
+function updateInsight() {
+  const m = getMonth();
+  const d = DATA.monthly[m];
+  const net = d.revenue - d.expenses - d.salaries;
+  const margin = ((net / d.revenue) * 100).toFixed(1);
+  const fuelPct = DATA.expenses[m].find(e => e.name === 'وقود').pct;
+  const violations = DATA.violations[m];
+
+  let insight = '';
+  if (fuelPct > 45) {
+    insight = `⛽ <strong>الوقود يشكل ${fuelPct}% من مصاريفك!</strong> — الأعلى بين البنود. ننصح بمراجعة استهلاك السيارات والتفاوض مع محطة وقود على خصم بالجملة. توفير 10% = <span style="color:#059669;font-weight:900">${(DATA.expenses[m].find(e=>e.name==='وقود').value*0.1).toFixed(0)} د.ك</span> شهرياً.`;
+  } else if (violations > 400) {
+    insight = `🚨 <strong>المخالفات هذا الشهر: ${violations} د.ك!</strong> — رقم مرتفع جداً. اعمل تحقيق فوري + كل سائق يدفع مخالفته. توفير محتمل: <span style="color:#059669;font-weight:900">${violations} د.ك بالكامل</span>.`;
+  } else if (margin < 10) {
+    insight = `📊 <strong>هامش الربح ${margin}%</strong> — أقل من المستهدف (10%). ركز على تقليل المصاريف التشغيلية أو زيادة الأسعار مع الشركاء.`;
+  } else {
+    insight = `✅ <strong>الأداء ممتاز!</strong> — هامش الربح ${margin}%، والمصاريف تحت السيطرة. استمر بنفس الأداء وفكر في التوسع في عقود B2B جديدة.`;
+  }
+  document.getElementById('smartInsight').innerHTML = insight;
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// KPI
+// ═══════════════════════════════════════════════════════════════════
 
 function renderKPIs() {
   const m = getMonth();
@@ -299,14 +450,17 @@ function renderKPIs() {
   document.getElementById('kpiGrid').innerHTML = html;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// FINANCIAL CHARTS
+// ═══════════════════════════════════════════════════════════════════
+
 function renderRevenueChart() {
   destroyChart('revenue');
   const ctx = document.getElementById('revenueChart');
-  const months = ['أبريل', 'مايو', 'يونيو'];
   charts.revenue = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: months,
+      labels: ['أبريل', 'مايو', 'يونيو'],
       datasets: [
         {label:'الإيرادات', data:[DATA.monthly['04'].revenue, DATA.monthly['05'].revenue, DATA.monthly['06'].revenue], backgroundColor:'#059669', borderRadius:6},
         {label:'المصروفات', data:[DATA.monthly['04'].expenses+DATA.monthly['04'].salaries, DATA.monthly['05'].expenses+DATA.monthly['05'].salaries, DATA.monthly['06'].expenses+DATA.monthly['06'].salaries], backgroundColor:'#dc2626', borderRadius:6},
@@ -318,136 +472,305 @@ function renderRevenueChart() {
 
 function renderPartnerChart() {
   destroyChart('partner');
-  const m = getMonth();
-  const partners = DATA.partners[m];
-  const ctx = document.getElementById('partnerChart');
-  charts.partner = new Chart(ctx, {
+  const partners = DATA.partners[getMonth()];
+  charts.partner = new Chart(document.getElementById('partnerChart'), {
     type: 'doughnut',
-    data: {
-      labels: partners.map(p => p.name),
-      datasets: [{data:partners.map(p => p.value), backgroundColor:partners.map(p => p.color), borderWidth:3, borderColor:'#fff'}]
-    },
-    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}, tooltip:{callbacks:{label:c=>c.label+': '+fmtKD(c.raw)+' د.ك ('+((c.raw/partners.reduce((s,x)=>s+x.value,0))*100).toFixed(1)+'%)'}}}}
+    data: {labels:partners.map(p=>p.name), datasets:[{data:partners.map(p=>p.value), backgroundColor:partners.map(p=>p.color), borderWidth:3, borderColor:'#fff'}]},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}}}
   });
 }
 
 function renderExpensesChart() {
   destroyChart('expenses');
-  const m = getMonth();
-  const exps = DATA.expenses[m];
-  const ctx = document.getElementById('expensesChart');
-  charts.expenses = new Chart(ctx, {
+  const exps = DATA.expenses[getMonth()];
+  charts.expenses = new Chart(document.getElementById('expensesChart'), {
     type: 'pie',
-    data: {
-      labels: exps.map(e => e.name),
-      datasets: [{data:exps.map(e => e.value), backgroundColor:exps.map(e => e.color), borderWidth:2, borderColor:'#fff'}]
-    },
+    data: {labels:exps.map(e=>e.name), datasets:[{data:exps.map(e=>e.value), backgroundColor:exps.map(e=>e.color), borderWidth:2, borderColor:'#fff'}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}}}
   });
 }
 
 function renderProfitChart() {
   destroyChart('profit');
-  const ctx = document.getElementById('profitChart');
   const profits = ['04','05','06'].map(m => {
     const d = DATA.monthly[m];
     return d.revenue - d.expenses - d.salaries;
   });
-  charts.profit = new Chart(ctx, {
+  charts.profit = new Chart(document.getElementById('profitChart'), {
     type: 'line',
-    data: {
-      labels: ['أبريل', 'مايو', 'يونيو'],
-      datasets: [{
-        label:'صافي الربح',
-        data: profits,
-        borderColor:'#c29449',
-        backgroundColor:'rgba(194,148,73,0.15)',
-        fill:true, tension:0.4, borderWidth:3,
-        pointRadius:6, pointBackgroundColor:'#c29449'
-      }]
-    },
-    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>fmtKD(v)+' د.ك'}}}}
+    data: {labels:['أبريل','مايو','يونيو'], datasets:[{label:'صافي الربح', data:profits, borderColor:'#c29449', backgroundColor:'rgba(194,148,73,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6, pointBackgroundColor:'#c29449'}]},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
 
-function renderTopDrivers() {
-  destroyChart('topDrivers');
-  const top = DATA.drivers.slice(0,10).sort((a,b)=>b.orders-a.orders);
-  const ctx = document.getElementById('topDriversChart');
-  charts.topDrivers = new Chart(ctx, {
-    type: 'bar',
+// ═══════════════════════════════════════════════════════════════════
+// DETAILED EXPENSES CHARTS
+// ═══════════════════════════════════════════════════════════════════
+
+function renderExpenseEvolution() {
+  destroyChart('expenseEvolution');
+  const categories = ['وقود', 'صيانة', 'إقامات', 'إيجار', 'مخالفات', 'أخرى'];
+  const colors = ['#dc2626', '#f59e0b', '#7c3aed', '#0891b2', '#e11d48', '#64748b'];
+
+  const datasets = categories.map((cat, i) => ({
+    label: cat,
+    data: ['04','05','06'].map(m => DATA.expenses[m].find(e => e.name === cat).value),
+    borderColor: colors[i],
+    backgroundColor: colors[i] + '20',
+    tension: 0.4,
+    borderWidth: 2.5,
+    pointRadius: 5,
+  }));
+
+  charts.expenseEvolution = new Chart(document.getElementById('expenseEvolutionChart'), {
+    type: 'line',
+    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>fmtKD(v)+' د.ك'}}}}
+  });
+}
+
+function renderExpensePct() {
+  destroyChart('expensePct');
+  const m = getMonth();
+  const d = DATA.monthly[m];
+  const total = d.expenses + d.salaries;
+  const pctFuel = (DATA.expenses[m].find(e=>e.name==='وقود').value / d.revenue * 100).toFixed(1);
+  const pctSalaries = (d.salaries / d.revenue * 100).toFixed(1);
+  const pctOther = ((d.expenses - DATA.expenses[m].find(e=>e.name==='وقود').value) / d.revenue * 100).toFixed(1);
+  const pctProfit = ((d.revenue - total) / d.revenue * 100).toFixed(1);
+
+  charts.expensePct = new Chart(document.getElementById('expensePctChart'), {
+    type: 'doughnut',
     data: {
-      labels: top.map(d => d.name),
-      datasets: [{label:'عدد الطلبات', data:top.map(d => d.orders), backgroundColor:top.map(d => d.color), borderRadius:6}]
+      labels: [`وقود (${pctFuel}%)`, `رواتب (${pctSalaries}%)`, `مصاريف أخرى (${pctOther}%)`, `ربح (${pctProfit}%)`],
+      datasets: [{data:[pctFuel, pctSalaries, pctOther, pctProfit], backgroundColor:['#dc2626','#d97706','#f59e0b','#059669'], borderWidth:2, borderColor:'#fff'}]
     },
-    options: {responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}}
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+function renderFuelChart() {
+  destroyChart('fuel');
+  const data = ['04','05','06'].map(m => DATA.expenses[m].find(e=>e.name==='وقود').value);
+  charts.fuel = new Chart(document.getElementById('fuelChart'), {
+    type: 'bar',
+    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'الوقود', data, backgroundColor:['#f59e0b','#f59e0b','#dc2626'], borderRadius:6}]},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+  });
+}
+
+function renderExpenseTable() {
+  const m = getMonth();
+  const exps = DATA.expenses[m];
+  const total = exps.reduce((s,e)=>s+e.value, 0);
+  const html = `
+    <thead>
+      <tr>
+        <th>البند</th>
+        <th>القيمة (د.ك)</th>
+        <th>النسبة</th>
+        <th>الشهر السابق</th>
+        <th>التغيير</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${exps.map(e => {
+        const prev = DATA.expenses[getPrev(m)].find(pe => pe.name === e.name);
+        const change = pct(e.value, prev.value);
+        const up = e.value > prev.value;
+        return `<tr>
+          <td><span class="badge" style="background:${e.color}20;color:${e.color}">${e.name}</span></td>
+          <td class="money-red">${e.value.toFixed(1)}</td>
+          <td>${e.pct}%</td>
+          <td>${prev.value.toFixed(1)}</td>
+          <td class="${up?'money-red':'money'}">${up?'▲':'▼'} ${Math.abs(change)}%</td>
+        </tr>`;
+      }).join('')}
+      <tr style="background:var(--navy);color:#fff;font-weight:900">
+        <td>إجمالي المصاريف التشغيلية</td>
+        <td>${total.toFixed(1)}</td>
+        <td>100%</td>
+        <td colspan="2">-</td>
+      </tr>
+    </tbody>`;
+  document.getElementById('expenseTable').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FLEET
+// ═══════════════════════════════════════════════════════════════════
+
+function renderFleetUtil() {
+  destroyChart('fleetUtil');
+  const f = DATA.fleet;
+  charts.fleetUtil = new Chart(document.getElementById('fleetUtilChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['نشطة', 'في الصيانة', 'خارج الخدمة'],
+      datasets: [{data:[f.active, f.inMaintenance, f.outOfService], backgroundColor:['#059669','#f59e0b','#dc2626'], borderWidth:3, borderColor:'#fff'}]
+    },
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, title:{display:true, text:`${f.utilization}% استخدام`, font:{size:14, weight:'bold'}}}}
+  });
+}
+
+function renderMaintenance() {
+  destroyChart('maintenance');
+  const data = ['04','05','06'].map(m => DATA.expenses[m].find(e=>e.name==='صيانة').value);
+  charts.maintenance = new Chart(document.getElementById('maintenanceChart'), {
+    type: 'bar',
+    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'الصيانة', data, backgroundColor:'#f59e0b', borderRadius:6}]},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+  });
+}
+
+function renderFuelPerDriver() {
+  destroyChart('fuelPerDriver');
+  const data = ['04','05','06'].map(m => {
+    const fuel = DATA.expenses[m].find(e=>e.name==='وقود').value;
+    return (fuel / DATA.monthly[m].drivers).toFixed(1);
+  });
+  charts.fuelPerDriver = new Chart(document.getElementById('fuelPerDriverChart'), {
+    type: 'line',
+    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'وقود/سائق', data, borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6}]},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HR
+// ═══════════════════════════════════════════════════════════════════
+
+function renderNationality() {
+  destroyChart('nationality');
+  charts.nationality = new Chart(document.getElementById('nationalityChart'), {
+    type: 'pie',
+    data: {labels:DATA.nationalities.map(n=>n.name), datasets:[{data:DATA.nationalities.map(n=>n.value), backgroundColor:DATA.nationalities.map(n=>n.color), borderWidth:2, borderColor:'#fff'}]},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{font:{size:10}}}}}
   });
 }
 
 function renderDriversDist() {
   destroyChart('driversDist');
-  const ctx = document.getElementById('driversDistChart');
-  charts.driversDist = new Chart(ctx, {
+  charts.driversDist = new Chart(document.getElementById('driversDistChart'), {
     type: 'polarArea',
-    data: {
-      labels: ['كيتا (16)', 'هومي (13)', 'كابوريا (11)'],
-      datasets: [{data:[16, 13, 11], backgroundColor:['#059669', '#d97706', '#2563eb']}]
-    },
+    data: {labels:['كيتا (16)', 'هومي (13)', 'كابوريا (11)'], datasets:[{data:[16, 13, 11], backgroundColor:['#059669', '#d97706', '#2563eb']}]},
     options: {responsive:true, maintainAspectRatio:false}
+  });
+}
+
+function renderAttendance() {
+  destroyChart('attendance');
+  const a = DATA.attendance;
+  charts.attendance = new Chart(document.getElementById('attendanceChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['حاضر', 'متأخر', 'غائب'],
+      datasets: [{data:[a.presentRate, a.lateRate, a.absentRate], backgroundColor:['#059669', '#f59e0b', '#dc2626'], borderWidth:3, borderColor:'#fff'}]
+    },
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, title:{display:true, text:`${a.presentRate}% حضور`, font:{size:14, weight:'bold'}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DRIVERS PERFORMANCE
+// ═══════════════════════════════════════════════════════════════════
+
+function renderTopDrivers() {
+  destroyChart('topDrivers');
+  const top = DATA.drivers.slice(0,10).sort((a,b)=>b.orders-a.orders);
+  charts.topDrivers = new Chart(document.getElementById('topDriversChart'), {
+    type: 'bar',
+    data: {labels:top.map(d=>d.name), datasets:[{label:'عدد الطلبات', data:top.map(d=>d.orders), backgroundColor:top.map(d=>d.color), borderRadius:6}]},
+    options: {responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}}
   });
 }
 
 function renderOrdersPerDay() {
   destroyChart('ordersPerDay');
-  const ctx = document.getElementById('ordersPerDayChart');
   const top5 = DATA.drivers.slice(0,5);
-  charts.ordersPerDay = new Chart(ctx, {
+  charts.ordersPerDay = new Chart(document.getElementById('ordersPerDayChart'), {
     type: 'radar',
-    data: {
-      labels: top5.map(d => d.name),
-      datasets: [{
-        label:'طلبات/يوم',
-        data: top5.map(d => d.perDay),
-        borderColor:'#7c3aed',
-        backgroundColor:'rgba(124,58,237,0.2)',
-        pointBackgroundColor:'#7c3aed',
-        borderWidth:2
-      }]
-    },
+    data: {labels:top5.map(d=>d.name), datasets:[{label:'طلبات/يوم', data:top5.map(d=>d.perDay), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.2)', pointBackgroundColor:'#7c3aed', borderWidth:2}]},
     options: {responsive:true, maintainAspectRatio:false, scales:{r:{beginAtZero:true, max:15}}}
   });
 }
 
+function renderRevenuePerDriver() {
+  destroyChart('revenuePerDriver');
+  const top5 = DATA.drivers.slice(0,5).sort((a,b)=>b.revenue-a.revenue);
+  charts.revenuePerDriver = new Chart(document.getElementById('revenuePerDriverChart'), {
+    type: 'bar',
+    data: {labels:top5.map(d=>d.name), datasets:[{label:'الإيراد (د.ك)', data:top5.map(d=>d.revenue), backgroundColor:top5.map(d=>d.color), borderRadius:6}]},
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OPERATIONS
+// ═══════════════════════════════════════════════════════════════════
+
 function renderOrders() {
   destroyChart('orders');
-  const ctx = document.getElementById('ordersChart');
-  charts.orders = new Chart(ctx, {
+  charts.orders = new Chart(document.getElementById('ordersChart'), {
     type: 'line',
-    data: {
-      labels: ['أبريل', 'مايو', 'يونيو'],
-      datasets: [{
-        label:'الطلبات',
-        data: [DATA.monthly['04'].orders, DATA.monthly['05'].orders, DATA.monthly['06'].orders],
-        borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.15)',
-        fill:true, tension:0.4, borderWidth:3, pointRadius:6, pointBackgroundColor:'#2563eb'
-      }]
-    },
+    data: {labels:['أبريل','مايو','يونيو'], datasets:[{label:'الطلبات', data:[DATA.monthly['04'].orders, DATA.monthly['05'].orders, DATA.monthly['06'].orders], borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
 
 function renderViolations() {
   destroyChart('violations');
-  const ctx = document.getElementById('violationsChart');
-  charts.violations = new Chart(ctx, {
+  charts.violations = new Chart(document.getElementById('violationsChart'), {
     type: 'bar',
-    data: {
-      labels: ['أبريل', 'مايو', 'يونيو'],
-      datasets: [{label:'المخالفات (د.ك)', data:[180, 210, 445], backgroundColor:['#f59e0b', '#f59e0b', '#dc2626'], borderRadius:6}]
-    },
+    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'المخالفات', data:[180, 210, 445], backgroundColor:['#f59e0b','#f59e0b','#dc2626'], borderRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// FORECASTING
+// ═══════════════════════════════════════════════════════════════════
+
+function renderForecast() {
+  destroyChart('forecast');
+  // Historical
+  const hist = ['04','05','06'].map(m => DATA.monthly[m].revenue);
+  // Linear projection: use trend from May to Jun
+  const growth = (hist[2] - hist[1]) / hist[1];
+  const forecastMonths = ['يوليو', 'أغسطس', 'سبتمبر'];
+  const forecasts = [];
+  let last = hist[2];
+  for (let i = 0; i < 3; i++) {
+    last = last * (1 + growth);
+    forecasts.push(Math.round(last));
+  }
+
+  charts.forecast = new Chart(document.getElementById('forecastChart'), {
+    type: 'line',
+    data: {
+      labels: ['أبريل', 'مايو', 'يونيو', 'يوليو (توقع)', 'أغسطس (توقع)', 'سبتمبر (توقع)'],
+      datasets: [
+        {label:'الإيرادات الفعلية', data:[...hist, null, null, null], borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6},
+        {label:'التوقعات', data:[null, null, hist[2], ...forecasts], borderColor:'#c29449', backgroundColor:'rgba(194,148,73,0.15)', fill:true, tension:0.4, borderWidth:3, borderDash:[6,3], pointRadius:6, pointStyle:'triangle'},
+      ]
+    },
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>fmtKD(v)}}}}
+  });
+
+  // Forecast list
+  const html = `
+    <div class="forecast-row"><span>📅 يوليو 2026</span><span>${fmtKD(forecasts[0])} د.ك</span></div>
+    <div class="forecast-row"><span>📅 أغسطس 2026</span><span>${fmtKD(forecasts[1])} د.ك</span></div>
+    <div class="forecast-row"><span>📅 سبتمبر 2026</span><span>${fmtKD(forecasts[2])} د.ك</span></div>
+    <div class="forecast-row"><span>🎯 نمو متوقع</span><span>${(growth*100).toFixed(1)}% شهرياً</span></div>
+    <div class="forecast-row"><span>💰 إيراد الربع القادم</span><span>${fmtKD(forecasts[0]+forecasts[1]+forecasts[2])} د.ك</span></div>
+  `;
+  document.getElementById('forecastList').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RANKING TABLE
+// ═══════════════════════════════════════════════════════════════════
 
 function renderRankingTable() {
   const rows = DATA.drivers.slice(0,15).sort((a,b)=>b.revenue-a.revenue);
@@ -469,25 +792,36 @@ function renderRankingTable() {
   document.getElementById('rankingBody').innerHTML = html;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════════════════════════
+
 function renderAll() {
+  updateInsight();
   renderKPIs();
   renderRevenueChart();
   renderPartnerChart();
   renderExpensesChart();
   renderProfitChart();
-  renderTopDrivers();
+  renderExpenseEvolution();
+  renderExpensePct();
+  renderFuelChart();
+  renderExpenseTable();
+  renderFleetUtil();
+  renderMaintenance();
+  renderFuelPerDriver();
+  renderNationality();
   renderDriversDist();
+  renderAttendance();
+  renderTopDrivers();
   renderOrdersPerDay();
+  renderRevenuePerDriver();
   renderOrders();
   renderViolations();
+  renderForecast();
   renderRankingTable();
 }
 
-function exportPdf() {
-  window.print();
-}
-
-// Initialize
 window.addEventListener('DOMContentLoaded', renderAll);
 </script>
 </body>
