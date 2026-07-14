@@ -1064,8 +1064,8 @@ table td{padding:11px 12px!important;font-size:13px!important}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.0/dist/jspdf.plugin.autotable.min.js"></script>
-<!-- Al-Salasil Cloud Sync -->
-<script src="cloud-sync.js"></script>
+<!-- Al-Salasil Cloud Sync — DISABLED -->
+<!-- <script src="cloud-sync.js"></script> -->
 </head>
 <body>
 <div class="app">
@@ -1088,6 +1088,7 @@ table td{padding:11px 12px!important;font-size:13px!important}
     <button class="nav-tab" id="nav-reports" onclick="setMainView('reports')" style="color:#22d3ee"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
     <button class="nav-tab" id="nav-orders" onclick="setMainView('orders')" style="color:#10b981;position:relative"><i class="ti ti-package"></i> <span data-i18n="nav_orders">الأوردرات</span> <span id="navOrdersBadge" style="display:none;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 5px;margin-right:4px">0</span></button>
     <button class="nav-tab" id="nav-dreports" onclick="setMainView('dreports')" style="color:#8b5cf6"><i class="ti ti-report"></i> تقارير يومية</button>
+    <button class="nav-tab" id="nav-analytics" onclick="window.open('analytics.html', '_blank')" style="color:#c29449;border-color:rgba(194,148,73,0.4);font-weight:900"><i class="ti ti-chart-histogram"></i> 📊 Analytics BI</button>
   </div>
   <div class="top-stats">
     <div class="ts"><div class="ts-n" id="st-total" style="color:var(--blue)">0</div><div class="ts-l">إجمالي</div></div>
@@ -1537,7 +1538,6 @@ function onStaffTypeChange(){
       <h2 style="margin:0;color:#fff"><i class="ti ti-file-analytics" style="color:#ec4899"></i> تقرير السائقين الشامل</h2>
       <div style="display:flex;gap:8px">
         <button class="tbtn" onclick="exportDriverReportExcel()" style="color:#10b981;border-color:rgba(16,185,129,0.4)"><i class="ti ti-file-spreadsheet"></i> Excel</button>
-        <button class="tbtn" onclick="printDriverReport()" style="color:#ec4899;border-color:rgba(236,72,153,0.4)"><i class="ti ti-printer"></i> طباعة / PDF</button>
         <button onclick="closeModal('driverReportModal')" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer">×</button>
       </div>
     </div>
@@ -9223,8 +9223,6 @@ async function doExport(fmt){
   ws1['!cols'] = [{wch:9},{wch:24},{wch:12},{wch:12},{wch:10},{wch:11},{wch:14},{wch:9},{wch:9},{wch:10},{wch:9},{wch:11},{wch:20}];
   ws1['!views'] = [{RTL:true}];
   XLSX.utils.book_append_sheet(wb, ws1, 'تفاصيل يومية');
-
-  // Sheet 2: Per-driver summary
   const sHead = ['كود','الاسم','الشريك','أيام عمل','حاضر','متأخر','غائب','أوف','عطلة','بدون تسجيل','إجمالي الساعات','إجمالي تأخير (د)'];
   const sAoa  = [sHead];
   summary.forEach(s=> sAoa.push([s.code, s.name, s.partner, s.daysWorked, s.present, s.late, s.absent, s.off, s.holiday, s.unmarked, s.totalHours, s.totalLateMin]));
@@ -9232,21 +9230,16 @@ async function doExport(fmt){
   ws2['!cols'] = [{wch:9},{wch:24},{wch:12},{wch:9},{wch:8},{wch:8},{wch:8},{wch:7},{wch:8},{wch:13},{wch:14},{wch:14}];
   ws2['!views'] = [{RTL:true}];
   XLSX.utils.book_append_sheet(wb, ws2, 'ملخص لكل سائق');
-
-  // Sheet 3: Absences only  const aHead = ['كود','الاسم','التاريخ','الحالة','الملاحظة'];
+  const aHead = ['كود','الاسم','التاريخ','الحالة','الملاحظة'];
   const aAoa = [aHead];
   absences.forEach(a => aAoa.push([a.code, a.name, a.date, a.status, a.note]));
   const ws3 = XLSX.utils.aoa_to_sheet(aAoa);
   ws3['!cols'] = [{wch:9},{wch:24},{wch:12},{wch:12},{wch:20}];
   ws3['!views'] = [{RTL:true}];
   XLSX.utils.book_append_sheet(wb, ws3, 'الغياب فقط');
-
-  const drvTag = (expDriver && expDriver !== 'all') ? ('-' + expDriver) : '';
-  const fname = 'تقرير-الحضور'+drvTag+'-'+from+'-إلى-'+to+'.xlsx';
+  const fname = 'تقرير-الحضور-'+from+'-إلى-'+to+'.xlsx';
   XLSX.writeFile(wb, fname);
 }
-
-/* PDF EXPORT */
 function exportPDF(rows, summary, absences, from, to){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
@@ -9254,44 +9247,51 @@ function exportPDF(rows, summary, absences, from, to){
   doc.setTextColor(28, 88, 120);
   doc.text('AL-SALASIL', 148, 16, { align:'center' });
   doc.setFontSize(11);
-  doc.setTextColor(100,100,100);
   doc.text('Attendance Report', 148, 22, { align:'center' });
   doc.setFontSize(9);
   doc.text('Period: ' + from + '  to  ' + to, 148, 28, { align:'center' });
   const sHead = [['Code','Name','Partner','Days','Present','Late','Absent','Off','Holiday','Total Hrs','Late Min']];
   const sBody = summary.map(s=>[s.code, s.name, s.partner, s.daysWorked, s.present, s.late, s.absent, s.off, s.holiday, s.totalHours, s.totalLateMin]);
-  doc.autoTable({
-    startY: 44, head: sHead, body: sBody,
-    theme:'grid',
-    styles:{fontSize:8, cellPadding:1.6},
-    headStyles:{fillColor:[28,88,120], textColor:255},
-    alternateRowStyles:{fillColor:[248,250,252]},
-  });
+  doc.autoTable({ startY:44, head:sHead, body:sBody, theme:'grid', styles:{fontSize:8, cellPadding:1.6}, headStyles:{fillColor:[28,88,120], textColor:255}, alternateRowStyles:{fillColor:[248,250,252]} });
   doc.save('attendance-'+from+'-to-'+to+'.pdf');
 }
-
-/* ARABIC ACCOUNTING REPORT — print-friendly HTML */
 function generateAccArabicReport(){
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-  const catAr = {fuel:'وقود', maintenance:'صيانة', salaries:'رواتب', rent:'إيجار', insurance:'تأمين', internet:'إنترنت واتصالات', supplies:'مستلزمات', fines:'مخالفات ورسوم', tax:'ضرائب ورسوم', other:'أخرى', misc:'متنوعة'};
-  const monthIncomes  = INCOMES.filter(x=>_matchMonth(x.date, accMonth, accYear));
-  const monthExpenses = EXPENSES.filter(x=>_matchMonth(x.date, accMonth, accYear));
-  const monthExpNS    = monthExpenses.filter(x=>x.category!=='salaries');
-  const totalIncome   = monthIncomes.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-  const totalExpense  = monthExpNS.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-  const salaryCost    = _monthlySalaryCost(accMonth, accYear);
-  const netProfit     = totalIncome - totalExpense - salaryCost;
-  const margin        = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
-  const fmt = n => (parseFloat(n)||0).toFixed(3);
   const monthLabel = months[accMonth-1] + ' ' + accYear;
   const today = new Date().toLocaleDateString('ar-EG');
+  const fmt = n => (parseFloat(n)||0).toFixed(3);
+  const monthIncomes = INCOMES.filter(x=>_matchMonth(x.date, accMonth, accYear));
+  const monthExpNS = EXPENSES.filter(x=>_matchMonth(x.date, accMonth, accYear) && x.category!=='salaries');
+  const totalIncome = monthIncomes.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  const totalExpense = monthExpNS.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  const salaryCost = _monthlySalaryCost(accMonth, accYear);
+  const netProfit = totalIncome - totalExpense - salaryCost;
+  const margin = totalIncome > 0 ? (netProfit/totalIncome*100) : 0;
   const profitColor = netProfit >= 0 ? '#15803d' : '#b91c1c';
   const w = window.open('', '_blank');
   if(!w){ toast('اسمح بفتح النوافذ المنبثقة','e'); return; }
   const html = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير المحاسبة</title>' +
     '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">' +
-    '<style>body{font-family:Cairo,sans-serif;padding:20px;direction:rtl}h1{color:#0f3a52}table{width:100%;border-collapse:collapse;margin:14px 0}th{background:#0f3a52;color:#fff;padding:8px}td{padding:6px;border:1px solid #ddd}.print-btn{position:fixed;top:10px;left:10px;background:#0f3a52;color:#fff;padding:10px 18px;border:none;border-radius:6px;font-family:Cairo;cursor:pointer}@media print{.print-btn{display:none}}</style>' +
-    '</head><body><button class="print-btn" onclick="window.print()">🖨️ طباعة</button>' +
+    '<style>body{font-family:Cairo,sans-serif;padding:20px;direction:rtl}h1{color:#0f3a52}table{width:100%;border-collapse:collapse;margin:14px 0}th{background:#0f3a52;color:#fff;padding:8px}td{padding:6px;border:1px solid #ddd}</style>' +
+    '</head><body>' +
+    '<h1>تقرير المحاسبة — ' + monthLabel + '</h1>' +
+    '<p>تاريخ الإصدار: ' + today + '</p>' +
+    '<table><tr><th>البند</th><th>القيمة (د.ك)</th></tr>' +
+    '<tr><td>إجمالي الإيرادات</td><td>' + fmt(totalIncome) + '</td></tr>' +
+    '<tr><td>إجمالي المصروفات</td><td>(' + fmt(totalExpense) + ')</td></tr>' +
+    '<tr><td>تكلفة الرواتب</td><td>(' + fmt(salaryCost) + ')</td></tr>' +
+    '<tr style="background:#fdf6e9"><td><b>صافي الربح</b></td><td style="color:' + profitColor + '"><b>' + fmt(netProfit) + '</b></td></tr>' +
+    '<tr><td>هامش الربح</td><td>' + margin.toFixed(2) + '%</td></tr>' +
+    '</table></body></html>';
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  toast('التقرير جاهز','s');
+}
+</script>
+</body>
+</html>
+ onclick="window.print()">🖨️ طباعة</button>' +
     '<h1>تقرير المحاسبة — ' + monthLabel + '</h1>' +
     '<p>تاريخ الإصدار: ' + today + '</p>' +
     '<table><tr><th>البند</th><th>القيمة (د.ك)</th></tr>' +
