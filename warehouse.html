@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام المخزن — شركة السلاسل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --navy:#0f3a52; --navy2:#1c5878; --gold:#c29449;
+    --bg:#f1f5f9; --surface:#fff; --text:#0f172a; --muted:#64748b;
+    --border:#e2e8f0; --light:#f8fafc; --cream:#fdf6e9;
+    --green:#059669; --green-bg:#dcfce7;
+    --red:#dc2626; --red-bg:#fee2e2;
+    --amber:#d97706; --amber-bg:#fef3c7;
+    --blue:#2563eb; --blue-bg:#dbeafe;
+    --purple:#7c3aed; --purple-bg:#ede9fe;
+    --teal:#0d9488; --teal-bg:#ccfbf1;
+    --pink:#db2777; --pink-bg:#fce7f3;
+    --orange:#ea580c; --orange-bg:#ffedd5;
+  }
+  body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  /* Top bar */
+  .topbar{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+  .topbar h1{font-size:20px;font-weight:900;display:flex;align-items:center;gap:10px}
+  .topbar .sub{font-size:12px;color:#e2e8f0;margin-top:2px;font-weight:600}
+  .topbar .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{padding:9px 16px;border:none;border-radius:8px;font-family:'Cairo';font-weight:800;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s}
+  .btn-primary{background:var(--gold);color:#fff}
+  .btn-primary:hover{background:#a67a35;transform:translateY(-1px)}
+  .btn-secondary{background:rgba(255,255,255,0.15);color:#fff}
+  .btn-secondary:hover{background:rgba(255,255,255,0.25)}
+  .btn-success{background:var(--green);color:#fff}
+  .btn-success:hover{background:#047857}
+  .btn-danger{background:var(--red);color:#fff}
+
+  /* Mode selector */
+  .mode-tabs{background:#fff;padding:0 24px;display:flex;gap:0;border-bottom:2px solid var(--border);position:sticky;top:72px;z-index:99}
+  .mode-tab{padding:14px 24px;background:transparent;border:none;font-family:'Cairo';font-weight:900;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;display:flex;align-items:center;gap:8px}
+  .mode-tab.active{color:var(--navy);border-bottom-color:var(--gold);background:linear-gradient(180deg,transparent,rgba(194,148,73,0.08))}
+  .mode-tab:hover{color:var(--navy)}
+  .mode-tab .badge{background:var(--gold);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;min-width:20px;text-align:center}
+
+  .container{padding:20px 24px;max-width:1600px;margin:0 auto}
+  .view{display:none}
+  .view.active{display:block}
+
+  /* ================ DATA ENTRY VIEW ================ */
+  .entry-header{background:#fff;padding:20px;border-radius:14px;margin-bottom:16px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+  .entry-title{font-size:18px;font-weight:900;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .entry-form{display:grid;grid-template-columns:200px 1fr auto;gap:14px;align-items:end}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;font-weight:800;color:var(--navy)}
+  .field input, .field select{padding:11px 14px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:14px;background:var(--light);transition:all 0.2s}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--gold);background:#fff}
+
+  /* Branch cards */
+  .section-title{font-size:16px;font-weight:900;color:var(--navy);margin:20px 0 12px;padding:8px 0;border-bottom:3px solid var(--gold);display:flex;align-items:center;gap:8px}
+  .section-title .count{background:var(--gold);color:#fff;padding:3px 10px;border-radius:10px;font-size:12px;margin-right:auto}
+
+  .branches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .branch-card{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);border-right:5px solid var(--branch-color);transition:all 0.2s;position:relative}
+  .branch-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.08)}
+  .branch-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border)}
+  .branch-name{font-size:15px;font-weight:900;color:var(--navy);display:flex;align-items:center;gap:8px}
+  .branch-type{background:var(--branch-bg);color:var(--branch-color);padding:3px 10px;border-radius:10px;font-size:10px;font-weight:900}
+  .item-inputs{display:grid;gap:10px}
+  .item-row{display:grid;grid-template-columns:100px 1fr 60px;gap:8px;align-items:center;padding:8px;background:var(--light);border-radius:8px;transition:all 0.2s}
+  .item-row:hover{background:var(--cream)}
+  .item-row label{font-size:12px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:5px}
+  .item-row input{padding:8px 10px;border:2px solid var(--border);border-radius:6px;font-family:'Cairo';font-weight:800;font-size:14px;text-align:center;background:#fff}
+  .item-row input:focus{outline:none;border-color:var(--gold)}
+  .item-row .unit{font-size:11px;color:var(--muted);font-weight:700;text-align:center}
+  .branch-total{margin-top:10px;padding:8px;background:linear-gradient(135deg,var(--branch-bg),transparent);border-radius:8px;text-align:center;font-weight:900;color:var(--branch-color);font-size:14px}
+
+  .save-bar{position:sticky;bottom:20px;background:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 -4px 20px rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center;margin-top:20px;border:2px solid var(--gold);z-index:50}
+  .save-summary{display:flex;gap:16px;flex-wrap:wrap}
+  .save-summary .item{display:flex;gap:8px;align-items:center;font-weight:800;font-size:13px}
+  .save-summary .item .val{background:var(--navy);color:#fff;padding:3px 10px;border-radius:10px;font-size:13px}
+
+  /* ================ DASHBOARD VIEW ================ */
+  .filter-bar{background:#fff;padding:14px 20px;border-radius:12px;margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border:1px solid var(--border)}
+  .filter-bar label{font-size:13px;font-weight:800;color:var(--navy)}
+  .filter-bar input, .filter-bar select{padding:8px 14px;border:2px solid var(--border);border-radius:8px;font-family:'Cairo';font-weight:700;font-size:13px}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  .kpi{background:#fff;border-radius:12px;padding:18px;border:1px solid var(--border);border-right:5px solid var(--kpi-color);transition:all 0.2s}
+  .kpi:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.1)}
+  .kpi-label{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+  .kpi-value{font-size:28px;font-weight:900;color:var(--kpi-color);line-height:1;margin-bottom:6px}
+  .kpi-unit{font-size:12px;color:var(--muted);font-weight:700}
+
+  .section-header{font-size:15px;font-weight:900;color:var(--navy);margin:20px 0 12px;display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--gold)}
+
+  .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .chart-card{background:#fff;border-radius:14px;padding:18px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+  .chart-card.wide{grid-column:1/-1}
+  .chart-title{font-size:14px;font-weight:900;color:var(--navy);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+  .chart-title small{font-size:10px;color:var(--muted);font-weight:600}
+  .chart-container{position:relative;height:300px}
+  .chart-container.tall{height:400px}
+
+  .data-table{width:100%;border-collapse:collapse;font-size:12px}
+  .data-table th{background:var(--navy);color:#fff;padding:9px 8px;text-align:center;font-weight:800;font-size:11px}
+  .data-table td{padding:8px;border-bottom:1px solid var(--border);text-align:center;font-weight:700}
+  .data-table tr:nth-child(even) td{background:var(--light)}
+  .data-table tr:hover td{background:var(--cream)}
+  .data-table .day-total{background:linear-gradient(135deg,var(--gold),#a67a35);color:#fff !important;font-weight:900}
+
+  /* Toast */
+  .toast{position:fixed;top:100px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:14px 24px;border-radius:10px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:1000;display:none;animation:slideDown 0.3s}
+  .toast.show{display:block}
+  .toast.error{background:var(--red)}
+  @keyframes slideDown{from{transform:translate(-50%,-30px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+
+  /* Records history */
+  .records-list{max-height:400px;overflow-y:auto;background:#fff;border-radius:12px;border:1px solid var(--border)}
+  .record-row{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all 0.2s}
+  .record-row:hover{background:var(--cream)}
+  .record-date{font-weight:900;color:var(--navy)}
+  .record-branch{font-size:12px;color:var(--muted)}
+  .record-values{display:flex;gap:8px}
+  .record-values .v{background:var(--light);padding:3px 10px;border-radius:8px;font-size:12px;font-weight:800}
+
+  /* Insight box */
+  .insight-box{background:linear-gradient(135deg,#fdf6e9,#faf3e0);border-radius:12px;padding:16px;margin-bottom:16px;border-right:5px solid var(--gold);display:flex;gap:14px;align-items:start}
+  .insight-icon{background:var(--gold);color:#fff;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+
+  @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-grid{grid-template-columns:1fr}.entry-form{grid-template-columns:1fr}}
+  @media(max-width:600px){.branches-grid{grid-template-columns:1fr}.mode-tab{padding:12px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>🏪 نظام المخزن — شركة السلاسل</h1>
+    <div class="sub">Warehouse Management System · إدارة الكميات من المخزن إلى الفروع</div>
+  </div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="window.location.href='السلاسل_نظام_ادارة_السائقين_28.html'"><i class="ti ti-arrow-right"></i> ARK</button>
+    <button class="btn btn-primary" onclick="exportData()"><i class="ti ti-download"></i> تصدير Excel</button>
+    <button class="btn btn-primary" onclick="document.getElementById('importInput').click()"><i class="ti ti-upload"></i> استيراد</button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<div class="mode-tabs">
+  <button class="mode-tab active" data-view="entry" onclick="switchView('entry')">
+    <i class="ti ti-clipboard-plus"></i> إدخال البيانات
+  </button>
+  <button class="mode-tab" data-view="dashboard" onclick="switchView('dashboard')">
+    <i class="ti ti-chart-bar"></i> لوحة التحكم
+  </button>
+  <button class="mode-tab" data-view="history" onclick="switchView('history')">
+    <i class="ti ti-history"></i> السجل الكامل <span class="badge" id="recordsBadge">0</span>
+  </button>
+</div>
+
+<!-- ═══════════ ENTRY VIEW ═══════════ -->
+<div class="view active" id="entryView">
+  <div class="container">
+
+    <div class="entry-header">
+      <div class="entry-title"><i class="ti ti-calendar"></i> إدخال كميات جديدة</div>
+      <div class="entry-form">
+        <div class="field">
+          <label>📅 التاريخ</label>
+          <input type="date" id="entryDate">
+        </div>
+        <div class="field">
+          <label>👤 اسم أمين المخزن</label>
+          <input type="text" id="warehouseKeeper" placeholder="مثال: محمد أحمد" value="">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" onclick="loadDay()"><i class="ti ti-refresh"></i> تحميل بيانات اليوم</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shawarma branches -->
+    <div class="section-title">
+      🌯 فروع الشاورما <span class="count">3 فروع</span>
+    </div>
+    <div class="branches-grid" id="shawarmaBranches"></div>
+
+    <!-- Sandwich branches -->
+    <div class="section-title">
+      🥪 فروع الساندويتش <span class="count">6 فروع</span>
+    </div>
+    <div class="branches-grid" id="sandwichBranches"></div>
+
+    <div class="save-bar">
+      <div class="save-summary" id="entrySummary">
+        <div class="item">📦 إجمالي الكميات: <span class="val" id="totalKg">0 كجم</span></div>
+        <div class="item">🐔 دجاج: <span class="val" id="totalChicken">0</span></div>
+        <div class="item">🥩 لحم: <span class="val" id="totalMeat">0</span></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-danger" onclick="clearForm()"><i class="ti ti-eraser"></i> مسح</button>
+        <button class="btn btn-success" onclick="saveEntry()" style="padding:12px 24px;font-size:15px">
+          <i class="ti ti-device-floppy"></i> حفظ البيانات
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ DASHBOARD VIEW ═══════════ -->
+<div class="view" id="dashboardView">
+  <div class="container">
+
+    <!-- Smart insight -->
+    <div class="insight-box">
+      <div class="insight-icon">💡</div>
+      <div>
+        <div style="font-weight:900;color:var(--navy);margin-bottom:5px;font-size:14px">تحليل ذكي</div>
+        <div style="color:var(--text);font-size:12px;line-height:1.6" id="smartInsight">جاري التحليل...</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <label>📅 من:</label>
+      <input type="date" id="filterFrom" onchange="renderDashboard()">
+      <label>إلى:</label>
+      <input type="date" id="filterTo" onchange="renderDashboard()">
+      <label>🏪 الفرع:</label>
+      <select id="filterBranch" onchange="renderDashboard()">
+        <option value="all">جميع الفروع</option>
+      </select>
+      <button class="btn btn-primary" onclick="resetFilters()"><i class="ti ti-refresh"></i> إعادة تعيين</button>
+      <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700">آخر تحديث: <span id="lastUpdate">-</span></span>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Charts -->
+    <div class="section-header"><i class="ti ti-chart-line"></i> تحليلات بيانية</div>
+    <div class="charts-grid">
+      <div class="chart-card wide">
+        <div class="chart-title">📈 اتجاه الكميات اليومي <small>Daily Trend</small></div>
+        <div class="chart-container tall"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🏪 الكميات حسب الفرع <small>By Branch</small></div>
+        <div class="chart-container"><canvas id="branchChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🍗 توزيع المنتجات <small>By Product</small></div>
+        <div class="chart-container"><canvas id="productChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🥇 أعلى فروع استهلاكاً <small>Top Consuming Branches</small></div>
+        <div class="chart-container"><canvas id="topBranchesChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📊 مقارنة شاورما vs ساندويتش <small>Shawarma vs Sandwich</small></div>
+        <div class="chart-container"><canvas id="typeChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="section-header"><i class="ti ti-table"></i> جدول البيانات التفصيلي</div>
+    <div class="chart-card wide">
+      <div style="overflow-x:auto">
+        <table class="data-table" id="detailTable"></table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ HISTORY VIEW ═══════════ -->
+<div class="view" id="historyView">
+  <div class="container">
+    <div class="section-header"><i class="ti ti-history"></i> سجل الإدخالات</div>
+    <div class="records-list" id="recordsList"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONFIG — الفروع والمنتجات
+// ═══════════════════════════════════════════════════════════════════
+
+const BRANCHES = [
+  // Shawarma branches
+  {id:'sh_jahra', name:'شاورما الجهراء', type:'شاورما', color:'#ea580c', bg:'#ffedd5', items:['chicken','meat']},
+  {id:'sh_ruqai', name:'شاورما الرقعي', type:'شاورما', color:'#ea580c', bg:'#ffedd5', items:['chicken','meat']},
+  {id:'sh_qurain', name:'شاورما القرين', type:'شاورما', color:'#ea580c', bg:'#ffedd5', items:['chicken','meat']},
+  // Sandwich branches
+  {id:'sw_jahra', name:'ساندويتش الجهراء', type:'ساندويتش', color:'#2563eb', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_ardiya', name:'ساندويتش العارضية', type:'ساندويتش', color:'#2563eb', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_ruqai', name:'ساندويتش الرقعي', type:'ساندويتش', color:'#2563eb', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_qurain', name:'ساندويتش القرين', type:'ساندويتش', color:'#2563eb', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_mangaf', name:'ساندويتش المنقف', type:'ساندويتش', color:'#2563eb', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_sabah', name:'ساندويتش صباح السالم', type:'ساندويتش', color:'#2563eb', bg:'#dbeafe', items:['chicken','naimi']},
+];
+
+const ITEMS = {
+  chicken: {name:'دجاج', icon:'🐔', color:'#f59e0b'},
+  meat:    {name:'لحم', icon:'🥩', color:'#dc2626'},
+  naimi:   {name:'لحم نعيمي', icon:'🥩', color:'#991b1b'},
+  dawaner: {name:'دوانر', icon:'🍗', color:'#c2410c'},
+};
+
+const STORAGE_KEY = 'salasil_warehouse_v1';
+
+// ═══════════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════════
+
+function loadRecords() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  updateBadge();
+}
+
+function updateBadge() {
+  const r = loadRecords();
+  document.getElementById('recordsBadge').textContent = r.length;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PRE-POPULATE JULY 2026 DATA (from uploaded document)
+// ═══════════════════════════════════════════════════════════════════
+
+function initialSeed() {
+  if (loadRecords().length > 0) return;
+  const seed = [
+    // July 1-3, 2026 (combined - I'll use July 3 as the entry date)
+    // Shawarma
+    {date:'2026-07-03', branch:'sh_jahra', keeper:'المخزن', chicken:144, meat:0, dawaner:27},
+    {date:'2026-07-03', branch:'sh_ruqai', keeper:'المخزن', chicken:58, meat:0, dawaner:21},
+    {date:'2026-07-03', branch:'sh_qurain', keeper:'المخزن', chicken:37, meat:0, dawaner:12},
+    // Sandwich
+    {date:'2026-07-03', branch:'sw_jahra', keeper:'المخزن', chicken:58, naimi:27},
+    {date:'2026-07-03', branch:'sw_ardiya', keeper:'المخزن', chicken:75, naimi:56},
+    {date:'2026-07-03', branch:'sw_ruqai', keeper:'المخزن', chicken:32, naimi:27},
+    {date:'2026-07-03', branch:'sw_qurain', keeper:'المخزن', chicken:36, naimi:33},
+    {date:'2026-07-03', branch:'sw_mangaf', keeper:'المخزن', chicken:28, naimi:18},
+    {date:'2026-07-03', branch:'sw_sabah', keeper:'المخزن', chicken:80, naimi:54},
+
+    // July 4
+    {date:'2026-07-04', branch:'sh_jahra', chicken:50, meat:11},
+    {date:'2026-07-04', branch:'sh_ruqai', chicken:18, meat:6},
+    {date:'2026-07-04', branch:'sh_qurain', chicken:11, meat:6},
+    {date:'2026-07-04', branch:'sw_jahra', chicken:20, naimi:8},
+    {date:'2026-07-04', branch:'sw_ardiya', chicken:28, naimi:24},
+    {date:'2026-07-04', branch:'sw_ruqai', chicken:15, naimi:11},
+    {date:'2026-07-04', branch:'sw_qurain', chicken:15, naimi:14},
+    {date:'2026-07-04', branch:'sw_mangaf', chicken:11, naimi:6},
+    {date:'2026-07-04', branch:'sw_sabah', chicken:25, naimi:12},
+
+    // July 5
+    {date:'2026-07-05', branch:'sh_jahra', chicken:45, meat:9},
+    {date:'2026-07-05', branch:'sh_ruqai', chicken:18, meat:6},
+    {date:'2026-07-05', branch:'sh_qurain', chicken:14, meat:6},
+    {date:'2026-07-05', branch:'sw_jahra', chicken:23, naimi:11},
+    {date:'2026-07-05', branch:'sw_ardiya', chicken:24, naimi:18},
+    {date:'2026-07-05', branch:'sw_ruqai', chicken:9, naimi:6},
+    {date:'2026-07-05', branch:'sw_qurain', chicken:15, naimi:11},
+    {date:'2026-07-05', branch:'sw_mangaf', chicken:12, naimi:7},
+    {date:'2026-07-05', branch:'sw_sabah', chicken:21, naimi:16},
+
+    // July 6
+    {date:'2026-07-06', branch:'sh_jahra', chicken:45, meat:8},
+    {date:'2026-07-06', branch:'sh_ruqai', chicken:21, meat:6},
+    {date:'2026-07-06', branch:'sh_qurain', chicken:8, meat:3},
+    {date:'2026-07-06', branch:'sw_jahra', chicken:18, naimi:8},
+    {date:'2026-07-06', branch:'sw_ardiya', chicken:24, naimi:15},
+    {date:'2026-07-06', branch:'sw_ruqai', chicken:12, naimi:9},
+    {date:'2026-07-06', branch:'sw_qurain', chicken:12, naimi:11},
+    {date:'2026-07-06', branch:'sw_mangaf', chicken:10, naimi:7},
+    {date:'2026-07-06', branch:'sw_sabah', chicken:22, naimi:15},
+
+    // July 7
+    {date:'2026-07-07', branch:'sh_jahra', chicken:45, meat:11},
+    {date:'2026-07-07', branch:'sh_ruqai', chicken:21, meat:6},
+    {date:'2026-07-07', branch:'sh_qurain', chicken:8, meat:3},
+    {date:'2026-07-07', branch:'sw_jahra', chicken:20, naimi:8},
+    {date:'2026-07-07', branch:'sw_ardiya', chicken:23, naimi:16},
+    {date:'2026-07-07', branch:'sw_ruqai', chicken:9, naimi:9},
+    {date:'2026-07-07', branch:'sw_qurain', chicken:15, naimi:11},
+    {date:'2026-07-07', branch:'sw_mangaf', chicken:11, naimi:6},
+    {date:'2026-07-07', branch:'sw_sabah', chicken:25, naimi:12},
+
+    // July 8
+    {date:'2026-07-08', branch:'sh_jahra', chicken:45, meat:6},
+    {date:'2026-07-08', branch:'sh_ruqai', chicken:25, meat:6},
+    {date:'2026-07-08', branch:'sh_qurain', chicken:14, meat:6},
+    {date:'2026-07-08', branch:'sw_jahra', chicken:23, naimi:8},
+    {date:'2026-07-08', branch:'sw_ardiya', chicken:29, naimi:24},
+    {date:'2026-07-08', branch:'sw_ruqai', chicken:12, naimi:9},
+    {date:'2026-07-08', branch:'sw_qurain', chicken:12, naimi:11},
+    {date:'2026-07-08', branch:'sw_mangaf', chicken:9, naimi:7},
+    {date:'2026-07-08', branch:'sw_sabah', chicken:22, naimi:15},
+
+    // July 9
+    {date:'2026-07-09', branch:'sh_jahra', chicken:40, meat:8},
+    {date:'2026-07-09', branch:'sh_ruqai', chicken:22, meat:9},
+    {date:'2026-07-09', branch:'sh_qurain', chicken:11, meat:3},
+    {date:'2026-07-09', branch:'sw_jahra', chicken:20, naimi:11},
+    {date:'2026-07-09', branch:'sw_ardiya', chicken:28, naimi:15},
+    {date:'2026-07-09', branch:'sw_ruqai', chicken:11, naimi:9},
+    {date:'2026-07-09', branch:'sw_qurain', chicken:15, naimi:14},
+    {date:'2026-07-09', branch:'sw_mangaf', chicken:13, naimi:9},
+    {date:'2026-07-09', branch:'sw_sabah', chicken:19, naimi:11},
+
+    // July 10
+    {date:'2026-07-10', branch:'sh_jahra', chicken:45, meat:8},
+    {date:'2026-07-10', branch:'sh_ruqai', chicken:22, meat:6},
+    {date:'2026-07-10', branch:'sh_qurain', chicken:11, meat:6},
+    {date:'2026-07-10', branch:'sw_jahra', chicken:22, naimi:10},
+    {date:'2026-07-10', branch:'sw_ardiya', chicken:28, naimi:15},
+    {date:'2026-07-10', branch:'sw_ruqai', chicken:11, naimi:9},
+    {date:'2026-07-10', branch:'sw_qurain', chicken:9, naimi:9},
+    {date:'2026-07-10', branch:'sw_mangaf', chicken:9, naimi:7},
+    {date:'2026-07-10', branch:'sw_sabah', chicken:24, naimi:16},
+
+    // July 11
+    {date:'2026-07-11', branch:'sh_jahra', chicken:45, meat:8},
+    {date:'2026-07-11', branch:'sh_ruqai', chicken:17, meat:6},
+    {date:'2026-07-11', branch:'sh_qurain', chicken:11, meat:3},
+    {date:'2026-07-11', branch:'sw_jahra', chicken:20, naimi:8},
+    {date:'2026-07-11', branch:'sw_ardiya', chicken:29, naimi:18},
+    {date:'2026-07-11', branch:'sw_ruqai', chicken:9, naimi:9},
+    {date:'2026-07-11', branch:'sw_qurain', chicken:12, naimi:8},
+    {date:'2026-07-11', branch:'sw_mangaf', chicken:9, naimi:6},
+    {date:'2026-07-11', branch:'sw_sabah', chicken:22, naimi:15},
+
+    // July 12
+    {date:'2026-07-12', branch:'sh_jahra', chicken:47, meat:8},
+    {date:'2026-07-12', branch:'sh_ruqai', chicken:18, meat:6},
+    {date:'2026-07-12', branch:'sh_qurain', chicken:11, meat:6},
+    {date:'2026-07-12', branch:'sw_jahra', chicken:20, naimi:10},
+    {date:'2026-07-12', branch:'sw_ardiya', chicken:26, naimi:19},
+    {date:'2026-07-12', branch:'sw_ruqai', chicken:15, naimi:9},
+    {date:'2026-07-12', branch:'sw_qurain', chicken:15, naimi:14},
+    {date:'2026-07-12', branch:'sw_mangaf', chicken:12, naimi:6},
+    {date:'2026-07-12', branch:'sw_sabah', chicken:22, naimi:12},
+  ];
+
+  // Enrich with defaults
+  const records = seed.map(r => ({
+    id: 'rec_' + Date.now() + Math.random().toString(36).slice(2,8),
+    date: r.date,
+    branch: r.branch,
+    keeper: r.keeper || 'المخزن',
+    chicken: r.chicken || 0,
+    meat: r.meat || 0,
+    naimi: r.naimi || 0,
+    dawaner: r.dawaner || 0,
+    createdAt: new Date().toISOString(),
+  }));
+  saveRecords(records);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════════
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function switchView(view) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(view + 'View').classList.add('active');
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'history') renderHistory();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ENTRY VIEW
+// ═══════════════════════════════════════════════════════════════════
+
+function buildEntryForm() {
+  const shDiv = document.getElementById('shawarmaBranches');
+  const swDiv = document.getElementById('sandwichBranches');
+
+  BRANCHES.forEach(b => {
+    const items = b.items.map(itemKey => {
+      const it = ITEMS[itemKey];
+      return `<div class="item-row">
+        <label>${it.icon} ${it.name}</label>
+        <input type="number" min="0" step="0.5" placeholder="0" data-branch="${b.id}" data-item="${itemKey}" onkeyup="updateSummary()" oninput="updateBranchTotal('${b.id}')">
+        <div class="unit">كجم</div>
+      </div>`;
+    }).join('');
+
+    // Add dawaner for shawarma branches
+    const dawanerRow = b.type === 'شاورما' ? `<div class="item-row">
+      <label>🍗 دوانر</label>
+      <input type="number" min="0" step="0.5" placeholder="0" data-branch="${b.id}" data-item="dawaner" onkeyup="updateSummary()" oninput="updateBranchTotal('${b.id}')">
+      <div class="unit">كجم</div>
+    </div>` : '';
+
+    const html = `<div class="branch-card" style="--branch-color:${b.color};--branch-bg:${b.bg}" id="card_${b.id}">
+      <div class="branch-header">
+        <div class="branch-name">${b.type === 'شاورما' ? '🌯' : '🥪'} ${b.name}</div>
+        <div class="branch-type">${b.type}</div>
+      </div>
+      <div class="item-inputs">${items}${dawanerRow}</div>
+      <div class="branch-total" id="total_${b.id}">إجمالي: 0 كجم</div>
+    </div>`;
+
+    if (b.type === 'شاورما') shDiv.innerHTML += html;
+    else swDiv.innerHTML += html;
+  });
+}
+
+function updateBranchTotal(branchId) {
+  const inputs = document.querySelectorAll(`input[data-branch="${branchId}"]`);
+  let total = 0;
+  inputs.forEach(i => total += Number(i.value) || 0);
+  document.getElementById('total_' + branchId).textContent = `إجمالي: ${total} كجم`;
+}
+
+function updateSummary() {
+  let totalKg = 0, chicken = 0, meat = 0;
+  document.querySelectorAll('input[data-branch]').forEach(i => {
+    const val = Number(i.value) || 0;
+    totalKg += val;
+    if (i.dataset.item === 'chicken') chicken += val;
+    if (i.dataset.item === 'meat' || i.dataset.item === 'naimi') meat += val;
+  });
+  document.getElementById('totalKg').textContent = totalKg + ' كجم';
+  document.getElementById('totalChicken').textContent = chicken + ' كجم';
+  document.getElementById('totalMeat').textContent = meat + ' كجم';
+}
+
+function loadDay() {
+  const date = document.getElementById('entryDate').value;
+  if (!date) { toast('اختر التاريخ أولاً', true); return; }
+
+  // Clear all inputs first
+  document.querySelectorAll('input[data-branch]').forEach(i => i.value = '');
+
+  const records = loadRecords().filter(r => r.date === date);
+  records.forEach(r => {
+    BRANCHES.find(b => b.id === r.branch)?.items.forEach(itemKey => {
+      const input = document.querySelector(`input[data-branch="${r.branch}"][data-item="${itemKey}"]`);
+      if (input && r[itemKey]) input.value = r[itemKey];
+    });
+    // Dawaner
+    if (r.dawaner) {
+      const input = document.querySelector(`input[data-branch="${r.branch}"][data-item="dawaner"]`);
+      if (input) input.value = r.dawaner;
+    }
+  });
+
+  BRANCHES.forEach(b => updateBranchTotal(b.id));
+  updateSummary();
+
+  const keeper = records[0]?.keeper;
+  if (keeper) document.getElementById('warehouseKeeper').value = keeper;
+
+  if (records.length > 0) toast(`تم تحميل بيانات ${date} (${records.length} فرع)`);
+  else toast('لا توجد بيانات لهذا اليوم — أدخل بيانات جديدة');
+}
+
+function clearForm() {
+  if (!confirm('هل تريد مسح كل البيانات المدخلة؟')) return;
+  document.querySelectorAll('input[data-branch]').forEach(i => i.value = '');
+  BRANCHES.forEach(b => updateBranchTotal(b.id));
+  updateSummary();
+}
+
+function saveEntry() {
+  const date = document.getElementById('entryDate').value;
+  const keeper = document.getElementById('warehouseKeeper').value.trim();
+
+  if (!date) { toast('اختر التاريخ', true); return; }
+  if (!keeper) { toast('اكتب اسم أمين المخزن', true); return; }
+
+  const records = loadRecords();
+  // Remove existing records for this date
+  const filtered = records.filter(r => r.date !== date);
+
+  let addedCount = 0;
+  BRANCHES.forEach(b => {
+    const rec = { id: 'rec_' + Date.now() + Math.random().toString(36).slice(2,8), date, branch: b.id, keeper, chicken:0, meat:0, naimi:0, dawaner:0, createdAt: new Date().toISOString() };
+    let hasData = false;
+    b.items.forEach(itemKey => {
+      const input = document.querySelector(`input[data-branch="${b.id}"][data-item="${itemKey}"]`);
+      const val = Number(input?.value) || 0;
+      if (val > 0) { rec[itemKey] = val; hasData = true; }
+    });
+    // Dawaner
+    if (b.type === 'شاورما') {
+      const input = document.querySelector(`input[data-branch="${b.id}"][data-item="dawaner"]`);
+      const val = Number(input?.value) || 0;
+      if (val > 0) { rec.dawaner = val; hasData = true; }
+    }
+    if (hasData) { filtered.push(rec); addedCount++; }
+  });
+
+  saveRecords(filtered);
+  toast(`✅ تم حفظ بيانات ${date} — ${addedCount} فرع`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DASHBOARD VIEW
+// ═══════════════════════════════════════════════════════════════════
+
+let charts = {};
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function getFilteredRecords() {
+  const from = document.getElementById('filterFrom').value;
+  const to = document.getElementById('filterTo').value;
+  const branch = document.getElementById('filterBranch').value;
+
+  let records = loadRecords();
+  if (from) records = records.filter(r => r.date >= from);
+  if (to) records = records.filter(r => r.date <= to);
+  if (branch !== 'all') records = records.filter(r => r.branch === branch);
+  return records;
+}
+
+function renderKPIs(records) {
+  const totalKg = records.reduce((s, r) => s + (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0), 0);
+  const totalChicken = records.reduce((s, r) => s + (r.chicken||0), 0);
+  const totalMeat = records.reduce((s, r) => s + (r.meat||0) + (r.naimi||0), 0);
+  const days = new Set(records.map(r => r.date)).size;
+
+  const kpis = [
+    {label:'إجمالي الكميات', value:totalKg.toLocaleString(), unit:'كجم', color:'var(--gold)'},
+    {label:'إجمالي الدجاج', value:totalChicken.toLocaleString(), unit:'كجم 🐔', color:'var(--amber)'},
+    {label:'إجمالي اللحوم', value:totalMeat.toLocaleString(), unit:'كجم 🥩', color:'var(--red)'},
+    {label:'أيام العمل', value:days, unit:'يوم', color:'var(--blue)'},
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi" style="--kpi-color:${k.color}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-unit">${k.unit}</div>
+    </div>
+  `).join('');
+}
+
+function renderTrendChart(records) {
+  destroyChart('trend');
+  const byDate = {};
+  records.forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = {chicken:0, meat:0, naimi:0, dawaner:0};
+    byDate[r.date].chicken += r.chicken||0;
+    byDate[r.date].meat += r.meat||0;
+    byDate[r.date].naimi += r.naimi||0;
+    byDate[r.date].dawaner += r.dawaner||0;
+  });
+  const dates = Object.keys(byDate).sort();
+  const labels = dates.map(d => d.slice(5).replace('-','/'));
+
+  charts.trend = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {label:'🐔 دجاج', data:dates.map(d => byDate[d].chicken), borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:5},
+        {label:'🥩 لحم شاورما', data:dates.map(d => byDate[d].meat), borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.1)', fill:true, tension:0.4, borderWidth:3, pointRadius:5},
+        {label:'🥩 لحم نعيمي', data:dates.map(d => byDate[d].naimi), borderColor:'#991b1b', backgroundColor:'rgba(153,27,27,0.1)', fill:true, tension:0.4, borderWidth:3, pointRadius:5},
+      ]
+    },
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>v+' كجم'}}}}
+  });
+}
+
+function renderBranchChart(records) {
+  destroyChart('branch');
+  const byBranch = {};
+  BRANCHES.forEach(b => byBranch[b.id] = 0);
+  records.forEach(r => {
+    byBranch[r.branch] = (byBranch[r.branch]||0) + (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0);
+  });
+
+  charts.branch = new Chart(document.getElementById('branchChart'), {
+    type: 'bar',
+    data: {
+      labels: BRANCHES.map(b => b.name),
+      datasets: [{
+        label:'الكميات (كجم)',
+        data: BRANCHES.map(b => byBranch[b.id]),
+        backgroundColor: BRANCHES.map(b => b.color),
+        borderRadius:6
+      }]
+    },
+    options: {responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}}
+  });
+}
+
+function renderProductChart(records) {
+  destroyChart('product');
+  const totals = {chicken:0, meat:0, naimi:0, dawaner:0};
+  records.forEach(r => {
+    totals.chicken += r.chicken||0;
+    totals.meat += r.meat||0;
+    totals.naimi += r.naimi||0;
+    totals.dawaner += r.dawaner||0;
+  });
+
+  charts.product = new Chart(document.getElementById('productChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['🐔 دجاج', '🥩 لحم شاورما', '🥩 لحم نعيمي', '🍗 دوانر'],
+      datasets: [{
+        data: [totals.chicken, totals.meat, totals.naimi, totals.dawaner],
+        backgroundColor: ['#f59e0b', '#dc2626', '#991b1b', '#c2410c'],
+        borderWidth:3, borderColor:'#fff'
+      }]
+    },
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+function renderTopBranchesChart(records) {
+  destroyChart('topBranches');
+  const byBranch = {};
+  BRANCHES.forEach(b => byBranch[b.id] = {name:b.name, color:b.color, total:0});
+  records.forEach(r => {
+    byBranch[r.branch].total += (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0);
+  });
+  const top = Object.values(byBranch).sort((a,b) => b.total - a.total).slice(0,5);
+
+  charts.topBranches = new Chart(document.getElementById('topBranchesChart'), {
+    type: 'bar',
+    data: {
+      labels: top.map(b => b.name),
+      datasets: [{
+        label:'الكميات (كجم)',
+        data: top.map(b => b.total),
+        backgroundColor: top.map(b => b.color),
+        borderRadius:6
+      }]
+    },
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+  });
+}
+
+function renderTypeChart(records) {
+  destroyChart('type');
+  let shawarma = 0, sandwich = 0;
+  records.forEach(r => {
+    const b = BRANCHES.find(br => br.id === r.branch);
+    const total = (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0);
+    if (b?.type === 'شاورما') shawarma += total;
+    else sandwich += total;
+  });
+
+  charts.type = new Chart(document.getElementById('typeChart'), {
+    type: 'polarArea',
+    data: {
+      labels: [`🌯 شاورما (${shawarma} كجم)`, `🥪 ساندويتش (${sandwich} كجم)`],
+      datasets: [{data:[shawarma, sandwich], backgroundColor:['#ea580c', '#2563eb']}]
+    },
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+function renderDetailTable(records) {
+  const byDate = {};
+  records.forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = {};
+    byDate[r.date][r.branch] = r;
+  });
+
+  const dates = Object.keys(byDate).sort().reverse();
+
+  let html = '<thead><tr><th>التاريخ</th>';
+  BRANCHES.forEach(b => html += `<th>${b.name}</th>`);
+  html += '<th class="day-total">إجمالي اليوم</th></tr></thead><tbody>';
+
+  dates.forEach(date => {
+    let dayTotal = 0;
+    html += `<tr><td style="font-weight:900;color:var(--navy)">${date}</td>`;
+    BRANCHES.forEach(b => {
+      const rec = byDate[date][b.id];
+      const total = rec ? (rec.chicken||0)+(rec.meat||0)+(rec.naimi||0)+(rec.dawaner||0) : 0;
+      dayTotal += total;
+      html += `<td style="color:${total>0?b.color:'#cbd5e1'}">${total || '-'}</td>`;
+    });
+    html += `<td class="day-total">${dayTotal} كجم</td></tr>`;
+  });
+  html += '</tbody>';
+
+  document.getElementById('detailTable').innerHTML = html;
+}
+
+function updateInsight(records) {
+  if (records.length === 0) {
+    document.getElementById('smartInsight').innerHTML = 'لا توجد بيانات لعرضها. ابدأ بإدخال البيانات في تبويب "إدخال البيانات".';
+    return;
+  }
+
+  const totalKg = records.reduce((s, r) => s + (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0), 0);
+  const days = new Set(records.map(r => r.date)).size;
+  const avgDaily = (totalKg / days).toFixed(1);
+
+  // Find top branch
+  const byBranch = {};
+  records.forEach(r => {
+    const b = BRANCHES.find(br => br.id === r.branch);
+    if (b) byBranch[b.name] = (byBranch[b.name]||0) + (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0);
+  });
+  const topBranch = Object.entries(byBranch).sort((a,b) => b[1]-a[1])[0];
+
+  document.getElementById('smartInsight').innerHTML = `
+    📊 <strong>خلال ${days} يوم:</strong> تم توزيع <strong style="color:var(--gold)">${totalKg.toLocaleString()} كجم</strong> بمتوسط <strong>${avgDaily} كجم/يوم</strong>.
+    🥇 <strong>أعلى فرع استهلاكاً:</strong> <span style="color:var(--gold);font-weight:900">${topBranch[0]}</span> بإجمالي <strong>${topBranch[1]} كجم</strong>.
+  `;
+}
+
+function renderDashboard() {
+  const records = getFilteredRecords();
+  renderKPIs(records);
+  renderTrendChart(records);
+  renderBranchChart(records);
+  renderProductChart(records);
+  renderTopBranchesChart(records);
+  renderTypeChart(records);
+  renderDetailTable(records);
+  updateInsight(records);
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleString('ar-KW');
+}
+
+function resetFilters() {
+  document.getElementById('filterFrom').value = '';
+  document.getElementById('filterTo').value = '';
+  document.getElementById('filterBranch').value = 'all';
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HISTORY VIEW
+// ═══════════════════════════════════════════════════════════════════
+
+function renderHistory() {
+  const records = loadRecords().sort((a,b) => b.date.localeCompare(a.date));
+  const byDate = {};
+  records.forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r);
+  });
+
+  let html = '';
+  Object.keys(byDate).sort().reverse().forEach(date => {
+    const dayRecords = byDate[date];
+    const dayTotal = dayRecords.reduce((s,r) => s + (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0), 0);
+    html += `<div class="record-row" onclick="editDate('${date}')">
+      <div>
+        <div class="record-date">📅 ${date}</div>
+        <div class="record-branch">${dayRecords.length} فرع · أمين: ${dayRecords[0].keeper || 'غير محدد'}</div>
+      </div>
+      <div class="record-values">
+        <div class="v" style="background:var(--gold);color:#fff">${dayTotal} كجم</div>
+        <div class="v" style="color:var(--red)">🗑️</div>
+      </div>
+    </div>`;
+  });
+
+  if (!html) html = '<div style="padding:40px;text-align:center;color:var(--muted)">لا توجد سجلات بعد. ابدأ الإدخال!</div>';
+  document.getElementById('recordsList').innerHTML = html;
+}
+
+function editDate(date) {
+  document.getElementById('entryDate').value = date;
+  switchView('entry');
+  setTimeout(loadDay, 100);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// IMPORT/EXPORT
+// ═══════════════════════════════════════════════════════════════════
+
+function exportData() {
+  const records = loadRecords();
+  if (records.length === 0) { toast('لا توجد بيانات للتصدير', true); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: All records
+  const rows = records.map(r => ({
+    'التاريخ': r.date,
+    'الفرع': BRANCHES.find(b => b.id === r.branch)?.name || r.branch,
+    'النوع': BRANCHES.find(b => b.id === r.branch)?.type || '',
+    'دجاج (كجم)': r.chicken || 0,
+    'لحم شاورما (كجم)': r.meat || 0,
+    'لحم نعيمي (كجم)': r.naimi || 0,
+    'دوانر (كجم)': r.dawaner || 0,
+    'الإجمالي (كجم)': (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0),
+    'أمين المخزن': r.keeper || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'السجلات الكاملة');
+
+  // Sheet 2: JSON backup
+  const backup = XLSX.utils.aoa_to_sheet([['البيانات - نسخة احتياطية JSON'], [JSON.stringify(records)]]);
+  XLSX.utils.book_append_sheet(wb, backup, 'نسخة احتياطية');
+
+  const filename = `المخزن_السلاسل_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  toast(`✅ تم تصدير ${records.length} سجل`);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error('صيغة غير صحيحة');
+      if (!confirm(`سيتم استبدال البيانات الحالية بـ${data.length} سجل. متأكد؟`)) return;
+      saveRecords(data);
+      toast(`✅ تم استيراد ${data.length} سجل`);
+      renderDashboard();
+    } catch (err) {
+      toast('❌ خطأ: ' + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+
+function populateBranchFilter() {
+  const sel = document.getElementById('filterBranch');
+  BRANCHES.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = b.name;
+    sel.appendChild(opt);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  buildEntryForm();
+  populateBranchFilter();
+  initialSeed();
+  updateBadge();
+  document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
+});
+</script>
+</body>
+</html>
