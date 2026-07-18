@@ -375,6 +375,14 @@ const STORAGE_KEY = 'restaurant_warehouse_v1';
 const CONFIG_KEY = 'restaurant_warehouse_config';
 
 // ═══════════════════════════════════════════════════════════════════
+// 🔧 SUPABASE CONFIG — Pre-configured for zero-setup experience
+// ═══════════════════════════════════════════════════════════════════
+// ⚠️ عدّل السطرين دول بمعلومات Supabase بتاعتك:
+const DEFAULT_SUPABASE_URL = 'https://ntwbbuweottxgwohrxpv.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50d2JidXdlb3R0eGd3b2hyeHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyOTYwNDgsImV4cCI6MjA5OTg3MjA0OH0.0vlEcYc2FVcSUAOqvgCwyf-7gFqI2tzH2AJGSreN0sw';
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
 // SUPABASE CLOUD SYNC
 // ═══════════════════════════════════════════════════════════════════
 
@@ -384,7 +392,17 @@ let syncing = false;
 let realtimeChannel = null;
 
 function getConfig() {
-  try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'); } catch { return {}; }
+  try {
+    var saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    // If user hasn't set custom config, use defaults (if available)
+    if (!saved.url && DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_URL !== 'YOUR_URL_HERE') {
+      saved.url = DEFAULT_SUPABASE_URL;
+    }
+    if (!saved.key && DEFAULT_SUPABASE_KEY && DEFAULT_SUPABASE_KEY !== 'PASTE_YOUR_ANON_KEY_HERE') {
+      saved.key = DEFAULT_SUPABASE_KEY;
+    }
+    return saved;
+  } catch { return {}; }
 }
 
 function setCloudStatus(state, text) {
