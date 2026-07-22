@@ -1102,6 +1102,7 @@ table td{padding:11px 12px!important;font-size:13px!important}
     <button class="tbtn" onclick="openInboxModal()" style="color:#22d3ee;border-color:rgba(34,211,238,0.35);position:relative"><i class="ti ti-inbox"></i> <span data-i18n="btn_inbox">صندوق الوارد</span><span id="inboxBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,0.4)">0</span></button>
     <button class="tbtn" onclick="openSocietiesModal()" style="color:#c29449;border-color:rgba(194,148,73,0.45)"><i class="ti ti-building-bank"></i> الجمعيات</button>
     <button class="tbtn" onclick="openDriverReportModal()" style="color:#ec4899;border-color:rgba(236,72,153,0.45);font-weight:900"><i class="ti ti-file-analytics"></i> تقرير السائقين</button>
+    <button class="tbtn" onclick="openFuelCardsReport()" style="color:#22c55e;border-color:rgba(34,197,94,0.45);font-weight:900"><i class="ti ti-gas-station"></i> كروت البنزين</button>
     <button class="tbtn" onclick="manualSaveFile()" style="color:#fbbf24;border-color:rgba(251,191,36,0.35)"><i class="ti ti-device-floppy"></i> <span data-i18n="btn_save_file">حفظ الملف</span></button>
     <button class="tbtn" onclick="openBackupModal()" style="color:#22c55e;border-color:rgba(34,197,94,0.4);position:relative" title="نسخة احتياطية على السحابة">
       <i class="ti ti-cloud-upload"></i> <span data-i18n="btn_backup">نسخ احتياطي</span>
@@ -9318,6 +9319,116 @@ function generateAccArabicReport(){
     if(typeof toast==='function') toast('التقرير جاهز','s');
   } catch(err) {
     console.error('Arabic report error:', err);
+    if(typeof toast==='function') toast('فشل: '+err.message,'e');
+    else alert('فشل: '+err.message);
+  }
+}
+
+// تقرير كروت البنزين — Fuel Cards Report
+function openFuelCardsReport(){
+  try {
+    var drivers = (typeof DRV !== 'undefined' && Array.isArray(DRV)) ? DRV : loadLS(SK_D, INIT_DRIVERS);
+    var partners = (typeof PARTNERS !== 'undefined' && Array.isArray(PARTNERS)) ? PARTNERS : loadLS(SK_P, INIT_PARTNERS);
+
+    function partnerName(pid){
+      var p = partners.find(function(x){ return x.id === pid; });
+      return p ? p.name : (pid || '—');
+    }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+
+    // Sort: drivers with cards first, then by partner
+    var withCard = drivers.filter(function(d){ return d.petrol && String(d.petrol).trim(); });
+    var noCard   = drivers.filter(function(d){ return !d.petrol || !String(d.petrol).trim(); });
+
+    // Detect duplicate card numbers
+    var cardCount = {};
+    withCard.forEach(function(d){ var c=String(d.petrol).trim(); cardCount[c]=(cardCount[c]||0)+1; });
+
+    var today = new Date().toLocaleDateString('ar-KW');
+
+    var rows = withCard.map(function(d, i){
+      var card = String(d.petrol).trim();
+      var isDup = cardCount[card] > 1;
+      var dupBadge = isDup ? ' <span style="background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800">مكرر</span>' : '';
+      return '<tr>'+
+        '<td>'+(i+1)+'</td>'+
+        '<td style="text-align:right;font-weight:700">'+esc(d.name)+'</td>'+
+        '<td style="font-family:monospace;font-weight:800;letter-spacing:0.5px">'+esc(card)+dupBadge+'</td>'+
+        '<td>'+esc(d.car||'—')+'</td>'+
+        '<td><span style="background:#f1f5f9;padding:2px 10px;border-radius:8px;font-weight:700">'+esc(partnerName(d.partner))+'</span></td>'+
+        '<td>'+esc(d.id)+'</td>'+
+        '</tr>';
+    }).join('');
+
+    var noCardRows = noCard.map(function(d, i){
+      return '<tr style="background:#fef2f2">'+
+        '<td>'+(i+1)+'</td>'+
+        '<td style="text-align:right;font-weight:700">'+esc(d.name)+'</td>'+
+        '<td style="color:#b91c1c;font-weight:800">بدون كرت</td>'+
+        '<td>'+esc(d.car||'—')+'</td>'+
+        '<td>'+esc(partnerName(d.partner))+'</td>'+
+        '<td>'+esc(d.id)+'</td>'+
+        '</tr>';
+    }).join('');
+
+    var dupCount = Object.keys(cardCount).filter(function(c){ return cardCount[c]>1; }).length;
+
+    var w = window.open('', '_blank');
+    if(!w){ if(typeof toast==='function') toast('اسمح بفتح النوافذ المنبثقة','e'); return; }
+
+    var html = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير كروت البنزين</title>';
+    html += '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">';
+    html += '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Cairo",Arial,sans-serif;background:#f8fafc;padding:30px;color:#0f172a}';
+    html += '.wrap{max-width:1000px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;box-shadow:0 8px 24px rgba(0,0,0,0.08);border-top:6px solid #22c55e}';
+    html += 'h1{color:#0f3a52;font-size:26px;font-weight:900;margin-bottom:6px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px}';
+    html += '.company{text-align:center;color:#64748b;margin-bottom:8px;font-weight:700}';
+    html += '.date-info{text-align:center;background:#f0fdf4;padding:12px;border-radius:10px;margin-bottom:24px;font-weight:800;color:#15803d}';
+    html += '.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}';
+    html += '.kpi{background:#f8fafc;padding:16px;border-radius:12px;border-right:4px solid var(--c);text-align:center}';
+    html += '.kpi-l{font-size:11px;color:#64748b;font-weight:800;margin-bottom:6px}.kpi-v{font-size:26px;font-weight:900;color:var(--c)}';
+    html += 'h2{color:#0f3a52;font-size:18px;font-weight:900;margin:24px 0 12px;padding-bottom:8px;border-bottom:3px solid #22c55e}';
+    html += 'table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px}';
+    html += 'th{background:#0f3a52;color:#fff;padding:11px 10px;text-align:center;font-weight:800}';
+    html += 'td{padding:9px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:600}';
+    html += 'tr:nth-child(even) td{background:#f8fafc}';
+    html += '.footer{margin-top:30px;text-align:center;padding-top:20px;border-top:2px solid #e2e8f0;color:#64748b;font-size:12px}';
+    html += '.print-btn{position:fixed;top:20px;left:20px;padding:12px 20px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-family:"Cairo";font-weight:800;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(34,197,94,0.4)}';
+    html += '@media print{.print-btn{display:none}body{background:#fff;padding:0}.wrap{box-shadow:none;padding:20px}}';
+    html += '</style></head><body>';
+    html += '<button class="print-btn" onclick="window.print()">🖨️ طباعة / PDF</button>';
+    html += '<div class="wrap">';
+    html += '<h1>⛽ تقرير كروت البنزين</h1>';
+    html += '<div class="company">شركة السلاسل لتوصيل الطلبات الاستهلاكية</div>';
+    html += '<div class="date-info">📅 تاريخ الإصدار: '+today+'</div>';
+    // KPIs
+    html += '<div class="kpis">';
+    html += '<div class="kpi" style="--c:#0f3a52"><div class="kpi-l">إجمالي السائقين</div><div class="kpi-v">'+drivers.length+'</div></div>';
+    html += '<div class="kpi" style="--c:#22c55e"><div class="kpi-l">كروت مُصدرة</div><div class="kpi-v">'+withCard.length+'</div></div>';
+    html += '<div class="kpi" style="--c:#b91c1c"><div class="kpi-l">بدون كرت</div><div class="kpi-v">'+noCard.length+'</div></div>';
+    html += '<div class="kpi" style="--c:#d97706"><div class="kpi-l">أرقام مكررة</div><div class="kpi-v">'+dupCount+'</div></div>';
+    html += '</div>';
+    // Table with cards
+    html += '<h2>✅ السائقون الحاصلون على كروت ('+withCard.length+')</h2>';
+    html += '<table><thead><tr><th>م</th><th>اسم السائق</th><th>رقم كرت البنزين</th><th>السيارة</th><th>الشريك</th><th>الكود</th></tr></thead>';
+    html += '<tbody>'+(rows || '<tr><td colspan="6" style="color:#94a3b8">لا يوجد</td></tr>')+'</tbody></table>';
+    // Table without cards
+    if(noCard.length){
+      html += '<h2 style="border-bottom-color:#b91c1c;color:#b91c1c">⚠️ سائقون بدون كرت بنزين ('+noCard.length+')</h2>';
+      html += '<table><thead><tr><th>م</th><th>اسم السائق</th><th>الحالة</th><th>السيارة</th><th>الشريك</th><th>الكود</th></tr></thead>';
+      html += '<tbody>'+noCardRows+'</tbody></table>';
+    }
+    if(dupCount){
+      html += '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px;margin-top:16px;color:#b91c1c;font-weight:700">🚨 تنبيه: يوجد '+dupCount+' رقم كرت مستخدم لأكثر من سائق — راجع الأرقام المميزة بـ"مكرر".</div>';
+    }
+    html += '<div class="footer">⛽ تقرير كروت البنزين · نظام ARK · شركة السلاسل © '+new Date().getFullYear()+'</div>';
+    html += '</div></body></html>';
+
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    if(typeof toast==='function') toast('التقرير جاهز','s');
+  } catch(err) {
+    console.error('Fuel cards report error:', err);
     if(typeof toast==='function') toast('فشل: '+err.message,'e');
     else alert('فشل: '+err.message);
   }
