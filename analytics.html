@@ -97,6 +97,7 @@
   </div>
   <div class="actions">
     <button class="btn btn-secondary" onclick="window.location.href='السلاسل_نظام_ادارة_السائقين_28.html'"><i class="ti ti-arrow-right"></i> ARK</button>
+    <button class="btn btn-primary" onclick="manualRefresh()" title="تحديث من ARK"><i class="ti ti-refresh"></i> تحديث</button>
     <button class="btn btn-primary" onclick="document.getElementById('excelInput').click()"><i class="ti ti-upload"></i> 📥 استيراد Excel</button>
     <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">
     <button class="btn btn-primary" onclick="downloadTemplate()"><i class="ti ti-download"></i> 📊 تحميل النموذج</button>
@@ -117,7 +118,11 @@
     <option value="prev" selected>مقارنة بالشهر السابق</option>
     <option value="none">بدون مقارنة</option>
   </select>
-  <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700">🔄 آخر تحديث: الآن &nbsp;·&nbsp; <span style="color:#dc2626">يوليو* = تقديري (شهر جاري)</span></span>
+  <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700">
+    <span style="color:#059669">🟢 تحديث تلقائي من ARK</span> &nbsp;·&nbsp;
+    <span id="lastSync">آخر تحديث: الآن</span> &nbsp;·&nbsp;
+    <span style="color:#dc2626">يوليو* = شهر جاري</span>
+  </span>
 </div>
 
 <div class="container">
@@ -747,9 +752,15 @@ function renderOrders() {
 
 function renderViolations() {
   destroyChart('violations');
+  // اقرأ من نظام المخالفات (sl_vio2) لكل شهر، مع fallback للقيم المعروفة
+  const fallback = {'04':180, '05':210, '06':445, '07':0};
+  const data = ['04','05','06','07'].map(m => {
+    const fromSys = getARKViolations(m);
+    return (fromSys !== null) ? Math.round(fromSys) : (DATA.violations[m] || fallback[m] || 0);
+  });
   charts.violations = new Chart(document.getElementById('violationsChart'), {
     type: 'bar',
-    data: {labels:['أبريل', 'مايو', 'يونيو', 'يوليو*'], datasets:[{label:'المخالفات', data:[180, 210, 445, 520], backgroundColor:['#f59e0b','#f59e0b','#dc2626','#b91c1c'], borderRadius:6}]},
+    data: {labels:['أبريل', 'مايو', 'يونيو', 'يوليو*'], datasets:[{label:'المخالفات (د.ك)', data, backgroundColor:['#f59e0b','#f59e0b','#dc2626','#b91c1c'], borderRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
@@ -897,7 +908,9 @@ function syncJulyFromARK() {
       return { name:c.name, value:+val.toFixed(1), color:c.color, pct: totalC>0 ? +(val/totalC*100).toFixed(1) : 0 };
     });
 
-    DATA.violations['07'] = Math.round(violations);
+    // المخالفات: نظام المخالفات (sl_vio2) أدق من فئة المصروفات
+    const vioFromSystem = getARKViolations('07');
+    DATA.violations['07'] = (vioFromSystem !== null) ? Math.round(vioFromSystem) : Math.round(violations);
     julyFromARK = true;
     return true;
   } catch (e) {
@@ -919,6 +932,18 @@ let arkHasDrivers = false;
 function getARKDrivers() {
   try { return JSON.parse(localStorage.getItem('sl_drv2') || localStorage.getItem('sl_drv') || '[]'); }
   catch { return []; }
+}
+
+// 🚨 مخالفات شهر معيّن من نظام المخالفات في ARK (sl_vio2) — المصدر الصحيح
+function getARKViolations(monthKey) {
+  try {
+    const vios = JSON.parse(localStorage.getItem('sl_vio2') || '[]');
+    if (!Array.isArray(vios)) return null;
+    const pfx = '2026-' + monthKey;
+    const monthVios = vios.filter(v => String(v.date || '').indexOf(pfx) === 0);
+    if (monthVios.length === 0) return null; // لا بيانات لهذا الشهر
+    return monthVios.reduce((s, v) => s + (parseFloat(v.amount) || 0), 0);
+  } catch { return null; }
 }
 
 function syncHRFleetFromARK() {
@@ -1039,6 +1064,11 @@ function renderAll() {
   syncJulyFromARK();
   syncHRFleetFromARK();
   syncAttendanceFromARK(getMonth());
+  // حدّث المخالفات لكل شهر من نظام المخالفات (sl_vio2)
+  ['04','05','06','07'].forEach(m => {
+    const v = getARKViolations(m);
+    if (v !== null) DATA.violations[m] = Math.round(v);
+  });
   updateInsight();
   renderKPIs();
   renderRevenueChart();
@@ -1218,7 +1248,54 @@ function downloadTemplate() {
   window.open('بيانات_Analytics.xlsx', '_blank');
 }
 
-window.addEventListener('DOMContentLoaded', renderAll);
+// ═══════════════════════════════════════════════════════════════════
+// التحديث التلقائي — أي تغيير في ARK ينعكس على BI فوراً
+// ═══════════════════════════════════════════════════════════════════
+let _lastSnapshot = '';
+function arkSnapshot() {
+  // بصمة سريعة لبيانات ARK لاكتشاف أي تغيير
+  try {
+    return [
+      (localStorage.getItem('sl_inc')||'').length,
+      (localStorage.getItem('sl_exp')||'').length,
+      (localStorage.getItem('sl_vio2')||'').length,
+      (localStorage.getItem('sl_drv2')||'').length,
+      (localStorage.getItem('sl_att2')||'').length,
+    ].join('|');
+  } catch { return ''; }
+}
+
+function autoRefreshIfChanged() {
+  const snap = arkSnapshot();
+  if (snap !== _lastSnapshot) {
+    _lastSnapshot = snap;
+    renderAll();
+    const el = document.getElementById('lastSync');
+    if (el) el.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-KW');
+  }
+}
+
+// 1) تغيير localStorage من تبويب ARK آخر
+window.addEventListener('storage', (e) => {
+  if (e.key && (e.key.indexOf('sl_') === 0)) autoRefreshIfChanged();
+});
+// 2) الرجوع لتبويب Analytics
+document.addEventListener('visibilitychange', () => { if (!document.hidden) autoRefreshIfChanged(); });
+window.addEventListener('focus', autoRefreshIfChanged);
+// 3) فحص دوري كل 15 ثانية
+setInterval(autoRefreshIfChanged, 15000);
+
+function manualRefresh() {
+  _lastSnapshot = arkSnapshot();
+  renderAll();
+  const el = document.getElementById('lastSync');
+  if (el) el.textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-KW');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  _lastSnapshot = arkSnapshot();
+  renderAll();
+});
 </script>
 </body>
 </html>
