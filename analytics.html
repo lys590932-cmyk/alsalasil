@@ -109,14 +109,15 @@
   <select id="monthSelect" onchange="renderAll()">
     <option value="04">أبريل 2026</option>
     <option value="05">مايو 2026</option>
-    <option value="06" selected>يونيو 2026</option>
+    <option value="06">يونيو 2026</option>
+    <option value="07" selected>🔴 يوليو 2026 (الشهر الحالي)</option>
   </select>
   <label>🔍 المقارنة:</label>
   <select id="compareSelect" onchange="renderAll()">
     <option value="prev" selected>مقارنة بالشهر السابق</option>
     <option value="none">بدون مقارنة</option>
   </select>
-  <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700">🔄 آخر تحديث: الآن</span>
+  <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700">🔄 آخر تحديث: الآن &nbsp;·&nbsp; <span style="color:#dc2626">يوليو* = تقديري (شهر جاري)</span></span>
 </div>
 
 <div class="container">
@@ -302,12 +303,14 @@ const DATA = {
     '04': { revenue: 12200, expenses: 3377, salaries: 7200, orders: 5400, drivers: 24 },
     '05': { revenue: 13458, expenses: 4440, salaries: 7865, orders: 6081, drivers: 26 },
     '06': { revenue: 13526, expenses: 5800, salaries: 6260, orders: 7760, drivers: 41 },
+    '07': { revenue: 13800, expenses: 5400, salaries: 6500, orders: 8200, drivers: 42, estimate: true },
   },
 
   partners: {
     '04': [{name:'Keeta', value:4200, color:'#059669'}, {name:'Caboria', value:4200, color:'#2563eb'}, {name:'HOMY', value:3800, color:'#d97706'}],
     '05': [{name:'Keeta', value:4830, color:'#059669'}, {name:'Caboria', value:4428, color:'#2563eb'}, {name:'HOMY', value:4200, color:'#d97706'}],
     '06': [{name:'Keeta', value:5032, color:'#059669'}, {name:'Caboria', value:4428, color:'#2563eb'}, {name:'HOMY', value:4066, color:'#d97706'}],
+    '07': [{name:'Keeta', value:5150, color:'#059669'}, {name:'Caboria', value:4500, color:'#2563eb'}, {name:'HOMY', value:4150, color:'#d97706'}],
   },
 
   expenses: {
@@ -335,6 +338,14 @@ const DATA = {
       {name:'مخالفات', value:445, color:'#e11d48', pct:7.7},
       {name:'أخرى', value:129.5, color:'#64748b', pct:2.2},
     ],
+    '07': [
+      {name:'وقود', value:2500, color:'#dc2626', pct:46.3},
+      {name:'صيانة', value:420, color:'#f59e0b', pct:7.8},
+      {name:'إقامات', value:900, color:'#7c3aed', pct:16.7},
+      {name:'إيجار', value:930, color:'#0891b2', pct:17.2},
+      {name:'مخالفات', value:520, color:'#e11d48', pct:9.6},
+      {name:'أخرى', value:130, color:'#64748b', pct:2.4},
+    ],
   },
 
   drivers: [
@@ -355,7 +366,7 @@ const DATA = {
     {name:'Rathod Vishnu', platform:'كيتا', orders:360, revenue:365.49, perDay:12.0, days:30, color:'#059669'},
   ],
 
-  violations: { '04': 180, '05': 210, '06': 445 },
+  violations: { '04': 180, '05': 210, '06': 445, '07': 520 },
 
   nationalities: [
     {name:'الهند / India', value:15, color:'#059669'},
@@ -390,7 +401,7 @@ const DATA = {
 let charts = {};
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 function getMonth() { return document.getElementById('monthSelect').value; }
-function getPrev(m) { return m === '06' ? '05' : (m === '05' ? '04' : '04'); }
+function getPrev(m) { const map = {'07':'06','06':'05','05':'04','04':'04'}; return map[m] || '04'; }
 function fmtKD(n) { return (n||0).toLocaleString('en-US'); }
 function pct(cur, prev) { if (!prev) return 0; return ((cur - prev) / prev * 100).toFixed(1); }
 
@@ -415,6 +426,10 @@ function updateInsight() {
     insight = `📊 <strong>هامش الربح ${margin}%</strong> — أقل من المستهدف (10%). ركز على تقليل المصاريف التشغيلية أو زيادة الأسعار مع الشركاء.`;
   } else {
     insight = `✅ <strong>الأداء ممتاز!</strong> — هامش الربح ${margin}%، والمصاريف تحت السيطرة. استمر بنفس الأداء وفكر في التوسع في عقود B2B جديدة.`;
+  }
+  // تنبيه الشهر الجاري (تقديري)
+  if (d.estimate) {
+    insight = `🔴 <strong>الشهر الحالي (يوليو) — بيانات تقديرية أولية.</strong> الأرقام مبنية على اتجاه الأشهر السابقة. حدّثها بالأرقام الفعلية من زر "📥 استيراد Excel" بمجرد اكتمال الشهر.<br><br>` + insight;
   }
   document.getElementById('smartInsight').innerHTML = insight;
 }
@@ -464,10 +479,10 @@ function renderRevenueChart() {
   charts.revenue = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['أبريل', 'مايو', 'يونيو'],
+      labels: ['أبريل', 'مايو', 'يونيو', 'يوليو*'],
       datasets: [
-        {label:'الإيرادات', data:[DATA.monthly['04'].revenue, DATA.monthly['05'].revenue, DATA.monthly['06'].revenue], backgroundColor:'#059669', borderRadius:6},
-        {label:'المصروفات', data:[DATA.monthly['04'].expenses+DATA.monthly['04'].salaries, DATA.monthly['05'].expenses+DATA.monthly['05'].salaries, DATA.monthly['06'].expenses+DATA.monthly['06'].salaries], backgroundColor:'#dc2626', borderRadius:6},
+        {label:'الإيرادات', data:[DATA.monthly['04'].revenue, DATA.monthly['05'].revenue, DATA.monthly['06'].revenue, DATA.monthly['07'].revenue], backgroundColor:'#059669', borderRadius:6},
+        {label:'المصروفات', data:[DATA.monthly['04'].expenses+DATA.monthly['04'].salaries, DATA.monthly['05'].expenses+DATA.monthly['05'].salaries, DATA.monthly['06'].expenses+DATA.monthly['06'].salaries, DATA.monthly['07'].expenses+DATA.monthly['07'].salaries], backgroundColor:'#dc2626', borderRadius:6},
       ]
     },
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>fmtKD(v)}}}}
@@ -496,13 +511,13 @@ function renderExpensesChart() {
 
 function renderProfitChart() {
   destroyChart('profit');
-  const profits = ['04','05','06'].map(m => {
+  const profits = ['04','05','06','07'].map(m => {
     const d = DATA.monthly[m];
     return d.revenue - d.expenses - d.salaries;
   });
   charts.profit = new Chart(document.getElementById('profitChart'), {
     type: 'line',
-    data: {labels:['أبريل','مايو','يونيو'], datasets:[{label:'صافي الربح', data:profits, borderColor:'#c29449', backgroundColor:'rgba(194,148,73,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6, pointBackgroundColor:'#c29449'}]},
+    data: {labels:['أبريل','مايو','يونيو','يوليو*'], datasets:[{label:'صافي الربح', data:profits, borderColor:'#c29449', backgroundColor:'rgba(194,148,73,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6, pointBackgroundColor:'#c29449'}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
@@ -518,7 +533,7 @@ function renderExpenseEvolution() {
 
   const datasets = categories.map((cat, i) => ({
     label: cat,
-    data: ['04','05','06'].map(m => DATA.expenses[m].find(e => e.name === cat).value),
+    data: ['04','05','06','07'].map(m => DATA.expenses[m].find(e => e.name === cat).value),
     borderColor: colors[i],
     backgroundColor: colors[i] + '20',
     tension: 0.4,
@@ -528,7 +543,7 @@ function renderExpenseEvolution() {
 
   charts.expenseEvolution = new Chart(document.getElementById('expenseEvolutionChart'), {
     type: 'line',
-    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets},
+    data: {labels:['أبريل', 'مايو', 'يونيو', 'يوليو*'], datasets},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>fmtKD(v)+' د.ك'}}}}
   });
 }
@@ -555,10 +570,10 @@ function renderExpensePct() {
 
 function renderFuelChart() {
   destroyChart('fuel');
-  const data = ['04','05','06'].map(m => DATA.expenses[m].find(e=>e.name==='وقود').value);
+  const data = ['04','05','06','07'].map(m => DATA.expenses[m].find(e=>e.name==='وقود').value);
   charts.fuel = new Chart(document.getElementById('fuelChart'), {
     type: 'bar',
-    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'الوقود', data, backgroundColor:['#f59e0b','#f59e0b','#dc2626'], borderRadius:6}]},
+    data: {labels:['أبريل', 'مايو', 'يونيو', 'يوليو*'], datasets:[{label:'الوقود', data, backgroundColor:['#f59e0b','#f59e0b','#dc2626','#dc2626'], borderRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
@@ -619,23 +634,23 @@ function renderFleetUtil() {
 
 function renderMaintenance() {
   destroyChart('maintenance');
-  const data = ['04','05','06'].map(m => DATA.expenses[m].find(e=>e.name==='صيانة').value);
+  const data = ['04','05','06','07'].map(m => DATA.expenses[m].find(e=>e.name==='صيانة').value);
   charts.maintenance = new Chart(document.getElementById('maintenanceChart'), {
     type: 'bar',
-    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'الصيانة', data, backgroundColor:'#f59e0b', borderRadius:6}]},
+    data: {labels:['أبريل', 'مايو', 'يونيو', 'يوليو*'], datasets:[{label:'الصيانة', data, backgroundColor:'#f59e0b', borderRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
 
 function renderFuelPerDriver() {
   destroyChart('fuelPerDriver');
-  const data = ['04','05','06'].map(m => {
+  const data = ['04','05','06','07'].map(m => {
     const fuel = DATA.expenses[m].find(e=>e.name==='وقود').value;
     return (fuel / DATA.monthly[m].drivers).toFixed(1);
   });
   charts.fuelPerDriver = new Chart(document.getElementById('fuelPerDriverChart'), {
     type: 'line',
-    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'وقود/سائق', data, borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6}]},
+    data: {labels:['أبريل', 'مايو', 'يونيو', 'يوليو*'], datasets:[{label:'وقود/سائق', data, borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
@@ -717,7 +732,7 @@ function renderOrders() {
   destroyChart('orders');
   charts.orders = new Chart(document.getElementById('ordersChart'), {
     type: 'line',
-    data: {labels:['أبريل','مايو','يونيو'], datasets:[{label:'الطلبات', data:[DATA.monthly['04'].orders, DATA.monthly['05'].orders, DATA.monthly['06'].orders], borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6}]},
+    data: {labels:['أبريل','مايو','يونيو','يوليو*'], datasets:[{label:'الطلبات', data:[DATA.monthly['04'].orders, DATA.monthly['05'].orders, DATA.monthly['06'].orders, DATA.monthly['07'].orders], borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
@@ -726,7 +741,7 @@ function renderViolations() {
   destroyChart('violations');
   charts.violations = new Chart(document.getElementById('violationsChart'), {
     type: 'bar',
-    data: {labels:['أبريل', 'مايو', 'يونيو'], datasets:[{label:'المخالفات', data:[180, 210, 445], backgroundColor:['#f59e0b','#f59e0b','#dc2626'], borderRadius:6}]},
+    data: {labels:['أبريل', 'مايو', 'يونيو', 'يوليو*'], datasets:[{label:'المخالفات', data:[180, 210, 445, 520], backgroundColor:['#f59e0b','#f59e0b','#dc2626','#b91c1c'], borderRadius:6}]},
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
   });
 }
@@ -737,13 +752,13 @@ function renderViolations() {
 
 function renderForecast() {
   destroyChart('forecast');
-  // Historical
-  const hist = ['04','05','06'].map(m => DATA.monthly[m].revenue);
-  // Linear projection: use trend from May to Jun
-  const growth = (hist[2] - hist[1]) / hist[1];
-  const forecastMonths = ['يوليو', 'أغسطس', 'سبتمبر'];
+  // Historical (يشمل يوليو التقديري)
+  const hist = ['04','05','06','07'].map(m => DATA.monthly[m].revenue);
+  // Linear projection: use trend from Jun to Jul
+  const growth = (hist[3] - hist[2]) / hist[2];
+  const forecastMonths = ['أغسطس', 'سبتمبر', 'أكتوبر'];
   const forecasts = [];
-  let last = hist[2];
+  let last = hist[3];
   for (let i = 0; i < 3; i++) {
     last = last * (1 + growth);
     forecasts.push(Math.round(last));
@@ -752,10 +767,10 @@ function renderForecast() {
   charts.forecast = new Chart(document.getElementById('forecastChart'), {
     type: 'line',
     data: {
-      labels: ['أبريل', 'مايو', 'يونيو', 'يوليو (توقع)', 'أغسطس (توقع)', 'سبتمبر (توقع)'],
+      labels: ['أبريل', 'مايو', 'يونيو', 'يوليو*', 'أغسطس (توقع)', 'سبتمبر (توقع)', 'أكتوبر (توقع)'],
       datasets: [
         {label:'الإيرادات الفعلية', data:[...hist, null, null, null], borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:6},
-        {label:'التوقعات', data:[null, null, hist[2], ...forecasts], borderColor:'#c29449', backgroundColor:'rgba(194,148,73,0.15)', fill:true, tension:0.4, borderWidth:3, borderDash:[6,3], pointRadius:6, pointStyle:'triangle'},
+        {label:'التوقعات', data:[null, null, null, hist[3], ...forecasts], borderColor:'#c29449', backgroundColor:'rgba(194,148,73,0.15)', fill:true, tension:0.4, borderWidth:3, borderDash:[6,3], pointRadius:6, pointStyle:'triangle'},
       ]
     },
     options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>fmtKD(v)}}}}
@@ -763,9 +778,9 @@ function renderForecast() {
 
   // Forecast list
   const html = `
-    <div class="forecast-row"><span>📅 يوليو 2026</span><span>${fmtKD(forecasts[0])} د.ك</span></div>
-    <div class="forecast-row"><span>📅 أغسطس 2026</span><span>${fmtKD(forecasts[1])} د.ك</span></div>
-    <div class="forecast-row"><span>📅 سبتمبر 2026</span><span>${fmtKD(forecasts[2])} د.ك</span></div>
+    <div class="forecast-row"><span>📅 أغسطس 2026</span><span>${fmtKD(forecasts[0])} د.ك</span></div>
+    <div class="forecast-row"><span>📅 سبتمبر 2026</span><span>${fmtKD(forecasts[1])} د.ك</span></div>
+    <div class="forecast-row"><span>📅 أكتوبر 2026</span><span>${fmtKD(forecasts[2])} د.ك</span></div>
     <div class="forecast-row"><span>🎯 نمو متوقع</span><span>${(growth*100).toFixed(1)}% شهرياً</span></div>
     <div class="forecast-row"><span>💰 إيراد الربع القادم</span><span>${fmtKD(forecasts[0]+forecasts[1]+forecasts[2])} د.ك</span></div>
   `;
@@ -847,6 +862,7 @@ function importExcel(event) {
           if (monthName.includes('أبريل')) key = '04';
           else if (monthName.includes('مايو')) key = '05';
           else if (monthName.includes('يونيو')) key = '06';
+          else if (monthName.includes('يوليو')) key = '07';
           if (key && r[1] !== '' && r[1] != null) {
             DATA.monthly[key] = {
               revenue: Number(r[1])||0,
@@ -870,6 +886,7 @@ function importExcel(event) {
           if (monthName.includes('أبريل')) key = '04';
           else if (monthName.includes('مايو')) key = '05';
           else if (monthName.includes('يونيو')) key = '06';
+          else if (monthName.includes('يوليو')) key = '07';
           if (key && r[1]) {
             newPartners[key].push({name: r[1], value: Number(r[2])||0, color: r[3]||'#64748b'});
           }
@@ -889,6 +906,7 @@ function importExcel(event) {
           if (monthName.includes('أبريل')) key = '04';
           else if (monthName.includes('مايو')) key = '05';
           else if (monthName.includes('يونيو')) key = '06';
+          else if (monthName.includes('يوليو')) key = '07';
           if (key && r[1]) {
             newExp[key].push({name: r[1], value: Number(r[2])||0, color: r[3]||'#64748b', pct: 0});
           }
