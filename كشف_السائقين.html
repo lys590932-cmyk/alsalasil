@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>كشف متابعة السائقين — شركة السلاسل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --navy:#0f3a52; --navy2:#1c5878; --gold:#c29449;
+    --bg:#f1f5f9; --surface:#fff; --text:#0f172a; --muted:#64748b;
+    --border:#e2e8f0; --light:#f8fafc; --cream:#fdf6e9;
+    --green:#059669; --green-bg:#dcfce7;
+    --red:#dc2626; --red-bg:#fee2e2;
+    --amber:#d97706; --amber-bg:#fef3c7;
+    --blue:#2563eb; --blue-bg:#dbeafe;
+    --purple:#7c3aed; --purple-bg:#ede9fe;
+    --gray:#64748b; --gray-bg:#f1f5f9;
+  }
+  body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  .topbar{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-logo{background:var(--gold);color:var(--navy);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .topbar h1{font-size:19px;font-weight:900;line-height:1.2}
+  .topbar .sub{font-size:11px;color:#fde68a;margin-top:2px;font-weight:700}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{padding:9px 15px;border:none;border-radius:8px;font-family:'Cairo';font-weight:800;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s}
+  .btn-gold{background:var(--gold);color:#fff}.btn-gold:hover{background:#a67a35}
+  .btn-ghost{background:rgba(255,255,255,0.15);color:#fff}.btn-ghost:hover{background:rgba(255,255,255,0.25)}
+  .btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#047857}
+  .btn-red{background:var(--red);color:#fff}
+  .cloud-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,0.12);border-radius:20px;font-size:11px;font-weight:800}
+  .cloud-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+
+  .container{padding:20px 24px;max-width:1700px;margin:0 auto}
+
+  /* KPIs */
+  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+  .kpi{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);border-right:5px solid var(--c);cursor:pointer;transition:all 0.2s}
+  .kpi:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.1)}
+  .kpi.active{background:var(--cream);box-shadow:0 4px 14px rgba(194,148,73,0.25)}
+  .kpi-label{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:6px}
+  .kpi-value{font-size:28px;font-weight:900;color:var(--c);line-height:1}
+  .kpi-sub{font-size:10px;color:var(--muted);font-weight:700;margin-top:4px}
+
+  /* Toolbar */
+  .toolbar{background:#fff;padding:12px 16px;border-radius:12px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--border)}
+  .search{flex:1;min-width:200px;position:relative}
+  .search input{width:100%;padding:10px 40px 10px 14px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:13px;background:var(--light)}
+  .search input:focus{outline:none;border-color:var(--gold);background:#fff}
+  .search i{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted)}
+  .toolbar select{padding:9px 14px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:13px;background:var(--light)}
+
+  /* Table */
+  .table-wrap{background:#fff;border-radius:14px;border:1px solid var(--border);overflow-x:auto;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+  table{width:100%;border-collapse:collapse;font-size:12px;min-width:1300px}
+  thead th{background:var(--navy);color:#fff;padding:12px 10px;text-align:center;font-weight:800;font-size:11px;position:sticky;top:0;white-space:nowrap}
+  tbody td{padding:9px 8px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;vertical-align:middle}
+  tbody tr{transition:all 0.15s;cursor:pointer}
+  tbody tr:hover{background:var(--cream)}
+  tbody tr:nth-child(even){background:var(--light)}
+  tbody tr:nth-child(even):hover{background:var(--cream)}
+  .name-cell{text-align:right;font-weight:900;color:var(--navy);white-space:nowrap;padding-right:14px}
+  .seq-badge{background:var(--navy);color:#fff;width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:11px}
+
+  /* Status badges */
+  .st{display:inline-block;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:800;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+  .st-green{background:var(--green-bg);color:var(--green)}
+  .st-amber{background:var(--amber-bg);color:var(--amber)}
+  .st-red{background:var(--red-bg);color:var(--red)}
+  .st-blue{background:var(--blue-bg);color:var(--blue)}
+  .st-gray{background:var(--gray-bg);color:var(--gray)}
+  .type-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:900}
+  .type-car{background:#dbeafe;color:#1e40af}
+  .type-bike{background:#fef3c7;color:#b45309}
+
+  /* Progress */
+  .prog-wrap{display:flex;align-items:center;gap:8px;justify-content:center}
+  .prog-bar{width:70px;height:8px;background:var(--border);border-radius:20px;overflow:hidden}
+  .prog-fill{height:100%;border-radius:20px;transition:width 0.4s}
+  .prog-txt{font-size:11px;font-weight:900;min-width:34px}
+
+  /* Modal */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;padding:16px}
+  .modal-bg.show{display:flex}
+  .modal{background:#fff;border-radius:16px;padding:0;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:92vh;overflow:hidden;display:flex;flex-direction:column}
+  .modal-head{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold)}
+  .modal-head h2{font-size:17px;font-weight:900}
+  .modal-x{background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px}
+  .modal-body{padding:20px 22px;overflow-y:auto}
+  .fg{margin-bottom:14px}
+  .fg label{display:block;font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px}
+  .fg input, .fg select{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:13px;background:var(--light)}
+  .fg input:focus, .fg select:focus{outline:none;border-color:var(--gold);background:#fff}
+  .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between}
+  .status-input-wrap{display:flex;gap:6px}
+  .status-input-wrap select{flex:1}
+
+  /* Toast */
+  .toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:13px 22px;border-radius:10px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:3000;display:none}
+  .toast.show{display:block;animation:sd 0.3s}
+  .toast.err{background:var(--red)}
+  @keyframes sd{from{transform:translate(-50%,-20px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+
+  @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.kpi-grid{grid-template-columns:1fr}.fg-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">🚗</div>
+    <div>
+      <h1>كشف متابعة توظيف السائقين</h1>
+      <div class="sub">Drivers Onboarding Tracker · شركة السلاسل</div>
+    </div>
+  </div>
+  <div class="actions">
+    <span class="cloud-badge"><span class="cloud-dot" id="cloudDot"></span><span id="cloudText">جاري الاتصال...</span></span>
+    <button class="btn btn-ghost" onclick="openSettings()"><i class="ti ti-settings"></i> إعدادات</button>
+    <button class="btn btn-gold" onclick="exportExcel()"><i class="ti ti-download"></i> Excel</button>
+    <button class="btn btn-green" onclick="openAdd()"><i class="ti ti-user-plus"></i> إضافة سائق</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPIs -->
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search">
+      <i class="ti ti-search"></i>
+      <input type="text" id="searchInput" placeholder="ابحث باسم السائق..." oninput="render()">
+    </div>
+    <select id="filterNat" onchange="render()"><option value="">كل الجنسيات</option></select>
+    <select id="filterType" onchange="render()">
+      <option value="">كل الأنواع</option>
+      <option value="سياره">🚗 سيارة</option>
+      <option value="سيكل">🏍️ سيكل</option>
+    </select>
+    <select id="filterProg" onchange="render()">
+      <option value="">كل الحالات</option>
+      <option value="done">✅ مكتمل (100%)</option>
+      <option value="progress">🟡 قيد الإجراء</option>
+      <option value="stuck">🔴 متوقف/مشكلة</option>
+    </select>
+    <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700" id="countLabel"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>م</th><th>الاسم</th><th>الجنسية</th>
+        <th>🩺 الفحص الطبي</th><th>🏛️ توثيق السفارة</th><th>📋 إذن العمل</th>
+        <th>🪪 الإقامة</th><th>🆔 المدنية</th><th>🚦 حالة الرخصة</th>
+        <th>نوع الرخصة</th><th>🏦 كارت البنك</th><th>التقدم</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">إضافة سائق</h2>
+      <button class="modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="f-id">
+      <div class="fg-row">
+        <div class="fg"><label>👤 اسم السائق *</label><input type="text" id="f-name" placeholder="الاسم الكامل"></div>
+        <div class="fg"><label>🌍 الجنسية</label><input type="text" id="f-nat" placeholder="مثال: مصر" list="natList"><datalist id="natList"></datalist></div>
+      </div>
+      <div class="fg"><label>🩺 الفحص الطبي</label>
+        <div class="status-input-wrap">
+          <select id="f-medical-sel" onchange="applyPreset('f-medical', this.value)"></select>
+        </div>
+        <input type="text" id="f-medical" placeholder="أو اكتب حالة مخصصة" style="margin-top:6px">
+      </div>
+      <div class="fg"><label>🏛️ توثيق السفارة</label>
+        <div class="status-input-wrap"><select id="f-embassy-sel" onchange="applyPreset('f-embassy', this.value)"></select></div>
+        <input type="text" id="f-embassy" placeholder="أو اكتب حالة مخصصة" style="margin-top:6px">
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>📋 إذن العمل</label>
+          <select id="f-work-sel" onchange="applyPreset('f-work', this.value)"></select>
+          <input type="text" id="f-work" placeholder="حالة مخصصة" style="margin-top:6px">
+        </div>
+        <div class="fg"><label>🪪 الإقامة</label>
+          <select id="f-residency-sel" onchange="applyPreset('f-residency', this.value)"></select>
+          <input type="text" id="f-residency" placeholder="حالة مخصصة" style="margin-top:6px">
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>🆔 المدنية</label>
+          <select id="f-civil-sel" onchange="applyPreset('f-civil', this.value)"></select>
+          <input type="text" id="f-civil" placeholder="حالة مخصصة" style="margin-top:6px">
+        </div>
+        <div class="fg"><label>🚦 حالة الرخصة</label>
+          <select id="f-license-sel" onchange="applyPreset('f-license', this.value)"></select>
+          <input type="text" id="f-license" placeholder="أو موعد: 26/07/2026" style="margin-top:6px">
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>🚗 نوع الرخصة</label>
+          <select id="f-type"><option value="سياره">🚗 سيارة</option><option value="سيكل">🏍️ سيكل</option></select>
+        </div>
+        <div class="fg"><label>🏦 كارت البنك</label>
+          <select id="f-bank-sel" onchange="applyPreset('f-bank', this.value)"></select>
+          <input type="text" id="f-bank" placeholder="حالة مخصصة" style="margin-top:6px">
+        </div>
+      </div>
+      <div class="fg"><label>📝 ملاحظات</label><input type="text" id="f-notes" placeholder="أي ملاحظات..."></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-red" id="delBtn" onclick="deleteDriver()" style="display:none"><i class="ti ti-trash"></i> حذف</button>
+      <div style="display:flex;gap:10px;margin-right:auto">
+        <button class="btn btn-ghost" style="background:#e2e8f0;color:#334155" onclick="closeModal()">إلغاء</button>
+        <button class="btn btn-green" onclick="saveDriver()"><i class="ti ti-device-floppy"></i> حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-bg" id="settingsModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><h2>⚙️ إعدادات المزامنة</h2><button class="modal-x" onclick="closeSettings()">×</button></div>
+    <div class="modal-body">
+      <div style="background:var(--cream);padding:14px;border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.7">
+        💡 النظام مربوط تلقائياً بـSupabase. لو حبيت تغيّر الحساب:<br>
+        1. شغّل <code>كشف_السائقين_supabase.sql</code> في Supabase<br>
+        2. الصق الـURL والـKey هنا
+      </div>
+      <div class="fg"><label>🔗 Supabase URL</label><input type="text" id="s-url" placeholder="https://xxx.supabase.co"></div>
+      <div class="fg"><label>🔑 Anon Key</label><textarea id="s-key" rows="3" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:9px;font-family:monospace;font-size:11px"></textarea></div>
+      <div id="s-status" style="font-size:12px;color:var(--muted);font-weight:700"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-green" onclick="saveSettings()" style="margin-right:auto"><i class="ti ti-cloud-check"></i> حفظ واتصال</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// إعدادات Supabase (مضمّنة — صفر إعداد)
+// ═══════════════════════════════════════════════════════════════════
+const DEFAULT_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const DEFAULT_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+const CONFIG_KEY = 'salasil_onboard_config';
+const CACHE_KEY  = 'salasil_onboard_cache';
+
+// حقول المراحل (لحساب التقدم)
+const STAGES = ['medical','embassy','work_permit','residency','civil_id','license_status','bank_card'];
+
+// خيارات جاهزة (presets) لكل عمود
+const PRESETS = {
+  medical:    ['تم الفحص','لائق','بانتظار ظهور نتيجة الفحص','اعاده الفحص الطبى','يوم الاحد سيتم اخذ عينه اخرى','غير لائق'],
+  embassy:    ['تم','لم يتم الانتهاء من التوثيق غدا موعد التوثيق','ليس لديها توثيق الرخصه ( سيكل )','قيد التوثيق'],
+  work_permit:['تم الاصدار','جاري الاصدار','لم يبدأ','مرفوض'],
+  residency:  ['تم الاصدار','جاري الاصدار','لم يبدأ','منتهية'],
+  civil_id:   ['تم الاصدار','جاري الاصدار','لم يبدأ'],
+  license_status:['تم الاصدار','جاري الاصدار','بانتظار الموعد','منتهية'],
+  bank_card:  ['تم الاصدار','جاري الاصدار','لم يبدأ'],
+};
+
+// تصنيف لون الحالة تلقائياً (ذكاء)
+function statusClass(txt){
+  const t = String(txt||'').trim();
+  if(!t) return 'st-gray';
+  const s = t.toLowerCase();
+  // أخضر: مكتمل
+  if(/تم الفحص|لائق|تم الاصدار|^تم$|مكتمل|جاهز|ناجح/.test(t) && !/لم|غير|جاري/.test(t)) return 'st-green';
+  if(/^تم /.test(t) || t==='تم') return 'st-green';
+  // أزرق: له موعد
+  if(/موعد|\d{1,2}\/\d{1,2}/.test(t)) return 'st-blue';
+  // أحمر: مشكلة/متوقف
+  if(/لم |ليس |غير لائق|مرفوض|منتهي|اعاده|إعاده|لا /.test(t)) return 'st-red';
+  // أصفر: قيد الإجراء
+  if(/جاري|بانتظار|قيد|غدا|سيتم|لم يبدأ/.test(t)) return 'st-amber';
+  return 'st-gray';
+}
+// هل المرحلة مكتملة؟ (للتقدم)
+function stageDone(txt){
+  const t = String(txt||'').trim();
+  if(!t) return false;
+  return statusClass(t) === 'st-green';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE + STORAGE
+// ═══════════════════════════════════════════════════════════════════
+let DRIVERS = [];
+let sb = null, cloudReady = false, realtimeCh = null;
+let activeKpi = '';
+
+function getConfig(){
+  try{
+    const c = JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');
+    if(!c.url && DEFAULT_URL) c.url = DEFAULT_URL;
+    if(!c.key && DEFAULT_KEY) c.key = DEFAULT_KEY;
+    return c;
+  }catch{ return {url:DEFAULT_URL, key:DEFAULT_KEY}; }
+}
+function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||'[]'); }catch{ return []; } }
+function saveCache(d){ localStorage.setItem(CACHE_KEY, JSON.stringify(d)); }
+
+function setCloud(state, txt){
+  const dot=document.getElementById('cloudDot'), lbl=document.getElementById('cloudText');
+  const col={connecting:'#94a3b8',connected:'#22c55e',syncing:'#eab308',error:'#ef4444',offline:'#94a3b8'};
+  dot.style.background=col[state]||'#94a3b8';
+  dot.style.boxShadow = state==='connected'?'0 0 8px '+col[state]:'none';
+  lbl.textContent=txt;
+}
+
+function toast(msg, err){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(err?' err':'');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════════
+async function initCloud(){
+  const cfg=getConfig();
+  if(!cfg.url||!cfg.key){ setCloud('offline','محلي فقط'); DRIVERS=loadCache(); render(); return; }
+  setCloud('connecting','جاري الاتصال...');
+  try{
+    sb=supabase.createClient(cfg.url,cfg.key);
+    await pull();
+    setCloud('connected','☁️ متصل — لحظي');
+    subscribe();
+  }catch(e){
+    console.error(e); setCloud('error','خطأ اتصال');
+    DRIVERS=loadCache(); render();
+  }
+}
+
+async function pull(){
+  const {data,error}=await sb.from('drivers_onboarding').select('*').order('seq');
+  if(error) throw error;
+  DRIVERS=data||[];
+  saveCache(DRIVERS);
+  render();
+}
+
+function subscribe(){
+  if(realtimeCh) sb.removeChannel(realtimeCh);
+  realtimeCh=sb.channel('onboard_ch')
+    .on('postgres_changes',{event:'*',schema:'public',table:'drivers_onboarding'},()=>{
+      clearTimeout(window._rt); window._rt=setTimeout(pull,400);
+      setCloud('connected','☁️ تحديث لحظي ✅');
+      setTimeout(()=>setCloud('connected','☁️ متصل — '+DRIVERS.length+' سائق'),1500);
+    }).subscribe();
+}
+
+async function upsert(rec){
+  if(!cloudReady && !sb){ // local fallback
+    const i=DRIVERS.findIndex(d=>d.id===rec.id);
+    if(i>=0) DRIVERS[i]=rec; else DRIVERS.push(rec);
+    saveCache(DRIVERS); render(); return true;
+  }
+  try{
+    setCloud('syncing','⬆️ حفظ...');
+    const {error}=await sb.from('drivers_onboarding').upsert(rec,{onConflict:'id'});
+    if(error) throw error;
+    setCloud('connected','☁️ محفوظ ✅');
+    return true;
+  }catch(e){ console.error(e); toast('خطأ في الحفظ: '+e.message,true); return false; }
+}
+
+async function removeDriver(id){
+  try{
+    if(sb){ const {error}=await sb.from('drivers_onboarding').delete().eq('id',id); if(error) throw error; }
+    else { DRIVERS=DRIVERS.filter(d=>d.id!==id); saveCache(DRIVERS); render(); }
+    return true;
+  }catch(e){ toast('خطأ الحذف: '+e.message,true); return false; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+function progress(d){
+  const done = STAGES.filter(s=>stageDone(d[s])).length;
+  return Math.round(done/STAGES.length*100);
+}
+function progColor(p){ return p>=100?'#059669':p>=50?'#d97706':p>0?'#2563eb':'#94a3b8'; }
+
+function driverState(d){
+  const p=progress(d);
+  if(p>=100) return 'done';
+  const hasStuck = STAGES.some(s=>statusClass(d[s])==='st-red');
+  if(hasStuck) return 'stuck';
+  return 'progress';
+}
+
+function renderKPIs(){
+  const total=DRIVERS.length;
+  const done=DRIVERS.filter(d=>driverState(d)==='done').length;
+  const prog=DRIVERS.filter(d=>driverState(d)==='progress').length;
+  const stuck=DRIVERS.filter(d=>driverState(d)==='stuck').length;
+  const avgProg = total? Math.round(DRIVERS.reduce((s,d)=>s+progress(d),0)/total) : 0;
+  const kpis=[
+    {k:'',label:'إجمالي السائقين',val:total,sub:'كل الكشف',c:'var(--navy)'},
+    {k:'done',label:'مكتمل ✅',val:done,sub:'جاهز 100%',c:'var(--green)'},
+    {k:'progress',label:'قيد الإجراء 🟡',val:prog,sub:'تحت المتابعة',c:'var(--amber)'},
+    {k:'stuck',label:'متوقف/مشكلة 🔴',val:stuck,sub:'يحتاج تدخّل',c:'var(--red)'},
+    {k:'',label:'متوسط الإنجاز',val:avgProg+'%',sub:'كل المراحل',c:'var(--gold)'},
+  ];
+  document.getElementById('kpiGrid').innerHTML=kpis.map(x=>
+    `<div class="kpi ${activeKpi===x.k&&x.k?'active':''}" style="--c:${x.c}" onclick="toggleKpi('${x.k}')">
+      <div class="kpi-label">${x.label}</div><div class="kpi-value">${x.val}</div><div class="kpi-sub">${x.sub}</div>
+    </div>`).join('');
+}
+
+function toggleKpi(k){ activeKpi = (activeKpi===k)?'':k; if(k) document.getElementById('filterProg').value=''; render(); }
+
+function stCell(txt){
+  const t=String(txt||'').trim();
+  return t ? `<span class="st ${statusClass(t)}" title="${t.replace(/"/g,'&quot;')}">${t}</span>` : '<span class="st st-gray">—</span>';
+}
+
+function render(){
+  renderKPIs();
+  const q=document.getElementById('searchInput').value.trim();
+  const fNat=document.getElementById('filterNat').value;
+  const fType=document.getElementById('filterType').value;
+  const fProg=document.getElementById('filterProg').value;
+
+  let list=DRIVERS.slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+  if(q) list=list.filter(d=>String(d.name||'').includes(q));
+  if(fNat) list=list.filter(d=>d.nationality===fNat);
+  if(fType) list=list.filter(d=>d.license_type===fType);
+  if(fProg) list=list.filter(d=>driverState(d)===fProg);
+  if(activeKpi) list=list.filter(d=>driverState(d)===activeKpi);
+
+  const tb=document.getElementById('tbody');
+  if(list.length===0){ tb.innerHTML='<tr><td colspan="12" style="padding:40px;color:var(--muted)">لا يوجد سائقين مطابقين</td></tr>'; }
+  else tb.innerHTML=list.map(d=>{
+    const p=progress(d);
+    const tp=d.license_type==='سيكل'?'<span class="type-badge type-bike">🏍️ سيكل</span>':'<span class="type-badge type-car">🚗 سيارة</span>';
+    return `<tr onclick="openEdit('${d.id}')">
+      <td><span class="seq-badge">${d.seq||''}</span></td>
+      <td class="name-cell">${d.name||''}</td>
+      <td>${d.nationality||'—'}</td>
+      <td>${stCell(d.medical)}</td>
+      <td>${stCell(d.embassy)}</td>
+      <td>${stCell(d.work_permit)}</td>
+      <td>${stCell(d.residency)}</td>
+      <td>${stCell(d.civil_id)}</td>
+      <td>${stCell(d.license_status)}</td>
+      <td>${tp}</td>
+      <td>${stCell(d.bank_card)}</td>
+      <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${p}%;background:${progColor(p)}"></div></div><span class="prog-txt" style="color:${progColor(p)}">${p}%</span></div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('countLabel').textContent='عرض '+list.length+' من '+DRIVERS.length+' سائق';
+
+  // fill nationality filter
+  const nats=[...new Set(DRIVERS.map(d=>d.nationality).filter(Boolean))].sort();
+  const sel=document.getElementById('filterNat'), cur=sel.value;
+  sel.innerHTML='<option value="">كل الجنسيات</option>'+nats.map(n=>`<option value="${n}">${n}</option>`).join('');
+  sel.value=cur;
+  document.getElementById('natList').innerHTML=nats.map(n=>`<option value="${n}">`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MODAL — Add/Edit
+// ═══════════════════════════════════════════════════════════════════
+function fillPresets(){
+  const map={medical:'f-medical-sel',embassy:'f-embassy-sel',work_permit:'f-work-sel',residency:'f-residency-sel',civil_id:'f-civil-sel',license_status:'f-license-sel',bank_card:'f-bank-sel'};
+  Object.keys(map).forEach(k=>{
+    const sel=document.getElementById(map[k]);
+    sel.innerHTML='<option value="">— اختر حالة جاهزة —</option>'+PRESETS[k].map(o=>`<option value="${o}">${o}</option>`).join('');
+  });
+}
+function applyPreset(inputId,val){ if(val) document.getElementById(inputId).value=val; }
+
+function openAdd(){
+  document.getElementById('modalTitle').textContent='➕ إضافة سائق جديد';
+  document.getElementById('delBtn').style.display='none';
+  ['f-name','f-nat','f-medical','f-embassy','f-work','f-residency','f-civil','f-license','f-bank','f-notes'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f-id').value='';
+  document.getElementById('f-type').value='سياره';
+  document.getElementById('modal').classList.add('show');
+}
+
+function openEdit(id){
+  const d=DRIVERS.find(x=>x.id===id); if(!d) return;
+  document.getElementById('modalTitle').textContent='✏️ تعديل: '+d.name;
+  document.getElementById('delBtn').style.display='inline-flex';
+  document.getElementById('f-id').value=d.id;
+  document.getElementById('f-name').value=d.name||'';
+  document.getElementById('f-nat').value=d.nationality||'';
+  document.getElementById('f-medical').value=d.medical||'';
+  document.getElementById('f-embassy').value=d.embassy||'';
+  document.getElementById('f-work').value=d.work_permit||'';
+  document.getElementById('f-residency').value=d.residency||'';
+  document.getElementById('f-civil').value=d.civil_id||'';
+  document.getElementById('f-license').value=d.license_status||'';
+  document.getElementById('f-type').value=d.license_type||'سياره';
+  document.getElementById('f-bank').value=d.bank_card||'';
+  document.getElementById('f-notes').value=d.notes||'';
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+
+async function saveDriver(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){ toast('اكتب اسم السائق',true); return; }
+  let id=document.getElementById('f-id').value;
+  const isNew=!id;
+  if(isNew) id='drv_'+Date.now()+Math.random().toString(36).slice(2,6);
+  const seq = isNew ? (Math.max(0,...DRIVERS.map(d=>d.seq||0))+1) : (DRIVERS.find(d=>d.id===id)?.seq||0);
+  const rec={
+    id, seq, name,
+    nationality:document.getElementById('f-nat').value.trim(),
+    medical:document.getElementById('f-medical').value.trim(),
+    embassy:document.getElementById('f-embassy').value.trim(),
+    work_permit:document.getElementById('f-work').value.trim(),
+    residency:document.getElementById('f-residency').value.trim(),
+    civil_id:document.getElementById('f-civil').value.trim(),
+    license_status:document.getElementById('f-license').value.trim(),
+    license_type:document.getElementById('f-type').value,
+    bank_card:document.getElementById('f-bank').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+  };
+  const ok=await upsert(rec);
+  if(ok){ toast(isNew?'✅ تم إضافة السائق':'✅ تم حفظ التعديلات'); closeModal(); if(!sb){render();} }
+}
+
+async function deleteDriver(){
+  const id=document.getElementById('f-id').value;
+  const d=DRIVERS.find(x=>x.id===id);
+  if(!confirm('حذف السائق "'+(d?.name||'')+'" نهائياً؟')) return;
+  const ok=await removeDriver(id);
+  if(ok){ toast('تم الحذف'); closeModal(); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════════
+function openSettings(){
+  const c=getConfig();
+  document.getElementById('s-url').value=c.url||'';
+  document.getElementById('s-key').value=c.key||'';
+  document.getElementById('s-status').innerHTML='الحالة: '+(cloudReady?'✅ متصل':'⚠️ غير متصل')+' · '+DRIVERS.length+' سائق';
+  document.getElementById('settingsModal').classList.add('show');
+}
+function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
+function saveSettings(){
+  const url=document.getElementById('s-url').value.trim();
+  const key=document.getElementById('s-key').value.trim();
+  if(!url||!key){ toast('املأ الحقلين',true); return; }
+  localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));
+  closeSettings(); toast('جاري الاتصال...');
+  setTimeout(()=>initCloud().then(()=>{cloudReady=true;}),400);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════════
+function exportExcel(){
+  if(!DRIVERS.length){ toast('لا يوجد بيانات',true); return; }
+  const rows=DRIVERS.slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(d=>({
+    'م':d.seq,'الاسم':d.name,'الجنسية':d.nationality,
+    'الفحص الطبي':d.medical,'توثيق السفارة':d.embassy,'إذن العمل':d.work_permit,
+    'الإقامة':d.residency,'المدنية':d.civil_id,'حالة الرخصة':d.license_status,
+    'نوع الرخصة':d.license_type,'كارت البنك':d.bank_card,'التقدم %':progress(d),'ملاحظات':d.notes
+  }));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!views']=[{RTL:true}];
+  XLSX.utils.book_append_sheet(wb,ws,'كشف السائقين');
+  XLSX.writeFile(wb,'كشف_السائقين_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('✅ تم التصدير');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',async ()=>{
+  fillPresets();
+  DRIVERS=loadCache(); render();
+  await initCloud();
+  cloudReady = !!sb;
+});
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && sb) pull(); });
+</script>
+</body>
+</html>
