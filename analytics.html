@@ -674,9 +674,12 @@ function renderNationality() {
 
 function renderDriversDist() {
   destroyChart('driversDist');
+  const dist = (DATA.driversDist && DATA.driversDist.length)
+    ? DATA.driversDist
+    : [{name:'كيتا (16)',value:16,color:'#059669'},{name:'هومي (13)',value:13,color:'#d97706'},{name:'كابوريا (11)',value:11,color:'#2563eb'}];
   charts.driversDist = new Chart(document.getElementById('driversDistChart'), {
     type: 'polarArea',
-    data: {labels:['كيتا (16)', 'هومي (13)', 'كابوريا (11)'], datasets:[{data:[16, 13, 11], backgroundColor:['#059669', '#d97706', '#2563eb']}]},
+    data: {labels:dist.map(d=>d.name), datasets:[{data:dist.map(d=>d.value), backgroundColor:dist.map(d=>d.color)}]},
     options: {responsive:true, maintainAspectRatio:false}
   });
 }
@@ -684,13 +687,14 @@ function renderDriversDist() {
 function renderAttendance() {
   destroyChart('attendance');
   const a = DATA.attendance;
+  const titleTxt = a.noData ? 'لا توجد بيانات حضور لهذا الشهر' : `${a.presentRate}% حضور`;
   charts.attendance = new Chart(document.getElementById('attendanceChart'), {
     type: 'doughnut',
     data: {
       labels: ['حاضر', 'متأخر', 'غائب'],
-      datasets: [{data:[a.presentRate, a.lateRate, a.absentRate], backgroundColor:['#059669', '#f59e0b', '#dc2626'], borderWidth:3, borderColor:'#fff'}]
+      datasets: [{data:[a.presentRate||0, a.lateRate||0, a.absentRate||0], backgroundColor:['#059669', '#f59e0b', '#dc2626'], borderWidth:3, borderColor:'#fff'}]
     },
-    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, title:{display:true, text:`${a.presentRate}% حضور`, font:{size:14, weight:'bold'}}}}
+    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}, title:{display:true, text:titleTxt, font:{size:13, weight:'bold'}}}}
   });
 }
 
@@ -903,8 +907,138 @@ function syncJulyFromARK() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// قراءة الموارد البشرية + الأسطول من ARK (localStorage — نفس الموقع)
+// ═══════════════════════════════════════════════════════════════════
+const ARK_SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const ARK_SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+const NAT_COLORS = ['#059669','#2563eb','#d97706','#7c3aed','#e11d48','#0891b2','#f59e0b','#14b8a6','#ec4899','#6366f1','#84cc16','#f97316'];
+const PARTNER_MAP = { keeta:{name:'كيتا',color:'#059669'}, caboria:{name:'كابوريا',color:'#2563eb'}, homy:{name:'هومي',color:'#d97706'}, imile:{name:'iMile',color:'#7c3aed'} };
+let arkHasDrivers = false;
+
+function getARKDrivers() {
+  try { return JSON.parse(localStorage.getItem('sl_drv2') || localStorage.getItem('sl_drv') || '[]'); }
+  catch { return []; }
+}
+
+function syncHRFleetFromARK() {
+  const all = getARKDrivers();
+  const drv = all.filter(d => d.staff_type !== 'admin');
+  if (drv.length === 0) { arkHasDrivers = false; return false; }
+  arkHasDrivers = true;
+
+  // 🌍 الجنسيات (فعلي من ARK)
+  const natCount = {};
+  drv.forEach(d => { const n = String(d.nationality || 'غير محدد').trim() || 'غير محدد'; natCount[n] = (natCount[n] || 0) + 1; });
+  DATA.nationalities = Object.keys(natCount).sort((a,b)=>natCount[b]-natCount[a])
+    .map((n,i) => ({ name:n, value:natCount[n], color:NAT_COLORS[i % NAT_COLORS.length] }));
+
+  // 👥 توزيع السائقين على المنصات (فعلي)
+  const partCount = {};
+  drv.forEach(d => { const p = d.partner || 'other'; partCount[p] = (partCount[p] || 0) + 1; });
+  DATA.driversDist = Object.keys(partCount).sort((a,b)=>partCount[b]-partCount[a]).map(p => {
+    const m = PARTNER_MAP[p] || { name:(p==='other'?'غير محدد':p), color:'#64748b' };
+    return { name:`${m.name} (${partCount[p]})`, value:partCount[p], color:m.color };
+  });
+
+  // 🚗 الأسطول (سيارة/بدون سيارة)
+  const withCar = drv.filter(d => d.car && String(d.car).trim()).length;
+  const noCar = drv.length - withCar;
+  DATA.fleet = {
+    total: drv.length, active: withCar, inMaintenance: 0, outOfService: noCar,
+    utilization: drv.length ? +(withCar / drv.length * 100).toFixed(1) : 0
+  };
+  return true;
+}
+
+function syncAttendanceFromARK(monthKey) {
+  try {
+    const att = JSON.parse(localStorage.getItem('sl_att2') || '{}');
+    const pfx = '2026-' + monthKey;
+    let present = 0, late = 0, absent = 0;
+    Object.keys(att).forEach(k => {
+      const datePart = k.split('_')[1] || '';
+      if (datePart.indexOf(pfx) === 0) {
+        const st = att[k].status;
+        if (st === 'present') present++;
+        else if (st === 'late') late++;
+        else if (st === 'absent') absent++;
+      }
+    });
+    const total = present + late + absent;
+    if (total === 0) { DATA.attendance = { presentRate:0, lateRate:0, absentRate:0, noData:true }; return false; }
+    DATA.attendance = {
+      presentRate: +(present / total * 100).toFixed(1),
+      lateRate: +(late / total * 100).toFixed(1),
+      absentRate: +(absent / total * 100).toFixed(1)
+    };
+    return true;
+  } catch (e) { return false; }
+}
+
+// 🏆 طلبات السائقين من Supabase daily_reports (async)
+async function syncDriverOrdersFromARK(monthKey) {
+  try {
+    const from = '2026-' + monthKey + '-01';
+    const to = '2026-' + monthKey + '-31';
+    const url = ARK_SUPA_URL + '/rest/v1/daily_reports?report_date=gte.' + from + '&report_date=lte.' + to + '&limit=5000';
+    const r = await fetch(url, { headers: { apikey: ARK_SUPA_KEY, Authorization: 'Bearer ' + ARK_SUPA_KEY } });
+    if (!r.ok) return false;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || rows.length === 0) return false;
+
+    const drv = getARKDrivers();
+    const byDrv = {};
+    rows.forEach(row => {
+      const id = row.driver_id;
+      if (!id) return;
+      if (!byDrv[id]) byDrv[id] = { orders:0, days:0, name: row.driver_name || id };
+      byDrv[id].orders += parseInt(row.orders_count) || 0;
+      byDrv[id].days += 1;
+    });
+
+    // إيراد كل شريك (من التحليل المالي) لتوزيعه على السائقين نسبةً لطلباتهم
+    const m = monthKey;
+    const partnerRev = {};
+    (DATA.partners[m] || []).forEach(p => {
+      const key = Object.keys(PARTNER_MAP).find(k => PARTNER_MAP[k].name === p.name || p.name.toLowerCase().includes(k));
+      partnerRev[key || p.name] = p.value;
+    });
+    // إجمالي طلبات كل شريك
+    const partnerOrders = {};
+    Object.keys(byDrv).forEach(id => {
+      const d = drv.find(x => x.id === id) || {};
+      const p = d.partner || 'other';
+      partnerOrders[p] = (partnerOrders[p] || 0) + byDrv[id].orders;
+    });
+
+    DATA.drivers = Object.keys(byDrv).map(id => {
+      const d = drv.find(x => x.id === id) || {};
+      const rec = byDrv[id];
+      const p = d.partner || 'other';
+      const pm = PARTNER_MAP[p] || { name:'—', color:'#64748b' };
+      // إيراد تقديري = (طلبات السائق / إجمالي طلبات الشريك) × إيراد الشريك
+      let revenue = 0;
+      if (partnerOrders[p] > 0 && partnerRev[p]) revenue = +(rec.orders / partnerOrders[p] * partnerRev[p]).toFixed(2);
+      return {
+        name: rec.name,
+        platform: pm.name,
+        orders: rec.orders,
+        revenue: revenue,
+        perDay: rec.days ? +(rec.orders / rec.days).toFixed(1) : 0,
+        days: rec.days,
+        color: pm.color
+      };
+    }).filter(x => x.orders > 0).sort((a,b) => b.orders - a.orders);
+
+    return DATA.drivers.length > 0;
+  } catch (e) { console.warn('syncDriverOrdersFromARK:', e); return false; }
+}
+
 function renderAll() {
   syncJulyFromARK();
+  syncHRFleetFromARK();
+  syncAttendanceFromARK(getMonth());
   updateInsight();
   renderKPIs();
   renderRevenueChart();
@@ -928,6 +1062,16 @@ function renderAll() {
   renderViolations();
   renderForecast();
   renderRankingTable();
+
+  // طلبات السائقين الفعلية من ARK (Supabase daily_reports) — غير متزامن
+  syncDriverOrdersFromARK(getMonth()).then(ok => {
+    if (ok) {
+      renderTopDrivers();
+      renderOrdersPerDay();
+      renderRevenuePerDriver();
+      renderRankingTable();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
