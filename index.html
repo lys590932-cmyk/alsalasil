@@ -3670,6 +3670,288 @@ if(_origRefreshAll){
 // تحميل أولي احتياطي
 setTimeout(function(){ if(DRIVER) loadControlData(); }, 2500);
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   ⏰ محرك تنبيهات الشفت + خصم التأخير التلقائي
+   • تنبيه قبل الشفت بـ30 دقيقة
+   • تنبيه عند بداية الشفت
+   • خصم نصف يوم تلقائي عند التأخير 30 دقيقة + إشعار
+   ═══════════════════════════════════════════════════════════════════ */
+
+var SHIFT_CFG = { grace:30, fraction:0.5, prealert:30 };
+var _alertSentLocal = {};   // كاش محلي لمنع التكرار في نفس الجلسة
+var _shiftTimer = null;
+
+/* تحميل الإعدادات من السحابة */
+function loadShiftSettings(){
+  return sb('app_settings?select=key,value')
+    .then(function(rows){
+      (rows||[]).forEach(function(r){
+        if(r.key==='late_grace_minutes')    SHIFT_CFG.grace    = parseInt(r.value,10)||30;
+        if(r.key==='late_deduct_fraction')  SHIFT_CFG.fraction = parseFloat(r.value)||0.5;
+        if(r.key==='prealert_minutes')      SHIFT_CFG.prealert = parseInt(r.value,10)||30;
+      });
+    }).catch(function(){});
+}
+
+/* تحويل HH:MM ليوم معيّن → Date */
+function shiftDateTime(dateStr, hhmm){
+  if(!dateStr || !hhmm) return null;
+  var p = String(hhmm).split(':');
+  var d = new Date(dateStr+'T00:00:00');
+  d.setHours(parseInt(p[0],10)||0, parseInt(p[1],10)||0, 0, 0);
+  return d;
+}
+
+/* شفت اليوم من الجدول */
+function todayShift(){
+  var ts = todayStr();
+  for(var i=0;i<SCHEDULES.length;i++){
+    var s = SCHEDULES[i];
+    if(s.date===ts) return s;
+  }
+  return null;
+}
+
+/* هل سجّل حضور اليوم؟ ووقت التسجيل */
+function todayClockInTime(){
+  var ts = todayStr();
+  var best = null;
+  CLOCKINS.forEach(function(c){
+    if(c.action!=='clock_in') return;
+    var d = String(c.created_at||'').slice(0,10);
+    if(d!==ts) return;
+    var t = new Date(c.created_at);
+    if(!best || t<best) best = t;
+  });
+  return best;
+}
+
+/* تسجيل أن التنبيه أُرسل (منع التكرار) */
+function markAlertSent(kind){
+  var key = DRIVER.id+'_'+todayStr()+'_'+kind;
+  _alertSentLocal[key] = true;
+  try{ localStorage.setItem('sl_alert_'+key,'1'); }catch(e){}
+  sb('shift_alerts', {method:'POST', headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({driver_id:DRIVER.id, alert_date:todayStr(), alert_kind:kind})
+  }).catch(function(){});
+}
+function alertAlreadySent(kind){
+  var key = DRIVER.id+'_'+todayStr()+'_'+kind;
+  if(_alertSentLocal[key]) return true;
+  try{ if(localStorage.getItem('sl_alert_'+key)==='1'){ _alertSentLocal[key]=true; return true; } }catch(e){}
+  return false;
+}
+
+/* إظهار إشعار داخل التطبيق + على الموبايل */
+function fireShiftNotif(title, body, tag, level){
+  // إشعار موبايل
+  try{ showPushNotif({title:title, body:body, tag:tag, data:{url:'./index.html'}}); }catch(e){}
+  // إشعار داخل التطبيق
+  var color = level==='bad' ? 'var(--red2)' : (level==='warn' ? 'var(--amber2)' : 'var(--blue2)');
+  var bg    = level==='bad' ? 'rgba(239,68,68,.14)' : (level==='warn' ? 'rgba(245,158,11,.14)' : 'rgba(59,130,246,.14)');
+  var ic    = level==='bad' ? 'ti-alert-octagon' : (level==='warn' ? 'ti-clock-exclamation' : 'ti-clock-hour-4');
+  NOTIFS.unshift({ic:ic, color:color, bg:bg, title:title, desc:body, time:fmtDateTime(new Date().toISOString())});
+  if(typeof _updateBellBadge==='function') _updateBellBadge();
+  toast(title, level==='bad'?'err':'ok');
+}
+
+/* إنشاء خصم التأخير */
+function createLateDeduction(minutesLate, shiftStart){
+  var base = parseFloat(DRIVER.salary_base)||0;
+  var perDay = base/30;
+  var amount = +(perDay * SHIFT_CFG.fraction).toFixed(3);
+  var fracTxt = SHIFT_CFG.fraction===0.5 ? (LANG==='ar'?'نصف يوم':'half day')
+              : (SHIFT_CFG.fraction===1 ? (LANG==='ar'?'يوم كامل':'full day')
+              : (SHIFT_CFG.fraction*100)+'%');
+  var reason = (LANG==='ar')
+    ? 'تأخير '+minutesLate+' دقيقة عن بداية الشفت ('+shiftStart+') — خصم '+fracTxt
+    : 'Late '+minutesLate+' min from shift start ('+shiftStart+') — '+fracTxt+' deduction';
+
+  var rec = {
+    id: 'LATE_'+DRIVER.id+'_'+todayStr(),
+    driver_id: DRIVER.id,
+    driver_name: DRIVER.name,
+    date: todayStr(),
+    amount: amount,
+    reason: reason,
+    ded_type: 'late',
+    auto: true,
+    minutes_late: minutesLate,
+    status: 'active'
+  };
+
+  return sb('deductions?on_conflict=id', {
+    method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body: JSON.stringify(rec)
+  }).then(function(){
+    // حدّث القائمة محلياً
+    var exists = DEDUCTIONS.some(function(d){ return d.id===rec.id; });
+    if(!exists) DEDUCTIONS.unshift(rec);
+    saveCache();
+    return amount;
+  });
+}
+
+/* ═══ الفحص الدوري ═══ */
+function checkShiftAlerts(){
+  if(!DRIVER) return;
+  var sh = todayShift();
+  if(!sh) return;
+  if(sh.shift_type==='off' || sh.shift_type==='holiday') return;
+  if(!sh.shift_start) return;
+
+  var start = shiftDateTime(sh.date, sh.shift_start);
+  if(!start) return;
+  var now = new Date();
+  var diffMin = Math.round((start - now)/60000);   // موجب = قبل الشفت
+
+  // ── 1) تنبيه قبل الشفت ──
+  if(diffMin <= SHIFT_CFG.prealert && diffMin > 0 && !alertAlreadySent('pre30')){
+    markAlertSent('pre30');
+    fireShiftNotif(
+      LANG==='ar' ? '⏰ شفتك بعد '+diffMin+' دقيقة' : '⏰ Your shift starts in '+diffMin+' min',
+      LANG==='ar' ? 'استعد — بداية الشفت الساعة '+sh.shift_start+'. لا تنسَ صورة بداية الشفت 📸'
+                  : 'Get ready — shift starts at '+sh.shift_start+'. Don\'t forget your shift photo 📸',
+      'shift-pre', 'warn'
+    );
+  }
+
+  // ── 2) تنبيه بداية الشفت ──
+  if(diffMin <= 0 && diffMin > -5 && !alertAlreadySent('start')){
+    markAlertSent('start');
+    fireShiftNotif(
+      LANG==='ar' ? '🚀 بدأ شفتك الآن' : '🚀 Your shift started',
+      LANG==='ar' ? 'سجّل حضورك من شاشة الحضور. لديك '+SHIFT_CFG.grace+' دقيقة قبل الخصم.'
+                  : 'Clock in now. You have '+SHIFT_CFG.grace+' minutes before deduction.',
+      'shift-start', 'info'
+    );
+  }
+
+  // ── 3) التأخير + الخصم التلقائي ──
+  var lateMin = -diffMin;                       // كم دقيقة تأخير
+  if(lateMin >= SHIFT_CFG.grace && !alertAlreadySent('late30')){
+    var ci = todayClockInTime();
+    // لو سجّل حضور قبل انتهاء المهلة → لا خصم
+    if(ci){
+      var ciLate = Math.round((ci - start)/60000);
+      if(ciLate < SHIFT_CFG.grace){ markAlertSent('late30'); return; }
+    }
+    markAlertSent('late30');
+    var actualLate = ci ? Math.round((ci - start)/60000) : lateMin;
+    createLateDeduction(actualLate, sh.shift_start).then(function(amount){
+      fireShiftNotif(
+        LANG==='ar' ? '⚠️ تم خصم تأخير' : '⚠️ Late deduction applied',
+        LANG==='ar' ? 'تأخرت '+actualLate+' دقيقة عن بداية الشفت. تم خصم '+fmtKD(amount)+' د.ك من راتبك.'
+                    : 'You were '+actualLate+' min late. '+fmtKD(amount)+' KD deducted from your salary.',
+        'shift-late', 'bad'
+      );
+      renderCurrentTab();
+    }).catch(function(e){ console.warn('late deduction', e); });
+  }
+}
+
+/* ═══ عرض شفت اليوم في الشاشة الرئيسية ═══ */
+function todayShiftCardHTML(){
+  var sh = todayShift();
+  if(!sh) return '';
+  if(sh.shift_type==='off' || sh.shift_type==='holiday'){
+    return '<div class="card" style="border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.06)">'+
+      '<div style="display:flex;align-items:center;gap:11px;padding:3px">'+
+      '<span style="font-size:26px">'+(sh.shift_type==='holiday'?'🌴':'🔴')+'</span>'+
+      '<div><div style="font-weight:900;font-size:14px;color:#ef4444">'+
+      (sh.shift_type==='holiday'?(LANG==='ar'?'عطلة رسمية':'Public holiday'):(LANG==='ar'?'إجازة اليوم':'Day off'))+'</div>'+
+      '<div style="font-size:11px;color:var(--muted2)">'+(LANG==='ar'?'استمتع بيومك 😊':'Enjoy your day 😊')+'</div></div></div></div>';
+  }
+  if(!sh.shift_start) return '';
+
+  var start = shiftDateTime(sh.date, sh.shift_start);
+  var now = new Date();
+  var diffMin = Math.round((start-now)/60000);
+  var ci = todayClockInTime();
+
+  var stTxt, stCol, icon;
+  if(ci){
+    var ciLate = Math.round((ci-start)/60000);
+    if(ciLate > SHIFT_CFG.grace){ stTxt=(LANG==='ar'?'سجّلت متأخراً '+ciLate+' د':'Clocked in '+ciLate+'m late'); stCol='#ef4444'; icon='⚠️'; }
+    else if(ciLate > 0){ stTxt=(LANG==='ar'?'سجّلت بعد '+ciLate+' د':'Clocked in +'+ciLate+'m'); stCol='#f59e0b'; icon='✅'; }
+    else { stTxt=(LANG==='ar'?'سجّلت في الوقت ✅':'On time ✅'); stCol='#10b981'; icon='✅'; }
+  } else if(diffMin > 0){
+    var hh = Math.floor(diffMin/60), mm = diffMin%60;
+    stTxt = (LANG==='ar'?'يبدأ بعد ':'Starts in ')+(hh?hh+(LANG==='ar'?' س ':'h '):'')+mm+(LANG==='ar'?' د':'m');
+    stCol = diffMin<=SHIFT_CFG.prealert ? '#f59e0b' : '#3b82f6';
+    icon = diffMin<=SHIFT_CFG.prealert ? '⏰' : '🕐';
+  } else {
+    var lt = -diffMin;
+    if(lt >= SHIFT_CFG.grace){ stTxt=(LANG==='ar'?'متأخر '+lt+' دقيقة — سجّل فوراً!':'Late '+lt+'m — clock in now!'); stCol='#ef4444'; icon='🚨'; }
+    else { stTxt=(LANG==='ar'?'بدأ الشفت — باقي '+(SHIFT_CFG.grace-lt)+' د قبل الخصم':'Started — '+(SHIFT_CFG.grace-lt)+'m before deduction'); stCol='#f59e0b'; icon='🚀'; }
+  }
+
+  return '<div class="card" style="border:1px solid '+stCol+'44;background:'+stCol+'0f">'+
+    '<div style="display:flex;align-items:center;gap:11px;margin-bottom:9px">'+
+      '<span style="font-size:26px">'+icon+'</span>'+
+      '<div style="flex:1"><div style="font-weight:900;font-size:14px">'+(LANG==='ar'?'شفت اليوم':'Today\'s shift')+'</div>'+
+      '<div style="font-size:12px;font-weight:800;color:'+stCol+'">'+stTxt+'</div></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:9px">'+
+      '<div style="flex:1;background:var(--s2);padding:9px;border-radius:10px;text-align:center">'+
+        '<div style="font-size:10px;color:var(--muted2);font-weight:700">'+(LANG==='ar'?'البداية':'Start')+'</div>'+
+        '<div style="font-size:16px;font-weight:900;color:#10b981">'+sh.shift_start+'</div></div>'+
+      '<div style="flex:1;background:var(--s2);padding:9px;border-radius:10px;text-align:center">'+
+        '<div style="font-size:10px;color:var(--muted2);font-weight:700">'+(LANG==='ar'?'النهاية':'End')+'</div>'+
+        '<div style="font-size:16px;font-weight:900;color:#ef4444">'+(sh.shift_end||'—')+'</div></div>'+
+    '</div></div>';
+}
+
+/* حقن كارت الشفت في الشاشة الرئيسية */
+var _origRenderHome2 = renderHome;
+renderHome = function(){
+  _origRenderHome2();
+  var el=$('scrHome'); if(!el) return;
+  var html = todayShiftCardHTML();
+  if(!html) return;
+  var d=document.createElement('div');
+  d.innerHTML=html;
+  el.insertBefore(d, el.firstChild);
+};
+
+/* حقن كارت الشفت في شاشة الحضور كمان */
+var _origRenderAttendance2 = renderAttendance;
+renderAttendance = function(){
+  _origRenderAttendance2();
+  var el=$('scrAttendance'); if(!el) return;
+  var html = todayShiftCardHTML();
+  if(!html) return;
+  var d=document.createElement('div');
+  d.innerHTML=html;
+  el.insertBefore(d, el.firstChild);
+};
+
+/* بدء المحرّك */
+function startShiftEngine(){
+  if(_shiftTimer) clearInterval(_shiftTimer);
+  loadShiftSettings().then(function(){
+    checkShiftAlerts();
+    _shiftTimer = setInterval(checkShiftAlerts, 60000);  // كل دقيقة
+  });
+}
+
+/* تشغيله بعد الدخول */
+var _origEnterApp2 = (typeof enterApp==='function') ? enterApp : null;
+if(_origEnterApp2){
+  enterApp = function(){
+    var r=_origEnterApp2.apply(this, arguments);
+    setTimeout(startShiftEngine, 1500);
+    return r;
+  };
+}
+setTimeout(function(){ if(DRIVER) startShiftEngine(); }, 3500);
+// أعِد الفحص عند العودة للتطبيق
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden && DRIVER) checkShiftAlerts();
+});
+
 </script>
 </body>
 </html>

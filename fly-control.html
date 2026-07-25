@@ -86,6 +86,7 @@
   <button class="tab" data-v="maint" onclick="go('maint')"><i class="ti ti-tool"></i> الصيانة <span class="bdg" id="bMaint" style="display:none">0</span></button>
   <button class="tab" data-v="fuel" onclick="go('fuel')"><i class="ti ti-gas-station"></i> الوقود</button>
   <button class="tab" data-v="vio" onclick="go('vio')"><i class="ti ti-alert-triangle"></i> المخالفات</button>
+  <button class="tab" data-v="shifts" onclick="go('shifts')"><i class="ti ti-clock"></i> الشفتات والتأخير <span class="bdg" id="bLate" style="display:none">0</span></button>
 </div>
 
 <div class="container">
@@ -151,6 +152,29 @@
       <div style="overflow-x:auto"><table id="tVio"></table></div></div>
   </div>
 
+  <!-- الشفتات والتأخير -->
+  <div class="view" id="v-shifts">
+    <div class="kpis" id="kShift"></div>
+    <div class="toolbar">
+      <label style="font-weight:800;font-size:13px;color:var(--navy)">📅 التاريخ:</label>
+      <input type="date" id="shiftDate" onchange="renderShifts()">
+      <select id="shiftFilter" onchange="renderShifts()">
+        <option value="">الكل</option>
+        <option value="late">🔴 متأخر (خُصم)</option>
+        <option value="ontime">✅ في الوقت</option>
+        <option value="noshow">⚫ لم يسجّل</option>
+        <option value="off">🏖️ إجازة</option>
+      </select>
+      <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700">
+        ⚙️ المهلة: <b id="cfgGrace">30</b> د · الخصم: <b id="cfgFrac">نصف يوم</b>
+      </span>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-clock"></i> شفتات اليوم والالتزام</div>
+      <div style="overflow-x:auto"><table id="tShifts"></table></div></div>
+    <div class="card"><div class="card-h"><i class="ti ti-cash-off"></i> خصومات التأخير التلقائية</div>
+      <div style="overflow-x:auto"><table id="tLateDed"></table></div></div>
+  </div>
+
 </div>
 
 <div class="lightbox" id="lb" onclick="closeLB()"><button class="x" onclick="closeLB()">×</button><img id="lbImg"></div>
@@ -160,6 +184,7 @@
 const SUPA_URL='https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY='sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 let sb=null, PHOTOS=[], REQS=[], MAINT=[], FUEL=[], VIO=[], DRIVERS=[];
+let SCHED=[], CLOCKINS=[], DEDS=[], CFG={grace:30,fraction:0.5,prealert:30};
 
 function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast on'+(e?' err':'');setTimeout(()=>t.classList.remove('on'),2800);}
 function setCloud(s,txt){const d=document.getElementById('dot');const c={connecting:'#94a3b8',connected:'#22c55e',error:'#ef4444'};d.style.background=c[s]||'#94a3b8';d.style.boxShadow=s==='connected'?'0 0 8px '+c[s]:'none';document.getElementById('cloudTxt').textContent=txt;}
@@ -173,7 +198,7 @@ function go(v){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
-  ({photos:renderPhotos,requests:renderRequests,maint:renderMaint,fuel:renderFuel,vio:renderVio}[v]||(()=>{}))();
+  ({photos:renderPhotos,requests:renderRequests,maint:renderMaint,fuel:renderFuel,vio:renderVio,shifts:renderShifts}[v]||(()=>{}))();
 }
 
 // ── ARK drivers (localStorage) ──
@@ -186,14 +211,24 @@ async function loadAll(){
   setCloud('connecting','جاري التحميل...');
   DRIVERS=getDrivers();
   try{
-    const [p,r,m,f,v]=await Promise.all([
+    const [p,r,m,f,v,sc,ci,dd,st]=await Promise.all([
       sb.from('shift_photos').select('*').order('photo_date',{ascending:false}).limit(600),
       sb.from('driver_requests').select('*').order('created_at',{ascending:false}).limit(300),
       sb.from('maintenance_reports').select('*').order('report_date',{ascending:false}).limit(300),
       sb.from('fuel_logs').select('*').order('log_date',{ascending:false}).limit(500),
       sb.from('driver_violations').select('*').order('vio_date',{ascending:false}).limit(400),
+      sb.from('schedules').select('*').order('date',{ascending:false}).limit(2000),
+      sb.from('clockin').select('*').order('created_at',{ascending:false}).limit(2000),
+      sb.from('deductions').select('*').order('date',{ascending:false}).limit(500),
+      sb.from('app_settings').select('*'),
     ]);
     PHOTOS=p.data||[];REQS=r.data||[];MAINT=m.data||[];FUEL=f.data||[];VIO=v.data||[];
+    SCHED=sc.data||[];CLOCKINS=ci.data||[];DEDS=dd.data||[];
+    (st.data||[]).forEach(x=>{
+      if(x.key==='late_grace_minutes') CFG.grace=parseInt(x.value,10)||30;
+      if(x.key==='late_deduct_fraction') CFG.fraction=parseFloat(x.value)||0.5;
+      if(x.key==='prealert_minutes') CFG.prealert=parseInt(x.value,10)||30;
+    });
     setCloud('connected','☁️ متصل');
     badges(); go(document.querySelector('.tab.on').dataset.v);
   }catch(e){ console.error(e); setCloud('error','خطأ اتصال'); toast('خطأ: '+e.message,true); }
@@ -413,14 +448,126 @@ async function openAddVio(){
   }catch(e){ toast('خطأ: '+e.message,true); }
 }
 
+// ══════════ الشفتات والتأخير ══════════
+function shiftDT(dateStr,hhmm){
+  if(!dateStr||!hhmm) return null;
+  const p=String(hhmm).split(':');
+  const d=new Date(dateStr+'T00:00:00');
+  d.setHours(parseInt(p[0],10)||0,parseInt(p[1],10)||0,0,0);
+  return d;
+}
+function firstClockIn(drvId,dateStr){
+  let best=null;
+  CLOCKINS.forEach(c=>{
+    if(c.action!=='clock_in')return;
+    if(String(c.created_at||'').slice(0,10)!==dateStr)return;
+    const t=new Date(c.created_at);
+    if(!best||t<best)best=t;
+  });
+  return best;
+}
+function renderShifts(){
+  const date=document.getElementById('shiftDate').value||new Date().toISOString().slice(0,10);
+  const filt=document.getElementById('shiftFilter').value;
+  document.getElementById('cfgGrace').textContent=CFG.grace;
+  document.getElementById('cfgFrac').textContent=CFG.fraction===0.5?'نصف يوم':(CFG.fraction===1?'يوم كامل':(CFG.fraction*100)+'%');
+
+  const daySched=SCHED.filter(s=>s.date===date);
+  const byDrv={}; daySched.forEach(s=>byDrv[s.driver_id]=s);
+
+  let rows=DRIVERS.map(d=>{
+    const sh=byDrv[d.id]||null;
+    let state='none', lateMin=0, ciTime=null;
+    if(sh){
+      if(sh.shift_type==='off'||sh.shift_type==='holiday') state='off';
+      else if(sh.shift_start){
+        const start=shiftDT(date,sh.shift_start);
+        ciTime=firstClockIn(d.id,date);
+        if(ciTime){
+          lateMin=Math.round((ciTime-start)/60000);
+          state = lateMin>=CFG.grace ? 'late' : 'ontime';
+        } else {
+          const now=new Date();
+          state = (now>start) ? 'noshow' : 'pending';
+          if(now>start) lateMin=Math.round((now-start)/60000);
+        }
+      }
+    }
+    return {drv:d, sh, state, lateMin, ciTime};
+  });
+  if(filt) rows=rows.filter(r=>r.state===filt);
+
+  const all=DRIVERS.map(d=>{const sh=byDrv[d.id];if(!sh)return null;return sh;}).filter(Boolean);
+  const working=all.filter(s=>s.shift_type!=='off'&&s.shift_type!=='holiday').length;
+  const lateN=rows.length?DRIVERS.filter(d=>{
+    const sh=byDrv[d.id]; if(!sh||sh.shift_type==='off'||sh.shift_type==='holiday'||!sh.shift_start)return false;
+    const ci=firstClockIn(d.id,date); if(!ci)return false;
+    return Math.round((ci-shiftDT(date,sh.shift_start))/60000)>=CFG.grace;
+  }).length:0;
+  const noshowN=DRIVERS.filter(d=>{
+    const sh=byDrv[d.id]; if(!sh||sh.shift_type==='off'||sh.shift_type==='holiday'||!sh.shift_start)return false;
+    return !firstClockIn(d.id,date) && new Date()>shiftDT(date,sh.shift_start);
+  }).length;
+  const lateDeds=DEDS.filter(x=>x.ded_type==='late'&&x.date===date);
+  const lateSum=lateDeds.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+
+  document.getElementById('kShift').innerHTML=kpiHTML([
+    {l:'شفتات اليوم',v:working,c:'var(--navy)'},
+    {l:'متأخرين 🔴',v:lateN,c:'var(--red)'},
+    {l:'لم يسجّلوا ⚫',v:noshowN,c:'var(--amber)'},
+    {l:'خصومات التأخير (د.ك)',v:fmtKD(lateSum),c:'var(--purple)'},
+  ]);
+  setB('bLate',lateN+noshowN);
+
+  const ST={
+    off:['🏖️ إجازة','b'], ontime:['✅ في الوقت','g'], late:['🔴 متأخر','r'],
+    noshow:['⚫ لم يسجّل','r'], pending:['⏳ لم يبدأ','a'], none:['— لا يوجد شفت','']
+  };
+  document.getElementById('tShifts').innerHTML=
+    '<thead><tr><th>السائق</th><th>الشريك</th><th>الوردية</th><th>البداية</th><th>النهاية</th><th>وقت التسجيل</th><th>التأخير</th><th>الحالة</th></tr></thead><tbody>'+
+    (rows.length?rows.map(r=>{
+      const s=ST[r.state]||ST.none;
+      const tm=r.ciTime?r.ciTime.toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'}):'—';
+      const lateTxt=r.state==='late'?`<b style="color:var(--red)">+${r.lateMin} د</b>`
+                   :(r.state==='ontime'?(r.lateMin>0?`+${r.lateMin} د`:'0'):(r.state==='noshow'?`<b style="color:var(--red)">+${r.lateMin} د</b>`:'—'));
+      const typ=r.sh?(r.sh.shift_type==='off'?'🔴 إجازة':(r.sh.shift_type==='holiday'?'🌴 عطلة':(r.sh.shift_type==='evening'?'🌙 مسائي':'🌅 صباحي'))):'—';
+      return `<tr${r.state==='late'||r.state==='noshow'?' style="background:var(--red-bg)"':''}>
+        <td class="nm">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
+        <td>${typ}</td><td><b>${r.sh&&r.sh.shift_start?r.sh.shift_start:'—'}</b></td>
+        <td>${r.sh&&r.sh.shift_end?r.sh.shift_end:'—'}</td><td>${tm}</td><td>${lateTxt}</td>
+        <td><span class="st ${s[1]}">${s[0]}</span></td></tr>`;
+    }).join('') : '<tr><td colspan="8" class="empty">لا توجد شفتات لهذا اليوم — من ARK اضغط "📲 إرسال للتطبيق"</td></tr>')+'</tbody>';
+
+  // خصومات التأخير
+  const allLate=DEDS.filter(x=>x.ded_type==='late').slice(0,40);
+  document.getElementById('tLateDed').innerHTML=
+    '<thead><tr><th>السائق</th><th>التاريخ</th><th>دقائق التأخير</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
+    (allLate.length?allLate.map(x=>{
+      const cancelled=x.status==='cancelled';
+      return `<tr${cancelled?' style="opacity:.5"':''}>
+        <td class="nm">${esc(x.driver_name)}</td><td>${fmtD(x.date)}</td>
+        <td><b style="color:var(--red)">${x.minutes_late||'—'}</b></td>
+        <td style="font-weight:900;color:var(--red)">${fmtKD(x.amount)}</td>
+        <td style="text-align:right;max-width:280px">${esc(x.reason||'')}</td>
+        <td><span class="st ${cancelled?'':'r'}">${cancelled?'ملغي':'نشط'}</span></td>
+        <td>${!cancelled?`<button class="act ok" onclick="cancelLate('${x.id}')">إلغاء الخصم</button>`:'—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">لا توجد خصومات تأخير</td></tr>')+'</tbody>';
+}
+async function cancelLate(id){
+  if(!confirm('إلغاء خصم التأخير ده؟ (يرجع للسائق)')) return;
+  try{ await sb.from('deductions').update({status:'cancelled',amount:0}).eq('id',id); toast('تم إلغاء الخصم'); await loadAll(); }
+  catch(e){ toast('خطأ: '+e.message,true); }
+}
+
 // ══════════ INIT ══════════
 window.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('shiftDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('photoDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('fuelMonth').value=new Date().toISOString().slice(0,7);
   sb=supabase.createClient(SUPA_URL,SUPA_KEY);
   await loadAll();
   // Realtime
-  ['shift_photos','driver_requests','maintenance_reports','fuel_logs','driver_violations'].forEach(tb=>{
+  ['shift_photos','driver_requests','maintenance_reports','fuel_logs','driver_violations','schedules','deductions','clockin'].forEach(tb=>{
     sb.channel('adm_'+tb).on('postgres_changes',{event:'*',schema:'public',table:tb},()=>{
       clearTimeout(window._rt); window._rt=setTimeout(loadAll,600);
     }).subscribe();

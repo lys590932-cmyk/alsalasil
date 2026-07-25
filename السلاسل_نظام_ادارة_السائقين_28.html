@@ -6716,6 +6716,8 @@ function openAppDetails(id){
     <div class="modal-actions" style="margin-top:10px">
       <button class="btn btn-cancel" onclick="closeModal('schedModal')">إغلاق</button>
       <button class="btn btn-cancel" onclick="exportSchedExcel()"><i class="ti ti-table-export"></i> Excel</button>
+      <button class="btn btn-cancel" onclick="openLateSettings()" title="مهلة التأخير ونسبة الخصم"><i class="ti ti-settings"></i> إعدادات التأخير</button>
+      <button class="btn btn-save" onclick="pushScheduleToApp()" id="btnPushSched" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="ti ti-cloud-upload"></i> 📲 إرسال للتطبيق</button>
       <button class="btn btn-save" onclick="exportScheduleImage()" style="background:linear-gradient(135deg,#a855f7,#7c3aed)"><i class="ti ti-photo-down"></i> تصدير PNG</button>
     </div>
   </div>
@@ -9433,6 +9435,106 @@ function openFuelCardsReport(){
     if(typeof toast==='function') toast('فشل: '+err.message,'e');
     else alert('فشل: '+err.message);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   📲 إرسال جدول الورديات للتطبيق (FLY) + إعدادات التأخير
+   ═══════════════════════════════════════════════════════════════════ */
+async function pushScheduleToApp(){
+  var btn = document.getElementById('btnPushSched');
+  var old = btn ? btn.innerHTML : '';
+  try{
+    if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span> جاري الإرسال...'; }
+
+    // ارفع 60 يوم: 14 يوم للخلف + 46 للأمام (يغطي الأسابيع الجاية)
+    var today = new Date(); today.setHours(0,0,0,0);
+    var from  = new Date(today); from.setDate(from.getDate()-14);
+    var to    = new Date(today); to.setDate(to.getDate()+46);
+    var fromS = fmtDate(from), toS = fmtDate(to);
+
+    var rows = [];
+    for(var key in SCHED){
+      var parts = key.split('_');
+      var drvId = parts[0], dateS = parts[1];
+      if(!drvId || !dateS) continue;
+      if(dateS < fromS || dateS > toS) continue;
+      var e = SCHED[key]; if(!e) continue;
+      var drv = DRV.find(function(d){ return d.id===drvId; });
+      var sh  = String(e.shift||'').split('-');
+      rows.push({
+        id: drvId+'_'+dateS,
+        driver_id: drvId,
+        driver_name: drv ? drv.name : drvId,
+        partner: drv ? (drv.partner||null) : null,
+        date: dateS,
+        shift_type: e.type||'work',
+        shift_start: (e.type==='off'||e.type==='holiday') ? null : (sh[0]||null),
+        shift_end:   (e.type==='off'||e.type==='holiday') ? null : (sh[1]||null),
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    if(!rows.length){ toast('لا توجد ورديات في الفترة المحددة','e'); return; }
+
+    // ارفع على دفعات (100 صف لكل دفعة)
+    var sent = 0;
+    for(var i=0;i<rows.length;i+=100){
+      var chunk = rows.slice(i, i+100);
+      var res = await fetch(SUPA_URL+'/rest/v1/schedules?on_conflict=id', {
+        method:'POST',
+        headers:{
+          'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY,
+          'Content-Type':'application/json',
+          'Prefer':'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify(chunk)
+      });
+      if(!res.ok){ var tx=await res.text(); throw new Error(res.status+' '+tx.slice(0,140)); }
+      sent += chunk.length;
+    }
+
+    toast('✅ تم إرسال '+sent+' وردية للتطبيق — السائقون هيشوفوها فوراً','s');
+  }catch(err){
+    console.error('pushSchedule', err);
+    toast('فشل الإرسال: '+err.message,'e');
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML=old; }
+  }
+}
+
+/* ⚙️ إعدادات التأخير والخصم */
+async function openLateSettings(){
+  try{
+    var res = await fetch(SUPA_URL+'/rest/v1/app_settings?select=*', {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var rows = res.ok ? await res.json() : [];
+    var get = function(k, d){ var r=rows.find(function(x){return x.key===k;}); return r? r.value : d; };
+    var grace = get('late_grace_minutes','30');
+    var frac  = get('late_deduct_fraction','0.5');
+    var pre   = get('prealert_minutes','30');
+
+    var g = prompt('⏱️ مهلة التأخير قبل الخصم (بالدقائق):', grace);
+    if(g===null) return;
+    var f = prompt('💸 نسبة الخصم عند التأخير (0.5 = نصف يوم، 1 = يوم كامل):', frac);
+    if(f===null) return;
+    var p = prompt('🔔 التنبيه قبل الشفت بكام دقيقة:', pre);
+    if(p===null) return;
+
+    var payload = [
+      {key:'late_grace_minutes', value:String(parseInt(g,10)||30), updated_at:new Date().toISOString()},
+      {key:'late_deduct_fraction', value:String(parseFloat(f)||0.5), updated_at:new Date().toISOString()},
+      {key:'prealert_minutes', value:String(parseInt(p,10)||30), updated_at:new Date().toISOString()}
+    ];
+    var r2 = await fetch(SUPA_URL+'/rest/v1/app_settings?on_conflict=key', {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json',
+               'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body: JSON.stringify(payload)
+    });
+    if(!r2.ok) throw new Error(await r2.text());
+    toast('✅ تم حفظ الإعدادات','s');
+  }catch(e){ toast('خطأ: '+e.message,'e'); }
 }
 </script>
 </body>
