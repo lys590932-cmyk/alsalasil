@@ -4030,7 +4030,7 @@ function sendClockInLink() {
     CLOCKIN_APP_URL + '\n\n' +
     '✅ سجّل دخولك في بداية الشفت\n' +
     '🔴 سجّل خروجك في نهاية الشفت\n\n' +
-    '⚠️ أي تأخير 15 دقيقة = خصم نصف يوم\n' +
+    '⚠️ أي تأخير 30 دقيقة = خصم نصف يوم\n' +
     '⚠️ Any delay of 15 min or more = half-day deduction 🔴';
 
   // Build links page
@@ -4072,7 +4072,7 @@ body{font-family:'Cairo',sans-serif;background:#0d1117;color:#e6edf3;min-height:
 <div class="stats">
   <div class="stat"><div class="stat-n">${valid.length}</div><div class="stat-l">سائق</div></div>
 </div>
-<div class="warn">⚠️ أي تأخير 15 دقيقة أو أكثر = خصم نصف يوم تلقائياً</div>
+<div class="warn">⚠️ أي تأخير 30 دقيقة أو أكثر = خصم نصف يوم تلقائياً</div>
 <div class="grid">`;
 
   valid.forEach(d => {
@@ -5300,7 +5300,7 @@ function buildDriverMsg(drv){
   msg += '⚠️ *IMPORTANT NOTICE:*\n';
   msg += 'Any delay of *15 minutes or more* will result in an automatic *half-day deduction* from your salary.\n\n';
   msg += '⚠️ *تنبيه مهم:*\n';
-  msg += 'أي تأخير لمدة *15 دقيقة أو أكثر* سيتم خصم *نصف يوم* من الراتب تلقائياً.\n\n';
+  msg += 'أي تأخير لمدة *30 دقيقة أو أكثر* سيتم خصم *نصف يوم* من الراتب تلقائياً.\n\n';
   msg += '📞 For inquiries contact management.\n';
   msg += '🙏 Al-Salasil Co.';
   return msg;
@@ -5356,7 +5356,7 @@ body{font-family:'Cairo',sans-serif;background:#0d1117;color:#e6edf3;min-height:
 <div class="stats">
   <div class="stat"><div class="stat-n">${valid.length}</div><div class="stat-l">سائق</div></div>
 </div>
-<div class="warn">⚠️ Any delay of 15 minutes or more = Automatic half-day deduction | أي تأخير 15 دقيقة = خصم نصف يوم</div>
+<div class="warn">⚠️ Any delay of 30 minutes or more = Automatic half-day deduction | أي تأخير 30 دقيقة = خصم نصف يوم</div>
 <div class="grid">`;
 
   valid.forEach(d => {
@@ -5412,7 +5412,7 @@ function broadcastGroup(){
     msg+='\n';
   });
   msg+='━━━━━━━━━━━━━━━━━━\n';
-  msg+='⚠️ أي تأخير لمدة *15 دقيقة* أو أكثر = خصم نصف يوم تلقائياً\n';
+  msg+='⚠️ أي تأخير لمدة *30 دقيقة* أو أكثر = خصم نصف يوم تلقائياً\n';
   msg+='⚠️ Any delay of 15 min or more = automatic half-day deduction 🔴';
   if(navigator.clipboard){ navigator.clipboard.writeText(msg).then(()=>toast('تم نسخ رسالة الجروب — الصقها في واتساب','s')); }
   else { const t=document.createElement('textarea');t.value=msg;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);toast('تم النسخ ✓','s'); }
@@ -6711,7 +6711,7 @@ function openAppDetails(id){
         <button class="wa-group-btn" onclick="broadcastAll()"><i class="ti ti-send"></i> إرسال للكل (كل سائق على حده)</button>
         <button class="wa-group-btn blue" onclick="broadcastGroup()"><i class="ti ti-copy"></i> نسخ رسالة الجروب</button>
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:7px">⚠️ تنبيه: أي تأخير لمدة 15 دقيقة أو أكثر سيتم خصم نصف يوم تلقائياً</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:7px">⚠️ تنبيه: أي تأخير لمدة 30 دقيقة أو أكثر سيتم خصم نصف يوم تلقائياً</div>
     </div>
     <div class="modal-actions" style="margin-top:10px">
       <button class="btn btn-cancel" onclick="closeModal('schedModal')">إغلاق</button>
@@ -9462,7 +9462,7 @@ async function pushScheduleToApp(){
       var drv = DRV.find(function(d){ return d.id===drvId; });
       var sh  = String(e.shift||'').split('-');
       rows.push({
-        id: drvId+'_'+dateS,
+        uniq_key: drvId+'_'+dateS,
         driver_id: drvId,
         driver_name: drv ? drv.name : drvId,
         partner: drv ? (drv.partner||null) : null,
@@ -9480,7 +9480,7 @@ async function pushScheduleToApp(){
     var sent = 0;
     for(var i=0;i<rows.length;i+=100){
       var chunk = rows.slice(i, i+100);
-      var res = await fetch(SUPA_URL+'/rest/v1/schedules?on_conflict=id', {
+      var res = await fetch(SUPA_URL+'/rest/v1/schedules?on_conflict=uniq_key', {
         method:'POST',
         headers:{
           'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY,

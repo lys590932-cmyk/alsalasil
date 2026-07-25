@@ -3769,7 +3769,7 @@ function createLateDeduction(minutesLate, shiftStart){
     : 'Late '+minutesLate+' min from shift start ('+shiftStart+') — '+fracTxt+' deduction';
 
   var rec = {
-    id: 'LATE_'+DRIVER.id+'_'+todayStr(),
+    uniq_key: 'LATE_'+DRIVER.id+'_'+todayStr(),
     driver_id: DRIVER.id,
     driver_name: DRIVER.name,
     date: todayStr(),
@@ -3781,13 +3781,13 @@ function createLateDeduction(minutesLate, shiftStart){
     status: 'active'
   };
 
-  return sb('deductions?on_conflict=id', {
+  return sb('deductions?on_conflict=uniq_key', {
     method:'POST',
     headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
     body: JSON.stringify(rec)
   }).then(function(){
     // حدّث القائمة محلياً
-    var exists = DEDUCTIONS.some(function(d){ return d.id===rec.id; });
+    var exists = DEDUCTIONS.some(function(d){ return d.uniq_key===rec.uniq_key; });
     if(!exists) DEDUCTIONS.unshift(rec);
     saveCache();
     return amount;

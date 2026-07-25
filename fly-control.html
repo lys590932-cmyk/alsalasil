@@ -550,13 +550,17 @@ function renderShifts(){
         <td style="font-weight:900;color:var(--red)">${fmtKD(x.amount)}</td>
         <td style="text-align:right;max-width:280px">${esc(x.reason||'')}</td>
         <td><span class="st ${cancelled?'':'r'}">${cancelled?'ملغي':'نشط'}</span></td>
-        <td>${!cancelled?`<button class="act ok" onclick="cancelLate('${x.id}')">إلغاء الخصم</button>`:'—'}</td></tr>`;
+        <td>${!cancelled?`<button class="act ok" onclick="cancelLate('${x.uniq_key||x.id}')">إلغاء الخصم</button>`:'—'}</td></tr>`;
     }).join('') : '<tr><td colspan="7" class="empty">لا توجد خصومات تأخير</td></tr>')+'</tbody>';
 }
-async function cancelLate(id){
+async function cancelLate(key){
   if(!confirm('إلغاء خصم التأخير ده؟ (يرجع للسائق)')) return;
-  try{ await sb.from('deductions').update({status:'cancelled',amount:0}).eq('id',id); toast('تم إلغاء الخصم'); await loadAll(); }
-  catch(e){ toast('خطأ: '+e.message,true); }
+  try{
+    let q = sb.from('deductions').update({status:'cancelled',amount:0});
+    q = String(key).startsWith('LATE_') ? q.eq('uniq_key',key) : q.eq('id',key);
+    const {error}=await q; if(error) throw error;
+    toast('تم إلغاء الخصم'); await loadAll();
+  }catch(e){ toast('خطأ: '+e.message,true); }
 }
 
 // ══════════ INIT ══════════
