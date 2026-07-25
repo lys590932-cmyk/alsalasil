@@ -2363,10 +2363,43 @@ function runDemo(){
   renderCurrentTab();
 }
 
+/* بانر تحديث النسخة */
+function showUpdateBanner(){
+  if(document.getElementById('updBanner')) return;
+  var d=document.createElement('div');
+  d.id='updBanner';
+  d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:900;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:13px 16px;display:flex;align-items:center;gap:11px;box-shadow:0 4px 14px rgba(0,0,0,.3);font-family:inherit';
+  d.innerHTML='<span style="font-size:21px">🎉</span>'+
+    '<div style="flex:1"><div style="font-weight:900;font-size:13px">'+(LANG==='ar'?'تحديث جديد متاح!':'New update available!')+'</div>'+
+    '<div style="font-size:11px;opacity:.9">'+(LANG==='ar'?'مميزات جديدة في انتظارك':'New features are waiting')+'</div></div>'+
+    '<button onclick="applyUpdate()" style="background:#fff;color:#059669;border:none;padding:9px 16px;border-radius:9px;font-family:inherit;font-weight:900;font-size:12px;cursor:pointer">'+(LANG==='ar'?'تحديث الآن':'Update now')+'</button>';
+  document.body.appendChild(d);
+}
+function applyUpdate(){
+  if('caches' in window){
+    caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })
+      .then(function(){ location.reload(true); })
+      .catch(function(){ location.reload(true); });
+  } else location.reload(true);
+}
+
 function init(){
   applyLang();
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(function(e){ console.warn('SW',e); });
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      // اكتشاف نسخة جديدة وإعلام السائق
+      reg.addEventListener('updatefound', function(){
+        var nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', function(){
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            showUpdateBanner();
+          }
+        });
+      });
+      // فحص التحديث كل مرة يفتح التطبيق
+      try{ reg.update(); }catch(e){}
+    }).catch(function(e){ console.warn('SW',e); });
   }
   updateOfflineBar(navigator.onLine);
   if(location.search.indexOf('demo')>=0){ runDemo(); return; }

@@ -3,7 +3,7 @@
    يخزّن ملفات التطبيق للعمل بدون إنترنت ولتثبيته كتطبيق
    + يدعم إشعارات الموبايل الفعلية (Web Notifications)
    =========================================================== */
-const CACHE = 'alsalasil-driver-v2';
+const CACHE = 'alsalasil-driver-v3';
 
 // ملفات هيكل التطبيق (App Shell)
 const SHELL = [
