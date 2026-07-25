@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحكم FLY — شركة السلاسل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --navy:#0f3a52;--navy2:#1c5878;--gold:#c29449;
+    --bg:#f1f5f9;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;--light:#f8fafc;--cream:#fdf6e9;
+    --green:#059669;--green-bg:#dcfce7;--red:#dc2626;--red-bg:#fee2e2;
+    --amber:#d97706;--amber-bg:#fef3c7;--blue:#2563eb;--blue-bg:#dbeafe;--purple:#7c3aed;
+  }
+  body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .topbar{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-logo{background:var(--gold);color:var(--navy);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .topbar h1{font-size:19px;font-weight:900}
+  .topbar .sub{font-size:11px;color:#fde68a;font-weight:700;margin-top:2px}
+  .btn{padding:9px 15px;border:none;border-radius:8px;font-family:'Cairo';font-weight:800;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+  .btn-gold{background:var(--gold);color:#fff}.btn-ghost{background:rgba(255,255,255,0.15);color:#fff}
+  .cloud{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,.12);border-radius:20px;font-size:11px;font-weight:800}
+  .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+
+  .tabs{background:#fff;padding:0 24px;display:flex;border-bottom:2px solid var(--border);position:sticky;top:76px;z-index:99;overflow-x:auto}
+  .tab{padding:14px 20px;background:none;border:none;font-family:'Cairo';font-weight:900;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:7px}
+  .tab.on{color:var(--navy);border-bottom-color:var(--gold);background:linear-gradient(180deg,transparent,rgba(194,148,73,.08))}
+  .tab .bdg{background:var(--red);color:#fff;padding:1px 7px;border-radius:10px;font-size:10px}
+
+  .container{padding:20px 24px;max-width:1600px;margin:0 auto}
+  .view{display:none}.view.on{display:block}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .kpi{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);border-right:5px solid var(--c)}
+  .kpi-l{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:6px}
+  .kpi-v{font-size:26px;font-weight:900;color:var(--c);line-height:1}
+
+  .card{background:#fff;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px}
+  .card-h{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:900;font-size:14px;color:var(--navy);display:flex;align-items:center;gap:8px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:var(--navy);color:#fff;padding:11px 9px;text-align:center;font-weight:800;font-size:11px;white-space:nowrap}
+  td{padding:10px 9px;border-bottom:1px solid var(--border);text-align:center;font-weight:600}
+  tr:nth-child(even) td{background:var(--light)}
+  tr:hover td{background:var(--cream)}
+  .nm{text-align:right;font-weight:900;color:var(--navy);white-space:nowrap;padding-right:14px}
+  .st{display:inline-block;padding:3px 10px;border-radius:8px;font-size:10px;font-weight:800}
+  .g{background:var(--green-bg);color:var(--green)}.r{background:var(--red-bg);color:var(--red)}
+  .a{background:var(--amber-bg);color:var(--amber)}.b{background:var(--blue-bg);color:var(--blue)}
+  .thumb{width:46px;height:46px;border-radius:8px;object-fit:cover;cursor:pointer;border:2px solid var(--border)}
+  .act{padding:5px 11px;border:none;border-radius:7px;font-family:'Cairo';font-weight:800;font-size:11px;cursor:pointer;margin:0 2px}
+  .ok{background:var(--green);color:#fff}.no{background:var(--red);color:#fff}
+  .empty{padding:44px;text-align:center;color:var(--muted);font-weight:700}
+  .toolbar{background:#fff;padding:12px 16px;border-radius:12px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--border)}
+  .toolbar input,.toolbar select{padding:9px 13px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:13px}
+
+  .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:3000;align-items:center;justify-content:center;padding:20px}
+  .lightbox.on{display:flex}
+  .lightbox img{max-width:96%;max-height:92vh;border-radius:12px}
+  .lightbox .x{position:absolute;top:20px;left:20px;background:rgba(255,255,255,.15);border:none;color:#fff;width:42px;height:42px;border-radius:10px;font-size:24px;cursor:pointer}
+  .toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:13px 22px;border-radius:10px;font-weight:800;z-index:4000;display:none}
+  .toast.on{display:block}.toast.err{background:var(--red)}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">🎛️</div>
+    <div><h1>لوحة تحكم FLY</h1><div class="sub">إدارة صور الشفت · الطلبات · الصيانة · الوقود</div></div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span class="cloud"><span class="dot" id="dot"></span><span id="cloudTxt">جاري الاتصال...</span></span>
+    <button class="btn btn-ghost" onclick="location.href='السلاسل_نظام_ادارة_السائقين_28.html'"><i class="ti ti-arrow-right"></i> ARK</button>
+    <button class="btn btn-gold" onclick="loadAll()"><i class="ti ti-refresh"></i> تحديث</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab on" data-v="photos" onclick="go('photos')"><i class="ti ti-camera"></i> صور الشفت <span class="bdg" id="bPhotos" style="display:none">0</span></button>
+  <button class="tab" data-v="requests" onclick="go('requests')"><i class="ti ti-file-text"></i> الطلبات <span class="bdg" id="bReq" style="display:none">0</span></button>
+  <button class="tab" data-v="maint" onclick="go('maint')"><i class="ti ti-tool"></i> الصيانة <span class="bdg" id="bMaint" style="display:none">0</span></button>
+  <button class="tab" data-v="fuel" onclick="go('fuel')"><i class="ti ti-gas-station"></i> الوقود</button>
+  <button class="tab" data-v="vio" onclick="go('vio')"><i class="ti ti-alert-triangle"></i> المخالفات</button>
+</div>
+
+<div class="container">
+
+  <!-- صور الشفت -->
+  <div class="view on" id="v-photos">
+    <div class="kpis" id="kPhotos"></div>
+    <div class="toolbar">
+      <label style="font-weight:800;font-size:13px;color:var(--navy)">📅 التاريخ:</label>
+      <input type="date" id="photoDate" onchange="renderPhotos()">
+      <select id="photoFilter" onchange="renderPhotos()">
+        <option value="">الكل</option><option value="missing">❌ لم يرفع</option>
+        <option value="pending">⏳ بانتظار المراجعة</option><option value="approved">✅ معتمد</option>
+      </select>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-camera"></i> صور بداية الشفت</div>
+      <div style="overflow-x:auto"><table id="tPhotos"></table></div></div>
+  </div>
+
+  <!-- الطلبات -->
+  <div class="view" id="v-requests">
+    <div class="kpis" id="kReq"></div>
+    <div class="toolbar">
+      <select id="reqType" onchange="renderRequests()"><option value="">كل الأنواع</option><option value="leave">🏖️ إجازات</option><option value="advance">💰 سلف</option></select>
+      <select id="reqStatus" onchange="renderRequests()"><option value="pending">⏳ قيد المراجعة</option><option value="">الكل</option><option value="approved">✅ موافق</option><option value="rejected">❌ مرفوض</option></select>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-file-text"></i> طلبات السائقين</div>
+      <div style="overflow-x:auto"><table id="tReq"></table></div></div>
+  </div>
+
+  <!-- الصيانة -->
+  <div class="view" id="v-maint">
+    <div class="kpis" id="kMaint"></div>
+    <div class="toolbar">
+      <select id="maintStatus" onchange="renderMaint()"><option value="open">🔴 مفتوح</option><option value="">الكل</option><option value="in_progress">🔵 جاري</option><option value="done">✅ تم</option></select>
+      <select id="maintSev" onchange="renderMaint()"><option value="">كل الدرجات</option><option value="critical">🔴 حرج</option><option value="high">🟠 خطير</option><option value="medium">🟡 متوسط</option><option value="low">🟢 بسيط</option></select>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-tool"></i> بلاغات الأعطال</div>
+      <div style="overflow-x:auto"><table id="tMaint"></table></div></div>
+  </div>
+
+  <!-- الوقود -->
+  <div class="view" id="v-fuel">
+    <div class="kpis" id="kFuel"></div>
+    <div class="toolbar">
+      <label style="font-weight:800;font-size:13px;color:var(--navy)">📅 الشهر:</label>
+      <input type="month" id="fuelMonth" onchange="renderFuel()">
+      <label style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px;color:var(--red)">
+        <input type="checkbox" id="fuelFlagged" onchange="renderFuel()"> ⚠️ المشبوه فقط</label>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-gas-station"></i> سجل الوقود</div>
+      <div style="overflow-x:auto"><table id="tFuel"></table></div></div>
+  </div>
+
+  <!-- المخالفات -->
+  <div class="view" id="v-vio">
+    <div class="kpis" id="kVio"></div>
+    <div class="toolbar">
+      <button class="btn btn-gold" onclick="openAddVio()"><i class="ti ti-plus"></i> تسجيل مخالفة</button>
+      <select id="vioStatus" onchange="renderVio()"><option value="">كل الحالات</option><option value="pending">⏳ بانتظار الإقرار</option><option value="acknowledged">✅ مُقر</option><option value="appealed">⚖️ اعتراض</option></select>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-alert-triangle"></i> المخالفات المرورية</div>
+      <div style="overflow-x:auto"><table id="tVio"></table></div></div>
+  </div>
+
+</div>
+
+<div class="lightbox" id="lb" onclick="closeLB()"><button class="x" onclick="closeLB()">×</button><img id="lbImg"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL='https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY='sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+let sb=null, PHOTOS=[], REQS=[], MAINT=[], FUEL=[], VIO=[], DRIVERS=[];
+
+function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast on'+(e?' err':'');setTimeout(()=>t.classList.remove('on'),2800);}
+function setCloud(s,txt){const d=document.getElementById('dot');const c={connecting:'#94a3b8',connected:'#22c55e',error:'#ef4444'};d.style.background=c[s]||'#94a3b8';d.style.boxShadow=s==='connected'?'0 0 8px '+c[s]:'none';document.getElementById('cloudTxt').textContent=txt;}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fmtKD(n){return (parseFloat(n)||0).toFixed(3);}
+function fmtD(d){if(!d)return '—';const x=new Date(d);return isNaN(x)?d:x.toLocaleDateString('ar-KW');}
+function openLB(u){document.getElementById('lbImg').src=u;document.getElementById('lb').classList.add('on');}
+function closeLB(){document.getElementById('lb').classList.remove('on');}
+
+function go(v){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  ({photos:renderPhotos,requests:renderRequests,maint:renderMaint,fuel:renderFuel,vio:renderVio}[v]||(()=>{}))();
+}
+
+// ── ARK drivers (localStorage) ──
+function getDrivers(){
+  try{ const d=JSON.parse(localStorage.getItem('sl_drv2')||localStorage.getItem('sl_drv')||'[]');
+    return Array.isArray(d)?d.filter(x=>x.staff_type!=='admin'):[]; }catch{ return []; }
+}
+
+async function loadAll(){
+  setCloud('connecting','جاري التحميل...');
+  DRIVERS=getDrivers();
+  try{
+    const [p,r,m,f,v]=await Promise.all([
+      sb.from('shift_photos').select('*').order('photo_date',{ascending:false}).limit(600),
+      sb.from('driver_requests').select('*').order('created_at',{ascending:false}).limit(300),
+      sb.from('maintenance_reports').select('*').order('report_date',{ascending:false}).limit(300),
+      sb.from('fuel_logs').select('*').order('log_date',{ascending:false}).limit(500),
+      sb.from('driver_violations').select('*').order('vio_date',{ascending:false}).limit(400),
+    ]);
+    PHOTOS=p.data||[];REQS=r.data||[];MAINT=m.data||[];FUEL=f.data||[];VIO=v.data||[];
+    setCloud('connected','☁️ متصل');
+    badges(); go(document.querySelector('.tab.on').dataset.v);
+  }catch(e){ console.error(e); setCloud('error','خطأ اتصال'); toast('خطأ: '+e.message,true); }
+}
+
+function badges(){
+  const today=new Date().toISOString().slice(0,10);
+  const uploaded=PHOTOS.filter(p=>p.photo_date===today).length;
+  const missing=Math.max(0,DRIVERS.length-uploaded);
+  setB('bPhotos',missing);
+  setB('bReq',REQS.filter(r=>r.status==='pending').length);
+  setB('bMaint',MAINT.filter(m=>m.status==='open').length);
+}
+function setB(id,n){const e=document.getElementById(id);if(!e)return;if(n>0){e.textContent=n;e.style.display='inline-block';}else e.style.display='none';}
+function kpiHTML(arr){return arr.map(k=>`<div class="kpi" style="--c:${k.c}"><div class="kpi-l">${k.l}</div><div class="kpi-v">${k.v}</div></div>`).join('');}
+
+// ══════════ صور الشفت ══════════
+function renderPhotos(){
+  const date=document.getElementById('photoDate').value||new Date().toISOString().slice(0,10);
+  const filt=document.getElementById('photoFilter').value;
+  const dayPhotos=PHOTOS.filter(p=>p.photo_date===date);
+  const byId={}; dayPhotos.forEach(p=>byId[p.driver_id]=p);
+
+  let rows=DRIVERS.map(d=>({drv:d, ph:byId[d.id]||null}));
+  if(filt==='missing') rows=rows.filter(r=>!r.ph);
+  else if(filt) rows=rows.filter(r=>r.ph&&r.ph.status===filt);
+
+  const up=dayPhotos.length, miss=DRIVERS.length-up;
+  const appr=dayPhotos.filter(p=>p.status==='approved').length;
+  document.getElementById('kPhotos').innerHTML=kpiHTML([
+    {l:'إجمالي السائقين',v:DRIVERS.length,c:'var(--navy)'},
+    {l:'رفعوا الصورة ✅',v:up,c:'var(--green)'},
+    {l:'لم يرفعوا ❌',v:miss,c:'var(--red)'},
+    {l:'معتمد',v:appr,c:'var(--blue)'},
+  ]);
+
+  document.getElementById('tPhotos').innerHTML=
+    '<thead><tr><th>السائق</th><th>الشريك</th><th>سيلفي</th><th>الصندوق</th><th>الوقت</th><th>الموقع</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
+    (rows.length?rows.map(r=>{
+      const p=r.ph;
+      if(!p) return `<tr><td class="nm">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
+        <td colspan="5" style="color:var(--red);font-weight:800">❌ لم يرفع صورة اليوم</td><td>—</td></tr>`;
+      const stc=p.status==='approved'?'g':(p.status==='rejected'?'r':'a');
+      const stt=p.status==='approved'?'✅ معتمد':(p.status==='rejected'?'❌ مرفوض':'⏳ بانتظار');
+      const tm=new Date(p.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
+      const loc=p.latitude?`<a href="https://maps.google.com/?q=${p.latitude},${p.longitude}" target="_blank" style="color:var(--blue)">📍 خريطة</a>`:'—';
+      return `<tr><td class="nm">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
+        <td>${p.selfie_url?`<img class="thumb" src="${p.selfie_url}" onclick="openLB('${p.selfie_url}')">`:'—'}</td>
+        <td>${p.box_url?`<img class="thumb" src="${p.box_url}" onclick="openLB('${p.box_url}')">`:'—'}</td>
+        <td>${tm}</td><td>${loc}</td><td><span class="st ${stc}">${stt}</span></td>
+        <td>${p.status==='pending'?`<button class="act ok" onclick="setPhoto(${p.id},'approved')">اعتماد</button><button class="act no" onclick="setPhoto(${p.id},'rejected')">رفض</button>`:'—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="8" class="empty">لا يوجد بيانات</td></tr>')+'</tbody>';
+}
+async function setPhoto(id,st){
+  try{ await sb.from('shift_photos').update({status:st}).eq('id',id); toast('تم '+(st==='approved'?'الاعتماد':'الرفض')); await loadAll(); }
+  catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+// ══════════ الطلبات ══════════
+function renderRequests(){
+  const ty=document.getElementById('reqType').value, st=document.getElementById('reqStatus').value;
+  let list=REQS.slice();
+  if(ty) list=list.filter(r=>r.req_type===ty);
+  if(st) list=list.filter(r=>r.status===st);
+
+  const pend=REQS.filter(r=>r.status==='pending').length;
+  const lv=REQS.filter(r=>r.req_type==='leave'&&r.status==='pending').length;
+  const ad=REQS.filter(r=>r.req_type==='advance'&&r.status==='pending').length;
+  const adSum=REQS.filter(r=>r.req_type==='advance'&&r.status==='approved').reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+  document.getElementById('kReq').innerHTML=kpiHTML([
+    {l:'قيد المراجعة',v:pend,c:'var(--amber)'},{l:'إجازات معلقة',v:lv,c:'var(--blue)'},
+    {l:'سلف معلقة',v:ad,c:'var(--purple)'},{l:'سلف معتمدة (د.ك)',v:fmtKD(adSum),c:'var(--green)'},
+  ]);
+
+  document.getElementById('tReq').innerHTML=
+    '<thead><tr><th>السائق</th><th>النوع</th><th>التفاصيل</th><th>السبب</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
+    (list.length?list.map(r=>{
+      const isL=r.req_type==='leave';
+      const det=isL?`${fmtD(r.from_date)} → ${fmtD(r.to_date)}<br><b>${r.days_count} يوم</b>`
+                   :`<b style="color:var(--green)">${fmtKD(r.amount)} د.ك</b><br>${r.installments} قسط`;
+      const stc=r.status==='approved'?'g':(r.status==='rejected'?'r':'a');
+      const stt=r.status==='approved'?'✅ موافق':(r.status==='rejected'?'❌ مرفوض':'⏳ معلق');
+      return `<tr><td class="nm">${esc(r.driver_name)}</td>
+        <td>${isL?'🏖️ إجازة':'💰 سلفة'}</td><td>${det}</td><td style="max-width:200px">${esc(r.reason||'—')}</td>
+        <td>${fmtD(r.created_at)}</td><td><span class="st ${stc}">${stt}</span></td>
+        <td>${r.status==='pending'?`<button class="act ok" onclick="setReq(${r.id},'approved')">موافقة</button><button class="act no" onclick="setReq(${r.id},'rejected')">رفض</button>`:esc(r.admin_note||'—')}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">لا توجد طلبات</td></tr>')+'</tbody>';
+}
+async function setReq(id,st){
+  const note=prompt(st==='approved'?'ملاحظة للسائق (اختياري):':'سبب الرفض:')||'';
+  try{ await sb.from('driver_requests').update({status:st,admin_note:note,reviewed_at:new Date().toISOString()}).eq('id',id);
+    toast('تم '+(st==='approved'?'الموافقة':'الرفض')); await loadAll(); }
+  catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+// ══════════ الصيانة ══════════
+function renderMaint(){
+  const st=document.getElementById('maintStatus').value, sv=document.getElementById('maintSev').value;
+  let list=MAINT.slice();
+  if(st) list=list.filter(m=>m.status===st);
+  if(sv) list=list.filter(m=>m.severity===sv);
+
+  const open=MAINT.filter(m=>m.status==='open').length;
+  const crit=MAINT.filter(m=>m.status==='open'&&(m.severity==='critical'||m.severity==='high')).length;
+  const done=MAINT.filter(m=>m.status==='done').length;
+  const cost=MAINT.reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
+  document.getElementById('kMaint').innerHTML=kpiHTML([
+    {l:'بلاغات مفتوحة',v:open,c:'var(--red)'},{l:'حرجة/خطيرة 🚨',v:crit,c:'var(--amber)'},
+    {l:'تم إصلاحها',v:done,c:'var(--green)'},{l:'إجمالي التكلفة (د.ك)',v:fmtKD(cost),c:'var(--navy)'},
+  ]);
+
+  const SEV={low:['🟢 بسيط','g'],medium:['🟡 متوسط','a'],high:['🟠 خطير','a'],critical:['🔴 حرج','r']};
+  const CAT={engine:'🔧 محرك',tires:'🛞 إطارات',brakes:'🛑 فرامل',ac:'❄️ تكييف',body:'🚗 هيكل',electrical:'⚡ كهرباء',other:'⋯ أخرى'};
+
+  document.getElementById('tMaint').innerHTML=
+    '<thead><tr><th>السائق</th><th>السيارة</th><th>النوع</th><th>الخطورة</th><th>الوصف</th><th>صورة</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
+    (list.length?list.map(m=>{
+      const s=SEV[m.severity]||SEV.medium;
+      const stc=m.status==='done'?'g':(m.status==='in_progress'?'b':'r');
+      const stt=m.status==='done'?'✅ تم':(m.status==='in_progress'?'🔵 جاري':'🔴 مفتوح');
+      return `<tr><td class="nm">${esc(m.driver_name)}</td><td>${esc(m.car_plate||'—')}</td>
+        <td>${CAT[m.category]||m.category||'—'}</td><td><span class="st ${s[1]}">${s[0]}</span></td>
+        <td style="max-width:230px;text-align:right">${esc(m.description||'')}</td>
+        <td>${m.photo_url?`<img class="thumb" src="${m.photo_url}" onclick="openLB('${m.photo_url}')">`:'—'}</td>
+        <td>${fmtD(m.report_date)}</td><td><span class="st ${stc}">${stt}</span></td>
+        <td>${m.status!=='done'?`<button class="act ok" onclick="setMaint(${m.id},'done')">تم الإصلاح</button>${m.status==='open'?`<button class="act" style="background:var(--blue);color:#fff" onclick="setMaint(${m.id},'in_progress')">جاري</button>`:''}`:'—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="9" class="empty">لا توجد بلاغات</td></tr>')+'</tbody>';
+}
+async function setMaint(id,st){
+  let cost=null;
+  if(st==='done'){ const c=prompt('تكلفة الإصلاح (د.ك) — اتركه فارغاً لو مجاني:'); if(c) cost=parseFloat(c)||null; }
+  try{ await sb.from('maintenance_reports').update({status:st,cost:cost,resolved_at:st==='done'?new Date().toISOString():null}).eq('id',id);
+    toast('تم التحديث'); await loadAll(); }
+  catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+// ══════════ الوقود ══════════
+function renderFuel(){
+  const mo=document.getElementById('fuelMonth').value;
+  const onlyF=document.getElementById('fuelFlagged').checked;
+  let list=FUEL.slice();
+  if(mo) list=list.filter(f=>String(f.log_date||'').startsWith(mo));
+  if(onlyF) list=list.filter(f=>f.flagged);
+
+  const tot=list.reduce((s,f)=>s+(parseFloat(f.amount_kd)||0),0);
+  const flg=list.filter(f=>f.flagged).length;
+  const km=list.reduce((s,f)=>s+(parseInt(f.km_since_last)||0),0);
+  const avg=km&&tot?(km/tot).toFixed(1):'—';
+  document.getElementById('kFuel').innerHTML=kpiHTML([
+    {l:'إجمالي الوقود (د.ك)',v:fmtKD(tot),c:'var(--red)'},{l:'عدد التعبئات',v:list.length,c:'var(--navy)'},
+    {l:'استهلاك مشبوه ⚠️',v:flg,c:'var(--amber)'},{l:'متوسط كم/دينار',v:avg,c:'var(--green)'},
+  ]);
+
+  document.getElementById('tFuel').innerHTML=
+    '<thead><tr><th>السائق</th><th>السيارة</th><th>التاريخ</th><th>المبلغ</th><th>العداد</th><th>كم منذ آخر</th><th>كم/د.ك</th><th>المحطة</th><th>الإيصال</th></tr></thead><tbody>'+
+    (list.length?list.map(f=>{
+      const eff=(f.km_since_last&&f.amount_kd)?(f.km_since_last/f.amount_kd).toFixed(1):'—';
+      return `<tr${f.flagged?' style="background:var(--red-bg)"':''}>
+        <td class="nm">${esc(f.driver_name)}${f.flagged?' <span title="استهلاك غير طبيعي">⚠️</span>':''}</td>
+        <td>${esc(f.car_plate||'—')}</td><td>${fmtD(f.log_date)}</td>
+        <td style="font-weight:900;color:var(--red)">${fmtKD(f.amount_kd)}</td>
+        <td>${f.odometer||'—'}</td><td>${f.km_since_last||'—'}</td>
+        <td style="font-weight:800;color:${eff!=='—'&&parseFloat(eff)<5?'var(--red)':'var(--green)'}">${eff}</td>
+        <td>${esc(f.station||'—')}</td>
+        <td>${f.receipt_url?`<img class="thumb" src="${f.receipt_url}" onclick="openLB('${f.receipt_url}')">`:'—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="9" class="empty">لا يوجد سجل وقود</td></tr>')+'</tbody>';
+}
+
+// ══════════ المخالفات ══════════
+function renderVio(){
+  const st=document.getElementById('vioStatus').value;
+  let list=VIO.slice();
+  if(st) list=list.filter(v=>v.status===st);
+
+  const tot=VIO.reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+  const pend=VIO.filter(v=>v.status==='pending').length;
+  const app=VIO.filter(v=>v.status==='appealed').length;
+  const ack=VIO.filter(v=>v.status==='acknowledged').length;
+  document.getElementById('kVio').innerHTML=kpiHTML([
+    {l:'إجمالي المخالفات (د.ك)',v:fmtKD(tot),c:'var(--red)'},{l:'بانتظار الإقرار',v:pend,c:'var(--amber)'},
+    {l:'اعتراضات ⚖️',v:app,c:'var(--purple)'},{l:'مُقرة ✅',v:ack,c:'var(--green)'},
+  ]);
+
+  document.getElementById('tVio').innerHTML=
+    '<thead><tr><th>السائق</th><th>التاريخ</th><th>السبب</th><th>المبلغ</th><th>رقم المخالفة</th><th>الحالة</th><th>الاعتراض</th></tr></thead><tbody>'+
+    (list.length?list.map(v=>{
+      const stc=v.status==='acknowledged'?'g':(v.status==='appealed'?'a':'r');
+      const stt=v.status==='acknowledged'?'✅ مُقر':(v.status==='appealed'?'⚖️ اعتراض':'⏳ بانتظار');
+      return `<tr><td class="nm">${esc(v.driver_name)}</td><td>${fmtD(v.vio_date)}</td>
+        <td style="text-align:right">${esc(v.reason||'—')}</td>
+        <td style="font-weight:900;color:var(--red)">${fmtKD(v.amount)}</td>
+        <td>${esc(v.vio_number||'—')}</td><td><span class="st ${stc}">${stt}</span></td>
+        <td style="max-width:220px;text-align:right">${v.appeal_text?esc(v.appeal_text)+`<br><button class="act ok" onclick="resolveVio('${v.id}')">حل الاعتراض</button>`:'—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty">لا توجد مخالفات</td></tr>')+'</tbody>';
+}
+async function resolveVio(id){
+  if(!confirm('اعتماد حل الاعتراض؟')) return;
+  try{ await sb.from('driver_violations').update({status:'resolved'}).eq('id',id); toast('تم'); await loadAll(); }
+  catch(e){ toast('خطأ: '+e.message,true); }
+}
+async function openAddVio(){
+  const names=DRIVERS.map((d,i)=>`${i+1}. ${d.name}`).join('\n');
+  const pick=prompt('اختر رقم السائق:\n'+names);
+  const idx=parseInt(pick,10)-1;
+  if(isNaN(idx)||!DRIVERS[idx]) return;
+  const d=DRIVERS[idx];
+  const reason=prompt('سبب المخالفة:'); if(!reason) return;
+  const amt=parseFloat(prompt('المبلغ (د.ك):')); if(!amt) return;
+  const num=prompt('رقم المخالفة (اختياري):')||null;
+  try{
+    await sb.from('driver_violations').insert({
+      id:'v_'+Date.now()+Math.random().toString(36).slice(2,6),
+      driver_id:d.id, driver_name:d.name, vio_date:new Date().toISOString().slice(0,10),
+      reason:reason, amount:amt, vio_number:num, status:'pending'
+    });
+    toast('✅ تم تسجيل المخالفة — ستظهر للسائق في FLY'); await loadAll();
+  }catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+// ══════════ INIT ══════════
+window.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('photoDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('fuelMonth').value=new Date().toISOString().slice(0,7);
+  sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+  await loadAll();
+  // Realtime
+  ['shift_photos','driver_requests','maintenance_reports','fuel_logs','driver_violations'].forEach(tb=>{
+    sb.channel('adm_'+tb).on('postgres_changes',{event:'*',schema:'public',table:tb},()=>{
+      clearTimeout(window._rt); window._rt=setTimeout(loadAll,600);
+    }).subscribe();
+  });
+});
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&sb) loadAll(); });
+</script>
+</body>
+</html>

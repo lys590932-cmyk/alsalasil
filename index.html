@@ -398,6 +398,7 @@ button,input,select{font-family:'Cairo',sans-serif}
   <div class="screen hide" id="scrReport"></div>
   <div class="screen hide" id="scrSalary"></div>
   <div class="screen hide" id="scrProfile"></div>
+  <div class="screen hide" id="scrServices"></div>
 
   <div class="bottomnav">
     <button class="navbtn on" id="navHome" onclick="switchTab('home')">
@@ -416,6 +417,10 @@ button,input,select{font-family:'Cairo',sans-serif}
     </button>
     <button class="navbtn" id="navSalary" onclick="switchTab('salary')">
       <i class="ti ti-wallet"></i><span data-i18n="nav_salary">راتبي</span>
+    </button>
+    <button class="navbtn" id="navServices" onclick="switchTab('services')" style="position:relative">
+      <i class="ti ti-clipboard-list"></i><span>خدمات</span>
+      <span id="servicesBadge" style="display:none;position:absolute;top:4px;right:14px;background:#f59e0b;color:#fff;font-size:10px;min-width:17px;height:17px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
     </button>
     <button class="navbtn" id="navProfile" onclick="switchTab('profile')">
       <i class="ti ti-user"></i><span data-i18n="nav_profile">بياناتي</span>
@@ -1894,9 +1899,9 @@ _askPermissionOnGesture();
    ========================================================= */
 function switchTab(tab){
   currentTab=tab;
-  var screens=['Home','Attendance','Orders','Report','Salary','Profile'];
-  screens.forEach(function(s){ $('scr'+s).classList.add('hide'); $('nav'+s).classList.remove('on'); });
-  var map={home:'Home',attendance:'Attendance',orders:'Orders',report:'Report',salary:'Salary',profile:'Profile'};
+  var screens=['Home','Attendance','Orders','Report','Salary','Services','Profile'];
+  screens.forEach(function(s){ if($('scr'+s)) $('scr'+s).classList.add('hide'); if($('nav'+s)) $('nav'+s).classList.remove('on'); });
+  var map={home:'Home',attendance:'Attendance',orders:'Orders',report:'Report',salary:'Salary',services:'Services',profile:'Profile'};
   var s=map[tab]||'Home';
   $('scr'+s).classList.remove('hide');
   $('nav'+s).classList.add('on');
@@ -1910,6 +1915,7 @@ function renderCurrentTab(){
   else if(currentTab==='orders') renderOrders();
   else if(currentTab==='report') renderReport();
   else if(currentTab==='salary') renderSalary();
+  else if(currentTab==='services') renderServices();
   else if(currentTab==='profile') renderProfile();
 }
 
@@ -3047,6 +3053,590 @@ setInterval(function(){
 
 // Fetch orders on login
 var _origTryAutoLogin = tryAutoLogin;
+
+/* ═══════════════════════════════════════════════════════════════════
+   🎯 FLY CONTROL MODULE — مميزات التحكم الجديدة
+   صور الشفت · المخالفات · الوقود · الطلبات · الصيانة · الوثائق
+   ═══════════════════════════════════════════════════════════════════ */
+
+var BUCKET = 'fly-uploads';
+var MY_VIOLATIONS = [];
+var MY_REQUESTS   = [];
+var MY_FUEL       = [];
+var MY_MAINT      = [];
+var TODAY_PHOTO   = null;
+var _pendingPhotos = {selfie:null, box:null};
+
+/* ---------- Storage upload ---------- */
+function uploadImage(file, folder){
+  return new Promise(function(resolve, reject){
+    if(!file) return reject(new Error('no file'));
+    var ext = (file.name||'jpg').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+    var path = folder+'/'+(DRIVER?DRIVER.id:'x')+'_'+Date.now()+'.'+ext;
+    fetch(SUPA_URL+'/storage/v1/object/'+BUCKET+'/'+path, {
+      method:'POST',
+      headers:{ 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Content-Type': file.type||'image/jpeg', 'x-upsert':'true' },
+      body:file
+    }).then(function(r){
+      if(!r.ok) return r.text().then(function(tx){ throw new Error('Upload '+r.status+' '+tx.slice(0,90)); });
+      resolve(SUPA_URL+'/storage/v1/object/public/'+BUCKET+'/'+path);
+    }).catch(reject);
+  });
+}
+
+/* ---------- Image compression (يوفر باقة النت) ---------- */
+function compressImage(file, maxW){
+  maxW = maxW || 1000;
+  return new Promise(function(resolve){
+    try{
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function(){
+        var scale = Math.min(1, maxW/img.width);
+        var w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+        var cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        cv.toBlob(function(blob){
+          URL.revokeObjectURL(url);
+          if(!blob) return resolve(file);
+          blob.name = file.name||'photo.jpg';
+          resolve(blob);
+        },'image/jpeg',0.72);
+      };
+      img.onerror = function(){ resolve(file); };
+      img.src = url;
+    }catch(e){ resolve(file); }
+  });
+}
+
+/* ---------- GPS helper ---------- */
+function getPos(){
+  return new Promise(function(resolve){
+    if(!navigator.geolocation) return resolve({lat:null,lng:null});
+    navigator.geolocation.getCurrentPosition(
+      function(p){ resolve({lat:p.coords.latitude, lng:p.coords.longitude}); },
+      function(){ resolve({lat:null,lng:null}); },
+      {enableHighAccuracy:true, timeout:8000, maximumAge:60000}
+    );
+  });
+}
+
+/* ═══════════ 1) صور بداية الشفت ═══════════ */
+function loadTodayPhoto(){
+  if(!DRIVER) return Promise.resolve(null);
+  return sb('shift_photos?driver_id=eq.'+encodeURIComponent(DRIVER.id)+'&photo_date=eq.'+todayStr()+'&limit=1')
+    .then(function(rows){ TODAY_PHOTO = (rows&&rows[0])||null; return TODAY_PHOTO; })
+    .catch(function(){ return null; });
+}
+
+function photoGateHTML(){
+  var done = TODAY_PHOTO && TODAY_PHOTO.selfie_url;
+  if(done){
+    return '<div class="card" style="border:1px solid rgba(16,185,129,.4);background:rgba(16,185,129,.06)">'+
+      '<div style="display:flex;align-items:center;gap:10px;padding:4px">'+
+        '<i class="ti ti-circle-check" style="font-size:26px;color:#10b981"></i>'+
+        '<div style="flex:1"><div style="font-weight:800;font-size:13px;color:#10b981">'+(LANG==='ar'?'صورة اليوم مرفوعة ✅':'Today\'s photo uploaded ✅')+'</div>'+
+        '<div style="font-size:11px;color:var(--muted2)">'+(LANG==='ar'?'تم التوثيق — يمكنك بدء الشفت':'Verified — you can start your shift')+'</div></div>'+
+        (TODAY_PHOTO.selfie_url?'<img src="'+TODAY_PHOTO.selfie_url+'" style="width:44px;height:44px;border-radius:9px;object-fit:cover">':'')+
+      '</div></div>';
+  }
+  return '<div class="card" style="border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.07)">'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+      '<i class="ti ti-camera" style="font-size:26px;color:#f59e0b"></i>'+
+      '<div><div style="font-weight:800;font-size:13px;color:#f59e0b">'+(LANG==='ar'?'صورة بداية الشفت مطلوبة':'Shift start photo required')+'</div>'+
+      '<div style="font-size:11px;color:var(--muted2)">'+(LANG==='ar'?'سيلفي بالزي + صندوق التوصيل':'Selfie in uniform + delivery box')+'</div></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">'+
+      photoSlot('selfie', LANG==='ar'?'📸 سيلفي بالزي':'📸 Selfie')+
+      photoSlot('box',    LANG==='ar'?'📦 صندوق التوصيل':'📦 Delivery box')+
+    '</div>'+
+    '<button class="clock-btn clock-in" style="margin-top:11px" id="btnSendPhotos" onclick="submitShiftPhotos()">'+
+      '<i class="ti ti-cloud-upload"></i> '+(LANG==='ar'?'رفع الصور':'Upload photos')+'</button>';
+}
+
+function photoSlot(key, label){
+  var has = _pendingPhotos[key];
+  return '<div style="text-align:center">'+
+    '<label style="display:block;cursor:pointer">'+
+      '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickPhoto(\''+key+'\',this)">'+
+      '<div id="prev_'+key+'" style="height:96px;border-radius:11px;border:2px dashed '+(has?'#10b981':'var(--br)')+';display:flex;align-items:center;justify-content:center;background:'+(has?'transparent':'var(--s2)')+';overflow:hidden">'+
+        (has? '<img src="'+URL.createObjectURL(has)+'" style="width:100%;height:100%;object-fit:cover">' : '<i class="ti ti-camera-plus" style="font-size:28px;color:var(--muted2)"></i>')+
+      '</div>'+
+      '<div style="font-size:11px;font-weight:700;margin-top:5px;color:'+(has?'#10b981':'var(--muted2)')+'">'+label+(has?' ✓':'')+'</div>'+
+    '</label></div>';
+}
+
+function pickPhoto(key, input){
+  var f = input.files && input.files[0];
+  if(!f) return;
+  compressImage(f).then(function(blob){
+    _pendingPhotos[key] = blob;
+    var prev = document.getElementById('prev_'+key);
+    if(prev){
+      prev.style.border='2px dashed #10b981'; prev.style.background='transparent';
+      prev.innerHTML='<img src="'+URL.createObjectURL(blob)+'" style="width:100%;height:100%;object-fit:cover">';
+    }
+  });
+}
+
+function submitShiftPhotos(){
+  if(!_pendingPhotos.selfie){ toast(LANG==='ar'?'التقط السيلفي أولاً':'Take selfie first','err'); return; }
+  var btn=document.getElementById('btnSendPhotos');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> '+(LANG==='ar'?'جاري الرفع...':'Uploading...'); }
+  getPos().then(function(pos){
+    var jobs=[uploadImage(_pendingPhotos.selfie,'shift/selfie')];
+    jobs.push(_pendingPhotos.box ? uploadImage(_pendingPhotos.box,'shift/box') : Promise.resolve(null));
+    return Promise.all(jobs).then(function(urls){
+      return sb('shift_photos', {
+        method:'POST',
+        headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({
+          driver_id:DRIVER.id, driver_name:DRIVER.name, partner:DRIVER.partner||null,
+          photo_date:todayStr(), selfie_url:urls[0], box_url:urls[1],
+          latitude:pos.lat, longitude:pos.lng, status:'pending'
+        })
+      });
+    });
+  }).then(function(){
+    _pendingPhotos={selfie:null,box:null};
+    toast(LANG==='ar'?'تم رفع الصور ✅':'Photos uploaded ✅','ok');
+    return loadTodayPhoto();
+  }).then(function(){ renderCurrentTab(); })
+  .catch(function(e){
+    console.error(e);
+    toast((LANG==='ar'?'فشل الرفع: ':'Upload failed: ')+e.message,'err');
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-cloud-upload"></i> '+(LANG==='ar'?'رفع الصور':'Upload photos'); }
+  });
+}
+
+/* ═══════════ 2) المخالفات ═══════════ */
+function loadMyViolations(){
+  if(!DRIVER) return Promise.resolve([]);
+  return sb('driver_violations?driver_id=eq.'+encodeURIComponent(DRIVER.id)+'&order=vio_date.desc&limit=100')
+    .then(function(r){ MY_VIOLATIONS=r||[]; return MY_VIOLATIONS; })
+    .catch(function(){ return []; });
+}
+
+function violationsHTML(){
+  if(!MY_VIOLATIONS.length) return '';
+  var pend = MY_VIOLATIONS.filter(function(v){ return v.status==='pending'; }).length;
+  var total = MY_VIOLATIONS.reduce(function(s,v){ return s+(parseFloat(v.amount)||0); },0);
+  var h='<div class="sec-title" style="display:flex;align-items:center;gap:7px">'+
+    '<i class="ti ti-alert-triangle" style="color:#ef4444"></i>'+(LANG==='ar'?'مخالفاتي':'My violations')+
+    (pend?'<span style="background:#ef4444;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px">'+pend+' '+(LANG==='ar'?'جديد':'new')+'</span>':'')+
+    '<span style="margin-'+(LANG==='ar'?'right':'left')+':auto;font-size:12px;color:#ef4444;font-weight:900">'+fmtKD(total)+'</span></div>';
+  h+='<div class="card">';
+  MY_VIOLATIONS.slice(0,12).forEach(function(v){
+    var stCol = v.status==='acknowledged'?'#10b981':(v.status==='appealed'?'#f59e0b':'#ef4444');
+    var stTxt = v.status==='acknowledged'?(LANG==='ar'?'مُقر':'Acknowledged'):(v.status==='appealed'?(LANG==='ar'?'اعتراض':'Appealed'):(LANG==='ar'?'بانتظار الإقرار':'Pending'));
+    h+='<div style="padding:11px 4px;border-bottom:1px solid var(--br)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:start;gap:8px">'+
+        '<div style="flex:1"><div style="font-weight:800;font-size:13px">'+(v.reason||'—')+'</div>'+
+        '<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+fmtDate(v.vio_date)+(v.vio_number?' · #'+v.vio_number:'')+'</div></div>'+
+        '<div style="text-align:'+(LANG==='ar'?'left':'right')+'"><div style="font-weight:900;color:#ef4444;font-size:14px">'+fmtKD(v.amount)+'</div>'+
+        '<div style="font-size:10px;font-weight:800;color:'+stCol+'">'+stTxt+'</div></div>'+
+      '</div>';
+    if(v.status==='pending'){
+      h+='<div style="display:flex;gap:7px;margin-top:9px">'+
+        '<button onclick="ackViolation(\''+v.id+'\')" style="flex:1;padding:8px;border:none;border-radius:9px;background:#10b981;color:#fff;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">✅ '+(LANG==='ar'?'أقر بالمخالفة':'Acknowledge')+'</button>'+
+        '<button onclick="appealViolation(\''+v.id+'\')" style="flex:1;padding:8px;border:1px solid #f59e0b;border-radius:9px;background:transparent;color:#f59e0b;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">⚖️ '+(LANG==='ar'?'اعتراض':'Appeal')+'</button>'+
+      '</div>';
+    }
+    if(v.appeal_text) h+='<div style="margin-top:7px;padding:7px 9px;background:var(--s2);border-radius:8px;font-size:11px;color:var(--muted2)">⚖️ '+v.appeal_text+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+function ackViolation(id){
+  sb('driver_violations?id=eq.'+encodeURIComponent(id), {
+    method:'PATCH', headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({status:'acknowledged', acknowledged_at:new Date().toISOString()})
+  }).then(function(){ toast(LANG==='ar'?'تم الإقرار ✅':'Acknowledged ✅','ok'); return loadMyViolations(); })
+   .then(function(){ renderCurrentTab(); })
+   .catch(function(e){ toast('خطأ: '+e.message,'err'); });
+}
+
+function appealViolation(id){
+  var txt = prompt(LANG==='ar'?'اكتب سبب الاعتراض:':'Write your appeal reason:');
+  if(!txt || !txt.trim()) return;
+  sb('driver_violations?id=eq.'+encodeURIComponent(id), {
+    method:'PATCH', headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({status:'appealed', appeal_text:txt.trim(), appeal_at:new Date().toISOString()})
+  }).then(function(){ toast(LANG==='ar'?'تم إرسال الاعتراض':'Appeal sent','ok'); return loadMyViolations(); })
+   .then(function(){ renderCurrentTab(); })
+   .catch(function(e){ toast('خطأ: '+e.message,'err'); });
+}
+
+/* ═══════════ 3) الوقود ═══════════ */
+function loadMyFuel(){
+  if(!DRIVER) return Promise.resolve([]);
+  return sb('fuel_logs?driver_id=eq.'+encodeURIComponent(DRIVER.id)+'&order=log_date.desc&limit=30')
+    .then(function(r){ MY_FUEL=r||[]; return MY_FUEL; }).catch(function(){ return []; });
+}
+
+function openFuelForm(){
+  var lastOdo = MY_FUEL.length ? (MY_FUEL[0].odometer||'') : '';
+  var body='<div style="padding:2px">'+
+    '<div style="font-size:12px;color:var(--muted2);margin-bottom:12px">'+(LANG==='ar'?'سجّل تعبئة الوقود مع صورة الإيصال':'Log fuel with receipt photo')+
+    (lastOdo?'<br>'+(LANG==='ar'?'آخر عداد مسجّل: ':'Last odometer: ')+'<b>'+lastOdo+'</b>':'')+'</div>'+
+    fRow(LANG==='ar'?'💵 المبلغ (د.ك) *':'💵 Amount (KD) *','<input id="fu-amt" type="number" step="0.001" inputmode="decimal" placeholder="0.000" style="'+INP+'">')+
+    fRow(LANG==='ar'?'🔢 قراءة العداد (كم) *':'🔢 Odometer (km) *','<input id="fu-odo" type="number" inputmode="numeric" placeholder="'+(lastOdo||'0')+'" style="'+INP+'">')+
+    fRow(LANG==='ar'?'⛽ عدد اللترات':'⛽ Liters','<input id="fu-lit" type="number" step="0.01" inputmode="decimal" placeholder="'+(LANG==='ar'?'اختياري':'optional')+'" style="'+INP+'">')+
+    fRow(LANG==='ar'?'🏪 المحطة':'🏪 Station','<input id="fu-sta" type="text" placeholder="'+(LANG==='ar'?'مثال: KNPC الجهراء':'e.g. KNPC')+'" style="'+INP+'">')+
+    fRow(LANG==='ar'?'🧾 صورة الإيصال *':'🧾 Receipt photo *',
+      '<label style="display:block;cursor:pointer"><input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickPhoto(\'fuel\',this)">'+
+      '<div id="prev_fuel" style="height:110px;border-radius:11px;border:2px dashed var(--br);display:flex;align-items:center;justify-content:center;background:var(--s2)">'+
+      '<i class="ti ti-receipt" style="font-size:30px;color:var(--muted2)"></i></div></label>')+
+  '</div>';
+  openSheet(LANG==='ar'?'⛽ تسجيل وقود':'⛽ Log fuel', body, submitFuel);
+}
+
+function submitFuel(){
+  var amt=parseFloat(val('fu-amt')), odo=parseInt(val('fu-odo'),10);
+  if(!amt||amt<=0){ toast(LANG==='ar'?'أدخل المبلغ':'Enter amount','err'); return; }
+  if(!odo||odo<=0){ toast(LANG==='ar'?'أدخل قراءة العداد':'Enter odometer','err'); return; }
+  if(!_pendingPhotos.fuel){ toast(LANG==='ar'?'صوّر الإيصال':'Photo required','err'); return; }
+  sheetBusy(true);
+  var lastOdo = MY_FUEL.length ? (parseInt(MY_FUEL[0].odometer,10)||0) : 0;
+  var kmSince = lastOdo && odo>lastOdo ? (odo-lastOdo) : null;
+  var lit = parseFloat(val('fu-lit'))||null;
+  var eff = (kmSince && lit) ? +(kmSince/lit).toFixed(2) : (kmSince && amt ? +(kmSince/amt).toFixed(2) : null);
+  // إشارة استهلاك غير طبيعي: أقل من 5 كم لكل دينار
+  var flagged = (kmSince && amt) ? ((kmSince/amt) < 5) : false;
+
+  Promise.all([uploadImage(_pendingPhotos.fuel,'fuel'), getPos()]).then(function(res){
+    return sb('fuel_logs', {method:'POST', headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        driver_id:DRIVER.id, driver_name:DRIVER.name, car_plate:DRIVER.car||null,
+        log_date:todayStr(), amount_kd:amt, liters:lit, odometer:odo,
+        station:val('fu-sta')||null, receipt_url:res[0],
+        latitude:res[1].lat, longitude:res[1].lng,
+        km_since_last:kmSince, efficiency:eff, flagged:flagged
+      })});
+  }).then(function(){
+    _pendingPhotos.fuel=null; closeSheet();
+    toast(LANG==='ar'?'تم تسجيل الوقود ✅':'Fuel logged ✅','ok');
+    return loadMyFuel();
+  }).then(function(){ renderCurrentTab(); })
+  .catch(function(e){ sheetBusy(false); toast('خطأ: '+e.message,'err'); });
+}
+
+/* ═══════════ 4) طلبات (إجازة / سلفة) ═══════════ */
+function loadMyRequests(){
+  if(!DRIVER) return Promise.resolve([]);
+  return sb('driver_requests?driver_id=eq.'+encodeURIComponent(DRIVER.id)+'&order=created_at.desc&limit=50')
+    .then(function(r){ MY_REQUESTS=r||[]; return MY_REQUESTS; }).catch(function(){ return []; });
+}
+
+function openLeaveForm(){
+  var body='<div style="padding:2px">'+
+    fRow(LANG==='ar'?'📅 من تاريخ *':'📅 From *','<input id="lv-from" type="date" style="'+INP+'">')+
+    fRow(LANG==='ar'?'📅 إلى تاريخ *':'📅 To *','<input id="lv-to" type="date" style="'+INP+'">')+
+    fRow(LANG==='ar'?'📋 نوع الإجازة':'📋 Leave type',
+      '<select id="lv-type" style="'+INP+'">'+
+      '<option value="annual">'+(LANG==='ar'?'سنوية':'Annual')+'</option>'+
+      '<option value="sick">'+(LANG==='ar'?'مرضية':'Sick')+'</option>'+
+      '<option value="emergency">'+(LANG==='ar'?'طارئة':'Emergency')+'</option>'+
+      '<option value="unpaid">'+(LANG==='ar'?'بدون راتب':'Unpaid')+'</option></select>')+
+    fRow(LANG==='ar'?'✍️ السبب':'✍️ Reason','<input id="lv-reason" type="text" placeholder="'+(LANG==='ar'?'اكتب السبب':'Write reason')+'" style="'+INP+'">')+
+  '</div>';
+  openSheet(LANG==='ar'?'🏖️ طلب إجازة':'🏖️ Leave request', body, submitLeave);
+}
+
+function submitLeave(){
+  var f=val('lv-from'), tt=val('lv-to');
+  if(!f||!tt){ toast(LANG==='ar'?'حدد التواريخ':'Select dates','err'); return; }
+  if(new Date(f)>new Date(tt)){ toast(LANG==='ar'?'تاريخ البداية بعد النهاية':'Invalid range','err'); return; }
+  var days=Math.round((new Date(tt)-new Date(f))/86400000)+1;
+  sheetBusy(true);
+  sb('driver_requests',{method:'POST',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({driver_id:DRIVER.id, driver_name:DRIVER.name, partner:DRIVER.partner||null,
+      req_type:'leave', from_date:f, to_date:tt, days_count:days,
+      leave_type:val('lv-type'), reason:val('lv-reason')||null, status:'pending'})
+  }).then(function(){ closeSheet(); toast(LANG==='ar'?'تم إرسال الطلب ✅':'Request sent ✅','ok'); return loadMyRequests(); })
+   .then(function(){ renderCurrentTab(); })
+   .catch(function(e){ sheetBusy(false); toast('خطأ: '+e.message,'err'); });
+}
+
+function openAdvanceForm(){
+  var body='<div style="padding:2px">'+
+    fRow(LANG==='ar'?'💵 المبلغ المطلوب (د.ك) *':'💵 Amount (KD) *','<input id="ad-amt" type="number" step="0.001" inputmode="decimal" placeholder="0.000" style="'+INP+'">')+
+    fRow(LANG==='ar'?'📆 التقسيط على':'📆 Installments',
+      '<select id="ad-inst" style="'+INP+'">'+
+      '<option value="1">'+(LANG==='ar'?'شهر واحد':'1 month')+'</option>'+
+      '<option value="2">'+(LANG==='ar'?'شهرين':'2 months')+'</option>'+
+      '<option value="3">'+(LANG==='ar'?'3 شهور':'3 months')+'</option></select>')+
+    fRow(LANG==='ar'?'✍️ السبب *':'✍️ Reason *','<input id="ad-reason" type="text" placeholder="'+(LANG==='ar'?'اكتب سبب الطلب':'Reason')+'" style="'+INP+'">')+
+    '<div style="font-size:11px;color:var(--muted2);padding:8px 10px;background:var(--s2);border-radius:9px;margin-top:6px">ℹ️ '+
+    (LANG==='ar'?'السلفة تُخصم من راتبك حسب التقسيط المختار بعد موافقة الإدارة.':'Advance will be deducted from your salary per selected installments after approval.')+'</div>'+
+  '</div>';
+  openSheet(LANG==='ar'?'💰 طلب سلفة':'💰 Advance request', body, submitAdvance);
+}
+
+function submitAdvance(){
+  var amt=parseFloat(val('ad-amt'));
+  if(!amt||amt<=0){ toast(LANG==='ar'?'أدخل المبلغ':'Enter amount','err'); return; }
+  if(!val('ad-reason')){ toast(LANG==='ar'?'اكتب السبب':'Enter reason','err'); return; }
+  sheetBusy(true);
+  sb('driver_requests',{method:'POST',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({driver_id:DRIVER.id, driver_name:DRIVER.name, partner:DRIVER.partner||null,
+      req_type:'advance', amount:amt, installments:parseInt(val('ad-inst'),10)||1,
+      reason:val('ad-reason'), status:'pending'})
+  }).then(function(){ closeSheet(); toast(LANG==='ar'?'تم إرسال الطلب ✅':'Request sent ✅','ok'); return loadMyRequests(); })
+   .then(function(){ renderCurrentTab(); })
+   .catch(function(e){ sheetBusy(false); toast('خطأ: '+e.message,'err'); });
+}
+
+/* ═══════════ 5) بلاغ صيانة ═══════════ */
+function loadMyMaint(){
+  if(!DRIVER) return Promise.resolve([]);
+  return sb('maintenance_reports?driver_id=eq.'+encodeURIComponent(DRIVER.id)+'&order=report_date.desc&limit=30')
+    .then(function(r){ MY_MAINT=r||[]; return MY_MAINT; }).catch(function(){ return []; });
+}
+
+function openMaintForm(){
+  var cats=[['engine','🔧 '+(LANG==='ar'?'المحرك':'Engine')],['tires','🛞 '+(LANG==='ar'?'الإطارات':'Tires')],
+    ['brakes','🛑 '+(LANG==='ar'?'الفرامل':'Brakes')],['ac','❄️ '+(LANG==='ar'?'التكييف':'A/C')],
+    ['body','🚗 '+(LANG==='ar'?'الهيكل':'Body')],['electrical','⚡ '+(LANG==='ar'?'كهرباء':'Electrical')],
+    ['other','⋯ '+(LANG==='ar'?'أخرى':'Other')]];
+  var body='<div style="padding:2px">'+
+    fRow(LANG==='ar'?'🔧 نوع العطل *':'🔧 Issue type *','<select id="mt-cat" style="'+INP+'">'+cats.map(function(c){return '<option value="'+c[0]+'">'+c[1]+'</option>';}).join('')+'</select>')+
+    fRow(LANG==='ar'?'⚠️ درجة الخطورة *':'⚠️ Severity',
+      '<select id="mt-sev" style="'+INP+'">'+
+      '<option value="low">'+(LANG==='ar'?'🟢 بسيط — يمكن التأجيل':'🟢 Low')+'</option>'+
+      '<option value="medium" selected>'+(LANG==='ar'?'🟡 متوسط':'🟡 Medium')+'</option>'+
+      '<option value="high">'+(LANG==='ar'?'🟠 خطير — يحتاج صيانة قريبة':'🟠 High')+'</option>'+
+      '<option value="critical">'+(LANG==='ar'?'🔴 حرج — السيارة متوقفة':'🔴 Critical')+'</option></select>')+
+    fRow(LANG==='ar'?'📝 وصف العطل *':'📝 Description *','<input id="mt-desc" type="text" placeholder="'+(LANG==='ar'?'اشرح المشكلة':'Describe the issue')+'" style="'+INP+'">')+
+    fRow(LANG==='ar'?'📷 صورة العطل':'📷 Photo',
+      '<label style="display:block;cursor:pointer"><input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickPhoto(\'maint\',this)">'+
+      '<div id="prev_maint" style="height:110px;border-radius:11px;border:2px dashed var(--br);display:flex;align-items:center;justify-content:center;background:var(--s2)">'+
+      '<i class="ti ti-camera-plus" style="font-size:30px;color:var(--muted2)"></i></div></label>')+
+  '</div>';
+  openSheet(LANG==='ar'?'🔧 بلاغ عطل':'🔧 Report issue', body, submitMaint);
+}
+
+function submitMaint(){
+  if(!val('mt-desc')){ toast(LANG==='ar'?'اكتب وصف العطل':'Enter description','err'); return; }
+  sheetBusy(true);
+  var up = _pendingPhotos.maint ? uploadImage(_pendingPhotos.maint,'maint') : Promise.resolve(null);
+  Promise.all([up, getPos()]).then(function(res){
+    return sb('maintenance_reports',{method:'POST',headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({driver_id:DRIVER.id, driver_name:DRIVER.name, car_plate:DRIVER.car||null,
+        report_date:todayStr(), category:val('mt-cat'), severity:val('mt-sev'),
+        description:val('mt-desc'), photo_url:res[0],
+        latitude:res[1].lat, longitude:res[1].lng, status:'open'})});
+  }).then(function(){
+    _pendingPhotos.maint=null; closeSheet();
+    toast(LANG==='ar'?'تم إرسال البلاغ ✅':'Report sent ✅','ok');
+    return loadMyMaint();
+  }).then(function(){ renderCurrentTab(); })
+  .catch(function(e){ sheetBusy(false); toast('خطأ: '+e.message,'err'); });
+}
+
+/* ═══════════ شاشة الخدمات ═══════════ */
+function renderServices(){
+  var el=$('scrServices'); if(!el) return;
+  var h='';
+  h+='<div class="flex-between" style="margin-bottom:10px">'+
+    '<div class="sec-title" style="margin:0">'+(LANG==='ar'?'الخدمات والطلبات':'Services & Requests')+'</div>'+
+    '<button class="btn-refresh" onclick="refreshServices()"><i class="ti ti-refresh"></i> '+t('refresh')+'</button></div>';
+
+  // أزرار الإجراءات
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">'+
+    svcBtn('🏖️', LANG==='ar'?'طلب إجازة':'Leave', '#3b82f6', 'openLeaveForm()')+
+    svcBtn('💰', LANG==='ar'?'طلب سلفة':'Advance', '#10b981', 'openAdvanceForm()')+
+    svcBtn('⛽', LANG==='ar'?'تسجيل وقود':'Log fuel', '#f59e0b', 'openFuelForm()')+
+    svcBtn('🔧', LANG==='ar'?'بلاغ عطل':'Report issue', '#ef4444', 'openMaintForm()')+
+  '</div>';
+
+  // الوثائق المنتهية قريباً
+  var docs=docAlertsHTML();
+  if(docs) h+=docs;
+
+  // طلباتي
+  if(MY_REQUESTS.length){
+    h+='<div class="sec-title">'+(LANG==='ar'?'طلباتي':'My requests')+'</div><div class="card">';
+    MY_REQUESTS.slice(0,10).forEach(function(r){
+      var isLeave=r.req_type==='leave';
+      var stC=r.status==='approved'?'#10b981':(r.status==='rejected'?'#ef4444':'#f59e0b');
+      var stT=r.status==='approved'?(LANG==='ar'?'موافق ✅':'Approved'):(r.status==='rejected'?(LANG==='ar'?'مرفوض ❌':'Rejected'):(LANG==='ar'?'قيد المراجعة ⏳':'Pending'));
+      h+='<div style="padding:10px 4px;border-bottom:1px solid var(--br);display:flex;justify-content:space-between;align-items:start;gap:8px">'+
+        '<div style="flex:1"><div style="font-weight:800;font-size:13px">'+(isLeave?'🏖️ '+(LANG==='ar'?'إجازة':'Leave'):'💰 '+(LANG==='ar'?'سلفة':'Advance'))+
+        (isLeave?' — '+r.days_count+' '+(LANG==='ar'?'يوم':'days'):' — '+fmtKD(r.amount))+'</div>'+
+        '<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+(isLeave?fmtDate(r.from_date)+' → '+fmtDate(r.to_date):fmtDate(r.created_at))+'</div>'+
+        (r.reason?'<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+r.reason+'</div>':'')+
+        (r.admin_note?'<div style="font-size:11px;color:'+stC+';margin-top:4px">💬 '+r.admin_note+'</div>':'')+
+        '</div><div style="font-size:11px;font-weight:800;color:'+stC+';white-space:nowrap">'+stT+'</div></div>';
+    });
+    h+='</div>';
+  }
+
+  // بلاغات الصيانة
+  if(MY_MAINT.length){
+    h+='<div class="sec-title">'+(LANG==='ar'?'بلاغاتي':'My reports')+'</div><div class="card">';
+    MY_MAINT.slice(0,6).forEach(function(m){
+      var sev={low:'🟢',medium:'🟡',high:'🟠',critical:'🔴'}[m.severity]||'🟡';
+      var stC=m.status==='done'?'#10b981':(m.status==='in_progress'?'#3b82f6':'#f59e0b');
+      var stT=m.status==='done'?(LANG==='ar'?'تم الإصلاح':'Resolved'):(m.status==='in_progress'?(LANG==='ar'?'جاري':'In progress'):(LANG==='ar'?'مفتوح':'Open'));
+      h+='<div style="padding:10px 4px;border-bottom:1px solid var(--br);display:flex;justify-content:space-between;gap:8px">'+
+        '<div style="flex:1"><div style="font-weight:800;font-size:13px">'+sev+' '+(m.description||'')+'</div>'+
+        '<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+fmtDate(m.report_date)+'</div></div>'+
+        '<div style="font-size:11px;font-weight:800;color:'+stC+';white-space:nowrap">'+stT+'</div></div>';
+    });
+    h+='</div>';
+  }
+
+  // سجل الوقود
+  if(MY_FUEL.length){
+    var totF=MY_FUEL.reduce(function(s,f){return s+(parseFloat(f.amount_kd)||0);},0);
+    h+='<div class="sec-title">'+(LANG==='ar'?'سجل الوقود':'Fuel log')+'<span style="margin-'+(LANG==='ar'?'right':'left')+':auto;font-size:12px;color:#f59e0b;font-weight:900">'+fmtKD(totF)+'</span></div><div class="card">';
+    MY_FUEL.slice(0,6).forEach(function(f){
+      h+='<div style="padding:9px 4px;border-bottom:1px solid var(--br);display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div><div style="font-weight:800;font-size:13px">⛽ '+fmtKD(f.amount_kd)+(f.flagged?' <span style="color:#ef4444;font-size:10px">⚠️</span>':'')+'</div>'+
+        '<div style="font-size:11px;color:var(--muted2)">'+fmtDate(f.log_date)+(f.odometer?' · '+f.odometer+' km':'')+'</div></div>'+
+        (f.km_since_last?'<div style="font-size:11px;color:var(--muted2);text-align:'+(LANG==='ar'?'left':'right')+'">'+f.km_since_last+' km<br><span style="font-size:10px">'+(LANG==='ar'?'منذ آخر تعبئة':'since last')+'</span></div>':'')+
+        '</div>';
+    });
+    h+='</div>';
+  }
+
+  el.innerHTML=h;
+}
+
+function svcBtn(icon,label,color,fn){
+  return '<button onclick="'+fn+'" style="background:var(--s2);border:1px solid var(--br);border-radius:14px;padding:16px 10px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:7px;transition:all .15s">'+
+    '<span style="font-size:26px">'+icon+'</span>'+
+    '<span style="font-size:12px;font-weight:800;color:'+color+'">'+label+'</span></button>';
+}
+
+/* ═══════════ 6) تنبيهات الوثائق ═══════════ */
+function docAlertsHTML(){
+  if(!DRIVER) return '';
+  var items=[];
+  function chk(dateStr,label,icon){
+    if(!dateStr) return;
+    var d=new Date(dateStr); if(isNaN(d)) return;
+    var days=Math.ceil((d-new Date())/86400000);
+    if(days<=60) items.push({label:label,icon:icon,days:days,date:dateStr});
+  }
+  chk(DRIVER.civil_expiry||DRIVER.residency||DRIVER.iqama_expiry, LANG==='ar'?'الإقامة / المدنية':'Residency / Civil ID','🪪');
+  chk(DRIVER.license, LANG==='ar'?'رخصة القيادة':'Driving license','🚦');
+  if(!items.length) return '';
+  var h='<div class="sec-title" style="color:#f59e0b">⚠️ '+(LANG==='ar'?'وثائق تحتاج انتباه':'Documents need attention')+'</div><div class="card">';
+  items.forEach(function(i){
+    var col=i.days<0?'#ef4444':(i.days<=7?'#ef4444':(i.days<=30?'#f59e0b':'#3b82f6'));
+    var txt=i.days<0?(LANG==='ar'?'منتهية منذ '+Math.abs(i.days)+' يوم':'Expired '+Math.abs(i.days)+'d ago')
+      :(LANG==='ar'?'باقي '+i.days+' يوم':i.days+' days left');
+    h+='<div style="padding:10px 4px;border-bottom:1px solid var(--br);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:800;font-size:13px">'+i.icon+' '+i.label+'</div>'+
+      '<div style="font-size:11px;color:var(--muted2)">'+fmtDate(i.date)+'</div></div>'+
+      '<div style="font-weight:900;font-size:12px;color:'+col+'">'+txt+'</div></div>';
+  });
+  return h+'</div>';
+}
+
+/* ═══════════ Bottom Sheet (نموذج منبثق) ═══════════ */
+var INP='width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--br);background:var(--s2);color:var(--text);font-family:inherit;font-size:14px;font-weight:700;outline:none;box-sizing:border-box';
+function fRow(label,inputHTML){
+  return '<div style="margin-bottom:13px"><label style="display:block;font-size:12px;font-weight:800;margin-bottom:6px;color:var(--muted2)">'+label+'</label>'+inputHTML+'</div>';
+}
+function val(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; }
+var _sheetCb=null;
+function openSheet(title, bodyHTML, onSave){
+  _sheetCb=onSave;
+  var ex=document.getElementById('flySheet'); if(ex) ex.remove();
+  var d=document.createElement('div');
+  d.id='flySheet';
+  d.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+  d.innerHTML='<div style="background:var(--s1,#161b22);width:100%;max-width:520px;border-radius:20px 20px 0 0;max-height:92vh;display:flex;flex-direction:column;border:1px solid var(--br);border-bottom:none">'+
+    '<div style="padding:15px 17px;border-bottom:1px solid var(--br);display:flex;justify-content:space-between;align-items:center">'+
+      '<div style="font-weight:900;font-size:15px">'+title+'</div>'+
+      '<button onclick="closeSheet()" style="background:var(--s2);border:none;color:var(--text);width:31px;height:31px;border-radius:9px;font-size:19px;cursor:pointer;line-height:1">×</button></div>'+
+    '<div style="padding:16px 17px;overflow-y:auto;flex:1">'+bodyHTML+'</div>'+
+    '<div style="padding:13px 17px;border-top:1px solid var(--br);display:flex;gap:9px">'+
+      '<button onclick="closeSheet()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--br);background:transparent;color:var(--muted2);font-family:inherit;font-weight:800;font-size:14px;cursor:pointer">'+(LANG==='ar'?'إلغاء':'Cancel')+'</button>'+
+      '<button id="sheetSave" onclick="sheetSave()" style="flex:2;padding:13px;border-radius:12px;border:none;background:#10b981;color:#fff;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer">'+(LANG==='ar'?'إرسال':'Submit')+'</button>'+
+    '</div></div>';
+  d.addEventListener('click',function(e){ if(e.target===d) closeSheet(); });
+  document.body.appendChild(d);
+}
+function closeSheet(){ var s=document.getElementById('flySheet'); if(s) s.remove(); _sheetCb=null; }
+function sheetSave(){ if(_sheetCb) _sheetCb(); }
+function sheetBusy(on){
+  var b=document.getElementById('sheetSave'); if(!b) return;
+  b.disabled=!!on;
+  b.innerHTML = on ? '<i class="ti ti-loader"></i> '+(LANG==='ar'?'جاري...':'Sending...') : (LANG==='ar'?'إرسال':'Submit');
+}
+
+/* ═══════════ التحميل والتحديث ═══════════ */
+function refreshServices(){
+  return Promise.all([loadMyRequests(), loadMyFuel(), loadMyMaint()])
+    .then(function(){ renderCurrentTab(); updateServicesBadge(); });
+}
+function updateServicesBadge(){
+  var b=document.getElementById('servicesBadge'); if(!b) return;
+  var pendV=MY_VIOLATIONS.filter(function(v){return v.status==='pending';}).length;
+  var n=pendV;
+  if(n>0){ b.textContent=n; b.style.display='flex'; } else b.style.display='none';
+}
+
+function loadControlData(){
+  if(!DRIVER) return Promise.resolve();
+  return Promise.all([
+    loadTodayPhoto(), loadMyViolations(), loadMyRequests(), loadMyFuel(), loadMyMaint()
+  ]).then(function(){
+    updateServicesBadge();
+    renderCurrentTab();
+  }).catch(function(e){ console.warn('control data:', e); });
+}
+
+/* ---------- تعديل شاشات موجودة (حقن) ---------- */
+// حقن بوابة الصورة في شاشة الحضور
+var _origRenderAttendance = renderAttendance;
+renderAttendance = function(){
+  _origRenderAttendance();
+  var el=$('scrAttendance'); if(!el) return;
+  var gate=document.createElement('div');
+  gate.innerHTML=photoGateHTML();
+  // أدخلها بعد أول عنوان
+  var firstCard = el.querySelector('.hero');
+  if(firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(gate, firstCard);
+  else el.insertBefore(gate, el.firstChild);
+};
+
+// حقن المخالفات في شاشة الراتب
+var _origRenderSalary = renderSalary;
+renderSalary = function(){
+  _origRenderSalary();
+  var el=$('scrSalary'); if(!el) return;
+  var vh=violationsHTML();
+  if(vh){ var d=document.createElement('div'); d.innerHTML=vh; el.appendChild(d); }
+};
+
+// تحميل البيانات عند الدخول
+var _origEnterApp = (typeof enterApp==='function') ? enterApp : null;
+if(_origEnterApp){
+  enterApp = function(){
+    var r=_origEnterApp.apply(this, arguments);
+    setTimeout(loadControlData, 900);
+    return r;
+  };
+}
+// وأيضاً عند التحديث العام
+var _origRefreshAll = (typeof refreshAll==='function') ? refreshAll : null;
+if(_origRefreshAll){
+  refreshAll = function(){
+    var r=_origRefreshAll.apply(this, arguments);
+    loadControlData();
+    return r;
+  };
+}
+// تحميل أولي احتياطي
+setTimeout(function(){ if(DRIVER) loadControlData(); }, 2500);
+
 </script>
 </body>
 </html>
