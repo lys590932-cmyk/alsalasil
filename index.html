@@ -1119,7 +1119,7 @@ function refreshAll(){
   Promise.all([
     sb('clockin?driver_id=eq.'+id+'&order=created_at.desc&limit=60').catch(function(){return null;}),
     sb('deductions?driver_id=eq.'+id+'&order=date.desc&limit=200').catch(function(){return null;}),
-    sb('schedules?driver_id=eq.'+id+'&order=date.asc&limit=60').catch(function(){return null;}),
+    sb('schedules?driver_id=eq.'+id+'&date=gte.'+(function(){var d=new Date();d.setDate(d.getDate()-21);return d.toISOString().slice(0,10);})()+'&order=date.asc&limit=200').catch(function(){return null;}),
     sb('messages?or=(recipient.eq.'+id+',recipient.eq.ALL)&order=created_at.desc&limit=30').catch(function(){return null;})
   ]).then(function(r){
     if(r[0]) CLOCKINS   = r[0];
@@ -4139,6 +4139,254 @@ renderAttendance = function(){
 document.addEventListener('visibilitychange', function(){
   if(!document.hidden && DRIVER) renderCurrentTab();
 });
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   📅 جدول الأسبوع للسائق — مواعيد الدوام
+   ═══════════════════════════════════════════════════════════════════ */
+
+var _weekOffset = 0;   // 0 = الأسبوع الحالي، -1 = السابق، +1 = القادم
+
+var WDAYS_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+var WDAYS_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var WMON_AR  = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+var WMON_EN  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* بداية الأسبوع = السبت (زي جدول ARK) */
+function weekStartSat(offset){
+  var d = new Date(); d.setHours(0,0,0,0);
+  var day = d.getDay();               // 0=أحد .. 6=سبت
+  var back = (day + 1) % 7;           // السبت = 0
+  d.setDate(d.getDate() - back + (offset||0)*7);
+  return d;
+}
+function ymd(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function shiftHours(s,e){
+  if(!s||!e) return 0;
+  var a=s.split(':'), b=e.split(':');
+  var m1=(+a[0])*60+(+a[1]), m2=(+b[0])*60+(+b[1]);
+  var diff = m2 - m1;
+  if(diff <= 0) diff += 24*60;        // شفت ليلي يعبر منتصف الليل
+  return Math.round(diff/60*10)/10;
+}
+
+/* أنواع الورديات */
+function shiftMeta(type){
+  var ar = LANG==='ar';
+  var M = {
+    work:    {icon:'✅', label: ar?'يعمل':'Working',  color:'#10b981'},
+    morning: {icon:'🌅', label: ar?'صباحي':'Morning', color:'#3b82f6'},
+    evening: {icon:'🌙', label: ar?'مسائي':'Evening', color:'#a855f7'},
+    off:     {icon:'🔴', label: ar?'إجازة':'Day off', color:'#ef4444'},
+    holiday: {icon:'🌴', label: ar?'عطلة رسمية':'Holiday', color:'#f59e0b'}
+  };
+  return M[type] || M.work;
+}
+
+function weekScheduleHTML(){
+  var ar = LANG==='ar';
+  var start = weekStartSat(_weekOffset);
+  var todayS = todayStr();
+
+  // اجمع أيام الأسبوع
+  var days = [];
+  for(var i=0;i<7;i++){
+    var d = new Date(start); d.setDate(d.getDate()+i);
+    var ds = ymd(d);
+    var sh = null;
+    for(var j=0;j<SCHEDULES.length;j++){ if(SCHEDULES[j].date===ds){ sh=SCHEDULES[j]; break; } }
+    days.push({date:ds, dt:d, sh:sh, isToday: ds===todayS});
+  }
+
+  var hasAny = days.some(function(x){ return x.sh; });
+
+  // العنوان + التنقّل
+  var first = days[0].dt, last = days[6].dt;
+  var rangeTxt = ar
+    ? first.getDate()+' '+WMON_AR[first.getMonth()]+' — '+last.getDate()+' '+WMON_AR[last.getMonth()]
+    : WMON_EN[first.getMonth()]+' '+first.getDate()+' — '+WMON_EN[last.getMonth()]+' '+last.getDate();
+  var weekLbl = _weekOffset===0 ? (ar?'هذا الأسبوع':'This week')
+              : (_weekOffset===1 ? (ar?'الأسبوع القادم':'Next week')
+              : (_weekOffset===-1 ? (ar?'الأسبوع الماضي':'Last week') : rangeTxt));
+
+  var h = '';
+  h += '<div class="sec-title" style="display:flex;align-items:center;gap:7px">'+
+       '<i class="ti ti-calendar-week" style="color:#a855f7"></i>'+(ar?'جدول الدوام':'Work schedule')+'</div>';
+
+  // شريط التنقّل
+  h += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:11px">'+
+    '<button onclick="weekNav(-1)" style="background:var(--s2);border:1px solid var(--br);color:var(--text);width:38px;height:38px;border-radius:11px;font-size:17px;cursor:pointer;font-family:inherit">'+(ar?'‹':'‹')+'</button>'+
+    '<div style="flex:1;text-align:center;background:var(--s2);border:1px solid var(--br);border-radius:11px;padding:8px">'+
+      '<div style="font-weight:900;font-size:13px">'+weekLbl+'</div>'+
+      '<div style="font-size:10.5px;color:var(--muted2);font-weight:700">'+rangeTxt+'</div></div>'+
+    '<button onclick="weekNav(1)" style="background:var(--s2);border:1px solid var(--br);color:var(--text);width:38px;height:38px;border-radius:11px;font-size:17px;cursor:pointer;font-family:inherit">'+(ar?'›':'›')+'</button>'+
+  '</div>';
+
+  if(_weekOffset!==0){
+    h += '<button onclick="weekNav(0,true)" style="width:100%;margin-bottom:11px;padding:9px;background:rgba(168,85,247,.13);border:1px solid rgba(168,85,247,.35);border-radius:10px;color:#a855f7;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer">'+
+      (ar?'⟲ رجوع لهذا الأسبوع':'⟲ Back to this week')+'</button>';
+  }
+
+  // لا يوجد جدول
+  if(!hasAny){
+    h += '<div class="card"><div class="empty" style="padding:30px 14px">'+
+      '<i class="ti ti-calendar-off" style="font-size:34px;opacity:.35;display:block;margin-bottom:9px"></i>'+
+      '<p style="font-weight:800">'+(ar?'لا يوجد جدول لهذا الأسبوع':'No schedule this week')+'</p>'+
+      '<div class="e-sub">'+(ar?'الإدارة لسه ما نشرتش الجدول — تواصل معهم':'Management hasn\'t published it yet — contact them')+'</div>'+
+    '</div></div>';
+    return h;
+  }
+
+  // أيام الأسبوع
+  h += '<div class="card" style="padding:0;overflow:hidden">';
+  days.forEach(function(x, idx){
+    var dayName = ar ? WDAYS_AR[x.dt.getDay()] : WDAYS_EN[x.dt.getDay()];
+    var dayNum  = x.dt.getDate() + ' ' + (ar ? WMON_AR[x.dt.getMonth()] : WMON_EN[x.dt.getMonth()]);
+    var isLast  = idx===6;
+    var bdr = isLast ? '' : 'border-bottom:1px solid var(--br);';
+
+    // خلفية اليوم الحالي
+    var bgToday = x.isToday ? 'background:rgba(59,130,246,.09);' : '';
+
+    if(!x.sh){
+      h += '<div style="padding:13px 14px;'+bdr+bgToday+'display:flex;align-items:center;gap:11px;opacity:.55">'+
+        '<div style="min-width:66px"><div style="font-weight:900;font-size:13px">'+dayName+'</div>'+
+        '<div style="font-size:10.5px;color:var(--muted2);font-weight:700">'+dayNum+'</div></div>'+
+        '<div style="flex:1;font-size:12px;color:var(--muted2);font-weight:700">'+(ar?'— لم يُحدَّد':'— Not set')+'</div>'+
+        (x.isToday?'<span style="background:#3b82f6;color:#fff;font-size:9.5px;font-weight:900;padding:3px 8px;border-radius:8px">'+(ar?'اليوم':'TODAY')+'</span>':'')+
+      '</div>';
+      return;
+    }
+
+    var m = shiftMeta(x.sh.shift_type);
+    var isOff = x.sh.shift_type==='off' || x.sh.shift_type==='holiday';
+    var hrs = isOff ? 0 : shiftHours(x.sh.shift_start, x.sh.shift_end);
+
+    h += '<div style="padding:13px 14px;'+bdr+bgToday+'display:flex;align-items:center;gap:11px">'+
+      // اليوم
+      '<div style="min-width:66px">'+
+        '<div style="font-weight:900;font-size:13px;color:'+(x.isToday?'#3b82f6':'var(--text)')+'">'+dayName+'</div>'+
+        '<div style="font-size:10.5px;color:var(--muted2);font-weight:700">'+dayNum+'</div>'+
+      '</div>'+
+      // الوردية
+      '<div style="flex:1">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:'+(isOff?'0':'4px')+'">'+
+          '<span style="font-size:15px">'+m.icon+'</span>'+
+          '<span style="font-weight:800;font-size:12.5px;color:'+m.color+'">'+m.label+'</span>'+
+          (hrs?'<span style="font-size:10px;color:var(--muted2);font-weight:700">• '+hrs+(ar?' س':'h')+'</span>':'')+
+        '</div>'+
+        (isOff ? '' :
+          '<div style="display:flex;align-items:center;gap:7px;font-family:monospace;font-weight:900;font-size:14px">'+
+            '<span style="color:#10b981">'+(x.sh.shift_start||'—')+'</span>'+
+            '<span style="color:var(--muted2);font-size:12px">→</span>'+
+            '<span style="color:#ef4444">'+(x.sh.shift_end||'—')+'</span>'+
+          '</div>')+
+      '</div>'+
+      // شارة اليوم
+      (x.isToday?'<span style="background:#3b82f6;color:#fff;font-size:9.5px;font-weight:900;padding:3px 8px;border-radius:8px;white-space:nowrap">'+(ar?'اليوم':'TODAY')+'</span>':'')+
+    '</div>';
+  });
+  h += '</div>';
+
+  // ملخص الأسبوع
+  var workDays=0, offDays=0, totalHrs=0;
+  days.forEach(function(x){
+    if(!x.sh) return;
+    if(x.sh.shift_type==='off' || x.sh.shift_type==='holiday'){ offDays++; return; }
+    workDays++;
+    totalHrs += shiftHours(x.sh.shift_start, x.sh.shift_end);
+  });
+  totalHrs = Math.round(totalHrs*10)/10;
+
+  h += '<div style="display:flex;gap:8px;margin-top:11px">'+
+    sumBox(ar?'أيام عمل':'Work days', workDays, '#10b981')+
+    sumBox(ar?'ساعات':'Hours', totalHrs, '#3b82f6')+
+    sumBox(ar?'إجازات':'Days off', offDays, '#ef4444')+
+  '</div>';
+
+  return h;
+}
+
+function sumBox(label, val, color){
+  return '<div style="flex:1;background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:11px 7px;text-align:center">'+
+    '<div style="font-size:19px;font-weight:900;color:'+color+';line-height:1">'+val+'</div>'+
+    '<div style="font-size:10px;color:var(--muted2);font-weight:700;margin-top:3px">'+label+'</div></div>';
+}
+
+function weekNav(dir, reset){
+  if(reset) _weekOffset = 0;
+  else _weekOffset += dir;
+  if(_weekOffset < -8)  _weekOffset = -8;
+  if(_weekOffset >  8)  _weekOffset =  8;
+  renderCurrentTab();
+  try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+}
+
+/* شريط مصغّر للأيام القادمة (للشاشة الرئيسية) */
+function nextDaysStripHTML(){
+  var ar = LANG==='ar';
+  var out = [];
+  var d = new Date(); d.setHours(0,0,0,0);
+  for(var i=0;i<5;i++){
+    var dd = new Date(d); dd.setDate(dd.getDate()+i);
+    var ds = ymd(dd);
+    var sh = null;
+    for(var j=0;j<SCHEDULES.length;j++){ if(SCHEDULES[j].date===ds){ sh=SCHEDULES[j]; break; } }
+    out.push({dt:dd, sh:sh, isToday:i===0});
+  }
+  if(!out.some(function(x){return x.sh;})) return '';
+
+  var h = '<div class="sec-title" style="display:flex;align-items:center;gap:7px">'+
+    '<i class="ti ti-calendar-week" style="color:#a855f7"></i>'+(ar?'الأيام القادمة':'Next days')+
+    '<button onclick="switchTab(\'attendance\')" style="margin-'+(ar?'right':'left')+':auto;background:none;border:none;color:#a855f7;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer">'+
+    (ar?'الجدول الكامل ›':'Full schedule ›')+'</button></div>';
+
+  h += '<div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px">';
+  out.forEach(function(x){
+    var dayShort = ar ? WDAYS_AR[x.dt.getDay()].replace('ال','') : WDAYS_EN[x.dt.getDay()].slice(0,3);
+    var isOff = x.sh && (x.sh.shift_type==='off' || x.sh.shift_type==='holiday');
+    var m = x.sh ? shiftMeta(x.sh.shift_type) : null;
+    var brd = x.isToday ? '2px solid #3b82f6' : '1px solid var(--br)';
+    h += '<div style="min-width:78px;flex:0 0 auto;background:var(--s2);border:'+brd+';border-radius:12px;padding:9px 6px;text-align:center">'+
+      '<div style="font-size:10.5px;font-weight:800;color:'+(x.isToday?'#3b82f6':'var(--muted2)')+'">'+
+        (x.isToday?(ar?'اليوم':'Today'):dayShort)+'</div>'+
+      '<div style="font-size:14px;font-weight:900;margin:3px 0">'+x.dt.getDate()+'</div>'+
+      (x.sh
+        ? (isOff
+            ? '<div style="font-size:14px">'+m.icon+'</div>'
+            : '<div style="font-family:monospace;font-size:10.5px;font-weight:900;color:#10b981;line-height:1.35">'+
+              (x.sh.shift_start||'—')+'<br><span style="color:#ef4444">'+(x.sh.shift_end||'—')+'</span></div>')
+        : '<div style="font-size:11px;color:var(--muted2)">—</div>')+
+    '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+/* ── حقن الجدول الكامل في شاشة الحضور ── */
+var _origRenderAttendance4 = renderAttendance;
+renderAttendance = function(){
+  _origRenderAttendance4();
+  var el = $('scrAttendance'); if(!el) return;
+  var d = document.createElement('div');
+  d.style.marginTop = '18px';
+  d.innerHTML = weekScheduleHTML();
+  el.appendChild(d);
+};
+
+/* ── حقن شريط الأيام القادمة في الرئيسية ── */
+var _origRenderHome4 = renderHome;
+renderHome = function(){
+  _origRenderHome4();
+  var el = $('scrHome'); if(!el) return;
+  var html = nextDaysStripHTML();
+  if(!html) return;
+  var d = document.createElement('div');
+  d.innerHTML = html;
+  el.appendChild(d);
+};
 
 </script>
 </body>
