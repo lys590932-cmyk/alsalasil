@@ -89,6 +89,7 @@
   <button class="tab" data-v="fuel" onclick="go('fuel')"><i class="ti ti-gas-station"></i> الوقود</button>
   <button class="tab" data-v="vio" onclick="go('vio')"><i class="ti ti-alert-triangle"></i> المخالفات</button>
   <button class="tab" data-v="shifts" onclick="go('shifts')"><i class="ti ti-clock"></i> الشفتات والتأخير <span class="bdg" id="bLate" style="display:none">0</span></button>
+  <button class="tab" data-v="daily" onclick="go('daily')"><i class="ti ti-report-analytics"></i> التقارير اليومية <span class="bdg" id="bDaily" style="display:none">0</span></button>
   <button class="tab" data-v="msgs" onclick="go('msgs')"><i class="ti ti-send"></i> الرسائل</button>
   <button class="tab" data-v="drivers" onclick="go('drivers')"><i class="ti ti-users"></i> السائقون</button>
 </div>
@@ -190,6 +191,28 @@
       <div style="overflow-x:auto"><table id="tShifts"></table></div></div>
     <div class="card"><div class="card-h"><i class="ti ti-cash-off"></i> خصومات التأخير التلقائية<button class="btn btn-gold" onclick="exportDeductions()" style="margin-right:auto;padding:6px 12px;font-size:11px"><i class="ti ti-download"></i> تصدير</button></div>
       <div style="overflow-x:auto"><table id="tLateDed"></table></div></div>
+  </div>
+
+  <!-- ═══ التقارير اليومية ═══ -->
+  <div class="view" id="v-daily">
+    <div class="kpis" id="kDaily"></div>
+    <div class="toolbar">
+      <label style="font-weight:800;font-size:13px;color:var(--navy)">📅 من:</label>
+      <input type="date" id="dlFrom" onchange="renderDaily()">
+      <label style="font-weight:800;font-size:13px;color:var(--navy)">إلى:</label>
+      <input type="date" id="dlTo" onchange="renderDaily()">
+      <select id="dlPartner" onchange="renderDaily()"><option value="">كل الشركاء</option></select>
+      <select id="dlView" onchange="renderDaily()">
+        <option value="daily">📋 تفصيلي يومي</option>
+        <option value="summary">📊 ملخص لكل سائق</option>
+        <option value="missing">❌ لم يرسلوا تقرير</option>
+        <option value="flagged">⚠️ فروقات تحتاج مراجعة</option>
+      </select>
+      <button class="btn btn-gold" onclick="exportDaily()"><i class="ti ti-download"></i> تصدير</button>
+    </div>
+    <div id="dlAlert"></div>
+    <div class="card"><div class="card-h"><i class="ti ti-report-analytics"></i> <span id="dlTitle">التقارير اليومية</span></div>
+      <div style="overflow-x:auto"><table id="tDaily"></table></div></div>
   </div>
 
   <!-- ═══ الرسائل ═══ -->
@@ -299,7 +322,7 @@
 const SUPA_URL='https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY='sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 let sb=null, PHOTOS=[], REQS=[], MAINT=[], FUEL=[], VIO=[], DRIVERS=[];
-let SCHED=[], CLOCKINS=[], DEDS=[], MSGS=[], CFG={grace:30,fraction:0.5,prealert:30};
+let SCHED=[], CLOCKINS=[], DEDS=[], MSGS=[], DAILY=[], CFG={grace:30,fraction:0.5,prealert:30};
 let _curDrv=null;   // السائق المفتوح في الملف
 
 function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast on'+(e?' err':'');setTimeout(()=>t.classList.remove('on'),2800);}
@@ -315,7 +338,8 @@ function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
   ({overview:renderOverview,photos:renderPhotos,requests:renderRequests,maint:renderMaint,
-    fuel:renderFuel,vio:renderVio,shifts:renderShifts,msgs:renderMsgs,drivers:renderDrivers}[v]||(()=>{}))();
+    fuel:renderFuel,vio:renderVio,shifts:renderShifts,msgs:renderMsgs,drivers:renderDrivers,
+    daily:renderDaily}[v]||(()=>{}))();
 }
 
 // ── ARK drivers (localStorage) ──
@@ -328,7 +352,7 @@ async function loadAll(){
   setCloud('connecting','جاري التحميل...');
   DRIVERS=getDrivers();
   try{
-    const [p,r,m,f,v,sc,ci,dd,st,mg]=await Promise.all([
+    const [p,r,m,f,v,sc,ci,dd,st,mg,dl]=await Promise.all([
       sb.from('shift_photos').select('*').order('photo_date',{ascending:false}).limit(600),
       sb.from('driver_requests').select('*').order('created_at',{ascending:false}).limit(300),
       sb.from('maintenance_reports').select('*').order('report_date',{ascending:false}).limit(300),
@@ -339,9 +363,10 @@ async function loadAll(){
       sb.from('deductions').select('*').order('date',{ascending:false}).limit(500),
       sb.from('app_settings').select('*'),
       sb.from('messages').select('*').order('created_at',{ascending:false}).limit(150),
+      sb.from('daily_reports').select('*').order('report_date',{ascending:false}).limit(3000),
     ]);
     PHOTOS=p.data||[];REQS=r.data||[];MAINT=m.data||[];FUEL=f.data||[];VIO=v.data||[];
-    SCHED=sc.data||[];CLOCKINS=ci.data||[];DEDS=dd.data||[];MSGS=(mg&&mg.data)||[];
+    SCHED=sc.data||[];CLOCKINS=ci.data||[];DEDS=dd.data||[];MSGS=(mg&&mg.data)||[];DAILY=(dl&&dl.data)||[];
     (st.data||[]).forEach(x=>{
       if(x.key==='late_grace_minutes') CFG.grace=parseInt(x.value,10)||30;
       if(x.key==='late_deduct_fraction') CFG.fraction=parseFloat(x.value)||0.5;
@@ -689,7 +714,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   sb=supabase.createClient(SUPA_URL,SUPA_KEY);
   await loadAll();
   // Realtime
-  ['shift_photos','driver_requests','maintenance_reports','fuel_logs','driver_violations','schedules','deductions','clockin','messages'].forEach(tb=>{
+  ['shift_photos','driver_requests','maintenance_reports','fuel_logs','driver_violations','schedules','deductions','clockin','messages','daily_reports'].forEach(tb=>{
     sb.channel('adm_'+tb).on('postgres_changes',{event:'*',schema:'public',table:tb},()=>{
       clearTimeout(window._rt); window._rt=setTimeout(loadAll,600);
     }).subscribe();
@@ -729,6 +754,13 @@ function renderOverview(){
   const pendVio=VIO.filter(v=>v.status==='pending');
   const appealVio=VIO.filter(v=>v.status==='appealed');
   const flaggedFuel=FUEL.filter(f=>f.flagged&&String(f.log_date).startsWith(T.slice(0,7)));
+  // تقارير أمس (لأن تقرير اليوم يُرسل آخر اليوم)
+  const yd=new Date(); yd.setDate(yd.getDate()-1);
+  const Y=yd.toISOString().slice(0,10);
+  const ySched=SCHED.filter(s=>s.date===Y&&s.shift_type!=='off'&&s.shift_type!=='holiday');
+  const yReps=DAILY.filter(r=>r.report_date===Y);
+  const missingRep=ySched.filter(s=>!yReps.some(r=>r.driver_id===s.driver_id));
+  const flaggedRep=DAILY.filter(r=>r.report_date===Y&&auditReport(r).some(f=>f.s==='high'));
   const lateDedToday=DEDS.filter(x=>x.ded_type==='late'&&x.date===T&&x.status!=='cancelled');
   const lateSum=lateDedToday.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
 
@@ -737,7 +769,7 @@ function renderOverview(){
     {l:'شفتات اليوم',v:working.length+' / '+DRIVERS.length,c:'var(--navy)'},
     {l:'متأخرين + غياب',v:lateList.length+noshowList.length,c:(lateList.length+noshowList.length)?'var(--red)':'var(--green)'},
     {l:'لم يرفعوا صورة',v:missingPhoto.length,c:missingPhoto.length?'var(--amber)':'var(--green)'},
-    {l:'خصومات اليوم (د.ك)',v:fmtKD(lateSum),c:'var(--purple)'},
+    {l:'تقارير ناقصة (أمس)',v:missingRep.length,c:missingRep.length?'var(--amber)':'var(--green)'},
   ]);
 
   // تنبيهات كبيرة
@@ -747,6 +779,8 @@ function renderOverview(){
   if(pendReq.length) alerts.push({ic:'📋',t:pendReq.length+' طلب بانتظار موافقتك',s:'إجازات وسلف معلّقة',c:'var(--amber)',go:'requests'});
   if(appealVio.length) alerts.push({ic:'⚖️',t:appealVio.length+' اعتراض على مخالفة',s:'يحتاج قرار منك',c:'var(--purple)',go:'vio'});
   if(flaggedFuel.length) alerts.push({ic:'⛽',t:flaggedFuel.length+' تعبئة وقود مشبوهة',s:'استهلاك غير طبيعي هذا الشهر',c:'var(--amber)',go:'fuel'});
+  if(missingRep.length) alerts.push({ic:'📋',t:missingRep.length+' تقرير يومي ناقص (أمس)',s:'سائقون عملوا ولم يرسلوا تقاريرهم',c:'var(--amber)',go:'daily'});
+  if(flaggedRep.length) alerts.push({ic:'🔍',t:flaggedRep.length+' تقرير فيه فروقات',s:'الساعات أو الوقود لا يطابق السجل الفعلي',c:'var(--red)',go:'daily'});
 
   document.getElementById('alertsBox').innerHTML = alerts.length
     ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:11px;margin-bottom:16px">'+
@@ -767,6 +801,8 @@ function renderOverview(){
   openMaint.forEach(m=>todo.push({ic:'🔧',t:'عطل: '+(m.description||'').slice(0,32)+' — '+m.driver_name,a:`go('maint')`,c:'var(--red)'}));
   appealVio.forEach(v=>todo.push({ic:'⚖️',t:'اعتراض: '+v.driver_name,a:`go('vio')`,c:'var(--purple)'}));
   missingPhoto.slice(0,5).forEach(d=>todo.push({ic:'❌',t:'لم يرفع صورة: '+d.name,a:`openDrv('${d.id}')`,c:'var(--amber)'}));
+  flaggedRep.forEach(r=>todo.push({ic:'🔍',t:'راجع تقرير '+r.driver_name+' (فروقات)',a:`go('daily')`,c:'var(--red)'}));
+  missingRep.slice(0,5).forEach(s2=>todo.push({ic:'📋',t:'تقرير ناقص: '+(DRIVERS.find(d=>d.id===s2.driver_id)?.name||s2.driver_id),a:`go('daily')`,c:'var(--amber)'}));
 
   document.getElementById('todoList').innerHTML = todo.length
     ? todo.slice(0,25).map(x=>`<div onclick="${x.a}" style="padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
@@ -782,6 +818,7 @@ function renderOverview(){
   MAINT.slice(0,12).forEach(m=>feed.push({t:new Date(m.created_at),ic:'🔧',x:m.driver_name+' أبلغ عن عطل'}));
   FUEL.slice(0,12).forEach(f=>feed.push({t:new Date(f.created_at),ic:'⛽',x:f.driver_name+' سجّل وقود '+fmtKD(f.amount_kd)}));
   CLOCKINS.slice(0,15).forEach(c=>feed.push({t:new Date(c.created_at),ic:c.action==='clock_in'?'🟢':'🔴',x:c.driver_name+(c.action==='clock_in'?' سجّل حضور':' سجّل انصراف')}));
+  DAILY.slice(0,12).forEach(r=>feed.push({t:new Date(r.created_at||r.report_date),ic:'📋',x:r.driver_name+' أرسل تقرير — '+(r.orders_count||0)+' طلب'}));
   feed.sort((a,b)=>b.t-a.t);
 
   document.getElementById('feedList').innerHTML = feed.length
@@ -878,6 +915,10 @@ function drvStats(id){
   const rq=REQS.filter(r=>r.driver_id===id);
   const mt=MAINT.filter(m=>m.driver_id===id);
   // التزام الشهر
+  const dlM=DAILY.filter(r=>r.driver_id===id&&String(r.report_date).startsWith(M));
+  const dlOrders=dlM.reduce((s,r)=>s+(parseInt(r.orders_count)||0),0);
+  const dlHours=dlM.reduce((s,r)=>s+(parseFloat(r.duty_hours)||0),0);
+  const dlFlags=dlM.filter(r=>auditReport(r).some(f=>f.s==='high')).length;
   const schM=SCHED.filter(s=>s.driver_id===id&&String(s.date).startsWith(M)&&s.shift_type!=='off'&&s.shift_type!=='holiday');
   let onTime=0, late=0, absent=0;
   schM.forEach(s=>{
@@ -888,7 +929,7 @@ function drvStats(id){
     const lm=Math.round((ci-shiftDT(s.date,s.shift_start))/60000);
     if(lm>=CFG.grace) late++; else onTime++;
   });
-  return {ph,phM,vio,vioSum,ded,dedM,dedSum,fu,fuM,fuSum,rq,mt,schM,onTime,late,absent};
+  return {ph,phM,vio,vioSum,ded,dedM,dedSum,fu,fuM,fuSum,rq,mt,schM,onTime,late,absent,dlM,dlOrders,dlHours,dlFlags};
 }
 
 function renderDrivers(){
@@ -906,7 +947,7 @@ function renderDrivers(){
   if(pf) list=list.filter(d=>d.partner===pf);
 
   document.getElementById('tDrivers').innerHTML=
-    '<thead><tr><th>الكود</th><th>السائق</th><th>الشريك</th><th>السيارة</th><th>الالتزام (الشهر)</th><th>مخالفات</th><th>خصومات الشهر</th><th>وقود الشهر</th><th></th></tr></thead><tbody>'+
+    '<thead><tr><th>الكود</th><th>السائق</th><th>الشريك</th><th>السيارة</th><th>الالتزام (الشهر)</th><th>تقارير الشهر</th><th>الطلبات</th><th>مخالفات</th><th>خصومات الشهر</th><th></th></tr></thead><tbody>'+
     (list.length?list.map(d=>{
       const s=drvStats(d.id);
       const tot=s.onTime+s.late+s.absent;
@@ -916,11 +957,12 @@ function renderDrivers(){
         <td style="font-family:monospace;font-weight:800">${esc(d.id)}</td>
         <td class="nm">${esc(d.name)}</td><td>${esc(d.partner||'—')}</td><td>${esc(d.car||'—')}</td>
         <td>${pct===null?'—':`<b style="color:${pc}">${pct}%</b><br><span style="font-size:10px;color:var(--muted)">${s.onTime}✅ ${s.late}🔴 ${s.absent}⚫</span>`}</td>
+        <td>${s.dlM.length?`<b>${s.dlM.length}</b>${s.dlFlags?` <span style="color:var(--red)">⚠️${s.dlFlags}</span>`:''}`:'—'}</td>
+        <td>${s.dlOrders?`<b style="color:var(--green)">${s.dlOrders}</b>`:'—'}</td>
         <td>${s.vio.length?`<b style="color:var(--red)">${s.vio.length}</b><br><span style="font-size:10px">${fmtKD(s.vioSum)}</span>`:'—'}</td>
         <td>${s.dedSum?`<b style="color:var(--red)">${fmtKD(s.dedSum)}</b>`:'—'}</td>
-        <td>${s.fuSum?fmtKD(s.fuSum):'—'}</td>
         <td><i class="ti ti-chevron-left" style="color:var(--muted)"></i></td></tr>`;
-    }).join('') : '<tr><td colspan="9" class="empty">لا يوجد سائقون مطابقون</td></tr>')+'</tbody>';
+    }).join('') : '<tr><td colspan="10" class="empty">لا يوجد سائقون مطابقون</td></tr>')+'</tbody>';
 }
 
 function openDrv(id){
@@ -946,6 +988,13 @@ function openDrv(id){
     box('غياب', s.absent, 'var(--amber)')+
     box('مخالفات', s.vio.length, 'var(--red)')+
     box('خصم الشهر', fmtKD(s.dedSum), 'var(--purple)')+
+  '</div>'+
+  '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px">'+
+    box('تقارير الشهر', s.dlM.length, 'var(--blue)')+
+    box('إجمالي الطلبات', s.dlOrders, 'var(--green)')+
+    box('ساعات الدوام', s.dlHours.toFixed(1), 'var(--navy)')+
+    box('طلبات/يوم', s.dlM.length?(s.dlOrders/s.dlM.length).toFixed(1):'—', 'var(--amber)')+
+    box('فروقات التدقيق', s.dlFlags, s.dlFlags?'var(--red)':'var(--green)')+
   '</div>';
 
   // بيانات أساسية
@@ -997,6 +1046,23 @@ function openDrv(id){
         return `<div style="padding:9px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px">
           <span style="font-weight:700">${r.req_type==='leave'?'🏖️ إجازة '+(r.days_count||'')+' يوم':'💰 سلفة '+fmtKD(r.amount)}</span>
           <span>${st} ${fmtD(r.created_at)}</span></div>`;}).join('')+
+      '</div></div>';
+  }
+
+  // التقارير اليومية
+  if(s.dlM.length){
+    h+='<div style="margin-bottom:16px"><div style="font-weight:900;font-size:13px;color:var(--blue);margin-bottom:9px">📋 التقارير اليومية (هذا الشهر)</div>'+
+      '<div style="background:var(--light);border-radius:11px;overflow:hidden">'+
+      s.dlM.slice(0,8).map(r=>{
+        const fl=auditReport(r);
+        const hi=fl.some(f=>f.s==='high');
+        const actH=actualHours(r.driver_id,r.report_date);
+        return `<div style="padding:9px 13px;border-bottom:1px solid var(--border);font-size:12px;${hi?'background:var(--red-bg)':''}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:800">${fmtD(r.report_date)}</span>
+            <span><b style="color:var(--green)">${r.orders_count||0}</b> طلب · ${r.duty_hours||0}س${actH!==null?' <span style="color:var(--muted)">(فعلي '+actH+'س)</span>':''}</span></div>
+          ${fl.length?'<div style="margin-top:4px">'+fl.map(f=>`<span style="font-size:10px;font-weight:800;color:${f.s==='high'?'var(--red)':'var(--amber)'};margin-left:7px">${f.s==='high'?'🔴':'🟡'} ${esc(f.m)}</span>`).join('')+'</div>':''}
+        </div>`;}).join('')+
       '</div></div>';
   }
 
@@ -1113,6 +1179,8 @@ function exportDrivers(){
       'الجنسية':d.nationality||'','الهاتف':d.sim||'','الراتب':d.salary_base||'',
       'التزام %':tot?Math.round(s.onTime/tot*100):'',
       'في الوقت':s.onTime,'متأخر':s.late,'غياب':s.absent,
+      'تقارير الشهر':s.dlM.length,'إجمالي الطلبات':s.dlOrders,'ساعات الدوام':s.dlHours.toFixed(1),
+      'فروقات التدقيق':s.dlFlags,
       'عدد المخالفات':s.vio.length,'قيمة المخالفات':s.vioSum.toFixed(3),
       'خصومات الشهر':s.dedSum.toFixed(3),'وقود الشهر':s.fuSum.toFixed(3),
       'صور الشفت (الشهر)':s.phM.length
@@ -1185,6 +1253,276 @@ function exportPhotos(){
     };
   });
   download('صور_الشفت_'+date+'.csv', toCSV(rows));
+  toast('✅ تم التصدير');
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   📋 التقارير اليومية + تدقيق تلقائي
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ساعات الحضور الفعلية من سجل clockin */
+function actualHours(drvId, dateStr){
+  const day = CLOCKINS.filter(c=>String(c.created_at||'').slice(0,10)===dateStr && c.driver_id===drvId)
+                      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  let total=0, inT=null;
+  day.forEach(c=>{
+    if(c.action==='clock_in' && !inT) inT=new Date(c.created_at);
+    else if(c.action==='clock_out' && inT){ total += (new Date(c.created_at)-inT)/3600000; inT=null; }
+  });
+  return total>0 ? Math.round(total*10)/10 : null;
+}
+
+/* وقود مسجّل فعلياً في fuel_logs */
+function actualFuel(drvId, dateStr){
+  const rows=FUEL.filter(f=>f.driver_id===drvId && String(f.log_date)===dateStr);
+  if(!rows.length) return null;
+  return rows.reduce((s,f)=>s+(parseFloat(f.amount_kd)||0),0);
+}
+
+/* تدقيق تقرير واحد — يرجع قائمة ملاحظات */
+function auditReport(r){
+  const flags=[];
+  const orders=parseInt(r.orders_count)||0;
+  const repHrs=parseFloat(r.duty_hours)||0;
+  const repFuel=parseFloat(r.fuel_amount)||0;
+
+  // 1) ساعات التقرير vs الحضور الفعلي
+  const actH=actualHours(r.driver_id, r.report_date);
+  if(actH!==null && repHrs>0){
+    const diff=Math.abs(repHrs-actH);
+    if(diff>=2) flags.push({t:'ساعات',m:'التقرير '+repHrs+'س / الحضور '+actH+'س (فرق '+diff.toFixed(1)+'س)',s:'high'});
+    else if(diff>=1) flags.push({t:'ساعات',m:'فرق '+diff.toFixed(1)+'س عن الحضور',s:'low'});
+  } else if(repHrs>0 && actH===null){
+    flags.push({t:'حضور',m:'كتب '+repHrs+'س لكن لا يوجد تسجيل حضور',s:'high'});
+  }
+
+  // 2) وقود التقرير vs سجل الوقود
+  const actF=actualFuel(r.driver_id, r.report_date);
+  if(repFuel>0 && actF===null){
+    flags.push({t:'وقود',m:'كتب '+fmtKD(repFuel)+' د.ك بدون إيصال مرفوع',s:'low'});
+  } else if(repFuel>0 && actF!==null){
+    const d=Math.abs(repFuel-actF);
+    if(d>=1) flags.push({t:'وقود',m:'التقرير '+fmtKD(repFuel)+' / الإيصالات '+fmtKD(actF),s:'high'});
+  }
+
+  // 3) طلبات غير منطقية
+  if(orders===0 && repHrs>=4) flags.push({t:'طلبات',m:'0 طلب مع '+repHrs+' ساعة دوام',s:'high'});
+  if(repHrs>0 && orders/Math.max(repHrs,1) > 12) flags.push({t:'طلبات',m:'معدل مرتفع جداً ('+Math.round(orders/repHrs)+' طلب/ساعة)',s:'low'});
+
+  // 4) ساعات مبالغ فيها
+  if(repHrs>16) flags.push({t:'ساعات',m:repHrs+' ساعة — رقم غير منطقي',s:'high'});
+
+  // 5) شفت مجدول ولا تقرير
+  return flags;
+}
+
+function dailyRange(){
+  let f=document.getElementById('dlFrom').value;
+  let t=document.getElementById('dlTo').value;
+  if(!f||!t){
+    const d=new Date(); const to=d.toISOString().slice(0,10);
+    d.setDate(d.getDate()-6); const from=d.toISOString().slice(0,10);
+    if(!f){ f=from; document.getElementById('dlFrom').value=from; }
+    if(!t){ t=to;   document.getElementById('dlTo').value=to; }
+  }
+  return {from:f, to:t};
+}
+
+function renderDaily(){
+  const {from,to}=dailyRange();
+  const pf=document.getElementById('dlPartner').value;
+  const view=document.getElementById('dlView').value;
+
+  // فلتر الشركاء
+  const parts=[...new Set(DRIVERS.map(d=>d.partner).filter(Boolean))];
+  const ps=document.getElementById('dlPartner'), pc=ps.value;
+  ps.innerHTML='<option value="">كل الشركاء</option>'+parts.map(p=>`<option value="${p}">${p}</option>`).join('');
+  ps.value=pc;
+
+  const drvOf=id=>DRIVERS.find(d=>d.id===id);
+  let reps=DAILY.filter(r=>r.report_date>=from && r.report_date<=to);
+  if(pf) reps=reps.filter(r=>{const d=drvOf(r.driver_id); return d && d.partner===pf;});
+
+  // KPIs
+  const totOrders=reps.reduce((s,r)=>s+(parseInt(r.orders_count)||0),0);
+  const totHrs=reps.reduce((s,r)=>s+(parseFloat(r.duty_hours)||0),0);
+  const totFuel=reps.reduce((s,r)=>s+(parseFloat(r.fuel_amount)||0),0);
+  const avgOrders=reps.length?Math.round(totOrders/reps.length):0;
+  const flaggedCount=reps.filter(r=>auditReport(r).some(f=>f.s==='high')).length;
+
+  // أيام العمل المتوقعة في الفترة (من الجدول)
+  let expected=0;
+  const dset=new Set();
+  for(let d=new Date(from); d<=new Date(to); d.setDate(d.getDate()+1)) dset.add(d.toISOString().slice(0,10));
+  let drvList=DRIVERS; if(pf) drvList=DRIVERS.filter(d=>d.partner===pf);
+  const today0=today();
+  drvList.forEach(d=>{
+    dset.forEach(ds=>{
+      if(ds>today0) return;
+      const sh=SCHED.find(s=>s.driver_id===d.id && s.date===ds);
+      if(sh && sh.shift_type!=='off' && sh.shift_type!=='holiday') expected++;
+    });
+  });
+  const coverage = expected ? Math.round(reps.length/expected*100) : null;
+
+  document.getElementById('kDaily').innerHTML=kpiHTML([
+    {l:'التقارير المستلمة',v:reps.length+(expected?' / '+expected:''),c:'var(--navy)'},
+    {l:'نسبة الالتزام بالتقرير',v:coverage===null?'—':coverage+'%',c:coverage===null?'var(--muted)':(coverage>=90?'var(--green)':(coverage>=70?'var(--amber)':'var(--red)'))},
+    {l:'إجمالي الطلبات',v:totOrders.toLocaleString(),c:'var(--green)'},
+    {l:'فروقات تحتاج مراجعة',v:flaggedCount,c:flaggedCount?'var(--red)':'var(--green)'},
+  ]);
+  setB('bDaily', flaggedCount);
+
+  // تنبيه علوي
+  document.getElementById('dlAlert').innerHTML = flaggedCount
+    ? `<div style="background:var(--red-bg);border:1px solid rgba(220,38,38,.35);border-radius:12px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:11px">
+        <span style="font-size:22px">⚠️</span>
+        <div style="flex:1"><b style="color:var(--red)">${flaggedCount} تقرير فيه فروقات جوهرية</b>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-top:2px">النظام قارن التقارير بسجل الحضور وإيصالات الوقود</div></div>
+        <button class="btn" style="background:var(--red);color:#fff" onclick="document.getElementById('dlView').value='flagged';renderDaily()">عرضها</button></div>`
+    : '';
+
+  const T=document.getElementById('tDaily');
+  const TT=document.getElementById('dlTitle');
+
+  // ═══ عرض: لم يرسلوا تقرير ═══
+  if(view==='missing'){
+    TT.textContent='سائقون لديهم شفت ولم يرسلوا تقرير';
+    let rows=[];
+    drvList.forEach(d=>{
+      dset.forEach(ds=>{
+        if(ds>today0) return;
+        const sh=SCHED.find(s=>s.driver_id===d.id&&s.date===ds);
+        if(!sh||sh.shift_type==='off'||sh.shift_type==='holiday') return;
+        const has=reps.some(r=>r.driver_id===d.id&&r.report_date===ds);
+        if(!has) rows.push({d,ds,sh});
+      });
+    });
+    rows.sort((a,b)=>b.ds.localeCompare(a.ds));
+    T.innerHTML='<thead><tr><th>التاريخ</th><th>السائق</th><th>الشريك</th><th>الوردية</th><th>سجّل حضور؟</th><th>إجراء</th></tr></thead><tbody>'+
+      (rows.length?rows.slice(0,200).map(x=>{
+        const ci=firstClockIn(x.d.id,x.ds);
+        return `<tr style="background:var(--red-bg)">
+          <td>${fmtD(x.ds)}</td>
+          <td class="nm" onclick="openDrv('${x.d.id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(x.d.name)}</td>
+          <td>${esc(x.d.partner||'—')}</td>
+          <td>${x.sh.shift_start||''} - ${x.sh.shift_end||''}</td>
+          <td>${ci?'<span class="st g">✅ نعم</span>':'<span class="st r">❌ لا</span>'}</td>
+          <td><button class="act" style="background:var(--purple);color:#fff" onclick="remindReport('${x.d.id}','${x.ds}')">تذكير</button></td></tr>`;
+      }).join('') : '<tr><td colspan="6" class="empty">✅ كل السائقين أرسلوا تقاريرهم</td></tr>')+'</tbody>';
+    return;
+  }
+
+  // ═══ عرض: ملخص لكل سائق ═══
+  if(view==='summary'){
+    TT.textContent='ملخص أداء كل سائق ('+fmtD(from)+' → '+fmtD(to)+')';
+    const by={};
+    reps.forEach(r=>{
+      if(!by[r.driver_id]) by[r.driver_id]={id:r.driver_id,name:r.driver_name,days:0,orders:0,hours:0,fuel:0,flags:0};
+      const b=by[r.driver_id];
+      b.days++; b.orders+=parseInt(r.orders_count)||0;
+      b.hours+=parseFloat(r.duty_hours)||0; b.fuel+=parseFloat(r.fuel_amount)||0;
+      if(auditReport(r).some(f=>f.s==='high')) b.flags++;
+    });
+    const list=Object.values(by).sort((a,b)=>b.orders-a.orders);
+    T.innerHTML='<thead><tr><th>#</th><th>السائق</th><th>الشريك</th><th>أيام</th><th>الطلبات</th><th>طلبات/يوم</th><th>الساعات</th><th>طلبات/ساعة</th><th>الوقود</th><th>فروقات</th></tr></thead><tbody>'+
+      (list.length?list.map((b,i)=>{
+        const d=drvOf(b.id)||{};
+        const perDay=b.days?(b.orders/b.days).toFixed(1):'—';
+        const perHr=b.hours?(b.orders/b.hours).toFixed(1):'—';
+        const medal=i===0?'🥇':(i===1?'🥈':(i===2?'🥉':(i+1)));
+        return `<tr><td style="font-size:15px">${medal}</td>
+          <td class="nm" onclick="openDrv('${b.id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(b.name)}</td>
+          <td>${esc(d.partner||'—')}</td><td>${b.days}</td>
+          <td><b style="color:var(--green)">${b.orders}</b></td>
+          <td><b>${perDay}</b></td><td>${b.hours.toFixed(1)}</td><td>${perHr}</td>
+          <td>${fmtKD(b.fuel)}</td>
+          <td>${b.flags?`<span class="st r">${b.flags} ⚠️</span>`:'<span class="st g">سليم</span>'}</td></tr>`;
+      }).join('') : '<tr><td colspan="10" class="empty">لا توجد تقارير في هذه الفترة</td></tr>')+'</tbody>';
+    return;
+  }
+
+  // ═══ عرض: تفصيلي / فروقات ═══
+  let list=reps.slice().sort((a,b)=>b.report_date.localeCompare(a.report_date));
+  if(view==='flagged'){
+    list=list.filter(r=>auditReport(r).some(f=>f.s==='high'));
+    TT.textContent='تقارير فيها فروقات تحتاج مراجعة';
+  } else {
+    TT.textContent='التقارير اليومية ('+fmtD(from)+' → '+fmtD(to)+')';
+  }
+
+  T.innerHTML='<thead><tr><th>التاريخ</th><th>السائق</th><th>الشريك</th><th>الطلبات</th><th>من</th><th>إلى</th><th>ساعات التقرير</th><th>ساعات الحضور</th><th>الوقود</th><th>رصيد الكرت</th><th>ملاحظات</th><th>التدقيق</th></tr></thead><tbody>'+
+    (list.length?list.slice(0,400).map(r=>{
+      const d=drvOf(r.driver_id)||{};
+      const flags=auditReport(r);
+      const hi=flags.some(f=>f.s==='high');
+      const actH=actualHours(r.driver_id,r.report_date);
+      const repHrs=parseFloat(r.duty_hours)||0;
+      const hDiff=(actH!==null&&repHrs>0)?Math.abs(repHrs-actH):null;
+      const hCol=hDiff===null?'var(--muted)':(hDiff>=2?'var(--red)':(hDiff>=1?'var(--amber)':'var(--green)'));
+      return `<tr${hi?' style="background:var(--red-bg)"':''}>
+        <td>${fmtD(r.report_date)}</td>
+        <td class="nm" onclick="openDrv('${r.driver_id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(r.driver_name)}</td>
+        <td>${esc(d.partner||r.partner||'—')}</td>
+        <td><b style="color:var(--green);font-size:14px">${r.orders_count||0}</b></td>
+        <td>${r.duty_from||'—'}</td><td>${r.duty_to||'—'}</td>
+        <td><b>${repHrs||'—'}</b></td>
+        <td style="color:${hCol};font-weight:800">${actH===null?'—':actH}</td>
+        <td>${r.fuel_amount?fmtKD(r.fuel_amount):'—'}</td>
+        <td>${r.card_balance?fmtKD(r.card_balance):'—'}</td>
+        <td style="text-align:right;max-width:180px;font-size:11px">${esc(r.notes||'')}</td>
+        <td style="text-align:right;max-width:230px">${
+          flags.length
+            ? flags.map(f=>`<div style="font-size:10.5px;font-weight:800;color:${f.s==='high'?'var(--red)':'var(--amber)'};margin-bottom:2px">${f.s==='high'?'🔴':'🟡'} ${esc(f.m)}</div>`).join('')
+            : '<span class="st g">✅ مطابق</span>'
+        }</td></tr>`;
+    }).join('') : '<tr><td colspan="12" class="empty">'+(view==='flagged'?'✅ لا توجد فروقات':'لا توجد تقارير في هذه الفترة')+'</td></tr>')+'</tbody>';
+}
+
+/* تذكير سائق بإرسال التقرير */
+async function remindReport(drvId, dateStr){
+  const d=DRIVERS.find(x=>x.id===drvId);
+  if(!confirm('إرسال تذكير إلى '+(d?d.name:drvId)+' بخصوص تقرير '+dateStr+'؟')) return;
+  try{
+    const {error}=await sb.from('messages').insert({
+      recipient:drvId, level:'warn',
+      title:'📋 تقرير يومي ناقص',
+      body:'لم تُرسل التقرير اليومي ليوم '+dateStr+'. من فضلك ادخل على تبويب «تقرير» وأرسله.',
+      created_at:new Date().toISOString()
+    });
+    if(error) throw error;
+    toast('✅ تم إرسال التذكير');
+    await loadAll();
+  }catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+/* تصدير التقارير */
+function exportDaily(){
+  const {from,to}=dailyRange();
+  const pf=document.getElementById('dlPartner').value;
+  const drvOf=id=>DRIVERS.find(d=>d.id===id);
+  let reps=DAILY.filter(r=>r.report_date>=from&&r.report_date<=to);
+  if(pf) reps=reps.filter(r=>{const d=drvOf(r.driver_id); return d&&d.partner===pf;});
+  if(!reps.length){ toast('لا توجد تقارير',true); return; }
+
+  const rows=reps.map(r=>{
+    const d=drvOf(r.driver_id)||{};
+    const actH=actualHours(r.driver_id,r.report_date);
+    const actF=actualFuel(r.driver_id,r.report_date);
+    const flags=auditReport(r);
+    return {
+      'التاريخ':r.report_date,'السائق':r.driver_name,'الشريك':d.partner||r.partner||'',
+      'الطلبات':r.orders_count||0,'من':r.duty_from||'','إلى':r.duty_to||'',
+      'ساعات التقرير':r.duty_hours||0,'ساعات الحضور الفعلية':actH===null?'':actH,
+      'فرق الساعات':(actH!==null&&r.duty_hours)?Math.abs(r.duty_hours-actH).toFixed(1):'',
+      'وقود التقرير':r.fuel_amount||0,'وقود الإيصالات':actF===null?'':actF.toFixed(3),
+      'رصيد الكرت':r.card_balance||'','ملاحظات':r.notes||'',
+      'ملاحظات التدقيق':flags.map(f=>f.m).join(' | ')
+    };
+  });
+  download('التقارير_اليومية_'+from+'_'+to+'.csv', toCSV(rows));
   toast('✅ تم التصدير');
 }
 
