@@ -76,23 +76,39 @@
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <span class="cloud"><span class="dot" id="dot"></span><span id="cloudTxt">جاري الاتصال...</span></span>
     <button class="btn btn-ghost" onclick="location.href='السلاسل_نظام_ادارة_السائقين_28.html'"><i class="ti ti-arrow-right"></i> ARK</button>
+    <button class="btn btn-ghost" onclick="openSet()"><i class="ti ti-settings"></i> إعدادات</button>
     <button class="btn btn-gold" onclick="loadAll()"><i class="ti ti-refresh"></i> تحديث</button>
   </div>
 </div>
 
 <div class="tabs">
-  <button class="tab on" data-v="photos" onclick="go('photos')"><i class="ti ti-camera"></i> صور الشفت <span class="bdg" id="bPhotos" style="display:none">0</span></button>
+  <button class="tab on" data-v="overview" onclick="go('overview')"><i class="ti ti-layout-dashboard"></i> نظرة عامة <span class="bdg" id="bOver" style="display:none">0</span></button>
+  <button class="tab" data-v="photos" onclick="go('photos')"><i class="ti ti-camera"></i> صور الشفت <span class="bdg" id="bPhotos" style="display:none">0</span></button>
   <button class="tab" data-v="requests" onclick="go('requests')"><i class="ti ti-file-text"></i> الطلبات <span class="bdg" id="bReq" style="display:none">0</span></button>
   <button class="tab" data-v="maint" onclick="go('maint')"><i class="ti ti-tool"></i> الصيانة <span class="bdg" id="bMaint" style="display:none">0</span></button>
   <button class="tab" data-v="fuel" onclick="go('fuel')"><i class="ti ti-gas-station"></i> الوقود</button>
   <button class="tab" data-v="vio" onclick="go('vio')"><i class="ti ti-alert-triangle"></i> المخالفات</button>
   <button class="tab" data-v="shifts" onclick="go('shifts')"><i class="ti ti-clock"></i> الشفتات والتأخير <span class="bdg" id="bLate" style="display:none">0</span></button>
+  <button class="tab" data-v="msgs" onclick="go('msgs')"><i class="ti ti-send"></i> الرسائل</button>
+  <button class="tab" data-v="drivers" onclick="go('drivers')"><i class="ti ti-users"></i> السائقون</button>
 </div>
 
 <div class="container">
 
+  <!-- ═══ نظرة عامة — مركز القيادة ═══ -->
+  <div class="view on" id="v-overview">
+    <div class="kpis" id="kOver"></div>
+    <div id="alertsBox"></div>
+    <div class="charts2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card"><div class="card-h"><i class="ti ti-alert-circle" style="color:var(--red)"></i> يحتاج إجراء الآن</div>
+        <div id="todoList" style="max-height:420px;overflow-y:auto"></div></div>
+      <div class="card"><div class="card-h"><i class="ti ti-activity"></i> آخر النشاطات</div>
+        <div id="feedList" style="max-height:420px;overflow-y:auto"></div></div>
+    </div>
+  </div>
+
   <!-- صور الشفت -->
-  <div class="view on" id="v-photos">
+  <div class="view" id="v-photos">
     <div class="kpis" id="kPhotos"></div>
     <div class="toolbar">
       <label style="font-weight:800;font-size:13px;color:var(--navy)">📅 التاريخ:</label>
@@ -102,7 +118,7 @@
         <option value="pending">⏳ بانتظار المراجعة</option><option value="approved">✅ معتمد</option>
       </select>
     </div>
-    <div class="card"><div class="card-h"><i class="ti ti-camera"></i> صور بداية الشفت</div>
+    <div class="card"><div class="card-h"><i class="ti ti-camera"></i> صور بداية الشفت<button class="btn btn-gold" onclick="exportPhotos()" style="margin-right:auto;padding:6px 12px;font-size:11px"><i class="ti ti-download"></i> تصدير</button></div>
       <div style="overflow-x:auto"><table id="tPhotos"></table></div></div>
   </div>
 
@@ -137,7 +153,8 @@
       <label style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px;color:var(--red)">
         <input type="checkbox" id="fuelFlagged" onchange="renderFuel()"> ⚠️ المشبوه فقط</label>
     </div>
-    <div class="card"><div class="card-h"><i class="ti ti-gas-station"></i> سجل الوقود</div>
+    <div class="card"><div class="card-h"><i class="ti ti-gas-station"></i> سجل الوقود
+      <button class="btn btn-gold" onclick="exportFuel()" style="margin-right:auto;padding:6px 12px;font-size:11px"><i class="ti ti-download"></i> تصدير</button></div>
       <div style="overflow-x:auto"><table id="tFuel"></table></div></div>
   </div>
 
@@ -169,12 +186,110 @@
         ⚙️ المهلة: <b id="cfgGrace">30</b> د · الخصم: <b id="cfgFrac">نصف يوم</b>
       </span>
     </div>
-    <div class="card"><div class="card-h"><i class="ti ti-clock"></i> شفتات اليوم والالتزام</div>
+    <div class="card"><div class="card-h"><i class="ti ti-clock"></i> شفتات اليوم والالتزام<button class="btn btn-gold" onclick="exportShifts()" style="margin-right:auto;padding:6px 12px;font-size:11px"><i class="ti ti-download"></i> تصدير</button></div>
       <div style="overflow-x:auto"><table id="tShifts"></table></div></div>
-    <div class="card"><div class="card-h"><i class="ti ti-cash-off"></i> خصومات التأخير التلقائية</div>
+    <div class="card"><div class="card-h"><i class="ti ti-cash-off"></i> خصومات التأخير التلقائية<button class="btn btn-gold" onclick="exportDeductions()" style="margin-right:auto;padding:6px 12px;font-size:11px"><i class="ti ti-download"></i> تصدير</button></div>
       <div style="overflow-x:auto"><table id="tLateDed"></table></div></div>
   </div>
 
+  <!-- ═══ الرسائل ═══ -->
+  <div class="view" id="v-msgs">
+    <div class="card">
+      <div class="card-h"><i class="ti ti-send"></i> إرسال إشعار للسائقين</div>
+      <div style="padding:18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px">👤 المستقبِل</label>
+            <select id="msgTo" style="width:100%;padding:11px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700"></select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px">⚡ الأهمية</label>
+            <select id="msgLevel" style="width:100%;padding:11px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700">
+              <option value="info">🔵 عادي</option><option value="warn">🟡 تنبيه</option><option value="important">🔴 مهم جداً</option>
+            </select>
+          </div>
+        </div>
+        <label style="display:block;font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px">📌 العنوان</label>
+        <input id="msgTitle" type="text" placeholder="مثال: اجتماع غداً الساعة 9" style="width:100%;padding:11px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;margin-bottom:14px">
+        <label style="display:block;font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px">✍️ النص</label>
+        <textarea id="msgBody" rows="4" placeholder="اكتب الرسالة..." style="width:100%;padding:11px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;resize:vertical;margin-bottom:14px"></textarea>
+        <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border)" onclick="quickMsg('shift')">⏰ تذكير بالشفت</button>
+          <button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border)" onclick="quickMsg('photo')">📸 ذكّرهم بالصورة</button>
+          <button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border)" onclick="quickMsg('meeting')">📢 اجتماع</button>
+          <button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border)" onclick="quickMsg('salary')">💰 الرواتب</button>
+        </div>
+        <button class="btn btn-gold" onclick="sendMsg()" id="sendMsgBtn" style="width:100%;padding:14px;font-size:15px"><i class="ti ti-send"></i> إرسال الإشعار</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-history"></i> الرسائل المُرسلة</div>
+      <div style="overflow-x:auto"><table id="tMsgs"></table></div></div>
+  </div>
+
+  <!-- ═══ السائقون ═══ -->
+  <div class="view" id="v-drivers">
+    <div class="toolbar">
+      <input type="text" id="drvSearch" placeholder="🔍 ابحث باسم السائق..." oninput="renderDrivers()" style="flex:1;min-width:200px">
+      <select id="drvPartner" onchange="renderDrivers()"><option value="">كل الشركاء</option></select>
+      <button class="btn btn-gold" onclick="exportDrivers()"><i class="ti ti-download"></i> تصدير Excel</button>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-users"></i> ملفات السائقين — اضغط أي سائق للتفاصيل</div>
+      <div style="overflow-x:auto"><table id="tDrivers"></table></div></div>
+  </div>
+
+</div>
+
+<!-- ═══ ملف السائق (Modal) ═══ -->
+<div id="drvModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2500;align-items:center;justify-content:center;padding:18px">
+  <div style="background:#fff;border-radius:16px;max-width:820px;width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column">
+    <div style="background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold)">
+      <div><div id="dmName" style="font-size:17px;font-weight:900"></div>
+      <div id="dmSub" style="font-size:11px;color:#fde68a;font-weight:700;margin-top:2px"></div></div>
+      <button onclick="closeDrv()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;font-size:19px;cursor:pointer">×</button>
+    </div>
+    <div id="dmBody" style="padding:18px 20px;overflow-y:auto;flex:1"></div>
+    <div style="padding:13px 20px;border-top:1px solid var(--border);display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn" style="background:var(--purple);color:#fff" onclick="msgThisDriver()"><i class="ti ti-send"></i> إرسال رسالة</button>
+      <button class="btn" style="background:var(--red);color:#fff" onclick="addManualDeduction()"><i class="ti ti-cash-off"></i> إضافة خصم</button>
+      <button class="btn" style="background:var(--amber);color:#fff" onclick="addVioFor()"><i class="ti ti-alert-triangle"></i> تسجيل مخالفة</button>
+      <button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border);margin-right:auto" onclick="closeDrv()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الإعدادات (Modal) ═══ -->
+<div id="setModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2500;align-items:center;justify-content:center;padding:18px">
+  <div style="background:#fff;border-radius:16px;max-width:480px;width:100%;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold)">
+      <div style="font-size:16px;font-weight:900">⚙️ إعدادات النظام</div>
+      <button onclick="closeSet()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;font-size:19px;cursor:pointer">×</button>
+    </div>
+    <div style="padding:20px">
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:6px">⏱️ مهلة التأخير قبل الخصم (دقيقة)</label>
+        <input id="setGrace" type="number" min="0" max="180" style="width:100%;padding:11px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:800;font-size:15px">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">السائق لو تأخر أكتر من كده، يتخصم تلقائياً</div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:6px">💸 نسبة الخصم عند التأخير</label>
+        <select id="setFrac" style="width:100%;padding:11px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:800;font-size:15px">
+          <option value="0.25">ربع يوم (25%)</option><option value="0.5">نصف يوم (50%)</option>
+          <option value="0.75">ثلاثة أرباع (75%)</option><option value="1">يوم كامل (100%)</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:12.5px;font-weight:800;color:var(--navy);margin-bottom:6px">🔔 التنبيه قبل الشفت (دقيقة)</label>
+        <input id="setPre" type="number" min="5" max="180" style="width:100%;padding:11px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:800;font-size:15px">
+      </div>
+      <div style="background:var(--amber-bg);padding:12px;border-radius:10px;font-size:11.5px;color:var(--amber);font-weight:700;line-height:1.7">
+        ⚠️ التعديل يسري على كل السائقين فوراً. غيّر نص رسالة الواتساب في ARK لو غيّرت المهلة.
+      </div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:9px">
+      <button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border);flex:1" onclick="closeSet()">إلغاء</button>
+      <button class="btn btn-gold" style="flex:2" onclick="saveSettings()"><i class="ti ti-device-floppy"></i> حفظ</button>
+    </div>
+  </div>
 </div>
 
 <div class="lightbox" id="lb" onclick="closeLB()"><button class="x" onclick="closeLB()">×</button><img id="lbImg"></div>
@@ -184,7 +299,8 @@
 const SUPA_URL='https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY='sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 let sb=null, PHOTOS=[], REQS=[], MAINT=[], FUEL=[], VIO=[], DRIVERS=[];
-let SCHED=[], CLOCKINS=[], DEDS=[], CFG={grace:30,fraction:0.5,prealert:30};
+let SCHED=[], CLOCKINS=[], DEDS=[], MSGS=[], CFG={grace:30,fraction:0.5,prealert:30};
+let _curDrv=null;   // السائق المفتوح في الملف
 
 function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast on'+(e?' err':'');setTimeout(()=>t.classList.remove('on'),2800);}
 function setCloud(s,txt){const d=document.getElementById('dot');const c={connecting:'#94a3b8',connected:'#22c55e',error:'#ef4444'};d.style.background=c[s]||'#94a3b8';d.style.boxShadow=s==='connected'?'0 0 8px '+c[s]:'none';document.getElementById('cloudTxt').textContent=txt;}
@@ -198,7 +314,8 @@ function go(v){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('v-'+v).classList.add('on');
-  ({photos:renderPhotos,requests:renderRequests,maint:renderMaint,fuel:renderFuel,vio:renderVio,shifts:renderShifts}[v]||(()=>{}))();
+  ({overview:renderOverview,photos:renderPhotos,requests:renderRequests,maint:renderMaint,
+    fuel:renderFuel,vio:renderVio,shifts:renderShifts,msgs:renderMsgs,drivers:renderDrivers}[v]||(()=>{}))();
 }
 
 // ── ARK drivers (localStorage) ──
@@ -211,7 +328,7 @@ async function loadAll(){
   setCloud('connecting','جاري التحميل...');
   DRIVERS=getDrivers();
   try{
-    const [p,r,m,f,v,sc,ci,dd,st]=await Promise.all([
+    const [p,r,m,f,v,sc,ci,dd,st,mg]=await Promise.all([
       sb.from('shift_photos').select('*').order('photo_date',{ascending:false}).limit(600),
       sb.from('driver_requests').select('*').order('created_at',{ascending:false}).limit(300),
       sb.from('maintenance_reports').select('*').order('report_date',{ascending:false}).limit(300),
@@ -221,9 +338,10 @@ async function loadAll(){
       sb.from('clockin').select('*').order('created_at',{ascending:false}).limit(2000),
       sb.from('deductions').select('*').order('date',{ascending:false}).limit(500),
       sb.from('app_settings').select('*'),
+      sb.from('messages').select('*').order('created_at',{ascending:false}).limit(150),
     ]);
     PHOTOS=p.data||[];REQS=r.data||[];MAINT=m.data||[];FUEL=f.data||[];VIO=v.data||[];
-    SCHED=sc.data||[];CLOCKINS=ci.data||[];DEDS=dd.data||[];
+    SCHED=sc.data||[];CLOCKINS=ci.data||[];DEDS=dd.data||[];MSGS=(mg&&mg.data)||[];
     (st.data||[]).forEach(x=>{
       if(x.key==='late_grace_minutes') CFG.grace=parseInt(x.value,10)||30;
       if(x.key==='late_deduct_fraction') CFG.fraction=parseFloat(x.value)||0.5;
@@ -269,13 +387,13 @@ function renderPhotos(){
     '<thead><tr><th>السائق</th><th>الشريك</th><th>سيلفي</th><th>الصندوق</th><th>الوقت</th><th>الموقع</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
     (rows.length?rows.map(r=>{
       const p=r.ph;
-      if(!p) return `<tr><td class="nm">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
+      if(!p) return `<tr><td class="nm" onclick="openDrv('${r.drv.id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
         <td colspan="5" style="color:var(--red);font-weight:800">❌ لم يرفع صورة اليوم</td><td>—</td></tr>`;
       const stc=p.status==='approved'?'g':(p.status==='rejected'?'r':'a');
       const stt=p.status==='approved'?'✅ معتمد':(p.status==='rejected'?'❌ مرفوض':'⏳ بانتظار');
       const tm=new Date(p.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'});
       const loc=p.latitude?`<a href="https://maps.google.com/?q=${p.latitude},${p.longitude}" target="_blank" style="color:var(--blue)">📍 خريطة</a>`:'—';
-      return `<tr><td class="nm">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
+      return `<tr><td class="nm" onclick="openDrv('${r.drv.id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
         <td>${p.selfie_url?`<img class="thumb" src="${p.selfie_url}" onclick="openLB('${p.selfie_url}')">`:'—'}</td>
         <td>${p.box_url?`<img class="thumb" src="${p.box_url}" onclick="openLB('${p.box_url}')">`:'—'}</td>
         <td>${tm}</td><td>${loc}</td><td><span class="st ${stc}">${stt}</span></td>
@@ -311,7 +429,7 @@ function renderRequests(){
                    :`<b style="color:var(--green)">${fmtKD(r.amount)} د.ك</b><br>${r.installments} قسط`;
       const stc=r.status==='approved'?'g':(r.status==='rejected'?'r':'a');
       const stt=r.status==='approved'?'✅ موافق':(r.status==='rejected'?'❌ مرفوض':'⏳ معلق');
-      return `<tr><td class="nm">${esc(r.driver_name)}</td>
+      return `<tr><td class="nm" onclick="openDrv('${r.driver_id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(r.driver_name)}</td>
         <td>${isL?'🏖️ إجازة':'💰 سلفة'}</td><td>${det}</td><td style="max-width:200px">${esc(r.reason||'—')}</td>
         <td>${fmtD(r.created_at)}</td><td><span class="st ${stc}">${stt}</span></td>
         <td>${r.status==='pending'?`<button class="act ok" onclick="setReq(${r.id},'approved')">موافقة</button><button class="act no" onclick="setReq(${r.id},'rejected')">رفض</button>`:esc(r.admin_note||'—')}</td></tr>`;
@@ -349,7 +467,7 @@ function renderMaint(){
       const s=SEV[m.severity]||SEV.medium;
       const stc=m.status==='done'?'g':(m.status==='in_progress'?'b':'r');
       const stt=m.status==='done'?'✅ تم':(m.status==='in_progress'?'🔵 جاري':'🔴 مفتوح');
-      return `<tr><td class="nm">${esc(m.driver_name)}</td><td>${esc(m.car_plate||'—')}</td>
+      return `<tr><td class="nm" onclick="openDrv('${m.driver_id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(m.driver_name)}</td><td>${esc(m.car_plate||'—')}</td>
         <td>${CAT[m.category]||m.category||'—'}</td><td><span class="st ${s[1]}">${s[0]}</span></td>
         <td style="max-width:230px;text-align:right">${esc(m.description||'')}</td>
         <td>${m.photo_url?`<img class="thumb" src="${m.photo_url}" onclick="openLB('${m.photo_url}')">`:'—'}</td>
@@ -417,7 +535,7 @@ function renderVio(){
     (list.length?list.map(v=>{
       const stc=v.status==='acknowledged'?'g':(v.status==='appealed'?'a':'r');
       const stt=v.status==='acknowledged'?'✅ مُقر':(v.status==='appealed'?'⚖️ اعتراض':'⏳ بانتظار');
-      return `<tr><td class="nm">${esc(v.driver_name)}</td><td>${fmtD(v.vio_date)}</td>
+      return `<tr><td class="nm" onclick="openDrv('${v.driver_id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(v.driver_name)}</td><td>${fmtD(v.vio_date)}</td>
         <td style="text-align:right">${esc(v.reason||'—')}</td>
         <td style="font-weight:900;color:var(--red)">${fmtKD(v.amount)}</td>
         <td>${esc(v.vio_number||'—')}</td><td><span class="st ${stc}">${stt}</span></td>
@@ -532,7 +650,7 @@ function renderShifts(){
                    :(r.state==='ontime'?(r.lateMin>0?`+${r.lateMin} د`:'0'):(r.state==='noshow'?`<b style="color:var(--red)">+${r.lateMin} د</b>`:'—'));
       const typ=r.sh?(r.sh.shift_type==='off'?'🔴 إجازة':(r.sh.shift_type==='holiday'?'🌴 عطلة':(r.sh.shift_type==='evening'?'🌙 مسائي':'🌅 صباحي'))):'—';
       return `<tr${r.state==='late'||r.state==='noshow'?' style="background:var(--red-bg)"':''}>
-        <td class="nm">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
+        <td class="nm" onclick="openDrv('${r.drv.id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(r.drv.name)}</td><td>${esc(r.drv.partner||'—')}</td>
         <td>${typ}</td><td><b>${r.sh&&r.sh.shift_start?r.sh.shift_start:'—'}</b></td>
         <td>${r.sh&&r.sh.shift_end?r.sh.shift_end:'—'}</td><td>${tm}</td><td>${lateTxt}</td>
         <td><span class="st ${s[1]}">${s[0]}</span></td></tr>`;
@@ -545,7 +663,7 @@ function renderShifts(){
     (allLate.length?allLate.map(x=>{
       const cancelled=x.status==='cancelled';
       return `<tr${cancelled?' style="opacity:.5"':''}>
-        <td class="nm">${esc(x.driver_name)}</td><td>${fmtD(x.date)}</td>
+        <td class="nm" onclick="openDrv('${x.driver_id}')" style="cursor:pointer;text-decoration:underline dotted">${esc(x.driver_name)}</td><td>${fmtD(x.date)}</td>
         <td><b style="color:var(--red)">${x.minutes_late||'—'}</b></td>
         <td style="font-weight:900;color:var(--red)">${fmtKD(x.amount)}</td>
         <td style="text-align:right;max-width:280px">${esc(x.reason||'')}</td>
@@ -571,13 +689,506 @@ window.addEventListener('DOMContentLoaded',async()=>{
   sb=supabase.createClient(SUPA_URL,SUPA_KEY);
   await loadAll();
   // Realtime
-  ['shift_photos','driver_requests','maintenance_reports','fuel_logs','driver_violations','schedules','deductions','clockin'].forEach(tb=>{
+  ['shift_photos','driver_requests','maintenance_reports','fuel_logs','driver_violations','schedules','deductions','clockin','messages'].forEach(tb=>{
     sb.channel('adm_'+tb).on('postgres_changes',{event:'*',schema:'public',table:tb},()=>{
       clearTimeout(window._rt); window._rt=setTimeout(loadAll,600);
     }).subscribe();
   });
 });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&sb) loadAll(); });
+
+/* ═══════════════════════════════════════════════════════════════════
+   📊 نظرة عامة — مركز القيادة اليومي
+   ═══════════════════════════════════════════════════════════════════ */
+function today(){ return new Date().toISOString().slice(0,10); }
+
+function renderOverview(){
+  const T=today();
+
+  // حسابات اليوم
+  const daySched=SCHED.filter(s=>s.date===T);
+  const bySch={}; daySched.forEach(s=>bySch[s.driver_id]=s);
+  const working=daySched.filter(s=>s.shift_type!=='off'&&s.shift_type!=='holiday');
+  const photosToday=PHOTOS.filter(p=>p.photo_date===T);
+  const missingPhoto=DRIVERS.filter(d=>!photosToday.some(p=>p.driver_id===d.id));
+
+  let lateList=[], noshowList=[];
+  DRIVERS.forEach(d=>{
+    const sh=bySch[d.id];
+    if(!sh||sh.shift_type==='off'||sh.shift_type==='holiday'||!sh.shift_start) return;
+    const start=shiftDT(T,sh.shift_start);
+    const ci=firstClockIn(d.id,T);
+    if(ci){ const lm=Math.round((ci-start)/60000); if(lm>=CFG.grace) lateList.push({d,min:lm}); }
+    else if(new Date()>start) noshowList.push({d,min:Math.round((new Date()-start)/60000)});
+  });
+
+  const pendReq=REQS.filter(r=>r.status==='pending');
+  const openMaint=MAINT.filter(m=>m.status==='open');
+  const critMaint=openMaint.filter(m=>m.severity==='critical'||m.severity==='high');
+  const pendPhoto=photosToday.filter(p=>p.status==='pending');
+  const pendVio=VIO.filter(v=>v.status==='pending');
+  const appealVio=VIO.filter(v=>v.status==='appealed');
+  const flaggedFuel=FUEL.filter(f=>f.flagged&&String(f.log_date).startsWith(T.slice(0,7)));
+  const lateDedToday=DEDS.filter(x=>x.ded_type==='late'&&x.date===T&&x.status!=='cancelled');
+  const lateSum=lateDedToday.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+
+  // KPIs
+  document.getElementById('kOver').innerHTML=kpiHTML([
+    {l:'شفتات اليوم',v:working.length+' / '+DRIVERS.length,c:'var(--navy)'},
+    {l:'متأخرين + غياب',v:lateList.length+noshowList.length,c:(lateList.length+noshowList.length)?'var(--red)':'var(--green)'},
+    {l:'لم يرفعوا صورة',v:missingPhoto.length,c:missingPhoto.length?'var(--amber)':'var(--green)'},
+    {l:'خصومات اليوم (د.ك)',v:fmtKD(lateSum),c:'var(--purple)'},
+  ]);
+
+  // تنبيهات كبيرة
+  let alerts=[];
+  if(critMaint.length) alerts.push({ic:'🚨',t:critMaint.length+' بلاغ عطل حرج/خطير',s:'سيارات قد تكون متوقفة — راجعها فوراً',c:'var(--red)',go:'maint'});
+  if(noshowList.length) alerts.push({ic:'⚫',t:noshowList.length+' سائق لم يسجّل حضور',s:noshowList.slice(0,3).map(x=>x.d.name).join(' · ')+(noshowList.length>3?' وآخرون':''),c:'var(--red)',go:'shifts'});
+  if(pendReq.length) alerts.push({ic:'📋',t:pendReq.length+' طلب بانتظار موافقتك',s:'إجازات وسلف معلّقة',c:'var(--amber)',go:'requests'});
+  if(appealVio.length) alerts.push({ic:'⚖️',t:appealVio.length+' اعتراض على مخالفة',s:'يحتاج قرار منك',c:'var(--purple)',go:'vio'});
+  if(flaggedFuel.length) alerts.push({ic:'⛽',t:flaggedFuel.length+' تعبئة وقود مشبوهة',s:'استهلاك غير طبيعي هذا الشهر',c:'var(--amber)',go:'fuel'});
+
+  document.getElementById('alertsBox').innerHTML = alerts.length
+    ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:11px;margin-bottom:16px">'+
+      alerts.map(a=>`<div onclick="go('${a.go}')" style="background:#fff;border:1px solid var(--border);border-right:5px solid ${a.c};border-radius:12px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">${a.ic}</span>
+          <div style="flex:1"><div style="font-weight:900;font-size:13.5px;color:${a.c}">${a.t}</div>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:2px">${esc(a.s)}</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted)"></i></div></div>`).join('')+'</div>'
+    : '<div style="background:var(--green-bg);border:1px solid rgba(5,150,105,.3);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;font-weight:800;color:var(--green)">✅ كل شيء تمام — لا يوجد ما يحتاج تدخّل عاجل</div>';
+
+  setB('bOver', alerts.length);
+
+  // قائمة المهام
+  let todo=[];
+  pendPhoto.forEach(p=>todo.push({ic:'📸',t:'مراجعة صورة '+p.driver_name,a:`go('photos')`,c:'var(--blue)'}));
+  pendReq.forEach(r=>todo.push({ic:r.req_type==='leave'?'🏖️':'💰',t:(r.req_type==='leave'?'إجازة':'سلفة')+' — '+r.driver_name,a:`go('requests')`,c:'var(--amber)'}));
+  openMaint.forEach(m=>todo.push({ic:'🔧',t:'عطل: '+(m.description||'').slice(0,32)+' — '+m.driver_name,a:`go('maint')`,c:'var(--red)'}));
+  appealVio.forEach(v=>todo.push({ic:'⚖️',t:'اعتراض: '+v.driver_name,a:`go('vio')`,c:'var(--purple)'}));
+  missingPhoto.slice(0,5).forEach(d=>todo.push({ic:'❌',t:'لم يرفع صورة: '+d.name,a:`openDrv('${d.id}')`,c:'var(--amber)'}));
+
+  document.getElementById('todoList').innerHTML = todo.length
+    ? todo.slice(0,25).map(x=>`<div onclick="${x.a}" style="padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+        <span style="font-size:17px">${x.ic}</span>
+        <span style="flex:1;font-size:12.5px;font-weight:700">${esc(x.t)}</span>
+        <i class="ti ti-chevron-left" style="color:var(--muted);font-size:14px"></i></div>`).join('')
+    : '<div class="empty">✅ لا توجد مهام معلقة</div>';
+
+  // آخر النشاطات
+  let feed=[];
+  PHOTOS.slice(0,12).forEach(p=>feed.push({t:new Date(p.created_at),ic:'📸',x:p.driver_name+' رفع صورة الشفت'}));
+  REQS.slice(0,12).forEach(r=>feed.push({t:new Date(r.created_at),ic:r.req_type==='leave'?'🏖️':'💰',x:r.driver_name+' طلب '+(r.req_type==='leave'?'إجازة':'سلفة')}));
+  MAINT.slice(0,12).forEach(m=>feed.push({t:new Date(m.created_at),ic:'🔧',x:m.driver_name+' أبلغ عن عطل'}));
+  FUEL.slice(0,12).forEach(f=>feed.push({t:new Date(f.created_at),ic:'⛽',x:f.driver_name+' سجّل وقود '+fmtKD(f.amount_kd)}));
+  CLOCKINS.slice(0,15).forEach(c=>feed.push({t:new Date(c.created_at),ic:c.action==='clock_in'?'🟢':'🔴',x:c.driver_name+(c.action==='clock_in'?' سجّل حضور':' سجّل انصراف')}));
+  feed.sort((a,b)=>b.t-a.t);
+
+  document.getElementById('feedList').innerHTML = feed.length
+    ? feed.slice(0,30).map(f=>`<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:15px">${f.ic}</span>
+        <span style="flex:1;font-size:12px;font-weight:700">${esc(f.x)}</span>
+        <span style="font-size:10.5px;color:var(--muted);font-weight:700;white-space:nowrap">${timeAgo(f.t)}</span></div>`).join('')
+    : '<div class="empty">لا توجد نشاطات</div>';
+}
+
+function timeAgo(d){
+  const m=Math.round((Date.now()-d)/60000);
+  if(m<1) return 'الآن';
+  if(m<60) return 'قبل '+m+' د';
+  const h=Math.round(m/60);
+  if(h<24) return 'قبل '+h+' س';
+  return 'قبل '+Math.round(h/24)+' ي';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   💬 الرسائل والإشعارات
+   ═══════════════════════════════════════════════════════════════════ */
+function renderMsgs(){
+  // ملء قائمة المستقبلين
+  const sel=document.getElementById('msgTo');
+  const cur=sel.value;
+  sel.innerHTML='<option value="ALL">📢 كل السائقين ('+DRIVERS.length+')</option>'+
+    DRIVERS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
+  if(cur) sel.value=cur;
+
+  document.getElementById('tMsgs').innerHTML=
+    '<thead><tr><th>المستقبِل</th><th>العنوان</th><th>النص</th><th>الأهمية</th><th>التاريخ</th></tr></thead><tbody>'+
+    (MSGS.length?MSGS.slice(0,50).map(m=>{
+      const to=m.recipient==='ALL'?'📢 الكل':(DRIVERS.find(d=>d.id===m.recipient)?.name||m.recipient);
+      const lv={important:['🔴 مهم','r'],warn:['🟡 تنبيه','a'],info:['🔵 عادي','b']}[m.level]||['🔵 عادي','b'];
+      return `<tr><td class="nm">${esc(to)}</td><td style="text-align:right;font-weight:800">${esc(m.title||'')}</td>
+        <td style="text-align:right;max-width:300px">${esc(m.body||'')}</td>
+        <td><span class="st ${lv[1]}">${lv[0]}</span></td><td>${fmtD(m.created_at)}</td></tr>`;
+    }).join('') : '<tr><td colspan="5" class="empty">لم تُرسل رسائل بعد</td></tr>')+'</tbody>';
+}
+
+function quickMsg(kind){
+  const P={
+    shift:   ['⏰ تذكير بموعد الشفت','لا تنسَ موعد شفتك اليوم. سجّل حضورك في الوقت لتجنّب الخصم.','warn'],
+    photo:   ['📸 صورة بداية الشفت','من فضلك ارفع صورة السيلفي بالزي وصندوق التوصيل من شاشة الحضور قبل بدء العمل.','warn'],
+    meeting: ['📢 اجتماع','يوجد اجتماع للسائقين. الحضور إلزامي — التفاصيل من الإدارة.','important'],
+    salary:  ['💰 الرواتب','تم تحويل رواتب هذا الشهر. راجع كشف راتبك من شاشة «راتبي».','info'],
+  }[kind];
+  if(!P) return;
+  document.getElementById('msgTitle').value=P[0];
+  document.getElementById('msgBody').value=P[1];
+  document.getElementById('msgLevel').value=P[2];
+}
+
+async function sendMsg(){
+  const to=document.getElementById('msgTo').value;
+  const title=document.getElementById('msgTitle').value.trim();
+  const body=document.getElementById('msgBody').value.trim();
+  const level=document.getElementById('msgLevel').value;
+  if(!title){ toast('اكتب عنوان الرسالة',true); return; }
+  if(!body){ toast('اكتب نص الرسالة',true); return; }
+
+  const btn=document.getElementById('sendMsgBtn');
+  btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> جاري الإرسال...';
+  try{
+    const {error}=await sb.from('messages').insert({
+      recipient:to, title:title, body:body, level:level, created_at:new Date().toISOString()
+    });
+    if(error) throw error;
+    const who = to==='ALL' ? 'كل السائقين' : (DRIVERS.find(d=>d.id===to)?.name||to);
+    toast('✅ تم الإرسال إلى '+who);
+    document.getElementById('msgTitle').value='';
+    document.getElementById('msgBody').value='';
+    await loadAll();
+  }catch(e){ toast('خطأ: '+e.message,true); }
+  finally{ btn.disabled=false; btn.innerHTML='<i class="ti ti-send"></i> إرسال الإشعار'; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   👥 السائقون + الملف الشامل
+   ═══════════════════════════════════════════════════════════════════ */
+function drvStats(id){
+  const T=today(), M=T.slice(0,7);
+  const ph=PHOTOS.filter(p=>p.driver_id===id);
+  const phM=ph.filter(p=>String(p.photo_date).startsWith(M));
+  const vio=VIO.filter(v=>v.driver_id===id);
+  const vioSum=vio.reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+  const ded=DEDS.filter(x=>x.driver_id===id&&x.status!=='cancelled');
+  const dedM=ded.filter(x=>String(x.date).startsWith(M));
+  const dedSum=dedM.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  const fu=FUEL.filter(f=>f.driver_id===id);
+  const fuM=fu.filter(f=>String(f.log_date).startsWith(M));
+  const fuSum=fuM.reduce((s,f)=>s+(parseFloat(f.amount_kd)||0),0);
+  const rq=REQS.filter(r=>r.driver_id===id);
+  const mt=MAINT.filter(m=>m.driver_id===id);
+  // التزام الشهر
+  const schM=SCHED.filter(s=>s.driver_id===id&&String(s.date).startsWith(M)&&s.shift_type!=='off'&&s.shift_type!=='holiday');
+  let onTime=0, late=0, absent=0;
+  schM.forEach(s=>{
+    if(!s.shift_start) return;
+    if(s.date>T) return;
+    const ci=firstClockIn(id,s.date);
+    if(!ci){ absent++; return; }
+    const lm=Math.round((ci-shiftDT(s.date,s.shift_start))/60000);
+    if(lm>=CFG.grace) late++; else onTime++;
+  });
+  return {ph,phM,vio,vioSum,ded,dedM,dedSum,fu,fuM,fuSum,rq,mt,schM,onTime,late,absent};
+}
+
+function renderDrivers(){
+  const q=document.getElementById('drvSearch').value.trim();
+  const pf=document.getElementById('drvPartner').value;
+
+  // ملء فلتر الشركاء
+  const parts=[...new Set(DRIVERS.map(d=>d.partner).filter(Boolean))];
+  const psel=document.getElementById('drvPartner'), pcur=psel.value;
+  psel.innerHTML='<option value="">كل الشركاء</option>'+parts.map(p=>`<option value="${p}">${p}</option>`).join('');
+  psel.value=pcur;
+
+  let list=DRIVERS.slice();
+  if(q) list=list.filter(d=>String(d.name||'').includes(q)||String(d.id||'').includes(q));
+  if(pf) list=list.filter(d=>d.partner===pf);
+
+  document.getElementById('tDrivers').innerHTML=
+    '<thead><tr><th>الكود</th><th>السائق</th><th>الشريك</th><th>السيارة</th><th>الالتزام (الشهر)</th><th>مخالفات</th><th>خصومات الشهر</th><th>وقود الشهر</th><th></th></tr></thead><tbody>'+
+    (list.length?list.map(d=>{
+      const s=drvStats(d.id);
+      const tot=s.onTime+s.late+s.absent;
+      const pct=tot?Math.round(s.onTime/tot*100):null;
+      const pc=pct===null?'var(--muted)':(pct>=90?'var(--green)':(pct>=70?'var(--amber)':'var(--red)'));
+      return `<tr onclick="openDrv('${d.id}')" style="cursor:pointer">
+        <td style="font-family:monospace;font-weight:800">${esc(d.id)}</td>
+        <td class="nm">${esc(d.name)}</td><td>${esc(d.partner||'—')}</td><td>${esc(d.car||'—')}</td>
+        <td>${pct===null?'—':`<b style="color:${pc}">${pct}%</b><br><span style="font-size:10px;color:var(--muted)">${s.onTime}✅ ${s.late}🔴 ${s.absent}⚫</span>`}</td>
+        <td>${s.vio.length?`<b style="color:var(--red)">${s.vio.length}</b><br><span style="font-size:10px">${fmtKD(s.vioSum)}</span>`:'—'}</td>
+        <td>${s.dedSum?`<b style="color:var(--red)">${fmtKD(s.dedSum)}</b>`:'—'}</td>
+        <td>${s.fuSum?fmtKD(s.fuSum):'—'}</td>
+        <td><i class="ti ti-chevron-left" style="color:var(--muted)"></i></td></tr>`;
+    }).join('') : '<tr><td colspan="9" class="empty">لا يوجد سائقون مطابقون</td></tr>')+'</tbody>';
+}
+
+function openDrv(id){
+  const d=DRIVERS.find(x=>x.id===id); if(!d) return;
+  _curDrv=d;
+  const s=drvStats(id);
+  const T=today(), M=T.slice(0,7);
+  const tot=s.onTime+s.late+s.absent;
+  const pct=tot?Math.round(s.onTime/tot*100):null;
+  const pc=pct===null?'var(--muted)':(pct>=90?'var(--green)':(pct>=70?'var(--amber)':'var(--red)'));
+
+  document.getElementById('dmName').textContent=d.name;
+  document.getElementById('dmSub').textContent=(d.id||'')+' · '+(d.partner||'—')+' · '+(d.car||'بدون سيارة');
+
+  const box=(l,v,c)=>`<div style="flex:1;min-width:110px;background:var(--light);border-radius:11px;padding:12px;text-align:center">
+    <div style="font-size:20px;font-weight:900;color:${c};line-height:1">${v}</div>
+    <div style="font-size:10.5px;color:var(--muted);font-weight:700;margin-top:3px">${l}</div></div>`;
+
+  let h='<div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px">'+
+    box('الالتزام', pct===null?'—':pct+'%', pc)+
+    box('في الوقت', s.onTime, 'var(--green)')+
+    box('متأخر', s.late, 'var(--red)')+
+    box('غياب', s.absent, 'var(--amber)')+
+    box('مخالفات', s.vio.length, 'var(--red)')+
+    box('خصم الشهر', fmtKD(s.dedSum), 'var(--purple)')+
+  '</div>';
+
+  // بيانات أساسية
+  h+='<div style="background:var(--light);border-radius:12px;padding:14px;margin-bottom:16px">'+
+    '<div style="font-weight:900;font-size:13px;color:var(--navy);margin-bottom:9px">📋 بيانات أساسية</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px;font-size:12px">'+
+      infoRow('🌍 الجنسية', d.nationality)+ infoRow('📱 الهاتف', d.sim)+
+      infoRow('🪪 الإقامة', d.civil_expiry||d.residency)+ infoRow('🚦 الرخصة', d.license)+
+      infoRow('⛽ كرت البنزين', d.petrol)+ infoRow('💵 الراتب', d.salary_base?fmtKD(d.salary_base)+' د.ك':'')+
+    '</div></div>';
+
+  // آخر صور الشفت
+  const ph7=s.ph.slice(0,7);
+  if(ph7.length){
+    h+='<div style="margin-bottom:16px"><div style="font-weight:900;font-size:13px;color:var(--navy);margin-bottom:9px">📸 آخر صور الشفت</div>'+
+      '<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">'+
+      ph7.map(p=>`<div style="flex:0 0 auto;text-align:center">
+        ${p.selfie_url?`<img src="${p.selfie_url}" onclick="openLB('${p.selfie_url}')" style="width:64px;height:64px;border-radius:9px;object-fit:cover;cursor:pointer;border:2px solid var(--border)">`:'<div style="width:64px;height:64px;border-radius:9px;background:var(--border)"></div>'}
+        <div style="font-size:9.5px;color:var(--muted);font-weight:700;margin-top:3px">${String(p.photo_date).slice(5)}</div></div>`).join('')+
+      '</div></div>';
+  }
+
+  // المخالفات
+  if(s.vio.length){
+    h+='<div style="margin-bottom:16px"><div style="font-weight:900;font-size:13px;color:var(--red);margin-bottom:9px">🚨 المخالفات ('+s.vio.length+' — '+fmtKD(s.vioSum)+' د.ك)</div>'+
+      '<div style="background:var(--light);border-radius:11px;overflow:hidden">'+
+      s.vio.slice(0,6).map(v=>`<div style="padding:9px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px">
+        <span style="font-weight:700">${esc(v.reason||'—')}</span>
+        <span><b style="color:var(--red)">${fmtKD(v.amount)}</b> · ${fmtD(v.vio_date)}</span></div>`).join('')+
+      '</div></div>';
+  }
+
+  // الخصومات
+  if(s.dedM.length){
+    h+='<div style="margin-bottom:16px"><div style="font-weight:900;font-size:13px;color:var(--purple);margin-bottom:9px">💸 خصومات هذا الشهر</div>'+
+      '<div style="background:var(--light);border-radius:11px;overflow:hidden">'+
+      s.dedM.slice(0,8).map(x=>`<div style="padding:9px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px">
+        <span style="font-weight:700">${esc(x.reason||'—')}</span>
+        <span><b style="color:var(--red)">${fmtKD(x.amount)}</b> · ${fmtD(x.date)}</span></div>`).join('')+
+      '</div></div>';
+  }
+
+  // الطلبات
+  if(s.rq.length){
+    h+='<div style="margin-bottom:16px"><div style="font-weight:900;font-size:13px;color:var(--blue);margin-bottom:9px">📋 الطلبات</div>'+
+      '<div style="background:var(--light);border-radius:11px;overflow:hidden">'+
+      s.rq.slice(0,6).map(r=>{
+        const st=r.status==='approved'?'✅':(r.status==='rejected'?'❌':'⏳');
+        return `<div style="padding:9px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px">
+          <span style="font-weight:700">${r.req_type==='leave'?'🏖️ إجازة '+(r.days_count||'')+' يوم':'💰 سلفة '+fmtKD(r.amount)}</span>
+          <span>${st} ${fmtD(r.created_at)}</span></div>`;}).join('')+
+      '</div></div>';
+  }
+
+  // الوقود
+  if(s.fuM.length){
+    h+='<div style="margin-bottom:6px"><div style="font-weight:900;font-size:13px;color:var(--amber);margin-bottom:9px">⛽ وقود هذا الشهر ('+fmtKD(s.fuSum)+' د.ك)</div>'+
+      '<div style="background:var(--light);border-radius:11px;overflow:hidden">'+
+      s.fuM.slice(0,6).map(f=>`<div style="padding:9px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px">
+        <span style="font-weight:700">${fmtD(f.log_date)}${f.flagged?' <span style="color:var(--red)">⚠️</span>':''}</span>
+        <span><b>${fmtKD(f.amount_kd)}</b>${f.km_since_last?' · '+f.km_since_last+' كم':''}</span></div>`).join('')+
+      '</div></div>';
+  }
+
+  document.getElementById('dmBody').innerHTML=h;
+  document.getElementById('drvModal').style.display='flex';
+}
+function infoRow(l,v){
+  return `<div><span style="color:var(--muted);font-weight:700">${l}:</span> <b>${esc(v||'—')}</b></div>`;
+}
+function closeDrv(){ document.getElementById('drvModal').style.display='none'; _curDrv=null; }
+
+/* إجراءات من ملف السائق */
+function msgThisDriver(){
+  if(!_curDrv) return;
+  const id=_curDrv.id;
+  closeDrv(); go('msgs');
+  setTimeout(()=>{ const s=document.getElementById('msgTo'); if(s) s.value=id; document.getElementById('msgTitle').focus(); },200);
+}
+
+async function addManualDeduction(){
+  if(!_curDrv) return;
+  const amt=parseFloat(prompt('مبلغ الخصم (د.ك) — سائق: '+_curDrv.name));
+  if(!amt||amt<=0) return;
+  const reason=prompt('سبب الخصم:');
+  if(!reason) return;
+  try{
+    const {error}=await sb.from('deductions').insert({
+      uniq_key:'MAN_'+_curDrv.id+'_'+Date.now(),
+      driver_id:_curDrv.id, driver_name:_curDrv.name,
+      date:today(), amount:amt, reason:reason,
+      ded_type:'manual', auto:false, status:'active'
+    });
+    if(error) throw error;
+    toast('✅ تم إضافة الخصم — سيظهر للسائق في «راتبي»');
+    closeDrv(); await loadAll();
+  }catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+async function addVioFor(){
+  if(!_curDrv) return;
+  const reason=prompt('سبب المخالفة — سائق: '+_curDrv.name); if(!reason) return;
+  const amt=parseFloat(prompt('المبلغ (د.ك):')); if(!amt) return;
+  const num=prompt('رقم المخالفة (اختياري):')||null;
+  try{
+    const {error}=await sb.from('driver_violations').insert({
+      id:'v_'+Date.now()+Math.random().toString(36).slice(2,6),
+      driver_id:_curDrv.id, driver_name:_curDrv.name,
+      vio_date:today(), reason:reason, amount:amt, vio_number:num, status:'pending'
+    });
+    if(error) throw error;
+    toast('✅ تم تسجيل المخالفة — ستظهر للسائق');
+    closeDrv(); await loadAll();
+  }catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ⚙️ الإعدادات
+   ═══════════════════════════════════════════════════════════════════ */
+function openSet(){
+  document.getElementById('setGrace').value=CFG.grace;
+  document.getElementById('setFrac').value=String(CFG.fraction);
+  document.getElementById('setPre').value=CFG.prealert;
+  document.getElementById('setModal').style.display='flex';
+}
+function closeSet(){ document.getElementById('setModal').style.display='none'; }
+async function saveSettings(){
+  const g=parseInt(document.getElementById('setGrace').value,10)||30;
+  const f=parseFloat(document.getElementById('setFrac').value)||0.5;
+  const p=parseInt(document.getElementById('setPre').value,10)||30;
+  try{
+    const {error}=await sb.from('app_settings').upsert([
+      {key:'late_grace_minutes',value:String(g),updated_at:new Date().toISOString()},
+      {key:'late_deduct_fraction',value:String(f),updated_at:new Date().toISOString()},
+      {key:'prealert_minutes',value:String(p),updated_at:new Date().toISOString()},
+    ],{onConflict:'key'});
+    if(error) throw error;
+    CFG={grace:g,fraction:f,prealert:p};
+    toast('✅ تم حفظ الإعدادات');
+    closeSet(); await loadAll();
+  }catch(e){ toast('خطأ: '+e.message,true); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   📥 تصدير Excel
+   ═══════════════════════════════════════════════════════════════════ */
+function toCSV(rows){
+  if(!rows.length) return '';
+  const heads=Object.keys(rows[0]);
+  const esc2=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  return '﻿'+heads.join(',')+'\n'+rows.map(r=>heads.map(h=>esc2(r[h])).join(',')).join('\n');
+}
+function download(name, content){
+  const b=new Blob([content],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+function exportDrivers(){
+  const rows=DRIVERS.map(d=>{
+    const s=drvStats(d.id);
+    const tot=s.onTime+s.late+s.absent;
+    return {
+      'الكود':d.id,'الاسم':d.name,'الشريك':d.partner||'','السيارة':d.car||'',
+      'الجنسية':d.nationality||'','الهاتف':d.sim||'','الراتب':d.salary_base||'',
+      'التزام %':tot?Math.round(s.onTime/tot*100):'',
+      'في الوقت':s.onTime,'متأخر':s.late,'غياب':s.absent,
+      'عدد المخالفات':s.vio.length,'قيمة المخالفات':s.vioSum.toFixed(3),
+      'خصومات الشهر':s.dedSum.toFixed(3),'وقود الشهر':s.fuSum.toFixed(3),
+      'صور الشفت (الشهر)':s.phM.length
+    };
+  });
+  download('تقرير_السائقين_'+today()+'.csv', toCSV(rows));
+  toast('✅ تم التصدير');
+}
+
+
+
+function exportFuel(){
+  const mo=document.getElementById('fuelMonth').value;
+  let list=FUEL.slice();
+  if(mo) list=list.filter(f=>String(f.log_date||'').startsWith(mo));
+  const rows=list.map(f=>({
+    'التاريخ':f.log_date,'السائق':f.driver_name,'السيارة':f.car_plate||'',
+    'المبلغ':f.amount_kd,'اللترات':f.liters||'','العداد':f.odometer||'',
+    'كم منذ آخر':f.km_since_last||'','كم/دينار':(f.km_since_last&&f.amount_kd)?(f.km_since_last/f.amount_kd).toFixed(1):'',
+    'المحطة':f.station||'','مشبوه':f.flagged?'نعم':'لا'
+  }));
+  if(!rows.length){ toast('لا توجد بيانات',true); return; }
+  download('سجل_الوقود_'+(mo||today())+'.csv', toCSV(rows));
+  toast('✅ تم التصدير');
+}
+
+function exportShifts(){
+  const date=document.getElementById('shiftDate').value||today();
+  const daySched=SCHED.filter(s=>s.date===date);
+  const byDrv={}; daySched.forEach(s=>byDrv[s.driver_id]=s);
+  const rows=DRIVERS.map(d=>{
+    const sh=byDrv[d.id];
+    const ci=sh&&sh.shift_start?firstClockIn(d.id,date):null;
+    const lm=(ci&&sh&&sh.shift_start)?Math.round((ci-shiftDT(date,sh.shift_start))/60000):'';
+    return {
+      'التاريخ':date,'السائق':d.name,'الشريك':d.partner||'',
+      'الوردية':sh?sh.shift_type:'—','البداية':sh?(sh.shift_start||''):'','النهاية':sh?(sh.shift_end||''):'',
+      'وقت التسجيل':ci?ci.toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'}):'لم يسجّل',
+      'دقائق التأخير':lm===''?'':lm,
+      'الحالة':!sh?'لا يوجد شفت':(sh.shift_type==='off'||sh.shift_type==='holiday'?'إجازة':(ci?(lm>=CFG.grace?'متأخر':'في الوقت'):'لم يسجّل'))
+    };
+  });
+  download('الشفتات_'+date+'.csv', toCSV(rows));
+  toast('✅ تم التصدير');
+}
+
+function exportDeductions(){
+  const rows=DEDS.map(x=>({
+    'التاريخ':x.date,'السائق':x.driver_name,'النوع':x.ded_type||'manual',
+    'المبلغ':x.amount,'دقائق التأخير':x.minutes_late||'',
+    'السبب':x.reason||'','الحالة':x.status==='cancelled'?'ملغي':'نشط'
+  }));
+  if(!rows.length){ toast('لا توجد خصومات',true); return; }
+  download('الخصومات_'+today()+'.csv', toCSV(rows));
+  toast('✅ تم التصدير');
+}
+
+function exportPhotos(){
+  const date=document.getElementById('photoDate').value||today();
+  const dayPhotos=PHOTOS.filter(p=>p.photo_date===date);
+  const byId={}; dayPhotos.forEach(p=>byId[p.driver_id]=p);
+  const rows=DRIVERS.map(d=>{
+    const p=byId[d.id];
+    return {
+      'التاريخ':date,'السائق':d.name,'الشريك':d.partner||'',
+      'رفع الصورة':p?'نعم':'لا',
+      'الوقت':p?new Date(p.created_at).toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'}):'',
+      'الحالة':p?(p.status==='approved'?'معتمد':(p.status==='rejected'?'مرفوض':'بانتظار')):'لم يرفع',
+      'رابط السيلفي':p?(p.selfie_url||''):'','رابط الصندوق':p?(p.box_url||''):''
+    };
+  });
+  download('صور_الشفت_'+date+'.csv', toCSV(rows));
+  toast('✅ تم التصدير');
+}
+
+
 </script>
 </body>
 </html>
