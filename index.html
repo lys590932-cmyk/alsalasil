@@ -1892,7 +1892,9 @@ function _askPermissionOnGesture(){
     document.addEventListener(ev, attempt, {once:true, passive:true});
   });
 }
-_askPermissionOnGesture();
+// ⛔ مُعطّل: الطلب الصامت كان يحرق الفرصة الوحيدة ويخلي الإذن denied للأبد.
+// بدلاً منه: كارت واضح في الشاشة الرئيسية (turnOnNotifs) يطلب الإذن بضغطة مقصودة.
+// _askPermissionOnGesture();
 
 /* =========================================================
    TABS
@@ -3485,6 +3487,10 @@ function renderServices(){
     svcBtn('🔧', LANG==='ar'?'بلاغ عطل':'Report issue', '#ef4444', 'openMaintForm()')+
   '</div>';
 
+  // حالة الإشعارات
+  var nc = notifSetupCardHTML() || notifOkBadgeHTML();
+  if(nc) h+=nc;
+
   // الوثائق المنتهية قريباً
   var docs=docAlertsHTML();
   if(docs) h+=docs;
@@ -3950,6 +3956,188 @@ setTimeout(function(){ if(DRIVER) startShiftEngine(); }, 3500);
 // أعِد الفحص عند العودة للتطبيق
 document.addEventListener('visibilitychange', function(){
   if(!document.hidden && DRIVER) checkShiftAlerts();
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   🔔 نظام تفعيل الإشعارات — كارت واضح + تعليمات حسب الجهاز
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* كشف المنصة وحالة التثبيت */
+function notifEnv(){
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  var isAndroid = /Android/i.test(ua);
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  var hasAPI = ('Notification' in window) && ('serviceWorker' in navigator);
+  var perm = hasAPI ? Notification.permission : 'unsupported';
+  return {isIOS:isIOS, isAndroid:isAndroid, standalone:standalone, hasAPI:hasAPI, perm:perm};
+}
+
+/* هل الإشعارات شغالة تماماً؟ */
+function notifsWorking(){
+  var e = notifEnv();
+  return e.hasAPI && e.perm === 'granted';
+}
+
+/* كارت التفعيل — يظهر في الرئيسية لو فيه مشكلة */
+function notifSetupCardHTML(){
+  var e = notifEnv();
+  if(notifsWorking()) return '';   // كل شيء تمام — لا تعرض شيء
+
+  var ar = LANG==='ar';
+  var title, body, action;
+
+  // ── حالة 1: iOS ومش مثبّت على الشاشة الرئيسية ──
+  if(e.isIOS && !e.standalone){
+    title = ar ? '📲 ثبّت التطبيق أولاً' : '📲 Install the app first';
+    body  = ar
+      ? '<b>على الآيفون، الإشعارات تحتاج تثبيت التطبيق:</b><br><br>'+
+        '1️⃣ اضغط زر المشاركة <b>⬆️</b> تحت<br>'+
+        '2️⃣ اختر <b>«إضافة إلى الشاشة الرئيسية»</b><br>'+
+        '3️⃣ افتح التطبيق من الأيقونة الجديدة<br>'+
+        '4️⃣ فعّل الإشعارات من نفس المكان'
+      : '<b>On iPhone, notifications require installing the app:</b><br><br>'+
+        '1️⃣ Tap the Share button <b>⬆️</b> below<br>'+
+        '2️⃣ Choose <b>"Add to Home Screen"</b><br>'+
+        '3️⃣ Open the app from the new icon<br>'+
+        '4️⃣ Enable notifications from there';
+    action = '';
+  }
+  // ── حالة 2: الجهاز لا يدعم ──
+  else if(!e.hasAPI){
+    title = ar ? '⚠️ المتصفح لا يدعم الإشعارات' : '⚠️ Browser doesn\'t support notifications';
+    body  = ar ? 'افتح التطبيق من متصفح <b>Chrome</b> أو <b>Safari</b> المحدّث.'
+               : 'Open the app in an updated <b>Chrome</b> or <b>Safari</b> browser.';
+    action = '';
+  }
+  // ── حالة 3: الإذن مرفوض ──
+  else if(e.perm === 'denied'){
+    title = ar ? '🔕 الإشعارات محظورة' : '🔕 Notifications blocked';
+    body  = ar
+      ? '<b>فعّلها من إعدادات المتصفح:</b><br><br>'+
+        (e.isAndroid
+          ? '1️⃣ اضغط على القفل 🔒 جنب العنوان فوق<br>2️⃣ اختر <b>الأذونات / Permissions</b><br>3️⃣ فعّل <b>الإشعارات</b><br>4️⃣ اقفل التطبيق وافتحه'
+          : '1️⃣ الإعدادات ← Safari ← الإشعارات<br>2️⃣ فعّل الإشعارات لهذا الموقع<br>3️⃣ اقفل التطبيق وافتحه')
+      : '<b>Enable from browser settings:</b><br><br>'+
+        '1️⃣ Tap the lock 🔒 next to the address<br>2️⃣ Open <b>Permissions</b><br>3️⃣ Allow <b>Notifications</b><br>4️⃣ Restart the app';
+    action = '';
+  }
+  // ── حالة 4: لسه ما طلبناش الإذن ──
+  else {
+    title = ar ? '🔔 فعّل الإشعارات' : '🔔 Enable notifications';
+    body  = ar
+      ? 'عشان يوصلك تنبيه <b>قبل الشفت بـ30 دقيقة</b> وعند بدايته، ولو فيه أي رسالة من الإدارة.'
+      : 'So you get an alert <b>30 min before your shift</b>, at shift start, and for any admin message.';
+    action = '<button onclick="turnOnNotifs()" style="width:100%;margin-top:12px;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-family:inherit;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.35)">'+
+             (ar ? '🔔 تفعيل الإشعارات الآن' : '🔔 Enable notifications now')+'</button>';
+  }
+
+  return '<div class="card" style="border:2px solid #f59e0b;background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.05))">'+
+    '<div style="display:flex;align-items:start;gap:11px;margin-bottom:9px">'+
+      '<span style="font-size:28px">🔔</span>'+
+      '<div style="flex:1"><div style="font-weight:900;font-size:15px;color:#f59e0b;margin-bottom:5px">'+title+'</div>'+
+      '<div style="font-size:12.5px;line-height:1.8;color:var(--text)">'+body+'</div></div>'+
+    '</div>'+ action +
+    '<div style="text-align:center;margin-top:9px"><button onclick="notifDiag()" style="background:none;border:none;color:var(--muted2);font-family:inherit;font-size:11px;text-decoration:underline;cursor:pointer">'+
+      (ar?'معلومات تقنية':'Technical info')+'</button></div>'+
+  '</div>';
+}
+
+/* تفعيل الإشعارات (لازم من ضغطة المستخدم) */
+function turnOnNotifs(){
+  if(!('Notification' in window)){
+    toast(LANG==='ar'?'المتصفح لا يدعم الإشعارات':'Not supported','err'); return;
+  }
+  Notification.requestPermission().then(function(res){
+    if(res === 'granted'){
+      toast(LANG==='ar'?'✅ تم التفعيل!':'✅ Enabled!','ok');
+      // إشعار ترحيبي للتأكيد
+      setTimeout(function(){
+        showPushNotif({
+          title: LANG==='ar' ? '✅ الإشعارات مفعّلة' : '✅ Notifications enabled',
+          body:  LANG==='ar' ? 'هيوصلك تنبيه قبل شفتك بـ30 دقيقة' : 'You\'ll get an alert 30 min before your shift',
+          tag:'welcome'
+        });
+      }, 700);
+      renderCurrentTab();
+    } else {
+      toast(LANG==='ar'?'لم يتم التفعيل — جرّب من إعدادات المتصفح':'Not enabled — try browser settings','err');
+      renderCurrentTab();
+    }
+  }).catch(function(){
+    toast(LANG==='ar'?'حدث خطأ':'Error','err');
+  });
+}
+
+/* تشخيص تقني */
+function notifDiag(){
+  var e = notifEnv();
+  var sh = (typeof todayShift==='function') ? todayShift() : null;
+  var lines = [
+    'الجهاز: ' + (e.isIOS?'iPhone/iPad':(e.isAndroid?'Android':'كمبيوتر')),
+    'مثبّت كتطبيق: ' + (e.standalone?'✅ نعم':'❌ لا'),
+    'دعم الإشعارات: ' + (e.hasAPI?'✅ متاح':'❌ غير متاح'),
+    'حالة الإذن: ' + e.perm,
+    'Service Worker: ' + (('serviceWorker' in navigator)?'✅':'❌'),
+    '—',
+    'السائق: ' + (DRIVER? DRIVER.name : 'غير مسجّل'),
+    'شفت اليوم: ' + (sh ? (sh.shift_type+' '+(sh.shift_start||'')+'-'+(sh.shift_end||'')) : '❌ لا يوجد جدول'),
+    'عدد الورديات المحمّلة: ' + (typeof SCHEDULES!=='undefined' ? SCHEDULES.length : 0),
+    'مهلة التأخير: ' + (typeof SHIFT_CFG!=='undefined' ? SHIFT_CFG.grace+' د' : '—'),
+  ];
+  alert('🔍 تشخيص الإشعارات\n\n' + lines.join('\n'));
+}
+
+/* اختبار إشعار */
+function testShiftNotif(){
+  if(!notifsWorking()){ toast(LANG==='ar'?'فعّل الإشعارات أولاً':'Enable notifications first','err'); return; }
+  showPushNotif({
+    title: LANG==='ar' ? '🔔 إشعار تجريبي' : '🔔 Test notification',
+    body:  LANG==='ar' ? 'لو وصلك ده، الإشعارات شغالة تمام ✅' : 'If you see this, notifications work ✅',
+    tag: 'test-'+Date.now()
+  });
+  toast(LANG==='ar'?'تم الإرسال — شوف شريط الإشعارات':'Sent — check your notification bar','ok');
+}
+
+/* كارت حالة الإشعارات (مصغّر) — يظهر لما تكون شغالة */
+function notifOkBadgeHTML(){
+  if(!notifsWorking()) return '';
+  var ar = LANG==='ar';
+  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 13px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:11px;margin-bottom:11px">'+
+    '<span style="font-size:11.5px;font-weight:800;color:#10b981">🔔 '+(ar?'الإشعارات مفعّلة':'Notifications on')+'</span>'+
+    '<button onclick="testShiftNotif()" style="background:rgba(16,185,129,.2);border:none;color:#10b981;padding:5px 11px;border-radius:8px;font-family:inherit;font-weight:800;font-size:11px;cursor:pointer">'+
+    (ar?'اختبار':'Test')+'</button></div>';
+}
+
+/* حقن الكارت في الشاشة الرئيسية */
+var _origRenderHome3 = renderHome;
+renderHome = function(){
+  _origRenderHome3();
+  var el = $('scrHome'); if(!el) return;
+  var html = notifSetupCardHTML() || notifOkBadgeHTML();
+  if(!html) return;
+  var d = document.createElement('div');
+  d.innerHTML = html;
+  el.insertBefore(d, el.firstChild);
+};
+
+/* حقن في شاشة الحضور كمان (لو مش مفعّلة) */
+var _origRenderAttendance3 = renderAttendance;
+renderAttendance = function(){
+  _origRenderAttendance3();
+  if(notifsWorking()) return;      // شغالة؟ لا تكرر
+  var el = $('scrAttendance'); if(!el) return;
+  var html = notifSetupCardHTML();
+  if(!html) return;
+  var d = document.createElement('div');
+  d.innerHTML = html;
+  el.insertBefore(d, el.firstChild);
+};
+
+/* أعد الرسم لما يرجع للتطبيق (لو غيّر الإعدادات) */
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden && DRIVER) renderCurrentTab();
 });
 
 </script>
