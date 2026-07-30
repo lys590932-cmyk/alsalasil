@@ -1,1237 +1,1303 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نظام إدارة المخزن والفروع</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  :root{
-    /* Restaurant / Food theme — burgundy + gold + warm */
-    --primary:#7f1d1d; --primary2:#991b1b; --accent:#eab308;
-    --bg:#fef7f0; --surface:#fff; --text:#1c1917; --muted:#78716c;
-    --border:#e7e5e4; --light:#fafaf9; --cream:#fef3c7;
-    --green:#15803d; --green-bg:#dcfce7;
-    --red:#b91c1c; --red-bg:#fee2e2;
-    --amber:#b45309; --amber-bg:#fef3c7;
-    --blue:#1e40af; --blue-bg:#dbeafe;
-    --orange:#c2410c; --orange-bg:#ffedd5;
-  }
-  body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+:root{
+  --primary:#0f3d47; --accent:#14b8a6; --accent-soft:#ccfbf1;
+  --amber:#eab308; --red:#b91c1c; --blue:#1e40af; --orange:#c2410c;
+  --green:#16a34a; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9;
+  --card:#ffffff; --shadow:0 1px 3px rgba(15,61,71,.08),0 8px 24px rgba(15,61,71,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',system-ui,sans-serif;background:var(--bg);color:#0f172a;line-height:1.6}
+button{font-family:inherit;cursor:pointer;border:none}
+input,select{font-family:inherit}
 
-  /* Top bar */
-  .topbar{background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--accent);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.12)}
-  .topbar-brand{display:flex;align-items:center;gap:12px}
-  .brand-logo{background:var(--accent);color:var(--primary);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;box-shadow:0 4px 10px rgba(0,0,0,0.2)}
-  .topbar h1{font-size:20px;font-weight:900;line-height:1.2}
-  .topbar .sub{font-size:12px;color:#fde68a;margin-top:2px;font-weight:700}
-  .topbar .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .btn{padding:9px 16px;border:none;border-radius:8px;font-family:'Cairo';font-weight:800;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s}
-  .btn-primary{background:var(--accent);color:var(--primary)}
-  .btn-primary:hover{background:#facc15;transform:translateY(-1px)}
-  .btn-secondary{background:rgba(255,255,255,0.15);color:#fff}
-  .btn-secondary:hover{background:rgba(255,255,255,0.25)}
-  .btn-success{background:var(--green);color:#fff}
-  .btn-success:hover{background:#047857}
-  .btn-danger{background:var(--red);color:#fff}
+/* ── Header ── */
+.topbar{background:linear-gradient(135deg,var(--primary),#155e6b);color:#fff;padding:14px 20px;
+  position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.topbar-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-size:19px;font-weight:900;display:flex;align-items:center;gap:9px}
+.spacer{flex:1}
+.cloud-chip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.13);
+  padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;background:#94a3b8;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.badge-chip{background:rgba(255,255,255,.13);padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:700}
+.icon-btn{background:rgba(255,255,255,.13);color:#fff;padding:7px 12px;border-radius:9px;font-size:13px;font-weight:600}
+.icon-btn:hover{background:rgba(255,255,255,.24)}
 
-  /* Mode selector */
-  .mode-tabs{background:#fff;padding:0 24px;display:flex;gap:0;border-bottom:2px solid var(--border);position:sticky;top:76px;z-index:99;overflow-x:auto}
-  .mode-tab{padding:14px 24px;background:transparent;border:none;font-family:'Cairo';font-weight:900;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;display:flex;align-items:center;gap:8px;white-space:nowrap}
-  .mode-tab.active{color:var(--primary);border-bottom-color:var(--accent);background:linear-gradient(180deg,transparent,rgba(234,179,8,0.08))}
-  .mode-tab:hover{color:var(--primary)}
-  .mode-tab .badge{background:var(--accent);color:var(--primary);padding:2px 8px;border-radius:10px;font-size:11px;min-width:20px;text-align:center;font-weight:900}
+/* ── Tabs ── */
+.tabs{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:59px;z-index:45;
+  overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs-inner{max-width:1400px;margin:0 auto;display:flex;gap:2px;padding:0 14px;min-width:max-content}
+.tab{padding:14px 17px;font-size:14px;font-weight:700;color:var(--muted);background:none;
+  border-bottom:3px solid transparent;white-space:nowrap;transition:.15s}
+.tab:hover{color:var(--primary);background:#f8fafc}
+.tab.active{color:var(--primary);border-bottom-color:var(--accent)}
 
-  .container{padding:20px 24px;max-width:1600px;margin:0 auto}
-  .view{display:none}
-  .view.active{display:block}
+.wrap{max-width:1400px;margin:0 auto;padding:22px 16px 60px}
+.view{display:none}
+.view.active{display:block}
 
-  /* ================ DATA ENTRY VIEW ================ */
-  .entry-header{background:#fff;padding:20px;border-radius:14px;margin-bottom:16px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.04)}
-  .entry-title{font-size:18px;font-weight:900;color:var(--primary);margin-bottom:14px;display:flex;align-items:center;gap:10px}
-  .entry-form{display:grid;grid-template-columns:200px 1fr auto;gap:14px;align-items:end}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:12px;font-weight:800;color:var(--primary)}
-  .field input, .field select{padding:11px 14px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:14px;background:var(--light);transition:all 0.2s}
-  .field input:focus, .field select:focus{outline:none;border-color:var(--accent);background:#fff}
+/* ── Cards ── */
+.card{background:var(--card);border-radius:14px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
+.card-title{font-size:16px;font-weight:900;color:var(--primary);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card-sub{font-size:12.5px;color:var(--muted);margin-bottom:16px}
 
-  /* Branch cards */
-  .section-title{font-size:16px;font-weight:900;color:var(--primary);margin:20px 0 12px;padding:8px 0;border-bottom:3px solid var(--accent);display:flex;align-items:center;gap:8px}
-  .section-title .count{background:var(--accent);color:var(--primary);padding:3px 10px;border-radius:10px;font-size:12px;margin-right:auto;font-weight:900}
+/* ── Toolbar ── */
+.toolbar{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:700;color:var(--muted)}
+.field input,.field select{padding:9px 12px;border:1.5px solid var(--line);border-radius:9px;
+  font-size:14px;font-weight:600;background:#fff;min-width:135px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.btn{padding:10px 18px;border-radius:9px;font-size:13.5px;font-weight:700;background:var(--primary);color:#fff;transition:.15s}
+.btn:hover{filter:brightness(1.15)}
+.btn.accent{background:var(--accent)}
+.btn.ghost{background:#f1f5f9;color:var(--primary)}
+.btn.danger{background:var(--red)}
+.btn.sm{padding:7px 13px;font-size:12.5px}
 
-  .branches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
-  .branch-card{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);border-right:5px solid var(--branch-color);transition:all 0.2s;position:relative}
-  .branch-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.08)}
-  .branch-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border)}
-  .branch-name{font-size:15px;font-weight:900;color:var(--primary);display:flex;align-items:center;gap:8px}
-  .branch-type{background:var(--branch-bg);color:var(--branch-color);padding:3px 10px;border-radius:10px;font-size:10px;font-weight:900}
-  .item-inputs{display:grid;gap:10px}
-  .item-row{display:grid;grid-template-columns:100px 1fr 60px;gap:8px;align-items:center;padding:8px;background:var(--light);border-radius:8px;transition:all 0.2s}
-  .item-row:hover{background:var(--cream)}
-  .item-row label{font-size:12px;font-weight:800;color:var(--primary);display:flex;align-items:center;gap:5px}
-  .item-row input{padding:8px 10px;border:2px solid var(--border);border-radius:6px;font-family:'Cairo';font-weight:800;font-size:14px;text-align:center;background:#fff}
-  .item-row input:focus{outline:none;border-color:var(--accent)}
-  .item-row .unit{font-size:11px;color:var(--muted);font-weight:700;text-align:center}
-  .branch-total{margin-top:10px;padding:8px;background:linear-gradient(135deg,var(--branch-bg),transparent);border-radius:8px;text-align:center;font-weight:900;color:var(--branch-color);font-size:14px}
+/* ── Entry grid ── */
+.section-label{font-size:14px;font-weight:900;color:var(--primary);margin:18px 0 11px;
+  padding-right:11px;border-right:4px solid var(--accent)}
+.branch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:14px}
+.branch-card{background:var(--card);border-radius:13px;padding:15px;box-shadow:var(--shadow);
+  border-top:4px solid var(--branch-color)}
+.branch-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.branch-name{font-size:14.5px;font-weight:900;color:var(--branch-color)}
+.branch-type{font-size:10.5px;font-weight:700;background:var(--branch-bg);color:var(--branch-color);
+  padding:3px 9px;border-radius:999px}
+.item-row{display:grid;grid-template-columns:1fr 92px 34px;align-items:center;gap:8px;margin-bottom:8px}
+.item-row label{font-size:13px;font-weight:600}
+.item-row input{padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;
+  font-size:14px;font-weight:700;text-align:center;width:100%}
+.item-row input:focus{outline:none;border-color:var(--accent);background:#f0fdfa}
+.item-row .unit{font-size:11px;color:var(--muted);font-weight:600}
+.branch-total{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+  font-size:12.5px;font-weight:800;color:var(--branch-color);text-align:left}
 
-  .save-bar{position:sticky;bottom:20px;background:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 -4px 20px rgba(0,0,0,0.15);display:flex;justify-content:space-between;align-items:center;margin-top:20px;border:2px solid var(--accent);z-index:50;flex-wrap:wrap;gap:10px}
-  .save-summary{display:flex;gap:16px;flex-wrap:wrap}
-  .save-summary .item{display:flex;gap:8px;align-items:center;font-weight:800;font-size:13px;color:var(--primary)}
-  .save-summary .item .val{background:var(--primary);color:#fff;padding:3px 10px;border-radius:10px;font-size:13px}
+/* ── KPIs ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin-bottom:18px}
+.kpi{background:var(--card);border-radius:13px;padding:17px;box-shadow:var(--shadow);
+  border-right:5px solid var(--kpi-color)}
+.kpi-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.kpi-value{font-size:27px;font-weight:900;color:var(--kpi-color);line-height:1.15}
+.kpi-unit{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
 
-  /* ================ DASHBOARD VIEW ================ */
-  .filter-bar{background:#fff;padding:14px 20px;border-radius:12px;margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border:1px solid var(--border)}
-  .filter-bar label{font-size:13px;font-weight:800;color:var(--primary)}
-  .filter-bar input, .filter-bar select{padding:8px 14px;border:2px solid var(--border);border-radius:8px;font-family:'Cairo';font-weight:700;font-size:13px}
+/* ── Charts ── */
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(370px,1fr));gap:18px}
+.chart-box{height:290px;position:relative}
 
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-  .kpi{background:#fff;border-radius:12px;padding:18px;border:1px solid var(--border);border-right:5px solid var(--kpi-color);transition:all 0.2s}
-  .kpi:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.1)}
-  .kpi-label{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
-  .kpi-value{font-size:28px;font-weight:900;color:var(--kpi-color);line-height:1;margin-bottom:6px}
-  .kpi-unit{font-size:12px;color:var(--muted);font-weight:700}
+/* ── Tables ── */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
+th{background:var(--primary);color:#fff;padding:10px 9px;font-weight:700;font-size:12px;
+  text-align:center;position:sticky;top:0;white-space:nowrap}
+td{padding:9px;text-align:center;border-bottom:1px solid var(--line);font-weight:600}
+tbody tr:hover{background:#f8fafc}
+.day-total{background:var(--accent-soft);font-weight:900;color:var(--primary)}
+.t-right{text-align:right}
 
-  .section-header{font-size:15px;font-weight:900;color:var(--primary);margin:20px 0 12px;display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--accent)}
+/* ── Alerts ── */
+.alert{display:flex;gap:12px;padding:13px 15px;border-radius:11px;margin-bottom:10px;
+  border-right:5px solid var(--a-color);background:var(--a-bg)}
+.alert-icon{font-size:19px;line-height:1.3}
+.alert-body{flex:1}
+.alert-title{font-size:13.5px;font-weight:900;color:var(--a-color);margin-bottom:2px}
+.alert-text{font-size:12.5px;color:#334155;line-height:1.65}
+.empty{padding:34px;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600}
 
-  .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-  .chart-card{background:#fff;border-radius:14px;padding:18px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.04)}
-  .chart-card.wide{grid-column:1/-1}
-  .chart-title{font-size:14px;font-weight:900;color:var(--primary);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
-  .chart-title small{font-size:10px;color:var(--muted);font-weight:600}
-  .chart-container{position:relative;height:300px}
-  .chart-container.tall{height:400px}
+/* ── Insight ── */
+.insight{background:linear-gradient(135deg,#f0fdfa,#ecfeff);border:1.5px solid var(--accent-soft);
+  border-radius:12px;padding:15px;font-size:13.5px;line-height:2;margin-bottom:18px}
 
-  .data-table{width:100%;border-collapse:collapse;font-size:12px}
-  .data-table th{background:var(--primary);color:#fff;padding:9px 8px;text-align:center;font-weight:800;font-size:11px}
-  .data-table td{padding:8px;border-bottom:1px solid var(--border);text-align:center;font-weight:700}
-  .data-table tr:nth-child(even) td{background:var(--light)}
-  .data-table tr:hover td{background:var(--cream)}
-  .data-table .day-total{background:linear-gradient(135deg,var(--accent),#facc15);color:var(--primary) !important;font-weight:900}
+/* ── History ── */
+.record-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;
+  border-bottom:1px solid var(--line);cursor:pointer;transition:.13s}
+.record-row:hover{background:#f0fdfa}
+.record-date{font-size:14px;font-weight:900;color:var(--primary)}
+.record-branch{font-size:11.5px;color:var(--muted);font-weight:600}
+.v{padding:5px 13px;border-radius:8px;font-size:12.5px;font-weight:900}
 
-  /* Toast */
-  .toast{position:fixed;top:100px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:14px 24px;border-radius:10px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:1000;display:none;animation:slideDown 0.3s}
-  .toast.show{display:block}
-  .toast.error{background:var(--red)}
-  @keyframes slideDown{from{transform:translate(-50%,-30px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+/* ── Modal ── */
+.modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:100;
+  align-items:center;justify-content:center;padding:18px}
+.modal-box{background:#fff;border-radius:15px;padding:24px;max-width:520px;width:100%;
+  max-height:88vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:900;color:var(--primary);margin-bottom:15px}
+.modal .field{margin-bottom:13px}
+.modal .field input{width:100%}
+.info-box{background:#f8fafc;border-radius:10px;padding:13px;font-size:12.5px;line-height:2;margin:13px 0}
 
-  /* Records history */
-  .records-list{max-height:600px;overflow-y:auto;background:#fff;border-radius:12px;border:1px solid var(--border)}
-  .record-row{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all 0.2s}
-  .record-row:hover{background:var(--cream)}
-  .record-date{font-weight:900;color:var(--primary)}
-  .record-branch{font-size:12px;color:var(--muted)}
-  .record-values{display:flex;gap:8px;align-items:center}
-  .record-values .v{background:var(--light);padding:3px 10px;border-radius:8px;font-size:12px;font-weight:800}
+/* ── Toast ── */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--primary);color:#fff;
+  padding:13px 21px;border-radius:11px;font-size:13.5px;font-weight:700;z-index:200;
+  opacity:0;transform:translateY(14px);transition:.28s;pointer-events:none;max-width:88vw}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.error{background:var(--red)}
 
-  /* Insight box */
-  .insight-box{background:linear-gradient(135deg,#fef3c7,#fef9e7);border-radius:12px;padding:16px;margin-bottom:16px;border-right:5px solid var(--accent);display:flex;gap:14px;align-items:start}
-  .insight-icon{background:var(--accent);color:var(--primary);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.note{background:#fffbeb;border-right:4px solid var(--amber);padding:11px 14px;
+  border-radius:9px;font-size:12.5px;color:#78350f;line-height:1.8;margin-bottom:15px}
 
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-
-  @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-grid{grid-template-columns:1fr}.entry-form{grid-template-columns:1fr}}
-  @media(max-width:600px){.branches-grid{grid-template-columns:1fr}.mode-tab{padding:12px}}
+/* ── Print ── */
+@media print{
+  .topbar,.tabs,.no-print{display:none!important}
+  body{background:#fff}
+  .wrap{padding:0;max-width:none}
+  .card{box-shadow:none;border:1px solid #cbd5e1;break-inside:avoid;page-break-inside:avoid}
+  .view{display:none!important}
+  #reportView{display:block!important}
+  th{background:#0f3d47!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .day-total,.kpi{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media(max-width:640px){
+  .brand{font-size:16px}
+  .kpi-value{font-size:22px}
+  .chart-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="topbar-brand">
-    <div class="brand-logo">🍽️</div>
-    <div>
-      <h1>نظام إدارة المخزن والفروع</h1>
-      <div class="sub">Warehouse & Branches Management System</div>
-    </div>
-  </div>
-  <div class="actions">
-    <span id="cloudStatus" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,0.12);border-radius:20px;font-size:12px;font-weight:800">
-      <span id="cloudDot" style="width:8px;height:8px;background:#94a3b8;border-radius:50%"></span>
-      <span id="cloudText">جاري الاتصال...</span>
-    </span>
-    <button class="btn btn-secondary" onclick="showSettingsModal()"><i class="ti ti-settings"></i> الإعدادات</button>
-    <button class="btn btn-primary" onclick="exportData()"><i class="ti ti-download"></i> تصدير Excel</button>
-    <button class="btn btn-secondary" onclick="window.print()"><i class="ti ti-printer"></i> طباعة</button>
+  <div class="topbar-inner">
+    <div class="brand">📦 نظام إدارة المخزن والفروع</div>
+    <div class="spacer"></div>
+    <div class="cloud-chip"><span class="dot" id="cloudDot"></span><span id="cloudText">جاري الاتصال...</span></div>
+    <div class="badge-chip">📁 <span id="recordsBadge">0</span> سجل</div>
+    <button class="icon-btn" onclick="showSettings()">⚙️ إعدادات</button>
   </div>
 </div>
 
-<div class="mode-tabs">
-  <button class="mode-tab active" data-view="entry" onclick="switchView('entry')">
-    <i class="ti ti-clipboard-plus"></i> إدخال البيانات
-  </button>
-  <button class="mode-tab" data-view="dashboard" onclick="switchView('dashboard')">
-    <i class="ti ti-chart-bar"></i> لوحة التحكم
-  </button>
-  <button class="mode-tab" data-view="history" onclick="switchView('history')">
-    <i class="ti ti-history"></i> السجل الكامل <span class="badge" id="recordsBadge">0</span>
-  </button>
+<div class="tabs">
+  <div class="tabs-inner">
+    <button class="tab active" data-view="entry"    onclick="switchView('entry')">✏️ إدخال البيانات</button>
+    <button class="tab" data-view="dashboard" onclick="switchView('dashboard')">📊 اللوحة والتنبيهات</button>
+    <button class="tab" data-view="forecast"  onclick="switchView('forecast')">🔮 توقع الاحتياج</button>
+    <button class="tab" data-view="cost"      onclick="switchView('cost')">💰 التكلفة</button>
+    <button class="tab" data-view="report"    onclick="switchView('report')">📄 التقرير</button>
+    <button class="tab" data-view="history"   onclick="switchView('history')">🗂️ السجل</button>
+  </div>
 </div>
 
-<!-- ═══════════ ENTRY VIEW ═══════════ -->
+<div class="wrap">
+
+<!-- ══════════ ENTRY ══════════ -->
 <div class="view active" id="entryView">
-  <div class="container">
-
-    <div class="entry-header">
-      <div class="entry-title"><i class="ti ti-calendar"></i> إدخال كميات جديدة</div>
-      <div class="entry-form">
-        <div class="field">
-          <label>📅 التاريخ</label>
-          <input type="date" id="entryDate">
-        </div>
-        <div class="field">
-          <label>👤 اسم أمين المخزن</label>
-          <input type="text" id="warehouseKeeper" placeholder="مثال: محمد أحمد" value="">
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <button class="btn btn-primary" onclick="loadDay()"><i class="ti ti-refresh"></i> تحميل بيانات اليوم</button>
-        </div>
-      </div>
+  <div class="card">
+    <div class="card-title">✏️ تسجيل كميات اليوم</div>
+    <div class="card-sub">اختر التاريخ، اكتب الكميات بالكيلو، واضغط حفظ. الفروع الفاضية بتتشال تلقائياً.</div>
+    <div class="toolbar">
+      <div class="field"><label>التاريخ</label><input type="date" id="entryDate"></div>
+      <div class="field"><label>أمين المخزن</label><input type="text" id="warehouseKeeper" placeholder="الاسم" value="المخزن"></div>
+      <button class="btn ghost" onclick="loadDay()">📂 تحميل اليوم</button>
+      <button class="btn ghost" onclick="copyPrevDay()">📋 نسخ آخر يوم</button>
+      <button class="btn ghost" onclick="clearForm()">🧹 مسح</button>
+      <button class="btn accent" onclick="saveEntry()">💾 حفظ</button>
     </div>
-
-    <!-- Shawarma branches -->
-    <div class="section-title">
-      🌯 فروع الشاورما <span class="count">3 فروع</span>
+    <div class="kpi-grid" style="margin-bottom:0">
+      <div class="kpi" style="--kpi-color:var(--accent)"><div class="kpi-label">إجمالي اليوم</div><div class="kpi-value" id="totalKg">0</div><div class="kpi-unit">كجم</div></div>
+      <div class="kpi" style="--kpi-color:var(--amber)"><div class="kpi-label">دجاج</div><div class="kpi-value" id="totalChicken">0</div><div class="kpi-unit">كجم 🐔</div></div>
+      <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">لحوم</div><div class="kpi-value" id="totalMeat">0</div><div class="kpi-unit">كجم 🥩</div></div>
+      <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">تكلفة اليوم</div><div class="kpi-value" id="totalCostEntry">0</div><div class="kpi-unit">د.ك</div></div>
     </div>
-    <div class="branches-grid" id="shawarmaBranches"></div>
-
-    <!-- Sandwich branches -->
-    <div class="section-title">
-      🥪 فروع الساندويتش <span class="count">6 فروع</span>
-    </div>
-    <div class="branches-grid" id="sandwichBranches"></div>
-
-    <div class="save-bar">
-      <div class="save-summary" id="entrySummary">
-        <div class="item">📦 إجمالي الكميات: <span class="val" id="totalKg">0 كجم</span></div>
-        <div class="item">🐔 دجاج: <span class="val" id="totalChicken">0</span></div>
-        <div class="item">🥩 لحم: <span class="val" id="totalMeat">0</span></div>
-      </div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-danger" onclick="clearForm()"><i class="ti ti-eraser"></i> مسح</button>
-        <button class="btn btn-success" onclick="saveEntry()" style="padding:12px 24px;font-size:15px">
-          <i class="ti ti-device-floppy"></i> حفظ البيانات
-        </button>
-      </div>
-    </div>
-
   </div>
+
+  <div class="section-label">🌯 فروع الشاورما</div>
+  <div class="branch-grid" id="shawarmaBranches"></div>
+  <div class="section-label">🥪 فروع الساندويتش</div>
+  <div class="branch-grid" id="sandwichBranches"></div>
 </div>
 
-<!-- ═══════════ DASHBOARD VIEW ═══════════ -->
+<!-- ══════════ DASHBOARD ══════════ -->
 <div class="view" id="dashboardView">
-  <div class="container">
+  <div class="card">
+    <div class="card-title">🔔 التنبيهات الذكية</div>
+    <div class="card-sub">النظام بيقارن كل فرع بمتوسطه في آخر ٧ أيام ويطلّع اللي محتاج انتباه.</div>
+    <div id="alertsList"></div>
+  </div>
 
-    <!-- Smart insight -->
-    <div class="insight-box">
-      <div class="insight-icon">💡</div>
-      <div>
-        <div style="font-weight:900;color:var(--primary);margin-bottom:5px;font-size:14px">تحليل ذكي</div>
-        <div style="color:var(--text);font-size:12px;line-height:1.6" id="smartInsight">جاري التحليل...</div>
-      </div>
+  <div class="card no-print">
+    <div class="toolbar" style="margin-bottom:0">
+      <div class="field"><label>من تاريخ</label><input type="date" id="filterFrom" onchange="renderDashboard()"></div>
+      <div class="field"><label>إلى تاريخ</label><input type="date" id="filterTo" onchange="renderDashboard()"></div>
+      <div class="field"><label>الفرع</label><select id="filterBranch" onchange="renderDashboard()"><option value="all">كل الفروع</option></select></div>
+      <button class="btn ghost" onclick="resetFilters()">↺ إعادة تعيين</button>
+      <button class="btn ghost" onclick="exportExcel()">📥 تصدير Excel</button>
+      <button class="btn ghost" onclick="exportBackup()">💾 نسخة احتياطية</button>
     </div>
+  </div>
 
-    <div class="filter-bar">
-      <label>📅 من:</label>
-      <input type="date" id="filterFrom" onchange="renderDashboard()">
-      <label>إلى:</label>
-      <input type="date" id="filterTo" onchange="renderDashboard()">
-      <label>🏪 الفرع:</label>
-      <select id="filterBranch" onchange="renderDashboard()">
-        <option value="all">جميع الفروع</option>
-      </select>
-      <button class="btn btn-primary" onclick="resetFilters()"><i class="ti ti-refresh"></i> إعادة تعيين</button>
-      <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700">آخر تحديث: <span id="lastUpdate">-</span></span>
-    </div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="insight" id="smartInsight"></div>
 
-    <!-- KPIs -->
-    <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="chart-grid">
+    <div class="card"><div class="card-title">📈 اتجاه الكميات اليومي</div><div class="chart-box"><canvas id="trendChart"></canvas></div></div>
+    <div class="card"><div class="card-title">🏪 الكميات حسب الفرع</div><div class="chart-box"><canvas id="branchChart"></canvas></div></div>
+    <div class="card"><div class="card-title">🥩 توزيع الأصناف</div><div class="chart-box"><canvas id="productChart"></canvas></div></div>
+    <div class="card"><div class="card-title">⚖️ شاورما مقابل ساندويتش</div><div class="chart-box"><canvas id="typeChart"></canvas></div></div>
+  </div>
 
-    <!-- Charts -->
-    <div class="section-header"><i class="ti ti-chart-line"></i> تحليلات بيانية</div>
-    <div class="charts-grid">
-      <div class="chart-card wide">
-        <div class="chart-title">📈 اتجاه الكميات اليومي <small>Daily Trend</small></div>
-        <div class="chart-container tall"><canvas id="trendChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">🏪 الكميات حسب الفرع <small>By Branch</small></div>
-        <div class="chart-container"><canvas id="branchChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">🍗 توزيع المنتجات <small>By Product</small></div>
-        <div class="chart-container"><canvas id="productChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">🥇 أعلى فروع استهلاكاً <small>Top Consuming Branches</small></div>
-        <div class="chart-container"><canvas id="topBranchesChart"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">📊 مقارنة شاورما vs ساندويتش <small>Shawarma vs Sandwich</small></div>
-        <div class="chart-container"><canvas id="typeChart"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Data Table -->
-    <div class="section-header"><i class="ti ti-table"></i> جدول البيانات التفصيلي</div>
-    <div class="chart-card wide">
-      <div style="overflow-x:auto">
-        <table class="data-table" id="detailTable"></table>
-      </div>
-    </div>
-
+  <div class="card">
+    <div class="card-title">📋 التفصيل اليومي حسب الفرع</div>
+    <div class="table-scroll"><table id="detailTable"></table></div>
   </div>
 </div>
 
-<!-- ═══════════ HISTORY VIEW ═══════════ -->
+<!-- ══════════ FORECAST ══════════ -->
+<div class="view" id="forecastView">
+  <div class="card">
+    <div class="card-title">🔮 توقع احتياج الأسبوع الجاي</div>
+    <div class="card-sub">الطريقة: متوسط آخر ٧ تسجيلات لكل فرع وصنف × معامل اليوم من الأسبوع (محسوب من تاريخك الفعلي).</div>
+    <div class="note" id="forecastNote"></div>
+    <div class="table-scroll"><table id="forecastTable"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 التوقع مقابل الفعلي (آخر ١٤ يوم)</div>
+    <div class="chart-box"><canvas id="forecastChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ══════════ COST ══════════ -->
+<div class="view" id="costView">
+  <div class="card">
+    <div class="card-title">💰 أسعار الكيلو</div>
+    <div class="card-sub">اكتب سعر الكيلو لكل صنف بالدينار الكويتي. بتتحفظ على الجهاز وبتتحسب في كل التقارير.</div>
+    <div class="note">⚠️ الأسعار مبدئياً <b>صفر</b> لأن النظام مايعرفش أسعارك. لازم تدخلها بنفسك عشان أرقام التكلفة تبقى صح.</div>
+    <div class="toolbar" id="priceInputs"></div>
+    <button class="btn accent" onclick="savePrices()">💾 حفظ الأسعار</button>
+  </div>
+  <div class="kpi-grid" id="costKpis"></div>
+  <div class="card">
+    <div class="card-title">🏪 التكلفة حسب الفرع</div>
+    <div class="table-scroll"><table id="costTable"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📈 تكلفة يومية</div>
+    <div class="chart-box"><canvas id="costChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ══════════ REPORT ══════════ -->
+<div class="view" id="reportView">
+  <div class="card no-print">
+    <div class="card-title">📄 التقرير الاحترافي</div>
+    <div class="card-sub">اختر الفترة واضغط طباعة — من نافذة الطباعة اختر «حفظ كـ PDF».</div>
+    <div class="toolbar" style="margin-bottom:0">
+      <div class="field"><label>من</label><input type="date" id="repFrom" onchange="renderReport()"></div>
+      <div class="field"><label>إلى</label><input type="date" id="repTo" onchange="renderReport()"></div>
+      <button class="btn ghost" onclick="setReportRange(7)">آخر ٧ أيام</button>
+      <button class="btn ghost" onclick="setReportRange(30)">آخر ٣٠ يوم</button>
+      <button class="btn accent" onclick="window.print()">🖨️ طباعة / PDF</button>
+    </div>
+  </div>
+  <div id="reportBody"></div>
+</div>
+
+<!-- ══════════ HISTORY ══════════ -->
 <div class="view" id="historyView">
-  <div class="container">
-    <div class="section-header"><i class="ti ti-history"></i> سجل الإدخالات</div>
-    <div class="records-list" id="recordsList"></div>
+  <div class="card">
+    <div class="card-title">🗂️ سجل الأيام</div>
+    <div class="card-sub">اضغط على أي يوم عشان تفتحه للتعديل.</div>
+    <div id="recordsList"></div>
   </div>
 </div>
 
-<!-- Toast -->
+</div>
+
+<!-- ══════════ SETTINGS MODAL ══════════ -->
+<div class="modal" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-title">⚙️ الإعدادات والمزامنة</div>
+    <div class="field"><label>Supabase URL</label><input type="text" id="supabaseUrl" placeholder="https://xxx.supabase.co"></div>
+    <div class="field"><label>Supabase anon key</label><input type="password" id="supabaseKey" placeholder="eyJ..."></div>
+    <div class="info-box" id="statusInfo"></div>
+    <div class="note" id="dupNote" style="display:none"></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn accent" onclick="saveSupabaseConfig()">💾 حفظ واتصال</button>
+      <button class="btn ghost" onclick="pullFromCloud()">🔄 تحديث من السحابة</button>
+      <button class="btn danger" onclick="cleanCloudDuplicates()">🧹 تنضيف المكرر</button>
+      <button class="btn ghost" onclick="hideSettings()">إغلاق</button>
+    </div>
+    <div class="info-box" style="margin-top:13px;font-size:11.5px">
+      <b>🧹 تنضيف المكرر</b> بيدوّر على أي يوم+فرع متسجل أكتر من مرة في السحابة، بيسيب أحدث نسخة وبيمسح الباقي. اعمل نسخة احتياطية الأول من زر «نسخة احتياطية» في اللوحة.
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
-
-<!-- Settings Modal -->
-<div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:16px;padding:24px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--accent)">
-      <h2 style="color:var(--primary);font-size:18px;font-weight:900">⚙️ إعدادات المزامنة السحابية</h2>
-      <button onclick="hideSettingsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">×</button>
-    </div>
-
-    <div style="background:var(--cream);padding:14px;border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.7">
-      💡 <b>للمزامنة بين الأجهزة:</b><br>
-      1. اذهب إلى <a href="https://supabase.com" target="_blank" style="color:var(--primary);font-weight:900">Supabase.com</a> وأنشئ حساب مجاني<br>
-      2. أنشئ Project جديد<br>
-      3. شغّل ملف <code style="background:#fff;padding:2px 6px;border-radius:4px">مخزن_supabase_setup.sql</code> في SQL Editor<br>
-      4. من Settings → API انسخ الـURL و Anon Key<br>
-      5. الصقهم هنا واحفظ ✅
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div>
-        <label style="display:block;font-weight:900;color:var(--primary);margin-bottom:6px;font-size:13px">🔗 Supabase Project URL</label>
-        <input type="text" id="supabaseUrl" placeholder="https://xxxxx.supabase.co"
-          style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:9px;font-family:monospace;font-size:13px">
-      </div>
-      <div>
-        <label style="display:block;font-weight:900;color:var(--primary);margin-bottom:6px;font-size:13px">🔑 Anon Public Key</label>
-        <textarea id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." rows="3"
-          style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:9px;font-family:monospace;font-size:11px;resize:vertical"></textarea>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
-      <button class="btn btn-success" onclick="saveSupabaseConfig()" style="flex:1;padding:12px;font-size:14px">
-        <i class="ti ti-cloud-check"></i> حفظ واتصال
-      </button>
-      <button class="btn btn-danger" onclick="disableCloud()" style="padding:12px">
-        <i class="ti ti-cloud-off"></i> إيقاف
-      </button>
-    </div>
-
-    <div style="margin-top:20px;padding:14px;background:var(--light);border-radius:10px;font-size:12px;color:var(--muted)">
-      <div style="font-weight:900;color:var(--primary);margin-bottom:6px">📊 حالة النظام:</div>
-      <div id="statusInfo">جاري التحميل...</div>
-    </div>
-  </div>
-</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// CONFIG — الفروع والمنتجات
+// CONFIG — الفروع والأصناف  (نفس المعرّفات القديمة — لا تغيّرها)
 // ═══════════════════════════════════════════════════════════════════
-
 const BRANCHES = [
-  // Shawarma branches
-  {id:'sh_jahra', name:'شاورما الجهراء', type:'شاورما', color:'#c2410c', bg:'#ffedd5', items:['chicken','meat']},
-  {id:'sh_ruqai', name:'شاورما الرقعي', type:'شاورما', color:'#c2410c', bg:'#ffedd5', items:['chicken','meat']},
-  {id:'sh_qurain', name:'شاورما القرين', type:'شاورما', color:'#c2410c', bg:'#ffedd5', items:['chicken','meat']},
-  // Sandwich branches
-  {id:'sw_jahra', name:'ساندويتش الجهراء', type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
-  {id:'sw_ardiya', name:'ساندويتش العارضية', type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
-  {id:'sw_ruqai', name:'ساندويتش الرقعي', type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
-  {id:'sw_qurain', name:'ساندويتش القرين', type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
-  {id:'sw_mangaf', name:'ساندويتش المنقف', type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
-  {id:'sw_sabah', name:'ساندويتش صباح السالم', type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sh_jahra',  name:'شاورما الجهراء',      type:'شاورما',   color:'#c2410c', bg:'#ffedd5', items:['chicken','meat']},
+  {id:'sh_ruqai',  name:'شاورما الرقعي',       type:'شاورما',   color:'#c2410c', bg:'#ffedd5', items:['chicken','meat']},
+  {id:'sh_qurain', name:'شاورما القرين',       type:'شاورما',   color:'#c2410c', bg:'#ffedd5', items:['chicken','meat']},
+  {id:'sw_jahra',  name:'ساندويتش الجهراء',    type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_ardiya', name:'ساندويتش العارضية',   type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_ruqai',  name:'ساندويتش الرقعي',     type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_qurain', name:'ساندويتش القرين',     type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_mangaf', name:'ساندويتش المنقف',     type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
+  {id:'sw_sabah',  name:'ساندويتش صباح السالم',type:'ساندويتش', color:'#1e40af', bg:'#dbeafe', items:['chicken','naimi']},
 ];
-
 const ITEMS = {
-  chicken: {name:'دجاج', icon:'🐔', color:'#eab308'},
-  meat:    {name:'لحم', icon:'🥩', color:'#b91c1c'},
-  naimi:   {name:'لحم نعيمي', icon:'🥩', color:'#7f1d1d'},
-  dawaner: {name:'دوانر', icon:'🍗', color:'#c2410c'},
+  chicken:{name:'دجاج',      icon:'🐔', color:'#eab308'},
+  meat:   {name:'لحم',       icon:'🥩', color:'#b91c1c'},
+  naimi:  {name:'لحم نعيمي', icon:'🥩', color:'#7f1d1d'},
+  dawaner:{name:'دوانر',     icon:'🍗', color:'#c2410c'},
 };
+const ALL_ITEM_KEYS = ['chicken','meat','naimi','dawaner'];
+const WEEKDAYS = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-// Independent storage key (not tied to salasil)
 const STORAGE_KEY = 'restaurant_warehouse_v1';
-const CONFIG_KEY = 'restaurant_warehouse_config';
+const CONFIG_KEY  = 'restaurant_warehouse_config';
+const PRICE_KEY   = 'restaurant_warehouse_prices';
 
-// ═══════════════════════════════════════════════════════════════════
-// 🔧 SUPABASE CONFIG — Pre-configured for zero-setup experience
-// ═══════════════════════════════════════════════════════════════════
-// ⚠️ عدّل السطرين دول بمعلومات Supabase بتاعتك:
 const DEFAULT_SUPABASE_URL = 'https://ntwbbuweottxgwohrxpv.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50d2JidXdlb3R0eGd3b2hyeHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyOTYwNDgsImV4cCI6MjA5OTg3MjA0OH0.0vlEcYc2FVcSUAOqvgCwyf-7gFqI2tzH2AJGSreN0sw';
-// ═══════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════
-// SUPABASE CLOUD SYNC
+// 🔑 المفتاح الثابت — إصلاح خطأ التكرار
+// كان: id عشوائي كل حفظة → الـ upsert مابيلاقيش الصف فبيضيف نسخة جديدة.
+// دلوقتي: المفتاح مشتق من (التاريخ + الفرع) فهو ثابت مهما حفظت.
 // ═══════════════════════════════════════════════════════════════════
+function makeId(date, branch){ return date + '_' + branch; }
+function recTotal(r){ return (+r.chicken||0)+(+r.meat||0)+(+r.naimi||0)+(+r.dawaner||0); }
+function fmt(n,d=0){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function branchOf(id){ return BRANCHES.find(b=>b.id===id); }
 
-let sb = null;
-let cloudReady = false;
-let syncing = false;
-let realtimeChannel = null;
-
-function getConfig() {
-  try {
-    var saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    // If user hasn't set custom config, use defaults (if available)
-    if (!saved.url && DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_URL !== 'YOUR_URL_HERE') {
-      saved.url = DEFAULT_SUPABASE_URL;
-    }
-    if (!saved.key && DEFAULT_SUPABASE_KEY && DEFAULT_SUPABASE_KEY !== 'PASTE_YOUR_ANON_KEY_HERE') {
-      saved.key = DEFAULT_SUPABASE_KEY;
-    }
-    return saved;
-  } catch { return {}; }
-}
-
-function setCloudStatus(state, text) {
-  const dot = document.getElementById('cloudDot');
-  const label = document.getElementById('cloudText');
-  const colors = {
-    connecting: '#94a3b8',
-    connected: '#22c55e',
-    syncing: '#eab308',
-    error: '#ef4444',
-    disabled: '#94a3b8',
-  };
-  dot.style.background = colors[state] || '#94a3b8';
-  label.textContent = text;
-  if (state === 'connected') {
-    dot.style.boxShadow = '0 0 8px ' + colors[state];
-    dot.style.animation = 'pulse 2s infinite';
-  } else {
-    dot.style.boxShadow = 'none';
-    dot.style.animation = 'none';
-  }
-}
-
-async function initSupabase() {
-  const cfg = getConfig();
-  if (!cfg.url || !cfg.key) {
-    setCloudStatus('disabled', '☁️ محلي فقط');
-    updateStatusInfo();
-    return false;
-  }
-
-  setCloudStatus('connecting', 'جاري الاتصال...');
-  try {
-    sb = supabase.createClient(cfg.url, cfg.key);
-    // Test connection
-    const { error } = await sb.from('warehouse_records').select('id').limit(1);
-    if (error) throw error;
-
-    cloudReady = true;
-    setCloudStatus('connected', '☁️ متصل — لحظي');
-
-    // Pull latest data
-    await pullFromCloud();
-
-    // Subscribe to real-time changes
-    subscribeRealtime();
-    updateStatusInfo();
-    return true;
-  } catch (err) {
-    console.error('Supabase init error:', err);
-    setCloudStatus('error', '❌ خطأ في الاتصال');
-    cloudReady = false;
-    updateStatusInfo();
-    return false;
-  }
-}
-
-async function pullFromCloud() {
-  if (!cloudReady) return;
-  syncing = true;
-  setCloudStatus('syncing', '⬇️ تحميل...');
-  try {
-    const { data, error } = await sb.from('warehouse_records').select('*').order('date', {ascending: false});
-    if (error) throw error;
-
-    // Map cloud fields to local format
-    const records = (data || []).map(r => ({
-      id: r.id, date: r.date, branch: r.branch, keeper: r.keeper,
-      chicken: Number(r.chicken) || 0,
-      meat: Number(r.meat) || 0,
-      naimi: Number(r.naimi) || 0,
-      dawaner: Number(r.dawaner) || 0,
-      notes: r.notes,
-      createdAt: r.created_at,
-    }));
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    updateBadge();
-    setCloudStatus('connected', `☁️ متصل — ${records.length} سجل`);
-
-    // Refresh views
-    if (document.getElementById('dashboardView').classList.contains('active')) renderDashboard();
-    if (document.getElementById('historyView').classList.contains('active')) renderHistory();
-  } catch (err) {
-    console.error('Pull error:', err);
-    setCloudStatus('error', '❌ خطأ في التحميل');
-  }
-  syncing = false;
-}
-
-async function pushToCloud(records) {
-  if (!cloudReady) return;
-  try {
-    // Upsert all records
-    const cloudRecords = records.map(r => ({
-      id: r.id,
-      date: r.date,
-      branch: r.branch,
-      keeper: r.keeper || 'المخزن',
-      chicken: r.chicken || 0,
-      meat: r.meat || 0,
-      naimi: r.naimi || 0,
-      dawaner: r.dawaner || 0,
-      notes: r.notes || null,
-    }));
-
-    const { error } = await sb.from('warehouse_records').upsert(cloudRecords, {onConflict: 'id'});
-    if (error) throw error;
-
-    setCloudStatus('connected', '☁️ محفوظ سحابياً ✅');
-    setTimeout(() => setCloudStatus('connected', `☁️ متصل — ${records.length} سجل`), 2000);
-    return true;
-  } catch (err) {
-    console.error('Push error:', err);
-    setCloudStatus('error', '❌ خطأ في الحفظ');
-    return false;
-  }
-}
-
-async function deleteFromCloud(dateToRemove) {
-  if (!cloudReady) return;
-  try {
-    await sb.from('warehouse_records').delete().eq('date', dateToRemove);
-  } catch (err) { console.error('Delete error:', err); }
-}
-
-function subscribeRealtime() {
-  if (realtimeChannel) sb.removeChannel(realtimeChannel);
-  realtimeChannel = sb
-    .channel('warehouse_changes')
-    .on('postgres_changes', {event: '*', schema: 'public', table: 'warehouse_records'},
-      (payload) => {
-        console.log('🔔 Real-time update:', payload.eventType);
-        // Debounce: pull latest data
-        clearTimeout(window._syncTimeout);
-        window._syncTimeout = setTimeout(pullFromCloud, 500);
-      })
-    .subscribe();
-}
-
-function saveSupabaseConfig() {
-  const url = document.getElementById('supabaseUrl').value.trim();
-  const key = document.getElementById('supabaseKey').value.trim();
-
-  if (!url || !key) { toast('املأ الحقلين', true); return; }
-  if (!url.includes('supabase.co')) { toast('URL غير صحيح', true); return; }
-
-  localStorage.setItem(CONFIG_KEY, JSON.stringify({url, key}));
-  toast('✅ تم الحفظ — جاري الاتصال...');
-  hideSettingsModal();
-  setTimeout(() => initSupabase().then(ok => {
-    if (ok) toast('🎉 متصل بنجاح! البيانات تتزامن الآن');
-  }), 500);
-}
-
-function disableCloud() {
-  if (!confirm('هل تريد إيقاف المزامنة السحابية؟ البيانات ستبقى محفوظة محلياً.')) return;
-  localStorage.removeItem(CONFIG_KEY);
-  if (realtimeChannel && sb) sb.removeChannel(realtimeChannel);
-  sb = null;
-  cloudReady = false;
-  setCloudStatus('disabled', '☁️ محلي فقط');
-  hideSettingsModal();
-  toast('تم إيقاف المزامنة السحابية');
-}
-
-function showSettingsModal() {
-  const cfg = getConfig();
-  document.getElementById('supabaseUrl').value = cfg.url || '';
-  document.getElementById('supabaseKey').value = cfg.key || '';
-  updateStatusInfo();
-  document.getElementById('settingsModal').style.display = 'flex';
-}
-
-function hideSettingsModal() {
-  document.getElementById('settingsModal').style.display = 'none';
-}
-
-function updateStatusInfo() {
-  const records = loadRecords();
-  const cfg = getConfig();
-  const html = `
-    📁 السجلات المحلية: <b>${records.length}</b><br>
-    ☁️ الاتصال السحابي: <b>${cloudReady ? '✅ نشط' : (cfg.url ? '⚠️ معطّل' : '❌ غير مُعدّ')}</b><br>
-    🔗 المشروع: <b>${cfg.url ? cfg.url.replace('https://', '').split('.')[0] : 'غير محدد'}</b><br>
-    📅 آخر تحديث: <b>${new Date().toLocaleString('ar-KW')}</b>
-  `;
-  const infoEl = document.getElementById('statusInfo');
-  if (infoEl) infoEl.innerHTML = html;
+/* يشيل أي تكرار لنفس (يوم+فرع) ويسيب أحدث نسخة */
+function dedupe(records){
+  const map = new Map();
+  records.forEach(r=>{
+    const k = makeId(r.date, r.branch);
+    const prev = map.get(k);
+    if(!prev){ map.set(k,r); return; }
+    const a = new Date(r.updatedAt||r.createdAt||0).getTime();
+    const b = new Date(prev.updatedAt||prev.createdAt||0).getTime();
+    if(a >= b) map.set(k,r);
+  });
+  return [...map.values()];
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // STORAGE
 // ═══════════════════════════════════════════════════════════════════
+function loadRecords(){
+  try{ return dedupe(JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')); }catch{ return []; }
+}
+function saveRecords(records){
+  const clean = dedupe(records);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+  updateBadge();
+  if(cloudReady && !syncing) pushToCloud(clean);
+  return clean;
+}
+function updateBadge(){
+  try{ document.getElementById('recordsBadge').textContent = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]').length; }catch{}
+}
+function getPrices(){
+  try{ return Object.assign({chicken:0,meat:0,naimi:0,dawaner:0}, JSON.parse(localStorage.getItem(PRICE_KEY)||'{}')); }
+  catch{ return {chicken:0,meat:0,naimi:0,dawaner:0}; }
+}
+function recCost(r,p){ return (+r.chicken||0)*p.chicken + (+r.meat||0)*p.meat + (+r.naimi||0)*p.naimi + (+r.dawaner||0)*p.dawaner; }
+function pricesSet(){ const p=getPrices(); return ALL_ITEM_KEYS.some(k=>p[k]>0); }
 
-function loadRecords() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  } catch { return []; }
+// ═══════════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════════
+let sb=null, cloudReady=false, syncing=false, realtimeChannel=null;
+
+function getConfig(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');
+    if(!saved.url && DEFAULT_SUPABASE_URL) saved.url = DEFAULT_SUPABASE_URL;
+    if(!saved.key && DEFAULT_SUPABASE_KEY) saved.key = DEFAULT_SUPABASE_KEY;
+    return saved;
+  }catch{ return {}; }
+}
+function setCloudStatus(state,text){
+  const dot=document.getElementById('cloudDot'), label=document.getElementById('cloudText');
+  const colors={connecting:'#94a3b8',connected:'#22c55e',syncing:'#eab308',error:'#ef4444',disabled:'#94a3b8'};
+  dot.style.background=colors[state]||'#94a3b8';
+  label.textContent=text;
+  dot.style.animation = state==='connected' ? 'pulse 2s infinite' : 'none';
 }
 
-function saveRecords(records) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  updateBadge();
-  // Push to cloud if available
-  if (cloudReady && !syncing) {
-    pushToCloud(records);
+async function initSupabase(){
+  const cfg=getConfig();
+  if(!cfg.url||!cfg.key){ setCloudStatus('disabled','☁️ محلي فقط'); return false; }
+  setCloudStatus('connecting','جاري الاتصال...');
+  try{
+    sb = supabase.createClient(cfg.url,cfg.key);
+    const {error} = await sb.from('warehouse_records').select('id').limit(1);
+    if(error) throw error;
+    cloudReady=true;
+    setCloudStatus('connected','☁️ متصل');
+    await pullFromCloud();
+    subscribeRealtime();
+    return true;
+  }catch(err){
+    console.error('Supabase init error:',err);
+    setCloudStatus('error','❌ خطأ في الاتصال');
+    cloudReady=false;
+    return false;
   }
 }
 
-function updateBadge() {
-  const r = loadRecords();
-  document.getElementById('recordsBadge').textContent = r.length;
+async function pullFromCloud(){
+  if(!cloudReady) return;
+  syncing=true; setCloudStatus('syncing','⬇️ تحميل...');
+  try{
+    const {data,error} = await sb.from('warehouse_records').select('*').order('date',{ascending:false});
+    if(error) throw error;
+    const raw = (data||[]).map(r=>({
+      id:r.id, date:r.date, branch:r.branch, keeper:r.keeper,
+      chicken:+r.chicken||0, meat:+r.meat||0, naimi:+r.naimi||0, dawaner:+r.dawaner||0,
+      notes:r.notes, createdAt:r.created_at, updatedAt:r.updated_at,
+    }));
+    const clean = dedupe(raw);
+    const dupCount = raw.length - clean.length;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+    updateBadge();
+    setCloudStatus('connected', `☁️ متصل — ${clean.length} سجل`);
+    const note=document.getElementById('dupNote');
+    if(dupCount>0){
+      note.style.display='block';
+      note.innerHTML = `⚠️ فيه <b>${dupCount}</b> سجل مكرر في السحابة (اتشالوا من العرض بس لسه موجودين في القاعدة). اضغط «تنضيف المكرر» عشان تمسحهم نهائياً.`;
+    }else{ note.style.display='none'; }
+    refreshActiveView();
+  }catch(err){
+    console.error('Pull error:',err);
+    setCloudStatus('error','❌ خطأ في التحميل');
+  }
+  syncing=false;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// PRE-POPULATE JULY 2026 DATA (from uploaded document)
-// ═══════════════════════════════════════════════════════════════════
+async function pushToCloud(records){
+  if(!cloudReady) return false;
+  try{
+    const rows = records.map(r=>({
+      id:makeId(r.date,r.branch), date:r.date, branch:r.branch,
+      keeper:r.keeper||'المخزن',
+      chicken:+r.chicken||0, meat:+r.meat||0, naimi:+r.naimi||0, dawaner:+r.dawaner||0,
+      notes:r.notes||null,
+    }));
+    const {error} = await sb.from('warehouse_records').upsert(rows,{onConflict:'id'});
+    if(error) throw error;
+    setCloudStatus('connected','☁️ محفوظ ✅');
+    setTimeout(()=>setCloudStatus('connected',`☁️ متصل — ${records.length} سجل`),1800);
+    return true;
+  }catch(err){
+    console.error('Push error:',err);
+    setCloudStatus('error','❌ خطأ في الحفظ');
+    return false;
+  }
+}
 
-function initialSeed() {
-  if (loadRecords().length > 0) return;
-  const seed = [
-    // July 1-3 (combined - stored on July 3)
-    {date:'2026-07-03', branch:'sh_jahra', keeper:'المخزن', chicken:144, meat:0, dawaner:27},
-    {date:'2026-07-03', branch:'sh_ruqai', keeper:'المخزن', chicken:58, meat:0, dawaner:21},
-    {date:'2026-07-03', branch:'sh_qurain', keeper:'المخزن', chicken:37, meat:0, dawaner:12},
-    {date:'2026-07-03', branch:'sw_jahra', keeper:'المخزن', chicken:58, naimi:27},
-    {date:'2026-07-03', branch:'sw_ardiya', keeper:'المخزن', chicken:75, naimi:56},
-    {date:'2026-07-03', branch:'sw_ruqai', keeper:'المخزن', chicken:32, naimi:27},
-    {date:'2026-07-03', branch:'sw_qurain', keeper:'المخزن', chicken:36, naimi:33},
-    {date:'2026-07-03', branch:'sw_mangaf', keeper:'المخزن', chicken:28, naimi:18},
-    {date:'2026-07-03', branch:'sw_sabah', keeper:'المخزن', chicken:80, naimi:54},
+/* ✅ الدالة دي كانت موجودة في النسخة القديمة بس محدش بينده عليها إطلاقاً —
+   دي كانت نص المشكلة: الصفوف القديمة مكانتش بتتمسح أبداً. */
+async function deleteFromCloud(ids){
+  if(!cloudReady || !ids.length) return;
+  try{ await sb.from('warehouse_records').delete().in('id',ids); }
+  catch(err){ console.error('Delete error:',err); }
+}
 
-    // July 4
-    {date:'2026-07-04', branch:'sh_jahra', chicken:50, meat:11},
-    {date:'2026-07-04', branch:'sh_ruqai', chicken:18, meat:6},
-    {date:'2026-07-04', branch:'sh_qurain', chicken:11, meat:6},
-    {date:'2026-07-04', branch:'sw_jahra', chicken:20, naimi:8},
-    {date:'2026-07-04', branch:'sw_ardiya', chicken:28, naimi:24},
-    {date:'2026-07-04', branch:'sw_ruqai', chicken:15, naimi:11},
-    {date:'2026-07-04', branch:'sw_qurain', chicken:15, naimi:14},
-    {date:'2026-07-04', branch:'sw_mangaf', chicken:11, naimi:6},
-    {date:'2026-07-04', branch:'sw_sabah', chicken:25, naimi:12},
+/* تنضيف السجلات المكررة الموجودة فعلاً في القاعدة */
+async function cleanCloudDuplicates(){
+  if(!cloudReady){ toast('مفيش اتصال بالسحابة',true); return; }
+  if(!confirm('هيتم مسح النسخ المكررة القديمة من السحابة والإبقاء على أحدث نسخة لكل يوم+فرع. اعملت نسخة احتياطية؟')) return;
+  setCloudStatus('syncing','🧹 جاري التنضيف...');
+  try{
+    const {data,error} = await sb.from('warehouse_records').select('*');
+    if(error) throw error;
+    const groups={};
+    (data||[]).forEach(r=>{
+      const k = r.date+'_'+r.branch;
+      (groups[k]=groups[k]||[]).push(r);
+    });
+    const toDelete=[];
+    let keptCount=0;
+    Object.values(groups).forEach(g=>{
+      if(g.length<2){ keptCount++; return; }
+      g.sort((a,b)=> new Date(b.updated_at||b.created_at||0) - new Date(a.updated_at||a.created_at||0));
+      keptCount++;
+      g.slice(1).forEach(r=>toDelete.push(r.id));
+    });
+    if(!toDelete.length){ toast('✅ مفيش تكرار — القاعدة نضيفة'); setCloudStatus('connected','☁️ متصل'); return; }
+    for(let i=0;i<toDelete.length;i+=200){
+      const {error:delErr} = await sb.from('warehouse_records').delete().in('id',toDelete.slice(i,i+200));
+      if(delErr) throw delErr;
+    }
+    toast(`✅ تم مسح ${toDelete.length} سجل مكرر — فضل ${keptCount} سجل`);
+    await pullFromCloud();
+  }catch(err){
+    console.error('Cleanup error:',err);
+    toast('❌ فشل التنضيف: '+err.message,true);
+    setCloudStatus('error','❌ خطأ');
+  }
+}
 
-    // July 5
-    {date:'2026-07-05', branch:'sh_jahra', chicken:45, meat:9},
-    {date:'2026-07-05', branch:'sh_ruqai', chicken:18, meat:6},
-    {date:'2026-07-05', branch:'sh_qurain', chicken:14, meat:6},
-    {date:'2026-07-05', branch:'sw_jahra', chicken:23, naimi:11},
-    {date:'2026-07-05', branch:'sw_ardiya', chicken:24, naimi:18},
-    {date:'2026-07-05', branch:'sw_ruqai', chicken:9, naimi:6},
-    {date:'2026-07-05', branch:'sw_qurain', chicken:15, naimi:11},
-    {date:'2026-07-05', branch:'sw_mangaf', chicken:12, naimi:7},
-    {date:'2026-07-05', branch:'sw_sabah', chicken:21, naimi:16},
+function subscribeRealtime(){
+  if(realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel = sb.channel('warehouse_changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'warehouse_records'},()=>{
+      clearTimeout(window._syncTimeout);
+      window._syncTimeout = setTimeout(pullFromCloud,600);
+    }).subscribe();
+}
 
-    // July 6
-    {date:'2026-07-06', branch:'sh_jahra', chicken:45, meat:8},
-    {date:'2026-07-06', branch:'sh_ruqai', chicken:21, meat:6},
-    {date:'2026-07-06', branch:'sh_qurain', chicken:8, meat:3},
-    {date:'2026-07-06', branch:'sw_jahra', chicken:18, naimi:8},
-    {date:'2026-07-06', branch:'sw_ardiya', chicken:24, naimi:15},
-    {date:'2026-07-06', branch:'sw_ruqai', chicken:12, naimi:9},
-    {date:'2026-07-06', branch:'sw_qurain', chicken:12, naimi:11},
-    {date:'2026-07-06', branch:'sw_mangaf', chicken:10, naimi:7},
-    {date:'2026-07-06', branch:'sw_sabah', chicken:22, naimi:15},
-
-    // July 7
-    {date:'2026-07-07', branch:'sh_jahra', chicken:45, meat:11},
-    {date:'2026-07-07', branch:'sh_ruqai', chicken:21, meat:6},
-    {date:'2026-07-07', branch:'sh_qurain', chicken:8, meat:3},
-    {date:'2026-07-07', branch:'sw_jahra', chicken:20, naimi:8},
-    {date:'2026-07-07', branch:'sw_ardiya', chicken:23, naimi:16},
-    {date:'2026-07-07', branch:'sw_ruqai', chicken:9, naimi:9},
-    {date:'2026-07-07', branch:'sw_qurain', chicken:15, naimi:11},
-    {date:'2026-07-07', branch:'sw_mangaf', chicken:11, naimi:6},
-    {date:'2026-07-07', branch:'sw_sabah', chicken:25, naimi:12},
-
-    // July 8
-    {date:'2026-07-08', branch:'sh_jahra', chicken:45, meat:6},
-    {date:'2026-07-08', branch:'sh_ruqai', chicken:25, meat:6},
-    {date:'2026-07-08', branch:'sh_qurain', chicken:14, meat:6},
-    {date:'2026-07-08', branch:'sw_jahra', chicken:23, naimi:8},
-    {date:'2026-07-08', branch:'sw_ardiya', chicken:29, naimi:24},
-    {date:'2026-07-08', branch:'sw_ruqai', chicken:12, naimi:9},
-    {date:'2026-07-08', branch:'sw_qurain', chicken:12, naimi:11},
-    {date:'2026-07-08', branch:'sw_mangaf', chicken:9, naimi:7},
-    {date:'2026-07-08', branch:'sw_sabah', chicken:22, naimi:15},
-
-    // July 9
-    {date:'2026-07-09', branch:'sh_jahra', chicken:40, meat:8},
-    {date:'2026-07-09', branch:'sh_ruqai', chicken:22, meat:9},
-    {date:'2026-07-09', branch:'sh_qurain', chicken:11, meat:3},
-    {date:'2026-07-09', branch:'sw_jahra', chicken:20, naimi:11},
-    {date:'2026-07-09', branch:'sw_ardiya', chicken:28, naimi:15},
-    {date:'2026-07-09', branch:'sw_ruqai', chicken:11, naimi:9},
-    {date:'2026-07-09', branch:'sw_qurain', chicken:15, naimi:14},
-    {date:'2026-07-09', branch:'sw_mangaf', chicken:13, naimi:9},
-    {date:'2026-07-09', branch:'sw_sabah', chicken:19, naimi:11},
-
-    // July 10
-    {date:'2026-07-10', branch:'sh_jahra', chicken:45, meat:8},
-    {date:'2026-07-10', branch:'sh_ruqai', chicken:22, meat:6},
-    {date:'2026-07-10', branch:'sh_qurain', chicken:11, meat:6},
-    {date:'2026-07-10', branch:'sw_jahra', chicken:22, naimi:10},
-    {date:'2026-07-10', branch:'sw_ardiya', chicken:28, naimi:15},
-    {date:'2026-07-10', branch:'sw_ruqai', chicken:11, naimi:9},
-    {date:'2026-07-10', branch:'sw_qurain', chicken:9, naimi:9},
-    {date:'2026-07-10', branch:'sw_mangaf', chicken:9, naimi:7},
-    {date:'2026-07-10', branch:'sw_sabah', chicken:24, naimi:16},
-
-    // July 11
-    {date:'2026-07-11', branch:'sh_jahra', chicken:45, meat:8},
-    {date:'2026-07-11', branch:'sh_ruqai', chicken:17, meat:6},
-    {date:'2026-07-11', branch:'sh_qurain', chicken:11, meat:3},
-    {date:'2026-07-11', branch:'sw_jahra', chicken:20, naimi:8},
-    {date:'2026-07-11', branch:'sw_ardiya', chicken:29, naimi:18},
-    {date:'2026-07-11', branch:'sw_ruqai', chicken:9, naimi:9},
-    {date:'2026-07-11', branch:'sw_qurain', chicken:12, naimi:8},
-    {date:'2026-07-11', branch:'sw_mangaf', chicken:9, naimi:6},
-    {date:'2026-07-11', branch:'sw_sabah', chicken:22, naimi:15},
-
-    // July 12
-    {date:'2026-07-12', branch:'sh_jahra', chicken:47, meat:8},
-    {date:'2026-07-12', branch:'sh_ruqai', chicken:18, meat:6},
-    {date:'2026-07-12', branch:'sh_qurain', chicken:11, meat:6},
-    {date:'2026-07-12', branch:'sw_jahra', chicken:20, naimi:10},
-    {date:'2026-07-12', branch:'sw_ardiya', chicken:26, naimi:19},
-    {date:'2026-07-12', branch:'sw_ruqai', chicken:15, naimi:9},
-    {date:'2026-07-12', branch:'sw_qurain', chicken:15, naimi:14},
-    {date:'2026-07-12', branch:'sw_mangaf', chicken:12, naimi:6},
-    {date:'2026-07-12', branch:'sw_sabah', chicken:22, naimi:12},
-  ];
-
-  const records = seed.map(r => ({
-    id: 'rec_' + Date.now() + Math.random().toString(36).slice(2,8),
-    date: r.date,
-    branch: r.branch,
-    keeper: r.keeper || 'المخزن',
-    chicken: r.chicken || 0,
-    meat: r.meat || 0,
-    naimi: r.naimi || 0,
-    dawaner: r.dawaner || 0,
-    createdAt: new Date().toISOString(),
-  }));
-  saveRecords(records);
+function saveSupabaseConfig(){
+  const url=document.getElementById('supabaseUrl').value.trim();
+  const key=document.getElementById('supabaseKey').value.trim();
+  if(!url||!key){ toast('املأ الحقلين',true); return; }
+  if(!url.includes('supabase.co')){ toast('URL غير صحيح',true); return; }
+  localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));
+  toast('✅ تم الحفظ — جاري الاتصال...');
+  hideSettings();
+  setTimeout(()=>initSupabase().then(ok=>{ if(ok) toast('🎉 متصل — البيانات بتتزامن دلوقتي'); }),400);
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // UI HELPERS
 // ═══════════════════════════════════════════════════════════════════
-
-function toast(msg, isError = false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (isError ? ' error' : '');
-  setTimeout(() => t.classList.remove('show'), 3000);
+function toast(msg,isError=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast show'+(isError?' error':'');
+  setTimeout(()=>t.classList.remove('show'),3200);
 }
-
-function switchView(view) {
-  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById(view + 'View').classList.add('active');
-  if (view === 'dashboard') renderDashboard();
-  if (view === 'history') renderHistory();
+function switchView(view){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(view+'View').classList.add('active');
+  refreshActiveView();
 }
+function refreshActiveView(){
+  const active=document.querySelector('.view.active');
+  if(!active) return;
+  ({dashboardView:renderDashboard, forecastView:renderForecast, costView:renderCost,
+    reportView:renderReport, historyView:renderHistory}[active.id]||(()=>{}))();
+}
+function showSettings(){
+  const cfg=getConfig();
+  document.getElementById('supabaseUrl').value=cfg.url||'';
+  document.getElementById('supabaseKey').value=cfg.key||'';
+  const records=loadRecords();
+  document.getElementById('statusInfo').innerHTML=`
+    📁 السجلات: <b>${records.length}</b><br>
+    ☁️ الاتصال: <b>${cloudReady?'✅ نشط':'❌ غير متصل'}</b><br>
+    💰 الأسعار: <b>${pricesSet()?'✅ مُدخلة':'⚠️ لسه مادخلتش'}</b><br>
+    📅 آخر تحديث: <b>${new Date().toLocaleString('ar-KW')}</b>`;
+  document.getElementById('settingsModal').style.display='flex';
+}
+function hideSettings(){ document.getElementById('settingsModal').style.display='none'; }
 
 // ═══════════════════════════════════════════════════════════════════
-// ENTRY VIEW
+// ENTRY
 // ═══════════════════════════════════════════════════════════════════
-
-function buildEntryForm() {
-  const shDiv = document.getElementById('shawarmaBranches');
-  const swDiv = document.getElementById('sandwichBranches');
-
-  BRANCHES.forEach(b => {
-    const items = b.items.map(itemKey => {
-      const it = ITEMS[itemKey];
-      return `<div class="item-row">
-        <label>${it.icon} ${it.name}</label>
-        <input type="number" min="0" step="0.5" placeholder="0" data-branch="${b.id}" data-item="${itemKey}" onkeyup="updateSummary()" oninput="updateBranchTotal('${b.id}')">
+function buildEntryForm(){
+  const sh=document.getElementById('shawarmaBranches'), sw=document.getElementById('sandwichBranches');
+  let shHtml='', swHtml='';
+  BRANCHES.forEach(b=>{
+    const keys = b.type==='شاورما' ? [...b.items,'dawaner'] : b.items;
+    const rows = keys.map(k=>`<div class="item-row">
+        <label>${ITEMS[k].icon} ${ITEMS[k].name}</label>
+        <input type="number" min="0" step="0.5" placeholder="0" data-branch="${b.id}" data-item="${k}" oninput="onEntryInput('${b.id}')">
         <div class="unit">كجم</div>
+      </div>`).join('');
+    const html=`<div class="branch-card" style="--branch-color:${b.color};--branch-bg:${b.bg}">
+        <div class="branch-header">
+          <div class="branch-name">${b.type==='شاورما'?'🌯':'🥪'} ${b.name}</div>
+          <div class="branch-type">${b.type}</div>
+        </div>
+        <div>${rows}</div>
+        <div class="branch-total" id="total_${b.id}">إجمالي: 0 كجم</div>
       </div>`;
-    }).join('');
-
-    const dawanerRow = b.type === 'شاورما' ? `<div class="item-row">
-      <label>🍗 دوانر</label>
-      <input type="number" min="0" step="0.5" placeholder="0" data-branch="${b.id}" data-item="dawaner" onkeyup="updateSummary()" oninput="updateBranchTotal('${b.id}')">
-      <div class="unit">كجم</div>
-    </div>` : '';
-
-    const html = `<div class="branch-card" style="--branch-color:${b.color};--branch-bg:${b.bg}" id="card_${b.id}">
-      <div class="branch-header">
-        <div class="branch-name">${b.type === 'شاورما' ? '🌯' : '🥪'} ${b.name}</div>
-        <div class="branch-type">${b.type}</div>
-      </div>
-      <div class="item-inputs">${items}${dawanerRow}</div>
-      <div class="branch-total" id="total_${b.id}">إجمالي: 0 كجم</div>
-    </div>`;
-
-    if (b.type === 'شاورما') shDiv.innerHTML += html;
-    else swDiv.innerHTML += html;
+    if(b.type==='شاورما') shHtml+=html; else swHtml+=html;
   });
+  sh.innerHTML=shHtml; sw.innerHTML=swHtml;
 }
-
-function updateBranchTotal(branchId) {
-  const inputs = document.querySelectorAll(`input[data-branch="${branchId}"]`);
-  let total = 0;
-  inputs.forEach(i => total += Number(i.value) || 0);
-  document.getElementById('total_' + branchId).textContent = `إجمالي: ${total} كجم`;
+function onEntryInput(branchId){ updateBranchTotal(branchId); updateSummary(); }
+function updateBranchTotal(branchId){
+  let total=0;
+  document.querySelectorAll(`input[data-branch="${branchId}"]`).forEach(i=>total+=Number(i.value)||0);
+  document.getElementById('total_'+branchId).textContent=`إجمالي: ${fmt(total,total%1?1:0)} كجم`;
 }
-
-function updateSummary() {
-  let totalKg = 0, chicken = 0, meat = 0;
-  document.querySelectorAll('input[data-branch]').forEach(i => {
-    const val = Number(i.value) || 0;
-    totalKg += val;
-    if (i.dataset.item === 'chicken') chicken += val;
-    if (i.dataset.item === 'meat' || i.dataset.item === 'naimi') meat += val;
+function updateSummary(){
+  let totalKg=0,chicken=0,meat=0,cost=0;
+  const p=getPrices();
+  document.querySelectorAll('input[data-branch]').forEach(i=>{
+    const v=Number(i.value)||0, k=i.dataset.item;
+    totalKg+=v; cost+=v*(p[k]||0);
+    if(k==='chicken') chicken+=v;
+    if(k==='meat'||k==='naimi') meat+=v;
   });
-  document.getElementById('totalKg').textContent = totalKg + ' كجم';
-  document.getElementById('totalChicken').textContent = chicken + ' كجم';
-  document.getElementById('totalMeat').textContent = meat + ' كجم';
+  document.getElementById('totalKg').textContent=fmt(totalKg,totalKg%1?1:0);
+  document.getElementById('totalChicken').textContent=fmt(chicken,chicken%1?1:0);
+  document.getElementById('totalMeat').textContent=fmt(meat,meat%1?1:0);
+  document.getElementById('totalCostEntry').textContent=fmt(cost,3);
 }
-
-function loadDay() {
-  const date = document.getElementById('entryDate').value;
-  if (!date) { toast('اختر التاريخ أولاً', true); return; }
-
-  document.querySelectorAll('input[data-branch]').forEach(i => i.value = '');
-
-  const records = loadRecords().filter(r => r.date === date);
-  records.forEach(r => {
-    BRANCHES.find(b => b.id === r.branch)?.items.forEach(itemKey => {
-      const input = document.querySelector(`input[data-branch="${r.branch}"][data-item="${itemKey}"]`);
-      if (input && r[itemKey]) input.value = r[itemKey];
-    });
-    if (r.dawaner) {
-      const input = document.querySelector(`input[data-branch="${r.branch}"][data-item="dawaner"]`);
-      if (input) input.value = r.dawaner;
+function fillForm(records){
+  document.querySelectorAll('input[data-branch]').forEach(i=>i.value='');
+  records.forEach(r=>ALL_ITEM_KEYS.forEach(k=>{
+    if(r[k]>0){
+      const el=document.querySelector(`input[data-branch="${r.branch}"][data-item="${k}"]`);
+      if(el) el.value=r[k];
     }
-  });
-
-  BRANCHES.forEach(b => updateBranchTotal(b.id));
+  }));
+  BRANCHES.forEach(b=>updateBranchTotal(b.id));
   updateSummary();
-
-  const keeper = records[0]?.keeper;
-  if (keeper) document.getElementById('warehouseKeeper').value = keeper;
-
-  if (records.length > 0) toast(`تم تحميل بيانات ${date} (${records.length} فرع)`);
-  else toast('لا توجد بيانات لهذا اليوم — أدخل بيانات جديدة');
 }
-
-function clearForm() {
-  if (!confirm('هل تريد مسح كل البيانات المدخلة؟')) return;
-  document.querySelectorAll('input[data-branch]').forEach(i => i.value = '');
-  BRANCHES.forEach(b => updateBranchTotal(b.id));
+function loadDay(){
+  const date=document.getElementById('entryDate').value;
+  if(!date){ toast('اختر التاريخ الأول',true); return; }
+  const records=loadRecords().filter(r=>r.date===date);
+  fillForm(records);
+  if(records[0]?.keeper) document.getElementById('warehouseKeeper').value=records[0].keeper;
+  toast(records.length ? `تم تحميل ${date} (${records.length} فرع)` : 'مفيش بيانات لليوم ده — ابدأ إدخال جديد');
+}
+function copyPrevDay(){
+  const date=document.getElementById('entryDate').value;
+  if(!date){ toast('اختر التاريخ الأول',true); return; }
+  const earlier=loadRecords().filter(r=>r.date<date).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!earlier.length){ toast('مفيش يوم سابق أنسخ منه',true); return; }
+  const prevDate=earlier[0].date;
+  fillForm(earlier.filter(r=>r.date===prevDate));
+  toast(`📋 اتنسخت كميات ${prevDate} — عدّل اللي محتاج وبعدين احفظ`);
+}
+function clearForm(){
+  if(!confirm('مسح كل الكميات المكتوبة؟')) return;
+  document.querySelectorAll('input[data-branch]').forEach(i=>i.value='');
+  BRANCHES.forEach(b=>updateBranchTotal(b.id));
   updateSummary();
 }
 
-function saveEntry() {
-  const date = document.getElementById('entryDate').value;
-  const keeper = document.getElementById('warehouseKeeper').value.trim();
+async function saveEntry(){
+  const date=document.getElementById('entryDate').value;
+  const keeper=document.getElementById('warehouseKeeper').value.trim();
+  if(!date){ toast('اختر التاريخ',true); return; }
+  if(!keeper){ toast('اكتب اسم أمين المخزن',true); return; }
 
-  if (!date) { toast('اختر التاريخ', true); return; }
-  if (!keeper) { toast('اكتب اسم أمين المخزن', true); return; }
-
-  const records = loadRecords();
-  const filtered = records.filter(r => r.date !== date);
-
-  let addedCount = 0;
-  BRANCHES.forEach(b => {
-    const rec = { id: 'rec_' + Date.now() + Math.random().toString(36).slice(2,8), date, branch: b.id, keeper, chicken:0, meat:0, naimi:0, dawaner:0, createdAt: new Date().toISOString() };
-    let hasData = false;
-    b.items.forEach(itemKey => {
-      const input = document.querySelector(`input[data-branch="${b.id}"][data-item="${itemKey}"]`);
-      const val = Number(input?.value) || 0;
-      if (val > 0) { rec[itemKey] = val; hasData = true; }
+  const now=new Date().toISOString();
+  const kept=[], removedIds=[];
+  BRANCHES.forEach(b=>{
+    const rec={ id:makeId(date,b.id), date, branch:b.id, keeper,
+                chicken:0, meat:0, naimi:0, dawaner:0, createdAt:now, updatedAt:now };
+    let hasData=false;
+    (b.type==='شاورما'?[...b.items,'dawaner']:b.items).forEach(k=>{
+      const v=Number(document.querySelector(`input[data-branch="${b.id}"][data-item="${k}"]`)?.value)||0;
+      if(v>0){ rec[k]=v; hasData=true; }
     });
-    if (b.type === 'شاورما') {
-      const input = document.querySelector(`input[data-branch="${b.id}"][data-item="dawaner"]`);
-      const val = Number(input?.value) || 0;
-      if (val > 0) { rec.dawaner = val; hasData = true; }
+    if(hasData) kept.push(rec); else removedIds.push(makeId(date,b.id));
+  });
+
+  if(!kept.length){ toast('مفيش أي كميات مكتوبة',true); return; }
+
+  const others=loadRecords().filter(r=>r.date!==date);
+  saveRecords([...others,...kept]);
+  // 🔑 الفروع اللي اتفضّت لازم تتمسح من السحابة كمان — ده اللي كان ناقص
+  await deleteFromCloud(removedIds);
+  toast(`✅ اتحفظ ${date} — ${kept.length} فرع`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ANALYTICS CORE
+// ═══════════════════════════════════════════════════════════════════
+let charts={};
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function getFilteredRecords(){
+  const from=document.getElementById('filterFrom').value;
+  const to=document.getElementById('filterTo').value;
+  const branch=document.getElementById('filterBranch').value;
+  let rs=loadRecords();
+  if(from) rs=rs.filter(r=>r.date>=from);
+  if(to) rs=rs.filter(r=>r.date<=to);
+  if(branch!=='all') rs=rs.filter(r=>r.branch===branch);
+  return rs;
+}
+function groupByDate(records){
+  const m={};
+  records.forEach(r=>{ (m[r.date]=m[r.date]||[]).push(r); });
+  return m;
+}
+function mean(a){ return a.length ? a.reduce((s,x)=>s+x,0)/a.length : 0; }
+function stdev(a){ if(a.length<2) return 0; const m=mean(a); return Math.sqrt(mean(a.map(x=>(x-m)**2))); }
+function median(a){
+  if(!a.length) return 0;
+  const s=[...a].sort((x,y)=>x-y), m=Math.floor(s.length/2);
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SMART ALERTS
+// ═══════════════════════════════════════════════════════════════════
+function buildAlerts(){
+  const records=loadRecords();
+  const alerts=[];
+  if(records.length<3) return alerts;
+
+  const dates=[...new Set(records.map(r=>r.date))].sort();
+  const latest=dates[dates.length-1];
+  const recent=dates.slice(-8,-1);            // آخر ٧ أيام قبل اليوم الأخير
+  const todayRecs=records.filter(r=>r.date===latest);
+
+  // 1) انحراف الفرع عن متوسطه
+  BRANCHES.forEach(b=>{
+    const hist=recent.map(d=>records.find(r=>r.date===d&&r.branch===b.id)).filter(Boolean).map(recTotal);
+    if(hist.length<3) return;
+    const avg=mean(hist);
+    const rec=todayRecs.find(r=>r.branch===b.id);
+    if(!rec||avg<=0) return;
+    const t=recTotal(rec), diff=(t-avg)/avg;
+    if(Math.abs(diff)>=0.4){
+      const up=diff>0;
+      alerts.push({
+        level: Math.abs(diff)>=0.8 ? 'high':'mid',
+        icon: up?'📈':'📉',
+        title:`${b.name} — ${up?'أعلى':'أقل'} من المعتاد بـ${Math.round(Math.abs(diff)*100)}%`,
+        text:`طلب <b>${fmt(t,t%1?1:0)} كجم</b> يوم ${latest}، ومتوسطه في آخر ${hist.length} أيام <b>${fmt(avg,1)} كجم</b>. ${up?'راجع إذا كان فيه مناسبة أو خطأ إدخال.':'راجع إذا كان الفرع قلّل الطلب أو نسي يسجّل.'}`
+      });
     }
-    if (hasData) { filtered.push(rec); addedCount++; }
   });
 
-  saveRecords(filtered);
-  toast(`✅ تم حفظ بيانات ${date} — ${addedCount} فرع`);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// DASHBOARD VIEW
-// ═══════════════════════════════════════════════════════════════════
-
-let charts = {};
-function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
-
-function getFilteredRecords() {
-  const from = document.getElementById('filterFrom').value;
-  const to = document.getElementById('filterTo').value;
-  const branch = document.getElementById('filterBranch').value;
-
-  let records = loadRecords();
-  if (from) records = records.filter(r => r.date >= from);
-  if (to) records = records.filter(r => r.date <= to);
-  if (branch !== 'all') records = records.filter(r => r.branch === branch);
-  return records;
-}
-
-function renderKPIs(records) {
-  const totalKg = records.reduce((s, r) => s + (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0), 0);
-  const totalChicken = records.reduce((s, r) => s + (r.chicken||0), 0);
-  const totalMeat = records.reduce((s, r) => s + (r.meat||0) + (r.naimi||0), 0);
-  const days = new Set(records.map(r => r.date)).size;
-
-  const kpis = [
-    {label:'إجمالي الكميات', value:totalKg.toLocaleString(), unit:'كجم', color:'var(--accent)'},
-    {label:'إجمالي الدجاج', value:totalChicken.toLocaleString(), unit:'كجم 🐔', color:'var(--amber)'},
-    {label:'إجمالي اللحوم', value:totalMeat.toLocaleString(), unit:'كجم 🥩', color:'var(--red)'},
-    {label:'أيام العمل', value:days, unit:'يوم', color:'var(--blue)'},
-  ];
-
-  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
-    <div class="kpi" style="--kpi-color:${k.color}">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-unit">${k.unit}</div>
-    </div>
-  `).join('');
-}
-
-function renderTrendChart(records) {
-  destroyChart('trend');
-  const byDate = {};
-  records.forEach(r => {
-    if (!byDate[r.date]) byDate[r.date] = {chicken:0, meat:0, naimi:0, dawaner:0};
-    byDate[r.date].chicken += r.chicken||0;
-    byDate[r.date].meat += r.meat||0;
-    byDate[r.date].naimi += r.naimi||0;
-    byDate[r.date].dawaner += r.dawaner||0;
-  });
-  const dates = Object.keys(byDate).sort();
-  const labels = dates.map(d => d.slice(5).replace('-','/'));
-
-  charts.trend = new Chart(document.getElementById('trendChart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {label:'🐔 دجاج', data:dates.map(d => byDate[d].chicken), borderColor:'#eab308', backgroundColor:'rgba(234,179,8,0.15)', fill:true, tension:0.4, borderWidth:3, pointRadius:5},
-        {label:'🥩 لحم شاورما', data:dates.map(d => byDate[d].meat), borderColor:'#b91c1c', backgroundColor:'rgba(185,28,28,0.1)', fill:true, tension:0.4, borderWidth:3, pointRadius:5},
-        {label:'🥩 لحم نعيمي', data:dates.map(d => byDate[d].naimi), borderColor:'#7f1d1d', backgroundColor:'rgba(127,29,29,0.1)', fill:true, tension:0.4, borderWidth:3, pointRadius:5},
-      ]
-    },
-    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true, ticks:{callback:v=>v+' كجم'}}}}
-  });
-}
-
-function renderBranchChart(records) {
-  destroyChart('branch');
-  const byBranch = {};
-  BRANCHES.forEach(b => byBranch[b.id] = 0);
-  records.forEach(r => {
-    byBranch[r.branch] = (byBranch[r.branch]||0) + (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0);
+  // 2) فروع غايبة
+  const lastSeen={};
+  records.forEach(r=>{ if(!lastSeen[r.branch]||r.date>lastSeen[r.branch]) lastSeen[r.branch]=r.date; });
+  BRANCHES.forEach(b=>{
+    const seen=lastSeen[b.id];
+    if(!seen){ alerts.push({level:'mid',icon:'❓',title:`${b.name} — مفيش أي بيانات`,text:'الفرع ده مالوش ولا سجل واحد في النظام.'}); return; }
+    const gap=Math.round((new Date(latest)-new Date(seen))/86400000);
+    if(gap>=2) alerts.push({level:gap>=4?'high':'mid',icon:'⏳',title:`${b.name} — مسجّلش من ${gap} يوم`,
+      text:`آخر تسجيل كان يوم <b>${seen}</b>، وآخر يوم في النظام <b>${latest}</b>.`});
   });
 
-  charts.branch = new Chart(document.getElementById('branchChart'), {
-    type: 'bar',
-    data: {
-      labels: BRANCHES.map(b => b.name),
-      datasets: [{
-        label:'الكميات (كجم)',
-        data: BRANCHES.map(b => byBranch[b.id]),
-        backgroundColor: BRANCHES.map(b => b.color),
-        borderRadius:6
-      }]
-    },
-    options: {responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}}
-  });
-}
-
-function renderProductChart(records) {
-  destroyChart('product');
-  const totals = {chicken:0, meat:0, naimi:0, dawaner:0};
-  records.forEach(r => {
-    totals.chicken += r.chicken||0;
-    totals.meat += r.meat||0;
-    totals.naimi += r.naimi||0;
-    totals.dawaner += r.dawaner||0;
-  });
-
-  charts.product = new Chart(document.getElementById('productChart'), {
-    type: 'doughnut',
-    data: {
-      labels: ['🐔 دجاج', '🥩 لحم شاورما', '🥩 لحم نعيمي', '🍗 دوانر'],
-      datasets: [{
-        data: [totals.chicken, totals.meat, totals.naimi, totals.dawaner],
-        backgroundColor: ['#eab308', '#b91c1c', '#7f1d1d', '#c2410c'],
-        borderWidth:3, borderColor:'#fff'
-      }]
-    },
-    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
-  });
-}
-
-function renderTopBranchesChart(records) {
-  destroyChart('topBranches');
-  const byBranch = {};
-  BRANCHES.forEach(b => byBranch[b.id] = {name:b.name, color:b.color, total:0});
-  records.forEach(r => {
-    byBranch[r.branch].total += (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0);
-  });
-  const top = Object.values(byBranch).sort((a,b) => b.total - a.total).slice(0,5);
-
-  charts.topBranches = new Chart(document.getElementById('topBranchesChart'), {
-    type: 'bar',
-    data: {
-      labels: top.map(b => b.name),
-      datasets: [{
-        label:'الكميات (كجم)',
-        data: top.map(b => b.total),
-        backgroundColor: top.map(b => b.color),
-        borderRadius:6
-      }]
-    },
-    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
-  });
-}
-
-function renderTypeChart(records) {
-  destroyChart('type');
-  let shawarma = 0, sandwich = 0;
-  records.forEach(r => {
-    const b = BRANCHES.find(br => br.id === r.branch);
-    const total = (r.chicken||0) + (r.meat||0) + (r.naimi||0) + (r.dawaner||0);
-    if (b?.type === 'شاورما') shawarma += total;
-    else sandwich += total;
-  });
-
-  charts.type = new Chart(document.getElementById('typeChart'), {
-    type: 'polarArea',
-    data: {
-      labels: [`🌯 شاورما (${shawarma} كجم)`, `🥪 ساندويتش (${sandwich} كجم)`],
-      datasets: [{data:[shawarma, sandwich], backgroundColor:['#c2410c', '#1e40af']}]
-    },
-    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}}
-  });
-}
-
-function renderDetailTable(records) {
-  const byDate = {};
-  records.forEach(r => {
-    if (!byDate[r.date]) byDate[r.date] = {};
-    byDate[r.date][r.branch] = r;
-  });
-
-  const dates = Object.keys(byDate).sort().reverse();
-
-  let html = '<thead><tr><th>التاريخ</th>';
-  BRANCHES.forEach(b => html += `<th>${b.name}</th>`);
-  html += '<th class="day-total">إجمالي اليوم</th></tr></thead><tbody>';
-
-  dates.forEach(date => {
-    let dayTotal = 0;
-    html += `<tr><td style="font-weight:900;color:var(--primary)">${date}</td>`;
-    BRANCHES.forEach(b => {
-      const rec = byDate[date][b.id];
-      const total = rec ? (rec.chicken||0)+(rec.meat||0)+(rec.naimi||0)+(rec.dawaner||0) : 0;
-      dayTotal += total;
-      html += `<td style="color:${total>0?b.color:'#cbd5e1'}">${total || '-'}</td>`;
+  // 3) قيم شاذة — بالوسيط و MAD (أمتن من المتوسط: قيمة واحدة شاذة ماتضللش المقياس)
+  const outliers=[];
+  BRANCHES.forEach(b=>{
+    ALL_ITEM_KEYS.forEach(k=>{
+      const rows=records.filter(r=>r.branch===b.id&&r[k]>0);
+      if(rows.length<6) return;
+      const vals=rows.map(r=>+r[k]);
+      const med=median(vals);
+      const mad=median(vals.map(v=>Math.abs(v-med)));
+      if(mad<=0) return;
+      rows.forEach(r=>{
+        const score=Math.abs(r[k]-med)/(1.4826*mad);
+        if(score>=4) outliers.push({date:r.date,branch:b,item:k,val:+r[k],med,score});
+      });
     });
-    html += `<td class="day-total">${dayTotal} كجم</td></tr>`;
   });
-  html += '</tbody>';
+  // لو نفس اليوم طلّع ٣ قيم شاذة أو أكتر فده يوم مجمّع مش أخطاء متفرقة — تنبيه واحد بدل عشرة
+  const outByDay={};
+  outliers.forEach(o=>{ (outByDay[o.date]=outByDay[o.date]||[]).push(o); });
+  Object.entries(outByDay).forEach(([date,list])=>{
+    if(list.length>=3){
+      const names=[...new Set(list.map(o=>o.branch.name))];
+      alerts.push({level:'mid',icon:'📅',
+        title:`يوم ${date} — ${list.length} قيمة أعلى من المعتاد في ${names.length} فروع`,
+        text:`الفروع: ${names.join('، ')}. النمط ده معناه غالباً إن اليوم ده <b>مجمّع</b> (كميات أكتر من يوم اتسجّلت مرة واحدة) مش أخطاء إدخال. لو مش كده — راجعه.`});
+    }else{
+      list.sort((a,b2)=>b2.score-a.score).forEach(o=>{
+        alerts.push({level:'high',icon:'⚠️',title:`قيمة شاذة — ${o.branch.name} / ${ITEMS[o.item].name}`,
+          text:`يوم <b>${o.date}</b> مسجّل <b>${fmt(o.val,1)} كجم</b> والمعتاد حوالي <b>${fmt(o.med,1)} كجم</b> (أعلى بـ${Math.round(o.val/o.med)}×). غالباً خطأ إدخال — راجعه.`});
+      });
+    }
+  });
 
-  document.getElementById('detailTable').innerHTML = html;
-}
-
-function updateInsight(records) {
-  if (records.length === 0) {
-    document.getElementById('smartInsight').innerHTML = 'لا توجد بيانات لعرضها. ابدأ بإدخال البيانات في تبويب "إدخال البيانات".';
-    return;
+  // 4) قفزة في الإجمالي اليومي
+  const dayTotals=dates.map(d=>({date:d,total:records.filter(r=>r.date===d).reduce((s,r)=>s+recTotal(r),0)}));
+  if(dayTotals.length>=4){
+    const last=dayTotals[dayTotals.length-1];
+    const prevAvg=mean(dayTotals.slice(-8,-1).map(x=>x.total));
+    if(prevAvg>0){
+      const diff=(last.total-prevAvg)/prevAvg;
+      if(Math.abs(diff)>=0.3) alerts.push({level:'mid',icon: diff>0?'🔺':'🔻',
+        title:`إجمالي ${last.date} ${diff>0?'أعلى':'أقل'} من المعتاد بـ${Math.round(Math.abs(diff)*100)}%`,
+        text:`الإجمالي <b>${fmt(last.total)} كجم</b> مقابل متوسط <b>${fmt(prevAvg,1)} كجم</b> في الأيام اللي قبله.`});
+    }
   }
 
-  const totalKg = records.reduce((s, r) => s + (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0), 0);
-  const days = new Set(records.map(r => r.date)).size;
-  const avgDaily = (totalKg / days).toFixed(1);
+  // 5) الأسعار مش مدخلة
+  if(!pricesSet()) alerts.push({level:'low',icon:'💰',title:'أسعار الكيلو لسه مادخلتش',
+    text:'أرقام التكلفة كلها هتفضل صفر لحد ما تدخل الأسعار من تبويب <b>التكلفة</b>.'});
 
-  const byBranch = {};
-  records.forEach(r => {
-    const b = BRANCHES.find(br => br.id === r.branch);
-    if (b) byBranch[b.name] = (byBranch[b.name]||0) + (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0);
+  const rank={high:0,mid:1,low:2};
+  return alerts.sort((a,b)=>rank[a.level]-rank[b.level]);
+}
+function renderAlerts(){
+  const alerts=buildAlerts();
+  const box=document.getElementById('alertsList');
+  if(!alerts.length){ box.innerHTML='<div class="empty">✅ كله تمام — مفيش أي انحرافات تستدعي الانتباه.</div>'; return; }
+  const style={high:{c:'#b91c1c',bg:'#fef2f2'},mid:{c:'#c2410c',bg:'#fff7ed'},low:{c:'#0369a1',bg:'#f0f9ff'}};
+  box.innerHTML=alerts.map(a=>`<div class="alert" style="--a-color:${style[a.level].c};--a-bg:${style[a.level].bg}">
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-body"><div class="alert-title">${a.title}</div><div class="alert-text">${a.text}</div></div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+function renderKPIs(records){
+  const p=getPrices();
+  const totalKg=records.reduce((s,r)=>s+recTotal(r),0);
+  const chicken=records.reduce((s,r)=>s+(+r.chicken||0),0);
+  const meat=records.reduce((s,r)=>s+(+r.meat||0)+(+r.naimi||0),0);
+  const days=new Set(records.map(r=>r.date)).size;
+  const cost=records.reduce((s,r)=>s+recCost(r,p),0);
+  const kpis=[
+    {l:'إجمالي الكميات',v:fmt(totalKg),u:'كجم',c:'var(--accent)'},
+    {l:'دجاج',v:fmt(chicken),u:'كجم 🐔',c:'var(--amber)'},
+    {l:'لحوم',v:fmt(meat),u:'كجم 🥩',c:'var(--red)'},
+    {l:'أيام مسجّلة',v:days,u:'يوم',c:'var(--blue)'},
+    {l:'متوسط يومي',v:days?fmt(totalKg/days,1):'0',u:'كجم/يوم',c:'var(--orange)'},
+    {l:'التكلفة',v:fmt(cost,3),u:'د.ك',c:'var(--green)'},
+  ];
+  document.getElementById('kpiGrid').innerHTML=kpis.map(k=>`
+    <div class="kpi" style="--kpi-color:${k.c}"><div class="kpi-label">${k.l}</div>
+    <div class="kpi-value">${k.v}</div><div class="kpi-unit">${k.u}</div></div>`).join('');
+}
+function renderTrendChart(records){
+  destroyChart('trend');
+  const byDate=groupByDate(records);
+  const dates=Object.keys(byDate).sort();
+  const sum=(d,k)=>byDate[d].reduce((s,r)=>s+(+r[k]||0),0);
+  charts.trend=new Chart(document.getElementById('trendChart'),{
+    type:'line',
+    data:{labels:dates.map(d=>d.slice(5).replace('-','/')),datasets:[
+      {label:'🐔 دجاج',data:dates.map(d=>sum(d,'chicken')),borderColor:'#eab308',backgroundColor:'rgba(234,179,8,.14)',fill:true,tension:.35,borderWidth:3,pointRadius:4},
+      {label:'🥩 لحم',data:dates.map(d=>sum(d,'meat')),borderColor:'#b91c1c',backgroundColor:'rgba(185,28,28,.1)',fill:true,tension:.35,borderWidth:3,pointRadius:4},
+      {label:'🥩 نعيمي',data:dates.map(d=>sum(d,'naimi')),borderColor:'#7f1d1d',backgroundColor:'rgba(127,29,29,.1)',fill:true,tension:.35,borderWidth:3,pointRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>v+' كجم'}}}}
   });
-  const topBranch = Object.entries(byBranch).sort((a,b) => b[1]-a[1])[0];
-
-  document.getElementById('smartInsight').innerHTML = `
-    📊 <strong>خلال ${days} يوم:</strong> تم توزيع <strong style="color:var(--primary)">${totalKg.toLocaleString()} كجم</strong> بمتوسط <strong>${avgDaily} كجم/يوم</strong>.
-    🥇 <strong>أعلى فرع استهلاكاً:</strong> <span style="color:var(--primary);font-weight:900">${topBranch[0]}</span> بإجمالي <strong>${topBranch[1]} كجم</strong>.
-  `;
 }
-
-function renderDashboard() {
-  const records = getFilteredRecords();
-  renderKPIs(records);
-  renderTrendChart(records);
-  renderBranchChart(records);
-  renderProductChart(records);
-  renderTopBranchesChart(records);
-  renderTypeChart(records);
-  renderDetailTable(records);
+function renderBranchChart(records){
+  destroyChart('branch');
+  const by={}; BRANCHES.forEach(b=>by[b.id]=0);
+  records.forEach(r=>{ if(by[r.branch]!==undefined) by[r.branch]+=recTotal(r); });
+  charts.branch=new Chart(document.getElementById('branchChart'),{
+    type:'bar',
+    data:{labels:BRANCHES.map(b=>b.name),datasets:[{data:BRANCHES.map(b=>by[b.id]),backgroundColor:BRANCHES.map(b=>b.color),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}}}
+  });
+}
+function renderProductChart(records){
+  destroyChart('product');
+  const t={chicken:0,meat:0,naimi:0,dawaner:0};
+  records.forEach(r=>ALL_ITEM_KEYS.forEach(k=>t[k]+=(+r[k]||0)));
+  charts.product=new Chart(document.getElementById('productChart'),{
+    type:'doughnut',
+    data:{labels:ALL_ITEM_KEYS.map(k=>ITEMS[k].icon+' '+ITEMS[k].name),
+      datasets:[{data:ALL_ITEM_KEYS.map(k=>t[k]),backgroundColor:ALL_ITEM_KEYS.map(k=>ITEMS[k].color),borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+  });
+}
+function renderTypeChart(records){
+  destroyChart('type');
+  let sh=0,sw=0;
+  records.forEach(r=>{ const b=branchOf(r.branch); if(b?.type==='شاورما') sh+=recTotal(r); else sw+=recTotal(r); });
+  charts.type=new Chart(document.getElementById('typeChart'),{
+    type:'polarArea',
+    data:{labels:[`🌯 شاورما (${fmt(sh)} كجم)`,`🥪 ساندويتش (${fmt(sw)} كجم)`],
+      datasets:[{data:[sh,sw],backgroundColor:['#c2410c','#1e40af']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+  });
+}
+function renderDetailTable(records){
+  const byDate={};
+  records.forEach(r=>{ (byDate[r.date]=byDate[r.date]||{})[r.branch]=r; });
+  const dates=Object.keys(byDate).sort().reverse();
+  let html='<thead><tr><th>التاريخ</th>'+BRANCHES.map(b=>`<th>${b.name}</th>`).join('')+'<th class="day-total">إجمالي اليوم</th></tr></thead><tbody>';
+  dates.forEach(d=>{
+    let dayTotal=0;
+    html+=`<tr><td style="font-weight:900;color:var(--primary)">${d}</td>`;
+    BRANCHES.forEach(b=>{
+      const rec=byDate[d][b.id], t=rec?recTotal(rec):0;
+      dayTotal+=t;
+      html+=`<td style="color:${t>0?b.color:'#cbd5e1'}">${t?fmt(t,t%1?1:0):'-'}</td>`;
+    });
+    html+=`<td class="day-total">${fmt(dayTotal)} كجم</td></tr>`;
+  });
+  document.getElementById('detailTable').innerHTML=html+'</tbody>';
+}
+function updateInsight(records){
+  const el=document.getElementById('smartInsight');
+  if(!records.length){ el.innerHTML='لا توجد بيانات في هذه الفترة.'; return; }
+  const total=records.reduce((s,r)=>s+recTotal(r),0);
+  const days=new Set(records.map(r=>r.date)).size;
+  const by={};
+  records.forEach(r=>{ const b=branchOf(r.branch); if(b) by[b.name]=(by[b.name]||0)+recTotal(r); });
+  const sorted=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+  const p=getPrices(), cost=records.reduce((s,r)=>s+recCost(r,p),0);
+  el.innerHTML=`📊 خلال <b>${days}</b> يوم اتوزع <b style="color:var(--primary)">${fmt(total)} كجم</b> بمتوسط <b>${fmt(total/days,1)} كجم/يوم</b>.<br>
+    🥇 الأعلى: <b style="color:var(--primary)">${sorted[0][0]}</b> (${fmt(sorted[0][1])} كجم) &nbsp;·&nbsp;
+    🔻 الأقل: <b>${sorted[sorted.length-1][0]}</b> (${fmt(sorted[sorted.length-1][1])} كجم)
+    ${cost>0?`<br>💰 التكلفة الإجمالية: <b style="color:var(--green)">${fmt(cost,3)} د.ك</b> بمتوسط <b>${fmt(cost/days,3)} د.ك/يوم</b>.`:''}`;
+}
+function renderDashboard(){
+  const records=getFilteredRecords();
+  renderAlerts();
+  renderKPIs(records); renderTrendChart(records); renderBranchChart(records);
+  renderProductChart(records); renderTypeChart(records); renderDetailTable(records);
   updateInsight(records);
-  document.getElementById('lastUpdate').textContent = new Date().toLocaleString('ar-KW');
 }
-
-function resetFilters() {
-  document.getElementById('filterFrom').value = '';
-  document.getElementById('filterTo').value = '';
-  document.getElementById('filterBranch').value = 'all';
+function resetFilters(){
+  document.getElementById('filterFrom').value='';
+  document.getElementById('filterTo').value='';
+  document.getElementById('filterBranch').value='all';
   renderDashboard();
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// HISTORY VIEW
+// FORECAST — متوسط متحرك × معامل اليوم من الأسبوع
 // ═══════════════════════════════════════════════════════════════════
+function computeForecast(){
+  const records=loadRecords();
+  const dates=[...new Set(records.map(r=>r.date))].sort();
+  if(dates.length<4) return null;
 
-function renderHistory() {
-  const records = loadRecords().sort((a,b) => b.date.localeCompare(a.date));
-  const byDate = {};
-  records.forEach(r => {
-    if (!byDate[r.date]) byDate[r.date] = [];
-    byDate[r.date].push(r);
+  // معامل اليوم من الأسبوع على مستوى الإجمالي
+  const dayTotals=dates.map(d=>({d,t:records.filter(r=>r.date===d).reduce((s,r)=>s+recTotal(r),0)}));
+  const overall=mean(dayTotals.map(x=>x.t));
+  const wdFactor={};
+  for(let w=0;w<7;w++){
+    const vals=dayTotals.filter(x=>new Date(x.d).getDay()===w).map(x=>x.t);
+    wdFactor[w]= (vals.length>=2 && overall>0) ? Math.min(1.4,Math.max(0.7,mean(vals)/overall)) : 1;
+  }
+
+  const lastDate=new Date(dates[dates.length-1]);
+  const nextDays=[...Array(7)].map((_,i)=>{
+    const d=new Date(lastDate); d.setDate(d.getDate()+i+1);
+    return d.toISOString().slice(0,10);
   });
 
-  let html = '';
-  Object.keys(byDate).sort().reverse().forEach(date => {
-    const dayRecords = byDate[date];
-    const dayTotal = dayRecords.reduce((s,r) => s + (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0), 0);
-    html += `<div class="record-row" onclick="editDate('${date}')">
-      <div>
-        <div class="record-date">📅 ${date}</div>
-        <div class="record-branch">${dayRecords.length} فرع · أمين: ${dayRecords[0].keeper || 'غير محدد'}</div>
-      </div>
-      <div class="record-values">
-        <div class="v" style="background:var(--accent);color:var(--primary)">${dayTotal} كجم</div>
-      </div>
-    </div>`;
+  const rows=[];
+  BRANCHES.forEach(b=>{
+    const keys=b.type==='شاورما'?[...b.items,'dawaner']:b.items;
+    keys.forEach(k=>{
+      const hist=records.filter(r=>r.branch===b.id&&r[k]>0).sort((a,b2)=>a.date.localeCompare(b2.date)).slice(-7).map(r=>+r[k]);
+      if(!hist.length) return;
+      const base=mean(hist);
+      rows.push({branch:b, item:k, base, hist:hist.length,
+        daily:nextDays.map(d=>base*wdFactor[new Date(d).getDay()])});
+    });
   });
+  return {nextDays, rows, wdFactor, overall, lastDate:dates[dates.length-1]};
+}
+function renderForecast(){
+  const f=computeForecast();
+  const note=document.getElementById('forecastNote');
+  const tbl=document.getElementById('forecastTable');
+  destroyChart('forecast');
+  if(!f){
+    note.innerHTML='محتاج على الأقل <b>٤ أيام</b> مسجّلة عشان أقدر أطلّع توقع له معنى.';
+    tbl.innerHTML=''; return;
+  }
+  note.innerHTML=`التوقع مبني على آخر تسجيلات لكل فرع/صنف (٧ كحد أقصى) مضروبة في معامل اليوم من الأسبوع.
+    آخر يوم مسجّل: <b>${f.lastDate}</b>. الأرقام دي <b>اقتراح للمراجعة</b> مش قرار — راجعها قبل ما تعتمدها.`;
 
-  if (!html) html = '<div style="padding:40px;text-align:center;color:var(--muted)">لا توجد سجلات بعد. ابدأ الإدخال!</div>';
-  document.getElementById('recordsList').innerHTML = html;
+  let html='<thead><tr><th class="t-right">الفرع</th><th>الصنف</th><th>المتوسط</th>'
+    + f.nextDays.map(d=>`<th>${WEEKDAYS[new Date(d).getDay()]}<br><span style="font-weight:400;font-size:10px">${d.slice(5)}</span></th>`).join('')
+    + '<th class="day-total">إجمالي الأسبوع</th></tr></thead><tbody>';
+  const totals=Array(7).fill(0);
+  f.rows.forEach(r=>{
+    const wk=r.daily.reduce((s,x)=>s+x,0);
+    r.daily.forEach((v,i)=>totals[i]+=v);
+    html+=`<tr><td class="t-right" style="color:${r.branch.color};font-weight:800">${r.branch.name}</td>
+      <td>${ITEMS[r.item].icon} ${ITEMS[r.item].name}</td>
+      <td style="color:var(--muted)">${fmt(r.base,1)}</td>`
+      + r.daily.map(v=>`<td>${fmt(v,1)}</td>`).join('')
+      + `<td class="day-total">${fmt(wk,1)}</td></tr>`;
+  });
+  html+=`<tr style="background:#f1f5f9"><td class="t-right" colspan="3" style="font-weight:900">الإجمالي المتوقع (كجم)</td>`
+    + totals.map(v=>`<td style="font-weight:900">${fmt(v,1)}</td>`).join('')
+    + `<td class="day-total">${fmt(totals.reduce((s,x)=>s+x,0),1)}</td></tr></tbody>`;
+  tbl.innerHTML=html;
+
+  // مقارنة التوقع بالفعلي
+  const records=loadRecords();
+  const dates=[...new Set(records.map(r=>r.date))].sort().slice(-14);
+  const actual=dates.map(d=>records.filter(r=>r.date===d).reduce((s,r)=>s+recTotal(r),0));
+  const predicted=dates.map(d=>f.overall*f.wdFactor[new Date(d).getDay()]);
+  charts.forecast=new Chart(document.getElementById('forecastChart'),{
+    type:'line',
+    data:{labels:dates.map(d=>d.slice(5)),datasets:[
+      {label:'الفعلي',data:actual,borderColor:'#0f3d47',backgroundColor:'rgba(15,61,71,.09)',fill:true,tension:.35,borderWidth:3,pointRadius:4},
+      {label:'نموذج التوقع',data:predicted,borderColor:'#14b8a6',borderDash:[7,5],tension:.35,borderWidth:3,pointRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>v+' كجم'}}}}
+  });
 }
 
-function editDate(date) {
-  document.getElementById('entryDate').value = date;
+// ═══════════════════════════════════════════════════════════════════
+// COST
+// ═══════════════════════════════════════════════════════════════════
+function buildPriceInputs(){
+  const p=getPrices();
+  document.getElementById('priceInputs').innerHTML=ALL_ITEM_KEYS.map(k=>`
+    <div class="field"><label>${ITEMS[k].icon} ${ITEMS[k].name} (د.ك/كجم)</label>
+    <input type="number" min="0" step="0.001" id="price_${k}" value="${p[k]||''}" placeholder="0.000"></div>`).join('');
+}
+function savePrices(){
+  const p={};
+  ALL_ITEM_KEYS.forEach(k=>p[k]=Number(document.getElementById('price_'+k).value)||0);
+  localStorage.setItem(PRICE_KEY,JSON.stringify(p));
+  toast('✅ اتحفظت الأسعار');
+  renderCost(); updateSummary();
+}
+function renderCost(){
+  buildPriceInputs();
+  const p=getPrices(), records=loadRecords();
+  const total=records.reduce((s,r)=>s+recCost(r,p),0);
+  const days=new Set(records.map(r=>r.date)).size||1;
+  const byItem={}; ALL_ITEM_KEYS.forEach(k=>byItem[k]=records.reduce((s,r)=>s+(+r[k]||0),0)*p[k]);
+  document.getElementById('costKpis').innerHTML=[
+    {l:'التكلفة الإجمالية',v:fmt(total,3),u:'د.ك',c:'var(--green)'},
+    {l:'متوسط يومي',v:fmt(total/days,3),u:'د.ك/يوم',c:'var(--accent)'},
+    {l:'أعلى بند',v:(()=>{const e=Object.entries(byItem).sort((a,b)=>b[1]-a[1])[0];return e&&e[1]>0?ITEMS[e[0]].name:'—';})(),u:'صنف',c:'var(--amber)'},
+    {l:'متوسط تكلفة الكيلو',v:(()=>{const kg=records.reduce((s,r)=>s+recTotal(r),0);return kg?fmt(total/kg,3):'0';})(),u:'د.ك/كجم',c:'var(--blue)'},
+  ].map(k=>`<div class="kpi" style="--kpi-color:${k.c}"><div class="kpi-label">${k.l}</div>
+    <div class="kpi-value" style="font-size:${String(k.v).length>7?'19px':'27px'}">${k.v}</div><div class="kpi-unit">${k.u}</div></div>`).join('');
+
+  let html='<thead><tr><th class="t-right">الفرع</th>'+ALL_ITEM_KEYS.map(k=>`<th>${ITEMS[k].name}<br><span style="font-weight:400;font-size:10px">كجم</span></th>`).join('')
+    +'<th>إجمالي كجم</th><th class="day-total">التكلفة (د.ك)</th></tr></thead><tbody>';
+  let gTotal=0, gCost=0;
+  BRANCHES.forEach(b=>{
+    const rs=records.filter(r=>r.branch===b.id);
+    const kg=rs.reduce((s,r)=>s+recTotal(r),0);
+    const c=rs.reduce((s,r)=>s+recCost(r,p),0);
+    gTotal+=kg; gCost+=c;
+    html+=`<tr><td class="t-right" style="color:${b.color};font-weight:800">${b.name}</td>`
+      + ALL_ITEM_KEYS.map(k=>{const v=rs.reduce((s,r)=>s+(+r[k]||0),0);return `<td>${v?fmt(v,v%1?1:0):'-'}</td>`;}).join('')
+      + `<td style="font-weight:800">${fmt(kg)}</td><td class="day-total">${fmt(c,3)}</td></tr>`;
+  });
+  html+=`<tr style="background:#f1f5f9"><td class="t-right" style="font-weight:900">الإجمالي</td>`
+    + ALL_ITEM_KEYS.map(k=>`<td style="font-weight:900">${fmt(records.reduce((s,r)=>s+(+r[k]||0),0))}</td>`).join('')
+    + `<td style="font-weight:900">${fmt(gTotal)}</td><td class="day-total">${fmt(gCost,3)}</td></tr></tbody>`;
+  document.getElementById('costTable').innerHTML=html;
+
+  destroyChart('cost');
+  const byDate=groupByDate(records);
+  const dates=Object.keys(byDate).sort();
+  charts.cost=new Chart(document.getElementById('costChart'),{
+    type:'bar',
+    data:{labels:dates.map(d=>d.slice(5)),datasets:[{label:'التكلفة (د.ك)',
+      data:dates.map(d=>byDate[d].reduce((s,r)=>s+recCost(r,p),0)),backgroundColor:'#16a34a',borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>v+' د.ك'}}}}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REPORT
+// ═══════════════════════════════════════════════════════════════════
+function setReportRange(days){
+  const records=loadRecords();
+  const dates=[...new Set(records.map(r=>r.date))].sort();
+  if(!dates.length) return;
+  const to=dates[dates.length-1];
+  const from=new Date(to); from.setDate(from.getDate()-days+1);
+  document.getElementById('repTo').value=to;
+  document.getElementById('repFrom').value=from.toISOString().slice(0,10);
+  renderReport();
+}
+function renderReport(){
+  const from=document.getElementById('repFrom').value;
+  const to=document.getElementById('repTo').value;
+  let records=loadRecords();
+  if(from) records=records.filter(r=>r.date>=from);
+  if(to) records=records.filter(r=>r.date<=to);
+  const box=document.getElementById('reportBody');
+  if(!records.length){ box.innerHTML='<div class="card"><div class="empty">مفيش بيانات في الفترة دي.</div></div>'; return; }
+
+  const p=getPrices();
+  const total=records.reduce((s,r)=>s+recTotal(r),0);
+  const cost=records.reduce((s,r)=>s+recCost(r,p),0);
+  const days=new Set(records.map(r=>r.date)).size;
+  const byBranch=BRANCHES.map(b=>{
+    const rs=records.filter(r=>r.branch===b.id);
+    return {b, kg:rs.reduce((s,r)=>s+recTotal(r),0), cost:rs.reduce((s,r)=>s+recCost(r,p),0), days:new Set(rs.map(r=>r.date)).size};
+  }).sort((x,y)=>y.kg-x.kg);
+  const alerts=buildAlerts().filter(a=>a.level==='high').slice(0,5);
+
+  box.innerHTML=`
+  <div class="card">
+    <div style="text-align:center;border-bottom:3px solid var(--primary);padding-bottom:14px;margin-bottom:18px">
+      <div style="font-size:22px;font-weight:900;color:var(--primary)">📦 تقرير المخزن والفروع</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">الفترة من <b>${from||'البداية'}</b> إلى <b>${to||'النهاية'}</b> · ${days} يوم عمل</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">صدر في ${new Date().toLocaleString('ar-KW')}</div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi" style="--kpi-color:var(--accent)"><div class="kpi-label">إجمالي الكميات</div><div class="kpi-value">${fmt(total)}</div><div class="kpi-unit">كجم</div></div>
+      <div class="kpi" style="--kpi-color:var(--orange)"><div class="kpi-label">متوسط يومي</div><div class="kpi-value">${fmt(total/days,1)}</div><div class="kpi-unit">كجم/يوم</div></div>
+      <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">التكلفة</div><div class="kpi-value" style="font-size:21px">${fmt(cost,3)}</div><div class="kpi-unit">د.ك</div></div>
+      <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">فروع نشطة</div><div class="kpi-value">${byBranch.filter(x=>x.kg>0).length}</div><div class="kpi-unit">من ${BRANCHES.length}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏪 الأداء حسب الفرع</div>
+    <div class="table-scroll"><table>
+      <thead><tr><th class="t-right">#</th><th class="t-right">الفرع</th><th>النوع</th><th>الكمية (كجم)</th><th>النسبة</th><th>أيام</th><th>متوسط/يوم</th><th class="day-total">التكلفة (د.ك)</th></tr></thead>
+      <tbody>${byBranch.map((x,i)=>`<tr>
+        <td>${i+1}</td>
+        <td class="t-right" style="color:${x.b.color};font-weight:800">${x.b.name}</td>
+        <td>${x.b.type}</td>
+        <td style="font-weight:800">${fmt(x.kg)}</td>
+        <td>${total?fmt(x.kg/total*100,1):'0'}%</td>
+        <td>${x.days}</td>
+        <td>${x.days?fmt(x.kg/x.days,1):'-'}</td>
+        <td class="day-total">${fmt(x.cost,3)}</td></tr>`).join('')}
+      </tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🥩 توزيع الأصناف</div>
+    <div class="table-scroll"><table>
+      <thead><tr><th class="t-right">الصنف</th><th>الكمية (كجم)</th><th>النسبة</th><th>سعر الكيلو</th><th class="day-total">التكلفة (د.ك)</th></tr></thead>
+      <tbody>${ALL_ITEM_KEYS.map(k=>{
+        const kg=records.reduce((s,r)=>s+(+r[k]||0),0);
+        return `<tr><td class="t-right" style="font-weight:800">${ITEMS[k].icon} ${ITEMS[k].name}</td>
+          <td>${fmt(kg)}</td><td>${total?fmt(kg/total*100,1):'0'}%</td>
+          <td>${p[k]?fmt(p[k],3):'—'}</td>
+          <td class="day-total">${fmt(kg*p[k],3)}</td></tr>`;}).join('')}
+      </tbody></table></div>
+  </div>
+
+  ${alerts.length?`<div class="card">
+    <div class="card-title">⚠️ نقاط تستدعي الانتباه</div>
+    ${alerts.map(a=>`<div class="alert" style="--a-color:#b91c1c;--a-bg:#fef2f2">
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-body"><div class="alert-title">${a.title}</div><div class="alert-text">${a.text}</div></div></div>`).join('')}
+  </div>`:''}
+
+  ${!pricesSet()?`<div class="card"><div class="note">⚠️ أسعار الكيلو لسه مادخلتش، فكل أرقام التكلفة في التقرير ده <b>صفر</b>. أدخلها من تبويب «التكلفة».</div></div>`:''}
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════════
+function renderHistory(){
+  const byDate=groupByDate(loadRecords());
+  const dates=Object.keys(byDate).sort().reverse();
+  const p=getPrices();
+  if(!dates.length){ document.getElementById('recordsList').innerHTML='<div class="empty">مفيش سجلات لسه — ابدأ الإدخال!</div>'; return; }
+  document.getElementById('recordsList').innerHTML=dates.map(d=>{
+    const rs=byDate[d];
+    const kg=rs.reduce((s,r)=>s+recTotal(r),0);
+    const c=rs.reduce((s,r)=>s+recCost(r,p),0);
+    return `<div class="record-row" onclick="editDate('${d}')">
+      <div><div class="record-date">📅 ${d} <span style="font-weight:600;font-size:11px;color:var(--muted)">${WEEKDAYS[new Date(d).getDay()]}</span></div>
+      <div class="record-branch">${rs.length} فرع · أمين: ${rs[0].keeper||'غير محدد'}</div></div>
+      <div style="display:flex;gap:7px">
+        ${c>0?`<div class="v" style="background:#dcfce7;color:#166534">${fmt(c,3)} د.ك</div>`:''}
+        <div class="v" style="background:var(--accent-soft);color:var(--primary)">${fmt(kg)} كجم</div>
+      </div></div>`;
+  }).join('');
+}
+function editDate(date){
+  document.getElementById('entryDate').value=date;
   switchView('entry');
-  setTimeout(loadDay, 100);
+  setTimeout(loadDay,80);
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// IMPORT/EXPORT
+// EXPORT
 // ═══════════════════════════════════════════════════════════════════
+function exportExcel(){
+  const records=loadRecords();
+  if(!records.length){ toast('مفيش بيانات للتصدير',true); return; }
+  const p=getPrices();
+  const wb=XLSX.utils.book_new();
 
-function exportData() {
-  const records = loadRecords();
-  if (records.length === 0) { toast('لا توجد بيانات للتصدير', true); return; }
-
-  const wb = XLSX.utils.book_new();
-
-  const rows = records.map(r => ({
-    'التاريخ': r.date,
-    'الفرع': BRANCHES.find(b => b.id === r.branch)?.name || r.branch,
-    'النوع': BRANCHES.find(b => b.id === r.branch)?.type || '',
-    'دجاج (كجم)': r.chicken || 0,
-    'لحم شاورما (كجم)': r.meat || 0,
-    'لحم نعيمي (كجم)': r.naimi || 0,
-    'دوانر (كجم)': r.dawaner || 0,
-    'الإجمالي (كجم)': (r.chicken||0)+(r.meat||0)+(r.naimi||0)+(r.dawaner||0),
-    'أمين المخزن': r.keeper || '',
+  const rows=records.sort((a,b)=>a.date.localeCompare(b.date)||a.branch.localeCompare(b.branch)).map(r=>({
+    'التاريخ':r.date,
+    'اليوم':WEEKDAYS[new Date(r.date).getDay()],
+    'الفرع':branchOf(r.branch)?.name||r.branch,
+    'النوع':branchOf(r.branch)?.type||'',
+    'دجاج (كجم)':+r.chicken||0,
+    'لحم (كجم)':+r.meat||0,
+    'لحم نعيمي (كجم)':+r.naimi||0,
+    'دوانر (كجم)':+r.dawaner||0,
+    'الإجمالي (كجم)':recTotal(r),
+    'التكلفة (د.ك)':+recCost(r,p).toFixed(3),
+    'أمين المخزن':r.keeper||'',
   }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, 'السجلات الكاملة');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'السجلات');
 
-  const filename = `نظام_المخزن_${new Date().toISOString().slice(0,10)}.xlsx`;
-  XLSX.writeFile(wb, filename);
-  toast(`✅ تم تصدير ${records.length} سجل`);
+  const byDate=groupByDate(records);
+  const daily=Object.keys(byDate).sort().map(d=>({
+    'التاريخ':d,'اليوم':WEEKDAYS[new Date(d).getDay()],
+    'عدد الفروع':byDate[d].length,
+    'الإجمالي (كجم)':byDate[d].reduce((s,r)=>s+recTotal(r),0),
+    'التكلفة (د.ك)':+byDate[d].reduce((s,r)=>s+recCost(r,p),0).toFixed(3),
+  }));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(daily),'ملخص يومي');
+
+  const branchSummary=BRANCHES.map(b=>{
+    const rs=records.filter(r=>r.branch===b.id);
+    return {'الفرع':b.name,'النوع':b.type,
+      'الإجمالي (كجم)':rs.reduce((s,r)=>s+recTotal(r),0),
+      'أيام مسجّلة':new Set(rs.map(r=>r.date)).size,
+      'التكلفة (د.ك)':+rs.reduce((s,r)=>s+recCost(r,p),0).toFixed(3)};
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(branchSummary),'ملخص الفروع');
+
+  XLSX.writeFile(wb,`نظام_المخزن_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`✅ اتصدّر ${records.length} سجل`);
 }
-
-function importData(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (!Array.isArray(data)) throw new Error('صيغة غير صحيحة');
-      if (!confirm(`سيتم استبدال البيانات الحالية بـ${data.length} سجل. متأكد؟`)) return;
-      saveRecords(data);
-      toast(`✅ تم استيراد ${data.length} سجل`);
-      renderDashboard();
-    } catch (err) {
-      toast('❌ خطأ: ' + err.message, true);
-    }
-  };
-  reader.readAsText(file);
+function exportBackup(){
+  const blob=new Blob([JSON.stringify(loadRecords(),null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`نسخة_احتياطية_المخزن_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('💾 اتنزّلت النسخة الاحتياطية');
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════
-
-function populateBranchFilter() {
-  const sel = document.getElementById('filterBranch');
-  BRANCHES.forEach(b => {
-    const opt = document.createElement('option');
-    opt.value = b.id;
-    opt.textContent = b.name;
-    sel.appendChild(opt);
+function populateBranchFilter(){
+  const sel=document.getElementById('filterBranch');
+  BRANCHES.forEach(b=>{
+    const o=document.createElement('option');
+    o.value=b.id; o.textContent=b.name;
+    sel.appendChild(o);
   });
 }
-
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded',async()=>{
   buildEntryForm();
   populateBranchFilter();
-  initialSeed();
+  buildPriceInputs();
   updateBadge();
-  document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
-
-  // Initialize cloud sync
+  document.getElementById('entryDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('settingsModal').addEventListener('click',e=>{ if(e.target.id==='settingsModal') hideSettings(); });
   await initSupabase();
+  const dates=[...new Set(loadRecords().map(r=>r.date))].sort();
+  if(dates.length){
+    document.getElementById('repTo').value=dates[dates.length-1];
+    const f=new Date(dates[dates.length-1]); f.setDate(f.getDate()-29);
+    document.getElementById('repFrom').value=f.toISOString().slice(0,10);
+  }
 });
 </script>
 </body>
