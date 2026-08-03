@@ -116,6 +116,18 @@
   .age{font-size:10.5px;font-weight:900;padding:1px 7px;border-radius:20px;background:var(--light);color:var(--muted)}
   .age.r{background:#fdeaea;color:#a11}.age.a{background:#fff6e5;color:#8a5a00}
 
+  /* ═══ BULK SELECT / DELETE ═══ */
+  .selbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;
+          background:#fdeaea;border:1px solid #f3b8b8;color:#a11;font-weight:800;font-size:13px;margin-bottom:10px}
+  .act.del{background:var(--red);color:#fff}
+  .dupgrp{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden}
+  .dupgrp>.h{background:var(--light);padding:8px 12px;font-weight:900;font-size:12.5px;color:var(--navy)}
+  .duprow{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border-top:1px solid var(--border);font-size:12.5px}
+  .duprow.keep{background:#eaf7ee}
+  .duprow .tag{font-size:10px;font-weight:900;padding:1px 8px;border-radius:20px;white-space:nowrap}
+  .duprow .tag.k{background:var(--green-bg);color:var(--green)}
+  .duprow .tag.d{background:var(--red-bg);color:var(--red)}
+
   /* ═══ PHOTO GALLERY ═══ */
   .ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;padding:12px 14px}
   .ph-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;break-inside:avoid}
@@ -272,11 +284,13 @@
       <select id="maintStatus" onchange="renderMaint()"></select>
       <select id="maintSev" onchange="renderMaint()"></select>
       <input type="text" id="mtSearch" oninput="renderMaint()" style="min-width:150px">
-      <button class="btn btn-ghost push" onclick="openPM()"><i class="ti ti-settings-cog"></i> <span data-i18n="pm_settings"></span></button>
+      <button class="btn btn-ghost push" onclick="openDupes()"><i class="ti ti-eraser"></i> <span data-i18n="dup_clean"></span></button>
+      <button class="btn btn-ghost" onclick="openPM()"><i class="ti ti-settings-cog"></i> <span data-i18n="pm_settings"></span></button>
       <button class="btn btn-gold" onclick="openReport('maint')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
     </div>
 
     <div id="mt-issues">
+      <div id="mtSelBar"></div>
       <div class="card"><div class="card-h"><i class="ti ti-tool"></i> <span data-i18n="issue_reports"></span>
         <span class="push" style="font-size:11px;color:var(--muted);font-weight:700" id="mtIssuesN"></span></div>
         <div style="overflow-x:auto"><table id="tMaint"></table></div></div>
@@ -384,6 +398,28 @@
 
 </div>
 
+<!-- DUPLICATES MODAL -->
+<div class="modal-bg" id="dupModal">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-h"><i class="ti ti-eraser"></i> <span data-i18n="dup_title"></span>
+      <button class="modal-x" onclick="closeDupes()">×</button></div>
+    <div class="modal-b">
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 6px" data-i18n="dup_help"></p>
+      <p style="font-size:12.5px;font-weight:800;color:var(--navy);margin:0 0 12px" id="dupCount"></p>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-ghost" style="padding:5px 12px" onclick="dupPickAll(true)"><span data-i18n="dup_all"></span></button>
+        <button class="btn btn-ghost" style="padding:5px 12px" onclick="dupPickAll(false)"><span data-i18n="dup_none_sel"></span></button>
+      </div>
+      <div id="dupBody"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" style="background:var(--red);color:#fff" onclick="applyDupes()">
+        <i class="ti ti-trash"></i> <span data-i18n="dup_del"></span></button>
+      <button class="btn btn-ghost" onclick="closeDupes()"><span data-i18n="close"></span></button>
+    </div>
+  </div>
+</div>
+
 <!-- PM SETTINGS MODAL -->
 <div class="modal-bg" id="pmModal">
   <div class="modal" style="max-width:640px">
@@ -453,7 +489,16 @@ ar:{
  t_requests:'الطلبات', t_maint:'الصيانة', t_fuel:'الوقود', t_vio:'المخالفات', t_msgs:'الرسائل', t_drivers:'السائقون',
  t_reports:'التقارير',
  // maintenance pro
- mt_search:'🔍 بحث بالسيارة أو السائق', mv_issues:'البلاغات', mv_fleet:'صحة الأسطول', mv_pm:'الصيانة الوقائية', mv_repeat:'الأعطال المتكررة',
+ mt_search:'🔍 بحث بالسيارة أو السائق',
+ del:'حذف', del_sel:'حذف المحدد', sel_n:'%s بلاغ محدد',
+ del_confirm1:'حذف هذا البلاغ نهائياً؟\n\n%s\n\nلا يمكن التراجع.',
+ del_confirm_n:'حذف %s بلاغ نهائياً؟ لا يمكن التراجع.',
+ del_ok:'🗑️ حُذف %s بلاغ', del_denied:'لم يُحذف أي سجل — تحقق من صلاحية الحذف على الجدول',
+ dup_clean:'تنظيف المكرر', dup_title:'البلاغات المكررة',
+ dup_help:'يُعتبر البلاغ مكرراً إذا كان لنفس السيارة ونفس نوع العطل وبنفس التاريخ. يُبقى الأقدم تلقائياً ويُعلَّم الباقي للحذف — راجع القائمة وعدّل التحديد قبل التأكيد.',
+ dup_found:'%s مجموعة مكررة · %s سجل زائد', dup_none:'✅ لا توجد بلاغات مكررة',
+ dup_records:'سجلات', dup_keep:'يُبقى', dup_identical:'وصف متطابق',
+ dup_all:'تحديد الكل', dup_none_sel:'إلغاء التحديد', dup_del:'حذف المحدد', dup_pick:'لم تحدد أي سجل', mv_issues:'البلاغات', mv_fleet:'صحة الأسطول', mv_pm:'الصيانة الوقائية', mv_repeat:'الأعطال المتكررة',
  fleet_health:'بطاقة صحة المركبات', pm_plan:'خطة الصيانة الوقائية', repeat_fail:'الأعطال المتكررة',
  odo_note:'العدادات مصدرها سجل الوقود', repeat_note:'تكرار نفس العطل لنفس السيارة خلال 60 يوماً',
  pm_settings:'إعدادات الصيانة الوقائية',
@@ -633,7 +678,16 @@ en:{
  t_overview:'Overview', t_photos:'Shift Photos', t_shifts:'Shifts & Lateness', t_daily:'Daily Reports',
  t_requests:'Requests', t_maint:'Maintenance', t_fuel:'Fuel', t_vio:'Violations', t_msgs:'Messages', t_drivers:'Drivers',
  t_reports:'Reports',
- mt_search:'🔍 Search vehicle or driver', mv_issues:'Issues', mv_fleet:'Fleet health', mv_pm:'Preventive', mv_repeat:'Repeat failures',
+ mt_search:'🔍 Search vehicle or driver',
+ del:'Delete', del_sel:'Delete selected', sel_n:'%s selected',
+ del_confirm1:'Permanently delete this report?\n\n%s\n\nThis cannot be undone.',
+ del_confirm_n:'Permanently delete %s report(s)? This cannot be undone.',
+ del_ok:'🗑️ Deleted %s report(s)', del_denied:'Nothing was deleted — check delete permissions on the table',
+ dup_clean:'Clean duplicates', dup_title:'Duplicate reports',
+ dup_help:'A report counts as a duplicate when it has the same vehicle, same issue type and same date. The oldest one is kept and the rest are pre-selected — review and adjust before confirming.',
+ dup_found:'%s duplicate group(s) · %s extra record(s)', dup_none:'✅ No duplicate reports found',
+ dup_records:'records', dup_keep:'kept', dup_identical:'identical description',
+ dup_all:'Select all', dup_none_sel:'Clear selection', dup_del:'Delete selected', dup_pick:'Nothing selected', mv_issues:'Issues', mv_fleet:'Fleet health', mv_pm:'Preventive', mv_repeat:'Repeat failures',
  fleet_health:'Vehicle health scorecard', pm_plan:'Preventive maintenance plan', repeat_fail:'Repeat failures',
  odo_note:'Odometer data comes from fuel logs', repeat_note:'Same issue on same vehicle within 60 days',
  pm_settings:'Preventive maintenance settings',
@@ -816,6 +870,7 @@ const PM_DEFAULT=[
 ];
 let PM=PM_DEFAULT.map(x=>Object.assign({},x));
 let _mv='issues';
+let _mtSel=new Set(), _dupG=[];
 let _curDrv=null, _view='overview';
 
 const TABS=[
@@ -1171,6 +1226,106 @@ function monthlyTrend(from,to){
    .forEach(x=>{ const k=dOnly(x.report_date||x.created_at).slice(0,7);
      if(!m[k]) m[k]={k:k,n:0,c:0}; m[k].n++; m[k].c+=(parseFloat(x.cost)||0); });
   return Object.values(m).sort((a,b)=>a.k<b.k?-1:1);
+}
+
+/* ═══════════ DELETE / DUPLICATES ═══════════ */
+function mtPick(id,on){ id=String(id); if(on)_mtSel.add(id); else _mtSel.delete(id); mtSelBar(); }
+function mtToggleAll(on){
+  document.querySelectorAll('.mtCk').forEach(c=>{ c.checked=on; mtPick(c.value,on); });
+}
+function mtSelBar(){
+  const el=document.getElementById('mtSelBar'); if(!el) return;
+  const n=_mtSel.size;
+  el.innerHTML = n? `<div class="selbar"><i class="ti ti-checkbox"></i>
+      <span>${t('sel_n',n)}</span>
+      <button class="btn" style="background:var(--red);color:#fff;padding:6px 14px" onclick="delMaintBulk()">
+        <i class="ti ti-trash"></i> ${t('del_sel')}</button>
+      <button class="btn btn-ghost" style="padding:6px 14px" onclick="mtClearSel()">${t('cancel')}</button></div>` : '';
+}
+function mtClearSel(){ _mtSel.clear(); document.querySelectorAll('.mtCk').forEach(c=>c.checked=false);
+  const a=document.getElementById('mtAll'); if(a)a.checked=false; mtSelBar(); }
+
+async function maintDelete(ids){
+  if(!sb) { toast(t('err'),true); return 0; }
+  const {data,error}=await sb.from('maintenance_reports').delete().in('id',ids).select('id');
+  if(error) throw error;
+  const n=(data||[]).length;
+  if(!n) throw new Error(t('del_denied'));
+  return n;
+}
+async function delMaint(id){
+  const m=MAINT.find(x=>String(x.id)===String(id));
+  const label=m?((m.car_plate||'—')+' · '+catLabel(m.category)+' · '+dOnly(m.report_date||m.created_at)):id;
+  if(!confirm(t('del_confirm1',label))) return;
+  try{ const n=await maintDelete([id]); _mtSel.delete(String(id));
+       toast(t('del_ok',n)); await loadAll(); }
+  catch(e){ toast(t('err')+': '+e.message,true); }
+}
+async function delMaintBulk(){
+  const ids=[..._mtSel]; if(!ids.length) return;
+  if(!confirm(t('del_confirm_n',ids.length))) return;
+  try{ const n=await maintDelete(ids); _mtSel.clear();
+       toast(t('del_ok',n)); await loadAll(); }
+  catch(e){ toast(t('err')+': '+e.message,true); }
+}
+
+/* ---- duplicate detection ----
+   same vehicle + same category + same report date  → one group.
+   The oldest record (smallest created_at / id) is kept; the rest are pre-ticked. */
+function normDesc(x){ return String(x||'').trim().toLowerCase().replace(/\s+/g,' '); }
+function findDupes(){
+  const by={};
+  MAINT.forEach(m=>{
+    const k=[String(m.car_plate||'—').trim(),m.category||'other',dOnly(m.report_date||m.created_at)].join('|');
+    (by[k]=by[k]||[]).push(m);
+  });
+  return Object.keys(by).filter(k=>by[k].length>1).map(k=>{
+    const g=by[k].slice().sort((a,b)=>{
+      const ca=dnum(a.created_at)||0, cb=dnum(b.created_at)||0;
+      return ca-cb || (String(a.id)<String(b.id)?-1:1);
+    });
+    const p=k.split('|');
+    const identical=new Set(g.map(m=>normDesc(m.description))).size===1;
+    return {key:k,plate:p[0],cat:p[1],date:p[2],items:g,identical:identical};
+  }).sort((a,b)=>b.items.length-a.items.length||(a.date<b.date?1:-1));
+}
+function openDupes(){
+  _dupG=findDupes();
+  const box=document.getElementById('dupBody');
+  if(!_dupG.length){
+    box.innerHTML='<div class="rp-empty">'+t('dup_none')+'</div>';
+    document.getElementById('dupCount').textContent='';
+  }else{
+    const total=_dupG.reduce((s,g)=>s+g.items.length-1,0);
+    document.getElementById('dupCount').textContent=t('dup_found',_dupG.length,total);
+    box.innerHTML=_dupG.map((g,gi)=>
+      '<div class="dupgrp"><div class="h">'+esc(g.plate)+' · '+catLabel(g.cat)+' · '+g.date+
+        ' — '+g.items.length+' '+t('dup_records')+
+        (g.identical?' <span class="tag d" style="margin-inline-start:6px">'+t('dup_identical')+'</span>':'')+'</div>'+
+      g.items.map((m,i)=>
+        '<div class="duprow'+(i===0?' keep':'')+'">'+
+        (i===0?'<span class="tag k">'+t('dup_keep')+'</span>'
+              :'<input type="checkbox" class="dupCk" value="'+m.id+'" checked>')+
+        '<div style="flex:1">'+
+          '<div><b>'+sevLabel(m.severity)+'</b> · '+stLabel(m.status)+
+          (m.cost?' · '+fmtKD(m.cost)+' KD':'')+
+          (m.photo_url?' · 📷':'')+'</div>'+
+          '<div style="color:var(--muted)">'+esc(m.description||'—')+'</div>'+
+          '<div style="color:var(--muted);font-size:11px">'+t('c_driver')+': '+esc(m.driver_name||'—')+
+          ' · ID '+esc(m.id)+(m.created_at?' · '+fmtD(m.created_at):'')+'</div>'+
+        '</div></div>').join('')+
+      '</div>').join('');
+  }
+  document.getElementById('dupModal').style.display='flex';
+}
+function closeDupes(){ document.getElementById('dupModal').style.display='none'; }
+function dupPickAll(on){ document.querySelectorAll('.dupCk').forEach(c=>c.checked=on); }
+async function applyDupes(){
+  const ids=[...document.querySelectorAll('.dupCk')].filter(c=>c.checked).map(c=>c.value);
+  if(!ids.length){ toast(t('dup_pick'),true); return; }
+  if(!confirm(t('del_confirm_n',ids.length))) return;
+  try{ const n=await maintDelete(ids); toast(t('del_ok',n)); closeDupes(); await loadAll(); }
+  catch(e){ toast(t('err')+': '+e.message,true); }
 }
 
 /* ═══════════ PM SETTINGS ═══════════ */
@@ -1935,8 +2090,14 @@ function renderMaint(){
   if(q)  list=list.filter(m=>((m.car_plate||'')+' '+(m.driver_name||'')+' '+(m.description||'')).toLowerCase().includes(q));
   document.getElementById('mtIssuesN').textContent=t('rp_recs')+': '+list.length;
 
+  /* keep only still-visible selections */
+  const vis=new Set(list.map(m=>String(m.id)));
+  [..._mtSel].forEach(id=>{ if(!vis.has(id)) _mtSel.delete(id); });
+  mtSelBar();
+
   const SEVC={low:'g',medium:'a',high:'a',critical:'r'};
-  const H=[t('c_car'),t('c_driver'),t('c_type'),t('c_sev'),t('c_desc'),t('mc_age'),t('c_photo'),t('c_date'),t('c_status'),t('rp_c_cost'),t('c_action')];
+  const H=['<input type="checkbox" id="mtAll" onclick="mtToggleAll(this.checked)">',
+           t('c_car'),t('c_driver'),t('c_type'),t('c_sev'),t('c_desc'),t('mc_age'),t('c_photo'),t('c_date'),t('c_status'),t('rp_c_cost'),t('c_action')];
   document.getElementById('tMaint').innerHTML=
     '<thead><tr>'+H.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
     (list.length?list.map(m=>{
@@ -1945,15 +2106,16 @@ function renderMaint(){
         ? (m.resolved_at?(daysBetween(dOnly(m.report_date||m.created_at),dOnly(m.resolved_at))+' '+t('rp_k_days')):'—')
         : ((daysBetween(dOnly(m.report_date||m.created_at),today())||0)+' '+t('rp_k_days'));
       const agc=m.status==='done'?'':((daysBetween(dOnly(m.report_date||m.created_at),today())||0)>14?' r':((daysBetween(dOnly(m.report_date||m.created_at),today())||0)>7?' a':''));
-      return `<tr><td><b>${esc(m.car_plate||'—')}</b></td>${nmCell(m.driver_id,m.driver_name)}
+      return `<tr><td><input type="checkbox" class="mtCk" value="${m.id}" ${_mtSel.has(String(m.id))?'checked':''} onclick="mtPick('${m.id}',this.checked)"></td>
+        <td><b>${esc(m.car_plate||'—')}</b></td>${nmCell(m.driver_id,m.driver_name)}
         <td>${catLabel(m.category)}</td><td><span class="st ${SEVC[m.severity]||'a'}">${sevLabel(m.severity)}</span></td>
         <td style="max-width:230px">${esc(m.description||'')}</td>
         <td><span class="age${agc}">${ag}</span></td>
         <td>${m.photo_url?`<img class="thumb" src="${m.photo_url}" onclick="openLB('${m.photo_url}')">`:'—'}</td>
         <td>${fmtD(m.report_date)}</td><td><span class="st ${stc}">${stLabel(m.status)}</span></td>
         <td>${m.cost?fmtKD(m.cost):'—'}</td>
-        <td>${m.status!=='done'?`<button class="act ok" onclick="setMaint(${m.id},'done')">${t('btn_fixed')}</button>${m.status==='open'?`<button class="act" style="background:var(--blue);color:#fff" onclick="setMaint(${m.id},'in_progress')">${t('btn_prog')}</button>`:''}`:'—'}</td></tr>`;
-    }).join('') : `<tr><td colspan="11" class="empty">${t('no_issues')}</td></tr>`)+'</tbody>';
+        <td style="white-space:nowrap">${m.status!=='done'?`<button class="act ok" onclick="setMaint(${m.id},'done')">${t('btn_fixed')}</button>${m.status==='open'?`<button class="act" style="background:var(--blue);color:#fff" onclick="setMaint(${m.id},'in_progress')">${t('btn_prog')}</button>`:''}`:''}<button class="act del" onclick="delMaint('${m.id}')" title="${t('del')}"><i class="ti ti-trash"></i></button></td></tr>`;
+    }).join('') : `<tr><td colspan="12" class="empty">${t('no_issues')}</td></tr>`)+'</tbody>';
 }
 
 function riskCell(x){
