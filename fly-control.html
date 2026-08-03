@@ -116,6 +116,17 @@
   .age{font-size:10.5px;font-weight:900;padding:1px 7px;border-radius:20px;background:var(--light);color:var(--muted)}
   .age.r{background:#fdeaea;color:#a11}.age.a{background:#fff6e5;color:#8a5a00}
 
+  /* ═══ PHOTO GALLERY ═══ */
+  .ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;padding:12px 14px}
+  .ph-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;break-inside:avoid}
+  .ph-card img{width:100%;height:150px;object-fit:cover;display:block;cursor:pointer;background:var(--light)}
+  .ph-meta{padding:7px 9px;font-size:11.5px;line-height:1.55}
+  .ph-meta .p1{font-weight:900;color:var(--navy);font-size:12.5px}
+  .ph-meta .p2{color:var(--muted)}
+  .ph-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+  .ph-tags .st{font-size:10px;padding:1px 7px}
+  .ph-desc{margin-top:4px;color:#444;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
   /* ═══ REPORTS ═══ */
   .rp-head{display:none}
   .rp-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:8px 0 14px}
@@ -146,6 +157,11 @@
     th{background:#0f3a52!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .kpi,.rp-mini th,.st{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     tr{break-inside:avoid}
+    .ph-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important;padding:6px 0!important}
+    .ph-card{border:1px solid #bbb!important}
+    .ph-card img{height:105px!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .ph-meta{font-size:9.5px!important;padding:5px 6px!important}
+    .ph-desc{-webkit-line-clamp:2}
   }
 </style>
 </head>
@@ -352,12 +368,15 @@
       <label data-i18n="from"></label><input type="date" id="rpFrom" onchange="renderReports()">
       <label data-i18n="to"></label><input type="date" id="rpTo" onchange="renderReports()">
       <select id="rpPartner" onchange="renderReports()"></select>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:800;color:var(--navy)">
+        <input type="checkbox" id="rpPhotos" checked onchange="renderReports()"> <span data-i18n="rp_show_photos"></span></label>
       <button class="btn btn-gold push" onclick="printReport()"><i class="ti ti-printer"></i> <span data-i18n="rp_print"></span></button>
       <button class="btn btn-gold" onclick="exportReport()"><i class="ti ti-file-spreadsheet"></i> <span data-i18n="rp_excel"></span></button>
     </div>
     <div class="rp-meta no-print" id="rpMeta"></div>
     <div class="kpis" id="rpKpis"></div>
     <div id="rpBreak"></div>
+    <div id="rpGallery"></div>
     <div class="card"><div class="card-h"><i class="ti ti-list-details"></i> <span id="rpTitle"></span>
       <span class="push" style="font-size:11px;color:var(--muted);font-weight:700" id="rpCount"></span></div>
       <div style="overflow-x:auto"><table id="rpTable"></table></div></div>
@@ -461,7 +480,8 @@ ar:{
  rp_rep_title:'🔁 الأعطال المتكررة', rp_rep_note:'نفس العطل تكرر لنفس المركبة خلال 60 يوماً — مؤشر على إصلاح غير مكتمل.',
  rp_pm_title:'🗓️ صيانة وقائية مستحقة أو قريبة', rp_pm_note:'يُحتسب المتبقي من العداد (سجل الوقود) ومن تاريخ آخر خدمة منجزة.',
  rp_age_title:'⏳ أعمار البلاغات المفتوحة',
- rp_down_note:'أيام التوقف تقديرية: تُحتسب من مدة بقاء بلاغ «حرج» مفتوحاً حتى إغلاقه. إغلاق البلاغ في حينه يجعل الرقم أدق.', rp_trend_title:'📈 الاتجاه الشهري', rp_more:'و%s سطراً إضافياً غير معروض — راجع تبويب الصيانة الوقائية',
+ rp_down_note:'أيام التوقف تقديرية: تُحتسب من مدة بقاء بلاغ «حرج» مفتوحاً حتى إغلاقه. إغلاق البلاغ في حينه يجعل الرقم أدق.', rp_trend_title:'📈 الاتجاه الشهري',
+ rp_ph_title:'📷 صور الأعطال', rp_show_photos:'📷 الصور', rp_k_photos:'بلاغات مصوّرة', rp_more:'و%s سطراً إضافياً غير معروض — راجع تبويب الصيانة الوقائية',
  // reports
  rp_print:'طباعة PDF', rp_excel:'تصدير Excel', rp_btn:'تقرير',
  rp_r_maint:'🔧 تقرير الصيانة', rp_r_fuel:'⛽ تقرير الوقود',
@@ -640,7 +660,8 @@ en:{
  rp_rep_title:'🔁 Repeat failures', rp_rep_note:'Same issue recurred on the same vehicle within 60 days — a sign of an incomplete repair.',
  rp_pm_title:'🗓️ Preventive services due or approaching', rp_pm_note:'Remaining km is derived from fuel-log odometer readings and the last completed service.',
  rp_age_title:'⏳ Age of open issues',
- rp_down_note:'Downtime is an estimate: measured from how long a critical issue stays open until it is closed. Closing issues promptly makes this figure accurate.', rp_trend_title:'📈 Monthly trend', rp_more:'and %s more rows not shown — see the Preventive tab',
+ rp_down_note:'Downtime is an estimate: measured from how long a critical issue stays open until it is closed. Closing issues promptly makes this figure accurate.', rp_trend_title:'📈 Monthly trend',
+ rp_ph_title:'📷 Fault photos', rp_show_photos:'📷 Photos', rp_k_photos:'Reports with photos', rp_more:'and %s more rows not shown — see the Preventive tab',
  rp_print:'Print PDF', rp_excel:'Export Excel', rp_btn:'Report',
  rp_r_maint:'🔧 Maintenance Report', rp_r_fuel:'⛽ Fuel Report',
  rp_r_vio:'🚨 Violations Report', rp_r_ded:'💰 Deductions Report',
@@ -1231,6 +1252,7 @@ function rpBreak(title,rows,showCost){
 function rpRender(cfg){
   document.getElementById('rpKpis').innerHTML=kpiHTML(cfg.kpis||[]);
   document.getElementById('rpBreak').innerHTML=(cfg.breaks||[]).join('');
+  document.getElementById('rpGallery').innerHTML=cfg.gallery||'';
   document.getElementById('rpTitle').textContent=cfg.title;
   document.getElementById('rpCount').textContent=t('rp_recs')+': '+(cfg.rows||[]).length;
   const T=document.getElementById('rpTable');
@@ -1266,6 +1288,7 @@ function renderReports(){
 }
 
 /* ---- 1) MAINTENANCE (professional) ---- */
+function withPhCount(list){ return list.filter(m=>m.photo_url).length; }
 function rpMiniTable(title,headers,rows,note){
   if(!rows.length) return '';
   return '<div class="rp-sec"><h4>'+title+'</h4><div class="card" style="padding:10px 14px">'+
@@ -1346,8 +1369,31 @@ function rpMaint(R,pf){
   B.push(rpBreak(t('rp_by_sev'),SEVg,true));
   B.push(rpBreak(t('rp_by_drv'),rpGroup(list,m=>m.driver_name,m=>m.cost),true));
 
+  /* ---- fault photo gallery ---- */
+  let gal='';
+  const wantPh=document.getElementById('rpPhotos').checked;
+  const withPh=list.filter(m=>m.photo_url);
+  if(wantPh&&withPh.length){
+    const SEVC={low:'g',medium:'a',high:'a',critical:'r'};
+    const CAP=60, shown=withPh.slice(0,CAP), rest=withPh.length-shown.length;
+    gal='<div class="rp-sec"><h4>'+t('rp_ph_title')+' ('+withPh.length+')</h4>'+
+      '<div class="card"><div class="ph-grid">'+
+      shown.map(m=>'<div class="ph-card">'+
+        '<img src="'+esc(m.photo_url)+'" loading="eager" onclick="openLB(\''+m.photo_url+'\')" '+
+        'onerror="this.style.display=\'none\'">'+
+        '<div class="ph-meta"><div class="p1">'+esc(m.car_plate||'—')+' · '+catLabel(m.category)+'</div>'+
+        '<div class="p2">'+esc(m.driver_name||'')+' · '+dOnly(m.report_date||m.created_at)+'</div>'+
+        '<div class="ph-tags"><span class="st '+(SEVC[m.severity]||'a')+'">'+sevLabel(m.severity)+'</span>'+
+        '<span class="st '+(m.status==='done'?'g':(m.status==='in_progress'?'b':'r'))+'">'+stLabel(m.status)+'</span>'+
+        (m.cost?'<span class="st b">'+fmtKD(m.cost)+' KD</span>':'')+'</div>'+
+        (m.description?'<div class="ph-desc">'+esc(m.description)+'</div>':'')+
+        '</div></div>').join('')+
+      '</div>'+(rest>0?'<div style="font-size:11px;color:var(--muted);padding:0 14px 12px">'+t('rp_more',rest)+'</div>':'')+
+      '</div></div>';
+  }
+
   rpRender({
-    title:t('rp_r_maint'), file:'maintenance',
+    title:t('rp_r_maint'), file:'maintenance', gallery:gal,
     kpis:[{l:t('rp_k_total'),v:list.length,c:'var(--navy)'},
           {l:t('k_open_issues'),v:openL.length,c:'var(--red)'},
           {l:t('k_crit'),v:crit,c:'var(--amber)'},
@@ -1359,6 +1405,7 @@ function rpMaint(R,pf){
           {l:t('mc_cpk'),v:cpk!==null?fmtKD(cpk):'—',c:'var(--blue)'},
           {l:t('mk_pm_due'),v:pmOver+(pmSoon?' (+'+pmSoon+')':''),c:'var(--purple)'},
           {l:t('mk_repeat'),v:reps.length,c:'var(--red)'},
+          {l:t('rp_k_photos'),v:withPhCount(list),c:'var(--blue)'},
           {l:t('k_cost'),v:fmtKD(cost),c:'var(--navy)'}],
     breaks:B,
     rows:list.map(m=>{const o={};
@@ -1373,6 +1420,7 @@ function rpMaint(R,pf){
       o[XH('mc_odo')]=(function(){const v=odoAt(String(m.car_plate||'').trim(),dOnly(m.report_date||m.created_at));
         return v!==null?Math.round(v):'';})();
       o[XH('rp_c_cost')]=m.cost?fmtKD(m.cost):'';
+      o[XH('c_photo')]=m.photo_url||'';
       return o;})
   });
 }
