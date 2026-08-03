@@ -97,6 +97,25 @@
   .toast.on{display:block}.toast.err{background:var(--red)}
   @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
 
+  /* ═══ FLEET / MAINTENANCE ═══ */
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{padding:6px 14px;border:1px solid var(--border);border-radius:20px;cursor:pointer;
+        font-size:12.5px;font-weight:800;background:#fff;color:var(--navy);white-space:nowrap}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .alertbar{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:10px;
+            margin-bottom:10px;font-size:13px;font-weight:700;border:1px solid}
+  .alertbar.r{background:#fdeaea;border-color:#f3b8b8;color:#a11}
+  .alertbar.a{background:#fff6e5;border-color:#f0d090;color:#8a5a00}
+  .alertbar.g{background:#eaf7ee;border-color:#b7ddc2;color:#186b32}
+  .alertbar i{font-size:18px;line-height:1}
+  .risk{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:900;color:#fff}
+  .risk.r{background:var(--red)}.risk.a{background:var(--amber)}.risk.g{background:var(--green)}
+  .gauge{display:inline-block;width:56px;height:7px;border-radius:5px;background:var(--border);
+         vertical-align:middle;overflow:hidden}
+  .gauge>span{display:block;height:100%;border-radius:5px}
+  .age{font-size:10.5px;font-weight:900;padding:1px 7px;border-radius:20px;background:var(--light);color:var(--muted)}
+  .age.r{background:#fdeaea;color:#a11}.age.a{background:#fff6e5;color:#8a5a00}
+
   /* ═══ REPORTS ═══ */
   .rp-head{display:none}
   .rp-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:8px 0 14px}
@@ -226,13 +245,43 @@
   <!-- MAINTENANCE -->
   <div class="view" id="v-maint">
     <div class="kpis" id="kMaint"></div>
+    <div id="mtAlerts"></div>
     <div class="toolbar">
+      <div class="chips" id="mtChips">
+        <button class="chip on" data-mv="issues" onclick="mtGo('issues')"><i class="ti ti-tool"></i> <span data-i18n="mv_issues"></span></button>
+        <button class="chip" data-mv="fleet" onclick="mtGo('fleet')"><i class="ti ti-car"></i> <span data-i18n="mv_fleet"></span></button>
+        <button class="chip" data-mv="pm" onclick="mtGo('pm')"><i class="ti ti-calendar-repeat"></i> <span data-i18n="mv_pm"></span></button>
+        <button class="chip" data-mv="repeat" onclick="mtGo('repeat')"><i class="ti ti-repeat"></i> <span data-i18n="mv_repeat"></span></button>
+      </div>
       <select id="maintStatus" onchange="renderMaint()"></select>
       <select id="maintSev" onchange="renderMaint()"></select>
-      <button class="btn btn-gold push" onclick="openReport('maint')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
+      <input type="text" id="mtSearch" oninput="renderMaint()" style="min-width:150px">
+      <button class="btn btn-ghost push" onclick="openPM()"><i class="ti ti-settings-cog"></i> <span data-i18n="pm_settings"></span></button>
+      <button class="btn btn-gold" onclick="openReport('maint')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
     </div>
-    <div class="card"><div class="card-h"><i class="ti ti-tool"></i> <span data-i18n="issue_reports"></span></div>
-      <div style="overflow-x:auto"><table id="tMaint"></table></div></div>
+
+    <div id="mt-issues">
+      <div class="card"><div class="card-h"><i class="ti ti-tool"></i> <span data-i18n="issue_reports"></span>
+        <span class="push" style="font-size:11px;color:var(--muted);font-weight:700" id="mtIssuesN"></span></div>
+        <div style="overflow-x:auto"><table id="tMaint"></table></div></div>
+    </div>
+
+    <div id="mt-fleet" style="display:none">
+      <div class="card"><div class="card-h"><i class="ti ti-car"></i> <span data-i18n="fleet_health"></span>
+        <span class="push" style="font-size:11px;color:var(--muted);font-weight:700" data-i18n="odo_note"></span></div>
+        <div style="overflow-x:auto"><table id="tFleet"></table></div></div>
+    </div>
+
+    <div id="mt-pm" style="display:none">
+      <div class="card"><div class="card-h"><i class="ti ti-calendar-repeat"></i> <span data-i18n="pm_plan"></span></div>
+        <div style="overflow-x:auto"><table id="tPM"></table></div></div>
+    </div>
+
+    <div id="mt-repeat" style="display:none">
+      <div class="card"><div class="card-h"><i class="ti ti-repeat"></i> <span data-i18n="repeat_fail"></span>
+        <span class="push" style="font-size:11px;color:var(--muted);font-weight:700" data-i18n="repeat_note"></span></div>
+        <div style="overflow-x:auto"><table id="tRepeat"></table></div></div>
+    </div>
   </div>
 
   <!-- FUEL -->
@@ -316,6 +365,22 @@
 
 </div>
 
+<!-- PM SETTINGS MODAL -->
+<div class="modal-bg" id="pmModal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-h"><i class="ti ti-calendar-repeat"></i> <span data-i18n="pm_settings"></span>
+      <button class="modal-x" onclick="closePM()">×</button></div>
+    <div class="modal-b">
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px" data-i18n="pm_help"></p>
+      <div style="overflow-x:auto"><table id="tPMset"></table></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-gold" onclick="savePM()"><i class="ti ti-device-floppy"></i> <span data-i18n="save"></span></button>
+      <button class="btn btn-ghost" onclick="closePM()"><span data-i18n="close"></span></button>
+    </div>
+  </div>
+</div>
+
 <!-- DRIVER MODAL -->
 <div class="modal-bg" id="drvModal">
   <div class="modal" style="max-width:820px">
@@ -368,6 +433,35 @@ ar:{
  t_overview:'نظرة عامة', t_photos:'صور الشفت', t_shifts:'الشفتات والتأخير', t_daily:'التقارير اليومية',
  t_requests:'الطلبات', t_maint:'الصيانة', t_fuel:'الوقود', t_vio:'المخالفات', t_msgs:'الرسائل', t_drivers:'السائقون',
  t_reports:'التقارير',
+ // maintenance pro
+ mt_search:'🔍 بحث بالسيارة أو السائق', mv_issues:'البلاغات', mv_fleet:'صحة الأسطول', mv_pm:'الصيانة الوقائية', mv_repeat:'الأعطال المتكررة',
+ fleet_health:'بطاقة صحة المركبات', pm_plan:'خطة الصيانة الوقائية', repeat_fail:'الأعطال المتكررة',
+ odo_note:'العدادات مصدرها سجل الوقود', repeat_note:'تكرار نفس العطل لنفس السيارة خلال 60 يوماً',
+ pm_settings:'إعدادات الصيانة الوقائية',
+ pm_help:'حدّد لكل خدمة كل كم كيلومتر أو كل كم يوم تتكرر. اترك القيمة صفراً لتجاهل ذلك المعيار.',
+ pm_task:'الخدمة', pm_every_km:'كل (كم)', pm_every_days:'كل (يوم)',
+ pm_last:'آخر خدمة', pm_last_odo:'عداد آخر خدمة', pm_rem_km:'المتبقي (كم)', pm_rem_days:'المتبقي (يوم)',
+ pm_over:'⛔ مستحقة', pm_soon:'⚠️ قريباً', pm_ok:'✅ سليمة', pm_never:'❓ بلا سجل',
+ pm_first:'أول مرة', pm_lastc:'آخر مرة',
+ pm_oil:'تغيير زيت وفلتر', pm_brakes:'فحص/تبديل فرامل', pm_tires:'تبديل أو دوران الإطارات',
+ pm_ac:'صيانة التكييف', pm_elec:'فحص كهرباء',
+ pm_local_only:'⚠️ حُفظت محلياً فقط — تعذّر الحفظ في السحابة',
+ mc_age:'العمر', mc_risk:'الخطورة', mc_open:'مفتوحة', mc_reports:'البلاغات', mc_repeat:'تكرار',
+ mc_odo:'العداد الحالي', mc_kmday:'المعدل', mc_mo:'شهر', mc_cpk:'تكلفة/1000كم',
+ mc_down:'توقف تقديري (يوم)', mc_avail:'الجاهزية', mc_pm:'وقائية', mc_last_srv:'آخر صيانة',
+ mk_cars_down:'مركبات متوقفة', mk_oldest:'أقدم بلاغ مفتوح', mk_pm_due:'صيانة وقائية مستحقة', mk_repeat:'أعطال متكررة',
+ mal_crit_old:'%s بلاغ حرج/خطير مفتوح منذ أكثر من 3 أيام',
+ mal_pm_over:'%s خدمة وقائية تجاوزت موعدها', mal_pm_over_s:'راجع تبويب الصيانة الوقائية',
+ mal_repeat:'%s حالة عطل متكرر', mal_no_odo:'%s مركبة بلا قراءة عداد',
+ mal_no_odo_s:'حساب الكيلومترات والصيانة الوقائية يحتاج تسجيل العداد مع تعبئة الوقود',
+ mal_ok:'✅ الأسطول سليم — لا يوجد ما يستدعي تدخلاً عاجلاً',
+ no_repeat:'لا توجد أعطال متكررة في هذه الفترة',
+ ag_0_3:'0–3 أيام', ag_4_7:'4–7 أيام', ag_8_14:'8–14 يوم', ag_15p:'أكثر من 14 يوم',
+ rp_sc_title:'🚗 بطاقة صحة المركبات', rp_sc_note:'الخطورة تُحتسب من: البلاغات الحرجة المفتوحة، تكرار الأعطال، الصيانة الوقائية المتأخرة، ومدة بقاء البلاغ مفتوحاً.',
+ rp_rep_title:'🔁 الأعطال المتكررة', rp_rep_note:'نفس العطل تكرر لنفس المركبة خلال 60 يوماً — مؤشر على إصلاح غير مكتمل.',
+ rp_pm_title:'🗓️ صيانة وقائية مستحقة أو قريبة', rp_pm_note:'يُحتسب المتبقي من العداد (سجل الوقود) ومن تاريخ آخر خدمة منجزة.',
+ rp_age_title:'⏳ أعمار البلاغات المفتوحة',
+ rp_down_note:'أيام التوقف تقديرية: تُحتسب من مدة بقاء بلاغ «حرج» مفتوحاً حتى إغلاقه. إغلاق البلاغ في حينه يجعل الرقم أدق.', rp_trend_title:'📈 الاتجاه الشهري', rp_more:'و%s سطراً إضافياً غير معروض — راجع تبويب الصيانة الوقائية',
  // reports
  rp_print:'طباعة PDF', rp_excel:'تصدير Excel', rp_btn:'تقرير',
  rp_r_maint:'🔧 تقرير الصيانة', rp_r_fuel:'⛽ تقرير الوقود',
@@ -519,6 +613,34 @@ en:{
  t_overview:'Overview', t_photos:'Shift Photos', t_shifts:'Shifts & Lateness', t_daily:'Daily Reports',
  t_requests:'Requests', t_maint:'Maintenance', t_fuel:'Fuel', t_vio:'Violations', t_msgs:'Messages', t_drivers:'Drivers',
  t_reports:'Reports',
+ mt_search:'🔍 Search vehicle or driver', mv_issues:'Issues', mv_fleet:'Fleet health', mv_pm:'Preventive', mv_repeat:'Repeat failures',
+ fleet_health:'Vehicle health scorecard', pm_plan:'Preventive maintenance plan', repeat_fail:'Repeat failures',
+ odo_note:'Odometer data comes from fuel logs', repeat_note:'Same issue on same vehicle within 60 days',
+ pm_settings:'Preventive maintenance settings',
+ pm_help:'Set the km and/or day interval for each service. Leave 0 to ignore that criterion.',
+ pm_task:'Service', pm_every_km:'Every (km)', pm_every_days:'Every (days)',
+ pm_last:'Last service', pm_last_odo:'Odo at service', pm_rem_km:'Remaining (km)', pm_rem_days:'Remaining (days)',
+ pm_over:'⛔ Overdue', pm_soon:'⚠️ Due soon', pm_ok:'✅ OK', pm_never:'❓ No record',
+ pm_first:'First', pm_lastc:'Last',
+ pm_oil:'Oil & filter change', pm_brakes:'Brake check/replace', pm_tires:'Tire change or rotation',
+ pm_ac:'A/C service', pm_elec:'Electrical check',
+ pm_local_only:'⚠️ Saved locally only — cloud save failed',
+ mc_age:'Age', mc_risk:'Risk', mc_open:'Open', mc_reports:'Reports', mc_repeat:'Repeats',
+ mc_odo:'Current odo', mc_kmday:'Rate', mc_mo:'mo', mc_cpk:'Cost/1000km',
+ mc_down:'Est. downtime (d)', mc_avail:'Availability', mc_pm:'Preventive', mc_last_srv:'Last service',
+ mk_cars_down:'Vehicles down', mk_oldest:'Oldest open issue', mk_pm_due:'PM due', mk_repeat:'Repeat failures',
+ mal_crit_old:'%s critical/high issue(s) open for more than 3 days',
+ mal_pm_over:'%s preventive service(s) overdue', mal_pm_over_s:'Check the Preventive tab',
+ mal_repeat:'%s repeat-failure case(s)', mal_no_odo:'%s vehicle(s) with no odometer reading',
+ mal_no_odo_s:'Km and preventive maintenance need odometer logged with fuel fill-ups',
+ mal_ok:'✅ Fleet healthy — nothing needs urgent action',
+ no_repeat:'No repeat failures in this period',
+ ag_0_3:'0–3 days', ag_4_7:'4–7 days', ag_8_14:'8–14 days', ag_15p:'Over 14 days',
+ rp_sc_title:'🚗 Vehicle health scorecard', rp_sc_note:'Risk is derived from open critical issues, repeat failures, overdue preventive services and how long issues stay open.',
+ rp_rep_title:'🔁 Repeat failures', rp_rep_note:'Same issue recurred on the same vehicle within 60 days — a sign of an incomplete repair.',
+ rp_pm_title:'🗓️ Preventive services due or approaching', rp_pm_note:'Remaining km is derived from fuel-log odometer readings and the last completed service.',
+ rp_age_title:'⏳ Age of open issues',
+ rp_down_note:'Downtime is an estimate: measured from how long a critical issue stays open until it is closed. Closing issues promptly makes this figure accurate.', rp_trend_title:'📈 Monthly trend', rp_more:'and %s more rows not shown — see the Preventive tab',
  rp_print:'Print PDF', rp_excel:'Export Excel', rp_btn:'Report',
  rp_r_maint:'🔧 Maintenance Report', rp_r_fuel:'⛽ Fuel Report',
  rp_r_vio:'🚨 Violations Report', rp_r_ded:'💰 Deductions Report',
@@ -664,6 +786,15 @@ const SUPA_URL='https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY='sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 let sb=null, PHOTOS=[], REQS=[], MAINT=[], FUEL=[], VIO=[], DRIVERS=[];
 let SCHED=[], CLOCKINS=[], DEDS=[], MSGS=[], DAILY=[], CFG={grace:30,fraction:0.5,prealert:30};
+const PM_DEFAULT=[
+  {id:'oil',    cat:'engine',     km:5000,  days:90},
+  {id:'brakes', cat:'brakes',     km:20000, days:365},
+  {id:'tires',  cat:'tires',      km:10000, days:180},
+  {id:'ac',     cat:'ac',         km:0,     days:365},
+  {id:'elec',   cat:'electrical', km:0,     days:365},
+];
+let PM=PM_DEFAULT.map(x=>Object.assign({},x));
+let _mv='issues';
 let _curDrv=null, _view='overview';
 
 const TABS=[
@@ -727,6 +858,7 @@ function fillSelects(){
     +opt('ded',t('rp_r_ded'))+opt('shifts',t('rp_r_shifts'))+opt('req',t('rp_r_req'))+opt('daily',t('rp_r_daily')));
   S('setFrac', opt('0.25',t('frac_25'))+opt('0.5',t('frac_50'))+opt('0.75',t('frac_75'))+opt('1',t('frac_100')));
   const ds=document.getElementById('drvSearch'); if(ds) ds.placeholder=t('search_driver');
+  const ms=document.getElementById('mtSearch'); if(ms) ms.placeholder=t('mt_search');
   const q=document.getElementById('quickMsgBtns');
   if(q) q.innerHTML=['shift','photo','meet','salary'].map(k=>
     `<button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border)" onclick="quickMsg('${k}')">${t('q_'+k)}</button>`).join('');
@@ -779,7 +911,10 @@ async function loadAll(){
       if(x.key==='late_grace_minutes') CFG.grace=parseInt(x.value,10)||30;
       if(x.key==='late_deduct_fraction') CFG.fraction=parseFloat(x.value)||0.5;
       if(x.key==='prealert_minutes') CFG.prealert=parseInt(x.value,10)||30;
+      if(x.key==='pm_rules'){ try{ const r=JSON.parse(x.value); if(Array.isArray(r)&&r.length) PM=r; }catch(e){} }
     });
+    try{ const lp=localStorage.getItem('fly_pm_rules');
+      if(lp && !(st.data||[]).some(x=>x.key==='pm_rules')){ const r=JSON.parse(lp); if(Array.isArray(r)&&r.length) PM=r; } }catch(e){}
     setCloud('connected',t('cl_connected'));
     document.getElementById('cfgGrace').textContent=CFG.grace;
     fillSelects(); badges(); go(_view);
@@ -858,6 +993,186 @@ function timeAgo(d){
 }
 function shiftLabel(ty){
   return ty==='off'?t('sh_off'):(ty==='holiday'?t('sh_holiday'):(ty==='evening'?t('sh_evening'):t('sh_morning')));
+}
+
+/* ═══════════ FLEET ANALYTICS ═══════════ */
+const DAYMS=86400000;
+function dnum(v){ const x=new Date(String(v||'').length<=10?(v+'T00:00:00'):v); return isNaN(x)?null:x.getTime(); }
+function daysBetween(a,b){ const x=dnum(a),y=dnum(b); return (x===null||y===null)?null:Math.max(0,Math.round((y-x)/DAYMS)); }
+function catLabel(c){ const M={engine:t('cat_engine'),tires:t('cat_tires'),brakes:t('cat_brakes'),ac:t('cat_ac'),
+  body:t('cat_body'),electrical:t('cat_electrical'),other:t('cat_other')}; return M[c]||c||'—'; }
+function sevLabel(v){ const M={low:t('sev_low'),medium:t('sev_med'),high:t('sev_high'),critical:t('sev_crit')}; return M[v]||v||'—'; }
+function stLabel(v){ const M={open:t('mst_open'),in_progress:t('mst_prog'),done:t('mst_done')}; return M[v]||v||'—'; }
+function pmLabel(id){ return t('pm_'+id)||id; }
+
+/* all plates known to the system */
+function fleetCars(){
+  const set=new Set();
+  DRIVERS.forEach(d=>{ if(d.car) set.add(String(d.car).trim()); });
+  MAINT.forEach(m=>{ if(m.car_plate) set.add(String(m.car_plate).trim()); });
+  FUEL.forEach(f=>{ if(f.car_plate) set.add(String(f.car_plate).trim()); });
+  return [...set].filter(Boolean).sort();
+}
+function carDriver(plate){
+  const d=DRIVERS.find(x=>String(x.car||'').trim()===plate);
+  if(d) return d.name;
+  const m=MAINT.find(x=>String(x.car_plate||'').trim()===plate&&x.driver_name);
+  return m?m.driver_name:'—';
+}
+/* odometer readings for a plate, ascending by date */
+function odoSeries(plate){
+  return FUEL.filter(f=>String(f.car_plate||'').trim()===plate && parseFloat(f.odometer)>0)
+    .map(f=>({d:dOnly(f.log_date),o:parseFloat(f.odometer)}))
+    .filter(x=>x.d).sort((a,b)=>a.d<b.d?-1:1);
+}
+function carOdo(plate){ const s=odoSeries(plate); return s.length?s[s.length-1]:null; }
+/* estimated odometer on a given date */
+function odoAt(plate,dateStr){
+  const s=odoSeries(plate); if(!s.length) return null;
+  let prev=null;
+  for(const p of s){ if(p.d<=dateStr) prev=p; else break; }
+  if(prev) return prev.o;
+  return s[0].o;
+}
+/* km per day from the odometer series */
+function kmPerDay(plate){
+  const s=odoSeries(plate); if(s.length<2) return null;
+  const a=s[0],b=s[s.length-1];
+  const dd=daysBetween(a.d,b.d); if(!dd) return null;
+  const dk=b.o-a.o; return dk>0?(dk/dd):null;
+}
+/* days a vehicle was out of service in a window (critical/high only) */
+function downtime(plate,from,to){
+  const f=dnum(from), tt=dnum(to)+DAYMS, now=Date.now();
+  let d=0;
+  MAINT.filter(m=>String(m.car_plate||'').trim()===plate&&m.severity==='critical')
+   .forEach(m=>{
+     const a=dnum(m.report_date||m.created_at); if(a===null) return;
+     const b=m.status==='done'?(dnum(m.resolved_at)||a):Math.min(now,tt);
+     const s0=Math.max(a,f), s1=Math.min(b,tt);
+     if(s1>s0) d+=(s1-s0)/DAYMS;
+   });
+  return Math.round(d*10)/10;
+}
+/* repeat failures: same plate + category >= 2 times within N days */
+function repeatFailures(from,to,win){
+  win=win||60;
+  const list=MAINT.filter(m=>{const d=dOnly(m.report_date||m.created_at); return d>=from&&d<=to;});
+  const by={};
+  list.forEach(m=>{ const k=(String(m.car_plate||'—').trim())+'|'+(m.category||'other');
+    (by[k]=by[k]||[]).push(dOnly(m.report_date||m.created_at)); });
+  const out=[];
+  Object.keys(by).forEach(k=>{
+    const ds=by[k].sort(); if(ds.length<2) return;
+    let hit=false;
+    for(let i=1;i<ds.length;i++){ const gap=daysBetween(ds[i-1],ds[i]); if(gap!==null&&gap<=win){hit=true;break;} }
+    if(!hit) return;
+    const p=k.split('|');
+    const cost=list.filter(m=>String(m.car_plate||'—').trim()===p[0]&&(m.category||'other')===p[1])
+                   .reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
+    out.push({plate:p[0],cat:p[1],n:ds.length,first:ds[0],last:ds[ds.length-1],cost:cost});
+  });
+  return out.sort((a,b)=>b.n-a.n);
+}
+/* preventive maintenance status for one plate */
+function pmStatus(plate){
+  const cur=carOdo(plate), rate=kmPerDay(plate), T=today();
+  return PM.map(r=>{
+    const done=MAINT.filter(m=>String(m.car_plate||'').trim()===plate&&m.category===r.cat&&m.status==='done')
+      .sort((a,b)=>dOnly(b.report_date)<dOnly(a.report_date)?-1:1)[0];
+    const lastDate=done?dOnly(done.report_date||done.created_at):null;
+    const lastOdo =lastDate?odoAt(plate,lastDate):null;
+    let remKm=null, remDays=null;
+    if(r.km>0&&cur&&lastOdo!==null) remKm=Math.round(lastOdo+r.km-cur.o);
+    else if(r.km>0&&cur&&lastOdo===null) remKm=null;
+    if(r.days>0&&lastDate) remDays=r.days-(daysBetween(lastDate,T)||0);
+    /* projected days until the km limit is reached */
+    let projDays=null;
+    if(remKm!==null&&rate&&rate>0) projDays=Math.round(remKm/rate);
+    const eff=[remDays,projDays].filter(x=>x!==null);
+    const soonest=eff.length?Math.min.apply(null,eff):null;
+    let st='none';
+    if(!lastDate) st='never';
+    else if(soonest===null) st='unknown';
+    else if(soonest<0) st='over';
+    else if(soonest<=14) st='soon';
+    else st='ok';
+    return {rule:r,plate:plate,lastDate:lastDate,lastOdo:lastOdo,curOdo:cur?cur.o:null,
+            remKm:remKm,remDays:remDays,projDays:projDays,soonest:soonest,st:st};
+  });
+}
+/* full per-vehicle scorecard */
+function carStats(plate,from,to){
+  const list=MAINT.filter(m=>{const d=dOnly(m.report_date||m.created_at);
+    return String(m.car_plate||'').trim()===plate&&d>=from&&d<=to;});
+  const open=list.filter(m=>m.status!=='done');
+  const openCrit=open.filter(m=>m.severity==='critical').length;
+  const openHigh=open.filter(m=>m.severity==='high').length;
+  const cost=list.reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
+  const cur=carOdo(plate), rate=kmPerDay(plate);
+  const winDays=Math.max(1,daysBetween(from,to)||1);
+  const kmWin=rate?rate*winDays:null;
+  const cpk=(kmWin&&kmWin>0)?(cost/kmWin*1000):null;
+  const dt=downtime(plate,from,to);
+  const avail=Math.max(0,Math.round((1-dt/winDays)*1000)/10);
+  const oldestOpen=open.map(m=>daysBetween(dOnly(m.report_date||m.created_at),today()))
+                       .filter(x=>x!==null).sort((a,b)=>b-a)[0];
+  const pm=pmStatus(plate);
+  const pmOver=pm.filter(x=>x.st==='over').length;
+  const pmSoon=pm.filter(x=>x.st==='soon').length;
+  const reps=repeatFailures(from,to).filter(r=>r.plate===plate).length;
+  let risk=openCrit*30+openHigh*15+(open.length-openCrit-openHigh)*5+reps*20+pmOver*15;
+  if(oldestOpen>14) risk+=10;
+  if(avail<90) risk+=10;
+  risk=Math.min(100,risk);
+  const band=risk>=60?'r':(risk>=30?'a':'g');
+  return {plate:plate,driver:carDriver(plate),n:list.length,open:open.length,openCrit:openCrit,openHigh:openHigh,
+    cost:cost,odo:cur?cur.o:null,odoDate:cur?cur.d:null,kmDay:rate,cpk:cpk,down:dt,avail:avail,
+    oldestOpen:oldestOpen===undefined?null:oldestOpen,pmOver:pmOver,pmSoon:pmSoon,repeats:reps,
+    risk:risk,band:band,lastService:list.filter(m=>m.status==='done')
+      .map(m=>dOnly(m.report_date)).sort().slice(-1)[0]||null};
+}
+function fleetScorecard(from,to){
+  return fleetCars().map(p=>carStats(p,from,to)).sort((a,b)=>b.risk-a.risk||b.cost-a.cost);
+}
+function agingBuckets(list){
+  const B=[{k:t('ag_0_3'),n:0},{k:t('ag_4_7'),n:0},{k:t('ag_8_14'),n:0},{k:t('ag_15p'),n:0}];
+  list.filter(m=>m.status!=='done').forEach(m=>{
+    const a=daysBetween(dOnly(m.report_date||m.created_at),today());
+    if(a===null) return;
+    if(a<=3)B[0].n++; else if(a<=7)B[1].n++; else if(a<=14)B[2].n++; else B[3].n++;
+  });
+  return B.filter(x=>x.n>0);
+}
+function monthlyTrend(from,to){
+  const m={};
+  MAINT.filter(x=>{const d=dOnly(x.report_date||x.created_at); return d>=from&&d<=to;})
+   .forEach(x=>{ const k=dOnly(x.report_date||x.created_at).slice(0,7);
+     if(!m[k]) m[k]={k:k,n:0,c:0}; m[k].n++; m[k].c+=(parseFloat(x.cost)||0); });
+  return Object.values(m).sort((a,b)=>a.k<b.k?-1:1);
+}
+
+/* ═══════════ PM SETTINGS ═══════════ */
+function openPM(){
+  document.getElementById('tPMset').innerHTML=
+    '<thead><tr><th>'+t('pm_task')+'</th><th>'+t('c_type')+'</th><th>'+t('pm_every_km')+'</th><th>'+t('pm_every_days')+'</th></tr></thead><tbody>'+
+    PM.map((r,i)=>'<tr><td><b>'+pmLabel(r.id)+'</b></td><td>'+catLabel(r.cat)+'</td>'+
+      '<td><input type="number" min="0" step="500" id="pmk'+i+'" value="'+(r.km||0)+'" style="width:110px"></td>'+
+      '<td><input type="number" min="0" step="15" id="pmd'+i+'" value="'+(r.days||0)+'" style="width:110px"></td></tr>').join('')+
+    '</tbody>';
+  document.getElementById('pmModal').style.display='flex';
+}
+function closePM(){ document.getElementById('pmModal').style.display='none'; }
+async function savePM(){
+  PM=PM.map((r,i)=>Object.assign({},r,{
+    km:parseInt(document.getElementById('pmk'+i).value,10)||0,
+    days:parseInt(document.getElementById('pmd'+i).value,10)||0}));
+  try{ localStorage.setItem('fly_pm_rules',JSON.stringify(PM)); }catch(e){}
+  try{
+    if(sb) await sb.from('app_settings').upsert([{key:'pm_rules',value:JSON.stringify(PM),updated_at:new Date().toISOString()}],{onConflict:'key'});
+    toast(t('done_settings'));
+  }catch(e){ toast(t('pm_local_only'),true); }
+  closePM(); renderMaint();
 }
 
 /* ═══════════ REPORTS ═══════════ */
@@ -950,40 +1265,114 @@ function renderReports(){
   ({maint:rpMaint,fuel:rpFuel,vio:rpVio,ded:rpDed,shifts:rpShifts,req:rpReq,daily:rpDaily}[ty]||rpMaint)(R,pf);
 }
 
-/* ---- 1) MAINTENANCE ---- */
+/* ---- 1) MAINTENANCE (professional) ---- */
+function rpMiniTable(title,headers,rows,note){
+  if(!rows.length) return '';
+  return '<div class="rp-sec"><h4>'+title+'</h4><div class="card" style="padding:10px 14px">'+
+   '<table class="rp-mini"><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+   rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+
+   (note?'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+note+'</div>':'')+'</div></div>';
+}
 function rpMaint(R,pf){
-  const CAT={engine:t('cat_engine'),tires:t('cat_tires'),brakes:t('cat_brakes'),ac:t('cat_ac'),
-             body:t('cat_body'),electrical:t('cat_electrical'),other:t('cat_other')};
-  const SEV={low:t('sev_low'),medium:t('sev_med'),high:t('sev_high'),critical:t('sev_crit')};
-  const ST={open:t('mst_open'),in_progress:t('mst_prog'),done:t('mst_done')};
   const list=MAINT.filter(m=>{const d=dOnly(m.report_date||m.created_at);
     return d>=R.from&&d<=R.to&&inPartner(pf,m.driver_id);});
-  const cost=list.reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
-  const open=list.filter(m=>m.status==='open').length;
-  const crit=list.filter(m=>m.severity==='critical'||m.severity==='high').length;
+  const openL=list.filter(m=>m.status!=='done');
   const fixed=list.filter(m=>m.status==='done');
-  let avg='—';
-  const spans=fixed.map(m=>{ if(!m.resolved_at) return null;
-      const a=new Date(m.report_date||m.created_at), b=new Date(m.resolved_at);
-      return (isNaN(a)||isNaN(b))?null:(b-a)/86400000; }).filter(x=>x!==null&&x>=0);
-  if(spans.length) avg=(spans.reduce((s,x)=>s+x,0)/spans.length).toFixed(1)+' '+t('rp_k_days');
+  const cost=list.reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
+  const crit=list.filter(m=>m.severity==='critical'||m.severity==='high').length;
+
+  /* mean time to repair */
+  const spans=fixed.map(m=>m.resolved_at?daysBetween(dOnly(m.report_date||m.created_at),dOnly(m.resolved_at)):null)
+                   .filter(x=>x!==null);
+  const mttr=spans.length?(spans.reduce((a,b)=>a+b,0)/spans.length).toFixed(1)+' '+t('rp_k_days'):'—';
+  const oldest=openL.map(m=>daysBetween(dOnly(m.report_date||m.created_at),today()))
+                    .filter(x=>x!==null).sort((a,b)=>b-a)[0];
+
+  /* fleet-level figures */
+  let cars=fleetCars();
+  if(pf) cars=cars.filter(p=>{const d=DRIVERS.find(x=>String(x.car||'').trim()===p); return d&&d.partner===pf;});
+  const score=cars.map(p=>carStats(p,R.from,R.to)).sort((a,b)=>b.risk-a.risk||b.cost-a.cost);
+  const winDays=Math.max(1,daysBetween(R.from,R.to)||1);
+  const totDown=score.reduce((s,x)=>s+x.down,0);
+  const avail=cars.length?Math.max(0,Math.round((1-totDown/(cars.length*winDays))*1000)/10):null;
+  const kmTot=score.reduce((s,x)=>s+((x.kmDay||0)*winDays),0);
+  const cpk=kmTot>0?(cost/kmTot*1000):null;
+  const reps=repeatFailures(R.from,R.to).filter(r=>!pf||cars.indexOf(r.plate)>=0);
+  const pmOver=score.reduce((s,x)=>s+x.pmOver,0), pmSoon=score.reduce((s,x)=>s+x.pmSoon,0);
+  const downCars=score.filter(x=>x.openCrit>0).length;
+
+  const CATg=rpGroup(list,m=>catLabel(m.category),m=>m.cost);
+  const SEVg=rpGroup(list,m=>sevLabel(m.severity),m=>m.cost);
+  const trend=monthlyTrend(R.from,R.to);
+  const ages=agingBuckets(list);
+
+  const B=[];
+  /* 1. vehicle scorecard */
+  B.push(rpMiniTable(t('rp_sc_title'),
+    [t('c_car'),t('mc_risk'),t('mc_open'),t('mc_reports'),t('rp_c_cost'),t('mc_cpk'),t('mc_down'),t('mc_avail'),t('mc_pm')],
+    score.filter(x=>x.n||x.open||x.pmOver).map(x=>[
+      '<b>'+esc(x.plate)+'</b>','<span class="risk '+x.band+'">'+x.risk+'</span>',
+      String(x.open||0),String(x.n),fmtKD(x.cost),
+      x.cpk!==null?fmtKD(x.cpk):'—',String(x.down||0),x.avail+'%',
+      (x.pmOver?'<b style="color:#b91c1c">'+x.pmOver+'</b>':'0')]),
+    t('rp_sc_note')+' — '+t('rp_down_note')));
+  /* 2. repeat failures */
+  B.push(rpMiniTable(t('rp_rep_title'),
+    [t('c_car'),t('c_type'),t('rp_c_count'),t('pm_first'),t('pm_lastc'),t('rp_c_cost')],
+    reps.map(r=>['<b>'+esc(r.plate)+'</b>',catLabel(r.cat),'<b>'+r.n+'</b>',r.first,r.last,fmtKD(r.cost)]),
+    t('rp_rep_note')));
+  /* 3. preventive maintenance due */
+  const pmRows=[];
+  cars.forEach(p=>pmStatus(p).filter(x=>x.st==='over'||x.st==='soon'||x.st==='never').forEach(x=>pmRows.push(x)));
+  const ORD={over:0,never:1,soon:2};
+  pmRows.sort((a,b)=>(ORD[a.st]-ORD[b.st])||((a.soonest===null?9e9:a.soonest)-(b.soonest===null?9e9:b.soonest)));
+  const pmShown=pmRows.slice(0,40), pmRest=pmRows.length-pmShown.length;
+  B.push(rpMiniTable(t('rp_pm_title'),
+    [t('c_car'),t('pm_task'),t('pm_last'),t('pm_rem_km'),t('pm_rem_days'),t('c_status')],
+    pmShown.map(x=>['<b>'+esc(x.plate)+'</b>',pmLabel(x.rule.id),x.lastDate||'—',
+      x.remKm!==null?String(x.remKm):'—',x.remDays!==null?String(x.remDays):'—',
+      x.st==='over'?'<span class="st r">'+t('pm_over')+'</span>':(x.st==='never'?'<span class="st a">'+t('pm_never')+'</span>':'<span class="st a">'+t('pm_soon')+'</span>')]),
+    t('rp_pm_note')+(pmRest>0?' · '+t('rp_more',pmRest):'')));
+  /* 4. aging of open issues */
+  B.push(rpBreak(t('rp_age_title'),ages.map(x=>({k:x.k,n:x.n,c:0})),false));
+  /* 5. monthly trend */
+  B.push(rpMiniTable(t('rp_trend_title'),
+    [t('month'),t('rp_c_count'),t('rp_c_cost'),''],
+    (function(){ const mx=Math.max.apply(null,trend.map(x=>x.n).concat([1]));
+      return trend.map(x=>[x.k,String(x.n),fmtKD(x.c),
+        '<span class="rp-bar" style="width:'+Math.round(x.n/mx*110)+'px"></span>']); })(), ''));
+  /* 6. category & severity */
+  B.push(rpBreak(t('rp_by_cat'),CATg,true));
+  B.push(rpBreak(t('rp_by_sev'),SEVg,true));
+  B.push(rpBreak(t('rp_by_drv'),rpGroup(list,m=>m.driver_name,m=>m.cost),true));
+
   rpRender({
     title:t('rp_r_maint'), file:'maintenance',
     kpis:[{l:t('rp_k_total'),v:list.length,c:'var(--navy)'},
-          {l:t('k_open_issues'),v:open,c:'var(--red)'},
+          {l:t('k_open_issues'),v:openL.length,c:'var(--red)'},
           {l:t('k_crit'),v:crit,c:'var(--amber)'},
-          {l:t('k_fixed'),v:fixed.length,c:'var(--green)'},
-          {l:t('rp_k_avgfix'),v:avg,c:'var(--blue)'},
-          {l:t('k_cost'),v:fmtKD(cost),c:'var(--purple)'}],
-    breaks:[rpBreak(t('rp_by_cat'),rpGroup(list,m=>CAT[m.category]||m.category,m=>m.cost),true),
-            rpBreak(t('rp_by_car'),rpGroup(list,m=>m.car_plate,m=>m.cost),true),
-            rpBreak(t('rp_by_sev'),rpGroup(list,m=>SEV[m.severity]||m.severity,m=>m.cost),true),
-            rpBreak(t('rp_by_drv'),rpGroup(list,m=>m.driver_name,m=>m.cost),true)],
+          {l:t('mk_cars_down'),v:downCars+' / '+cars.length,c:'var(--red)'},
+          {l:t('rp_k_avgfix'),v:mttr,c:'var(--blue)'},
+          {l:t('mk_oldest'),v:(oldest===undefined?'—':oldest+' '+t('rp_k_days')),c:'var(--purple)'},
+          {l:t('mc_down'),v:Math.round(totDown*10)/10,c:'var(--amber)'},
+          {l:t('mc_avail'),v:(avail===null?'—':avail+'%'),c:'var(--green)'},
+          {l:t('mc_cpk'),v:cpk!==null?fmtKD(cpk):'—',c:'var(--blue)'},
+          {l:t('mk_pm_due'),v:pmOver+(pmSoon?' (+'+pmSoon+')':''),c:'var(--purple)'},
+          {l:t('mk_repeat'),v:reps.length,c:'var(--red)'},
+          {l:t('k_cost'),v:fmtKD(cost),c:'var(--navy)'}],
+    breaks:B,
     rows:list.map(m=>{const o={};
-      o[XH('c_date')]=dOnly(m.report_date||m.created_at); o[XH('c_driver')]=m.driver_name||'';
-      o[XH('c_car')]=m.car_plate||''; o[XH('c_type')]=CAT[m.category]||m.category||'';
-      o[XH('c_sev')]=SEV[m.severity]||m.severity||''; o[XH('c_desc')]=m.description||'';
-      o[XH('c_status')]=ST[m.status]||m.status||''; o[XH('rp_c_cost')]=m.cost?fmtKD(m.cost):'';
+      const ag=m.status==='done'
+        ?(m.resolved_at?daysBetween(dOnly(m.report_date||m.created_at),dOnly(m.resolved_at)):'')
+        :daysBetween(dOnly(m.report_date||m.created_at),today());
+      o[XH('c_date')]=dOnly(m.report_date||m.created_at); o[XH('c_car')]=m.car_plate||'';
+      o[XH('c_driver')]=m.driver_name||''; o[XH('c_type')]=catLabel(m.category);
+      o[XH('c_sev')]=sevLabel(m.severity); o[XH('c_desc')]=m.description||'';
+      o[XH('c_status')]=stLabel(m.status);
+      o[XH('mc_age')]=(ag===null||ag==='')?'':ag;
+      o[XH('mc_odo')]=(function(){const v=odoAt(String(m.car_plate||'').trim(),dOnly(m.report_date||m.created_at));
+        return v!==null?Math.round(v):'';})();
+      o[XH('rp_c_cost')]=m.cost?fmtKD(m.cost):'';
       return o;})
   });
 }
@@ -1433,39 +1822,151 @@ async function setReq(id,st){
 }
 
 /* ═══════════ MAINTENANCE ═══════════ */
+function mtGo(v){
+  _mv=v;
+  document.querySelectorAll('#mtChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.mv===v));
+  ['issues','fleet','pm','repeat'].forEach(k=>{
+    const el=document.getElementById('mt-'+k); if(el) el.style.display=(k===v?'':'none'); });
+  renderMaint();
+}
+function mtWindow(){
+  const to=today(); const d=new Date(); d.setDate(d.getDate()-89);
+  return {from:d.toISOString().slice(0,10),to:to};
+}
 function renderMaint(){
+  const W=mtWindow();
   const st=document.getElementById('maintStatus').value, sv=document.getElementById('maintSev').value;
+  const q=(document.getElementById('mtSearch').value||'').trim().toLowerCase();
+
+  /* ---- KPI strip (whole dataset) ---- */
+  const open=MAINT.filter(m=>m.status==='open').length;
+  const crit=MAINT.filter(m=>m.status!=='done'&&(m.severity==='critical'||m.severity==='high')).length;
+  const done=MAINT.filter(m=>m.status==='done').length;
+  const cost=MAINT.reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
+  const cards=fleetCars();
+  const downCars=cards.filter(p=>MAINT.some(m=>String(m.car_plate||'').trim()===p&&m.status!=='done'&&m.severity==='critical')).length;
+  let pmOver=0,pmSoon=0;
+  cards.forEach(p=>{ const x=pmStatus(p); pmOver+=x.filter(y=>y.st==='over').length; pmSoon+=x.filter(y=>y.st==='soon').length; });
+  const openList=MAINT.filter(m=>m.status!=='done');
+  const oldest=openList.map(m=>daysBetween(dOnly(m.report_date||m.created_at),today())).filter(x=>x!==null).sort((a,b)=>b-a)[0];
+  document.getElementById('kMaint').innerHTML=kpiHTML([
+    {l:t('k_open_issues'),v:open,c:'var(--red)'},
+    {l:t('k_crit'),v:crit,c:'var(--amber)'},
+    {l:t('mk_cars_down'),v:downCars+' / '+cards.length,c:'var(--red)'},
+    {l:t('mk_oldest'),v:(oldest===undefined?'—':oldest+' '+t('rp_k_days')),c:'var(--purple)'},
+    {l:t('mk_pm_due'),v:pmOver+(pmSoon?' (+'+pmSoon+')':''),c:'var(--blue)'},
+    {l:t('k_fixed'),v:done,c:'var(--green)'},
+    {l:t('k_cost'),v:fmtKD(cost),c:'var(--navy)'},
+  ]);
+
+  /* ---- alert bars ---- */
+  const A=[];
+  const critOld=openList.filter(m=>(m.severity==='critical'||m.severity==='high')&&
+    (daysBetween(dOnly(m.report_date||m.created_at),today())||0)>3);
+  if(critOld.length) A.push(['r','ti-alert-triangle',t('mal_crit_old',critOld.length),
+    [...new Set(critOld.map(m=>m.car_plate||'—'))].slice(0,4).map(esc).join(' · ')]);
+  if(pmOver) A.push(['a','ti-calendar-x',t('mal_pm_over',pmOver),t('mal_pm_over_s')]);
+  const reps=repeatFailures(W.from,W.to);
+  if(reps.length) A.push(['a','ti-repeat',t('mal_repeat',reps.length),
+    reps.slice(0,3).map(r=>esc(r.plate)+' — '+catLabel(r.cat)).join(' · ')]);
+  const noOdo=cards.filter(p=>!carOdo(p)).length;
+  if(noOdo) A.push(['a','ti-gauge',t('mal_no_odo',noOdo),t('mal_no_odo_s')]);
+  if(!A.length) A.push(['g','ti-circle-check',t('mal_ok'),'']);
+  document.getElementById('mtAlerts').innerHTML=A.map(a=>
+    `<div class="alertbar ${a[0]}"><i class="ti ${a[1]}"></i><div><div>${a[2]}</div>`+
+    (a[3]?`<div style="font-weight:600;font-size:12px;opacity:.85;margin-top:2px">${a[3]}</div>`:'')+`</div></div>`).join('');
+
+  if(_mv==='fleet') return renderFleet(W,q);
+  if(_mv==='pm')    return renderPM(q);
+  if(_mv==='repeat')return renderRepeat(W,q);
+
+  /* ---- issues table ---- */
   let list=MAINT.slice();
   if(st) list=list.filter(m=>m.status===st);
   if(sv) list=list.filter(m=>m.severity===sv);
+  if(q)  list=list.filter(m=>((m.car_plate||'')+' '+(m.driver_name||'')+' '+(m.description||'')).toLowerCase().includes(q));
+  document.getElementById('mtIssuesN').textContent=t('rp_recs')+': '+list.length;
 
-  const open=MAINT.filter(m=>m.status==='open').length;
-  const crit=MAINT.filter(m=>m.status==='open'&&(m.severity==='critical'||m.severity==='high')).length;
-  const done=MAINT.filter(m=>m.status==='done').length;
-  const cost=MAINT.reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
-  document.getElementById('kMaint').innerHTML=kpiHTML([
-    {l:t('k_open_issues'),v:open,c:'var(--red)'},{l:t('k_crit'),v:crit,c:'var(--amber)'},
-    {l:t('k_fixed'),v:done,c:'var(--green)'},{l:t('k_cost'),v:fmtKD(cost),c:'var(--navy)'},
-  ]);
-
-  const SEV={low:[t('sev_low'),'g'],medium:[t('sev_med'),'a'],high:[t('sev_high'),'a'],critical:[t('sev_crit'),'r']};
-  const CAT={engine:t('cat_engine'),tires:t('cat_tires'),brakes:t('cat_brakes'),ac:t('cat_ac'),
-             body:t('cat_body'),electrical:t('cat_electrical'),other:t('cat_other')};
-  const H=[t('c_driver'),t('c_car'),t('c_type'),t('c_sev'),t('c_desc'),t('c_photo'),t('c_date'),t('c_status'),t('c_action')];
+  const SEVC={low:'g',medium:'a',high:'a',critical:'r'};
+  const H=[t('c_car'),t('c_driver'),t('c_type'),t('c_sev'),t('c_desc'),t('mc_age'),t('c_photo'),t('c_date'),t('c_status'),t('rp_c_cost'),t('c_action')];
   document.getElementById('tMaint').innerHTML=
     '<thead><tr>'+H.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
     (list.length?list.map(m=>{
-      const s=SEV[m.severity]||SEV.medium;
       const stc=m.status==='done'?'g':(m.status==='in_progress'?'b':'r');
-      const stt=m.status==='done'?t('mst_done'):(m.status==='in_progress'?t('mst_prog'):t('mst_open'));
-      return `<tr>${nmCell(m.driver_id,m.driver_name)}<td>${esc(m.car_plate||'—')}</td>
-        <td>${CAT[m.category]||m.category||'—'}</td><td><span class="st ${s[1]}">${s[0]}</span></td>
+      const ag=m.status==='done'
+        ? (m.resolved_at?(daysBetween(dOnly(m.report_date||m.created_at),dOnly(m.resolved_at))+' '+t('rp_k_days')):'—')
+        : ((daysBetween(dOnly(m.report_date||m.created_at),today())||0)+' '+t('rp_k_days'));
+      const agc=m.status==='done'?'':((daysBetween(dOnly(m.report_date||m.created_at),today())||0)>14?' r':((daysBetween(dOnly(m.report_date||m.created_at),today())||0)>7?' a':''));
+      return `<tr><td><b>${esc(m.car_plate||'—')}</b></td>${nmCell(m.driver_id,m.driver_name)}
+        <td>${catLabel(m.category)}</td><td><span class="st ${SEVC[m.severity]||'a'}">${sevLabel(m.severity)}</span></td>
         <td style="max-width:230px">${esc(m.description||'')}</td>
+        <td><span class="age${agc}">${ag}</span></td>
         <td>${m.photo_url?`<img class="thumb" src="${m.photo_url}" onclick="openLB('${m.photo_url}')">`:'—'}</td>
-        <td>${fmtD(m.report_date)}</td><td><span class="st ${stc}">${stt}</span></td>
+        <td>${fmtD(m.report_date)}</td><td><span class="st ${stc}">${stLabel(m.status)}</span></td>
+        <td>${m.cost?fmtKD(m.cost):'—'}</td>
         <td>${m.status!=='done'?`<button class="act ok" onclick="setMaint(${m.id},'done')">${t('btn_fixed')}</button>${m.status==='open'?`<button class="act" style="background:var(--blue);color:#fff" onclick="setMaint(${m.id},'in_progress')">${t('btn_prog')}</button>`:''}`:'—'}</td></tr>`;
-    }).join('') : `<tr><td colspan="9" class="empty">${t('no_issues')}</td></tr>`)+'</tbody>';
+    }).join('') : `<tr><td colspan="11" class="empty">${t('no_issues')}</td></tr>`)+'</tbody>';
 }
+
+function riskCell(x){
+  return `<span class="risk ${x.band}">${x.risk}</span> <span class="gauge"><span style="width:${x.risk}%;background:var(--${x.band==='r'?'red':(x.band==='a'?'amber':'green')})"></span></span>`;
+}
+function renderFleet(W,q){
+  let rows=fleetScorecard(W.from,W.to);
+  if(q) rows=rows.filter(x=>(x.plate+' '+x.driver).toLowerCase().includes(q));
+  const H=[t('c_car'),t('c_driver'),t('mc_risk'),t('mc_open'),t('mc_reports'),t('mc_repeat'),
+           t('mc_odo'),t('mc_kmday'),t('rp_c_cost'),t('mc_cpk'),t('mc_down'),t('mc_avail'),t('mc_pm'),t('mc_last_srv')];
+  document.getElementById('tFleet').innerHTML=
+    '<thead><tr>'+H.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    (rows.length?rows.map(x=>`<tr>
+      <td><b>${esc(x.plate)}</b></td><td>${esc(x.driver)}</td>
+      <td style="white-space:nowrap">${riskCell(x)}</td>
+      <td>${x.open?`<b style="color:var(--red)">${x.open}</b>`:'0'}${x.openCrit?` <span class="st r">${x.openCrit}🔴</span>`:''}</td>
+      <td>${x.n}</td><td>${x.repeats?`<span class="st a">${x.repeats}</span>`:'—'}</td>
+      <td>${x.odo?Math.round(x.odo).toLocaleString('en-US'):'—'}</td>
+      <td>${x.kmDay?Math.round(x.kmDay*30).toLocaleString('en-US')+'/'+t('mc_mo'):'—'}</td>
+      <td>${fmtKD(x.cost)}</td>
+      <td>${x.cpk!==null?fmtKD(x.cpk):'—'}</td>
+      <td>${x.down?x.down:'0'}</td>
+      <td>${x.avail}%</td>
+      <td>${x.pmOver?`<span class="st r">${x.pmOver}</span>`:''}${x.pmSoon?` <span class="st a">${x.pmSoon}</span>`:''}${(!x.pmOver&&!x.pmSoon)?'✅':''}</td>
+      <td>${x.lastService||'—'}</td></tr>`).join('')
+     : `<tr><td colspan="14" class="empty">${t('no_issues')}</td></tr>`)+'</tbody>';
+}
+function renderPM(q){
+  let cars=fleetCars(); if(q) cars=cars.filter(p=>(p+' '+carDriver(p)).toLowerCase().includes(q));
+  const rows=[];
+  cars.forEach(p=>pmStatus(p).forEach(x=>rows.push(x)));
+  const ORD={over:0,soon:1,never:2,unknown:3,ok:4};
+  rows.sort((a,b)=>(ORD[a.st]-ORD[b.st])||((a.soonest===null?9e9:a.soonest)-(b.soonest===null?9e9:b.soonest)));
+  const BADGE={over:['r',t('pm_over')],soon:['a',t('pm_soon')],never:['a',t('pm_never')],
+               unknown:['','—'],ok:['g',t('pm_ok')]};
+  const H=[t('c_car'),t('c_driver'),t('pm_task'),t('pm_last'),t('pm_last_odo'),t('mc_odo'),
+           t('pm_rem_km'),t('pm_rem_days'),t('c_status')];
+  document.getElementById('tPM').innerHTML=
+    '<thead><tr>'+H.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    (rows.length?rows.map(x=>{const b=BADGE[x.st]||['',''];
+      return `<tr><td><b>${esc(x.plate)}</b></td><td>${esc(carDriver(x.plate))}</td>
+      <td>${pmLabel(x.rule.id)} <span style="font-size:10.5px;color:var(--muted)">(${x.rule.km?x.rule.km.toLocaleString('en-US')+' km':''}${x.rule.km&&x.rule.days?' / ':''}${x.rule.days?x.rule.days+' '+t('rp_k_days'):''})</span></td>
+      <td>${x.lastDate||'—'}</td><td>${x.lastOdo!==null?Math.round(x.lastOdo).toLocaleString('en-US'):'—'}</td>
+      <td>${x.curOdo!==null?Math.round(x.curOdo).toLocaleString('en-US'):'—'}</td>
+      <td>${x.remKm!==null?(x.remKm<0?`<b style="color:var(--red)">${x.remKm.toLocaleString('en-US')}</b>`:x.remKm.toLocaleString('en-US')):'—'}</td>
+      <td>${x.remDays!==null?(x.remDays<0?`<b style="color:var(--red)">${x.remDays}</b>`:x.remDays):'—'}</td>
+      <td>${b[0]?`<span class="st ${b[0]}">${b[1]}</span>`:'—'}</td></tr>`;}).join('')
+     : `<tr><td colspan="9" class="empty">${t('no_issues')}</td></tr>`)+'</tbody>';
+}
+function renderRepeat(W,q){
+  let rows=repeatFailures(W.from,W.to);
+  if(q) rows=rows.filter(r=>(r.plate+' '+catLabel(r.cat)).toLowerCase().includes(q));
+  const H=[t('c_car'),t('c_driver'),t('c_type'),t('rp_c_count'),t('pm_first'),t('pm_lastc'),t('rp_c_cost')];
+  document.getElementById('tRepeat').innerHTML=
+    '<thead><tr>'+H.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    (rows.length?rows.map(r=>`<tr><td><b>${esc(r.plate)}</b></td><td>${esc(carDriver(r.plate))}</td>
+      <td>${catLabel(r.cat)}</td><td><span class="st r">${r.n}</span></td>
+      <td>${r.first}</td><td>${r.last}</td><td>${fmtKD(r.cost)}</td></tr>`).join('')
+     : `<tr><td colspan="7" class="empty">${t('no_repeat')}</td></tr>`)+'</tbody>';
+}
+
 async function setMaint(id,st){
   let cost=null;
   if(st==='done'){ const c=prompt(t('ask_cost')); if(c) cost=parseFloat(c)||null; }
