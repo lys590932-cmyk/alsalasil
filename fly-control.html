@@ -96,6 +96,38 @@
   .toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:13px 22px;border-radius:10px;font-weight:800;z-index:4000;display:none}
   .toast.on{display:block}.toast.err{background:var(--red)}
   @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+
+  /* ═══ REPORTS ═══ */
+  .rp-head{display:none}
+  .rp-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin:8px 0 14px}
+  .rp-meta b{color:var(--navy)}
+  .rp-sec{margin-top:16px}
+  .rp-sec h4{margin:0 0 8px;font-size:14px;color:var(--navy);border-inline-start:4px solid var(--gold);padding-inline-start:9px}
+  .rp-empty{padding:26px;text-align:center;color:var(--muted);font-weight:700}
+  .rp-mini{width:100%;border-collapse:collapse;font-size:12.5px}
+  .rp-mini th{background:var(--light);color:var(--navy);padding:7px 9px;text-align:start;font-weight:800;border-bottom:2px solid var(--border)}
+  .rp-mini td{padding:6px 9px;border-bottom:1px solid var(--border)}
+  .rp-mini tr:last-child td{border-bottom:none}
+  .rp-bar{height:7px;border-radius:5px;background:var(--gold);display:inline-block;min-width:3px;vertical-align:middle}
+
+  @media print{
+    @page{size:A4;margin:12mm}
+    body{background:#fff!important}
+    .topbar,.tabs,.toolbar,.modal-bg,.lightbox,.toast,.no-print{display:none!important}
+    .container{padding:0!important;max-width:100%!important}
+    .view{display:none!important}
+    .view#v-reports{display:block!important}
+    .rp-head{display:block!important;border-bottom:3px solid var(--navy);padding-bottom:10px;margin-bottom:12px}
+    .rp-head .rp-co{font-size:19px;font-weight:900;color:var(--navy)}
+    .rp-head .rp-ti{font-size:15px;font-weight:800;margin-top:3px}
+    .rp-head .rp-dt{font-size:11px;color:#555;margin-top:3px}
+    .card{box-shadow:none!important;border:1px solid #ccc!important;break-inside:avoid}
+    .kpi{break-inside:avoid}
+    table{font-size:10.5px!important}
+    th{background:#0f3a52!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .kpi,.rp-mini th,.st{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    tr{break-inside:avoid}
+  }
 </style>
 </head>
 <body>
@@ -153,6 +185,7 @@
       <select id="shiftFilter" onchange="renderShifts()"></select>
       <span class="push" style="font-size:11px;color:var(--muted);font-weight:700">
         ⚙️ <span data-i18n="grace"></span>: <b id="cfgGrace">30</b> · <span data-i18n="deduction"></span>: <b id="cfgFrac"></b></span>
+      <button class="btn btn-gold" onclick="openReport('shifts')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
     </div>
     <div class="card"><div class="card-h"><i class="ti ti-clock"></i> <span data-i18n="today_shifts"></span>
       <button class="btn btn-gold" onclick="exportShifts()"><i class="ti ti-download"></i> <span data-i18n="export"></span></button></div>
@@ -170,7 +203,8 @@
       <label data-i18n="to"></label><input type="date" id="dlTo" onchange="renderDaily()">
       <select id="dlPartner" onchange="renderDaily()"></select>
       <select id="dlView" onchange="renderDaily()"></select>
-      <button class="btn btn-gold push" onclick="exportDaily()"><i class="ti ti-download"></i> <span data-i18n="export"></span></button>
+      <button class="btn btn-gold push" onclick="openReport('daily')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
+      <button class="btn btn-gold" onclick="exportDaily()"><i class="ti ti-download"></i> <span data-i18n="export"></span></button>
     </div>
     <div id="dlAlert"></div>
     <div class="card"><div class="card-h"><i class="ti ti-report-analytics"></i> <span id="dlTitle"></span></div>
@@ -183,6 +217,7 @@
     <div class="toolbar">
       <select id="reqType" onchange="renderRequests()"></select>
       <select id="reqStatus" onchange="renderRequests()"></select>
+      <button class="btn btn-gold push" onclick="openReport('req')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
     </div>
     <div class="card"><div class="card-h"><i class="ti ti-file-text"></i> <span data-i18n="driver_requests"></span></div>
       <div style="overflow-x:auto"><table id="tReq"></table></div></div>
@@ -194,6 +229,7 @@
     <div class="toolbar">
       <select id="maintStatus" onchange="renderMaint()"></select>
       <select id="maintSev" onchange="renderMaint()"></select>
+      <button class="btn btn-gold push" onclick="openReport('maint')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
     </div>
     <div class="card"><div class="card-h"><i class="ti ti-tool"></i> <span data-i18n="issue_reports"></span></div>
       <div style="overflow-x:auto"><table id="tMaint"></table></div></div>
@@ -206,7 +242,8 @@
       <label data-i18n="month"></label><input type="month" id="fuelMonth" onchange="renderFuel()">
       <label style="display:flex;align-items:center;gap:6px;color:var(--red)">
         <input type="checkbox" id="fuelFlagged" onchange="renderFuel()"> <span data-i18n="flagged_only"></span></label>
-      <button class="btn btn-gold push" onclick="exportFuel()"><i class="ti ti-download"></i> <span data-i18n="export"></span></button>
+      <button class="btn btn-gold push" onclick="openReport('fuel')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
+      <button class="btn btn-gold" onclick="exportFuel()"><i class="ti ti-download"></i> <span data-i18n="export"></span></button>
     </div>
     <div class="card"><div class="card-h"><i class="ti ti-gas-station"></i> <span data-i18n="fuel_log"></span></div>
       <div style="overflow-x:auto"><table id="tFuel"></table></div></div>
@@ -218,6 +255,7 @@
     <div class="toolbar">
       <button class="btn btn-gold" onclick="openAddVio()"><i class="ti ti-plus"></i> <span data-i18n="add_violation"></span></button>
       <select id="vioStatus" onchange="renderVio()"></select>
+      <button class="btn btn-gold push" onclick="openReport('vio')"><i class="ti ti-file-analytics"></i> <span data-i18n="rp_btn"></span></button>
     </div>
     <div class="card"><div class="card-h"><i class="ti ti-alert-triangle"></i> <span data-i18n="traffic_violations"></span></div>
       <div style="overflow-x:auto"><table id="tVio"></table></div></div>
@@ -251,6 +289,29 @@
     </div>
     <div class="card"><div class="card-h"><i class="ti ti-users"></i> <span data-i18n="driver_files"></span></div>
       <div style="overflow-x:auto"><table id="tDrivers"></table></div></div>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="view" id="v-reports">
+    <div class="rp-head">
+      <div class="rp-co">شركة السلاسل للتوصيل — AL-SALASIL DELIVERY</div>
+      <div class="rp-ti" id="rpPrintTitle"></div>
+      <div class="rp-dt" id="rpPrintMeta"></div>
+    </div>
+    <div class="toolbar no-print">
+      <select id="rpType" onchange="renderReports()" style="min-width:190px;font-weight:800"></select>
+      <label data-i18n="from"></label><input type="date" id="rpFrom" onchange="renderReports()">
+      <label data-i18n="to"></label><input type="date" id="rpTo" onchange="renderReports()">
+      <select id="rpPartner" onchange="renderReports()"></select>
+      <button class="btn btn-gold push" onclick="printReport()"><i class="ti ti-printer"></i> <span data-i18n="rp_print"></span></button>
+      <button class="btn btn-gold" onclick="exportReport()"><i class="ti ti-file-spreadsheet"></i> <span data-i18n="rp_excel"></span></button>
+    </div>
+    <div class="rp-meta no-print" id="rpMeta"></div>
+    <div class="kpis" id="rpKpis"></div>
+    <div id="rpBreak"></div>
+    <div class="card"><div class="card-h"><i class="ti ti-list-details"></i> <span id="rpTitle"></span>
+      <span class="push" style="font-size:11px;color:var(--muted);font-weight:700" id="rpCount"></span></div>
+      <div style="overflow-x:auto"><table id="rpTable"></table></div></div>
   </div>
 
 </div>
@@ -306,6 +367,25 @@ ar:{
  // tabs
  t_overview:'نظرة عامة', t_photos:'صور الشفت', t_shifts:'الشفتات والتأخير', t_daily:'التقارير اليومية',
  t_requests:'الطلبات', t_maint:'الصيانة', t_fuel:'الوقود', t_vio:'المخالفات', t_msgs:'الرسائل', t_drivers:'السائقون',
+ t_reports:'التقارير',
+ // reports
+ rp_print:'طباعة PDF', rp_excel:'تصدير Excel', rp_btn:'تقرير',
+ rp_r_maint:'🔧 تقرير الصيانة', rp_r_fuel:'⛽ تقرير الوقود',
+ rp_r_vio:'🚨 تقرير المخالفات', rp_r_ded:'💰 تقرير الخصومات',
+ rp_r_shifts:'⏰ تقرير الدوام والتأخير', rp_r_req:'📄 تقرير الطلبات',
+ rp_r_daily:'📊 تقرير الأداء اليومي',
+ rp_period:'الفترة', rp_gen:'تاريخ الإصدار', rp_recs:'عدد السجلات', rp_partner_f:'الشريك',
+ rp_none:'لا توجد بيانات في هذه الفترة',
+ rp_by_cat:'حسب نوع العطل', rp_by_car:'حسب السيارة', rp_by_drv:'حسب السائق',
+ rp_by_sev:'حسب الخطورة', rp_by_type:'حسب النوع', rp_by_status:'حسب الحالة',
+ rp_c_count:'العدد', rp_c_cost:'التكلفة (د.ك)', rp_c_share:'النسبة',
+ rp_k_total:'إجمالي البلاغات', rp_k_avgfix:'متوسط زمن الإصلاح', rp_k_days:'يوم',
+ rp_k_fills:'عدد التعبئات', rp_k_totkm:'إجمالي الكيلومترات', rp_k_kmkd:'متوسط كم/د.ك',
+ rp_k_vios:'عدد المخالفات', rp_k_amount:'إجمالي المبلغ (د.ك)', rp_k_appeals:'تظلمات',
+ rp_k_workdays:'أيام عمل مجدولة', rp_k_ontime:'التزام بالمواعيد', rp_k_latemin:'إجمالي دقائق التأخير',
+ rp_k_reqs:'إجمالي الطلبات', rp_k_advamt:'إجمالي السلف (د.ك)', rp_k_pending:'معلّقة',
+ rp_k_reports:'عدد التقارير', rp_k_orders:'إجمالي الطلبات', rp_k_hours:'إجمالي الساعات',
+ rp_k_flagged:'تقارير فيها فروقات', rp_k_avgord:'متوسط الطلبات/يوم',
  // overview
  needs_action:'يحتاج إجراء الآن', recent_activity:'آخر النشاطات',
  k_shifts_today:'شفتات اليوم', k_late_absent:'متأخرين + غياب', k_no_photo:'لم يرفعوا صورة', k_missing_rep:'تقارير ناقصة (أمس)',
@@ -438,6 +518,24 @@ en:{
  date:'📅 Date:', from:'📅 From:', to:'To:', month:'📅 Month:', all:'All',
  t_overview:'Overview', t_photos:'Shift Photos', t_shifts:'Shifts & Lateness', t_daily:'Daily Reports',
  t_requests:'Requests', t_maint:'Maintenance', t_fuel:'Fuel', t_vio:'Violations', t_msgs:'Messages', t_drivers:'Drivers',
+ t_reports:'Reports',
+ rp_print:'Print PDF', rp_excel:'Export Excel', rp_btn:'Report',
+ rp_r_maint:'🔧 Maintenance Report', rp_r_fuel:'⛽ Fuel Report',
+ rp_r_vio:'🚨 Violations Report', rp_r_ded:'💰 Deductions Report',
+ rp_r_shifts:'⏰ Shifts & Lateness Report', rp_r_req:'📄 Requests Report',
+ rp_r_daily:'📊 Daily Performance Report',
+ rp_period:'Period', rp_gen:'Generated', rp_recs:'Records', rp_partner_f:'Partner',
+ rp_none:'No data in this period',
+ rp_by_cat:'By issue type', rp_by_car:'By vehicle', rp_by_drv:'By driver',
+ rp_by_sev:'By severity', rp_by_type:'By type', rp_by_status:'By status',
+ rp_c_count:'Count', rp_c_cost:'Cost (KD)', rp_c_share:'Share',
+ rp_k_total:'Total reports', rp_k_avgfix:'Avg fix time', rp_k_days:'d',
+ rp_k_fills:'Fill-ups', rp_k_totkm:'Total km', rp_k_kmkd:'Avg km/KD',
+ rp_k_vios:'Violations', rp_k_amount:'Total amount (KD)', rp_k_appeals:'Appeals',
+ rp_k_workdays:'Scheduled work days', rp_k_ontime:'On-time rate', rp_k_latemin:'Total late minutes',
+ rp_k_reqs:'Total requests', rp_k_advamt:'Advances total (KD)', rp_k_pending:'Pending',
+ rp_k_reports:'Reports filed', rp_k_orders:'Total orders', rp_k_hours:'Total hours',
+ rp_k_flagged:'Reports with gaps', rp_k_avgord:'Avg orders/day',
  needs_action:'Needs Action Now', recent_activity:'Recent Activity',
  k_shifts_today:'Shifts Today', k_late_absent:'Late + Absent', k_no_photo:'No Photo Uploaded', k_missing_rep:'Missing Reports (yesterday)',
  all_good:'✅ All good — nothing needs urgent attention', no_tasks:'✅ No pending tasks', no_activity:'No activity',
@@ -579,6 +677,7 @@ const TABS=[
  {id:'vio',     ic:'ti-alert-triangle'},
  {id:'msgs',    ic:'ti-send'},
  {id:'drivers', ic:'ti-users'},
+ {id:'reports', ic:'ti-file-analytics'},
 ];
 
 /* ═══════════ HELPERS ═══════════ */
@@ -624,6 +723,8 @@ function fillSelects(){
   S('maintSev', opt('',t('f_sev_all'))+opt('critical',t('sev_crit'))+opt('high',t('sev_high'))+opt('medium',t('sev_med'))+opt('low',t('sev_low')));
   S('vioStatus', opt('',t('all'))+opt('pending',t('f_v_pending'))+opt('acknowledged',t('f_v_ack'))+opt('appealed',t('f_v_appeal')));
   S('msgLevel', opt('info',t('lv_info'))+opt('warn',t('lv_warn'))+opt('important',t('lv_imp')));
+  S('rpType', opt('maint',t('rp_r_maint'))+opt('fuel',t('rp_r_fuel'))+opt('vio',t('rp_r_vio'))
+    +opt('ded',t('rp_r_ded'))+opt('shifts',t('rp_r_shifts'))+opt('req',t('rp_r_req'))+opt('daily',t('rp_r_daily')));
   S('setFrac', opt('0.25',t('frac_25'))+opt('0.5',t('frac_50'))+opt('0.75',t('frac_75'))+opt('1',t('frac_100')));
   const ds=document.getElementById('drvSearch'); if(ds) ds.placeholder=t('search_driver');
   const q=document.getElementById('quickMsgBtns');
@@ -646,7 +747,7 @@ function go(v){
   badges();
   ({overview:renderOverview,photos:renderPhotos,requests:renderRequests,maint:renderMaint,
     fuel:renderFuel,vio:renderVio,shifts:renderShifts,msgs:renderMsgs,drivers:renderDrivers,
-    daily:renderDaily}[v]||(()=>{}))();
+    daily:renderDaily,reports:renderReports}[v]||(()=>{}))();
 }
 
 /* ═══════════ DATA ═══════════ */
@@ -757,6 +858,304 @@ function timeAgo(d){
 }
 function shiftLabel(ty){
   return ty==='off'?t('sh_off'):(ty==='holiday'?t('sh_holiday'):(ty==='evening'?t('sh_evening'):t('sh_morning')));
+}
+
+/* ═══════════ REPORTS ═══════════ */
+let _RP={rows:[],title:'',file:'report'};
+
+function openReport(ty){
+  const el=document.getElementById('rpType'); if(el) el.value=ty;
+  go('reports');
+}
+function rpDefaults(){
+  const f=document.getElementById('rpFrom'), tt=document.getElementById('rpTo');
+  if(f&&!f.value){ const d=new Date(); d.setDate(d.getDate()-29); f.value=d.toISOString().slice(0,10); }
+  if(tt&&!tt.value) tt.value=today();
+}
+function rpRange(){
+  rpDefaults();
+  return {from:document.getElementById('rpFrom').value||'0000-01-01',
+          to:  document.getElementById('rpTo').value  ||'9999-12-31'};
+}
+function rpPartner(){
+  const parts=[...new Set(DRIVERS.map(d=>d.partner).filter(Boolean))];
+  const ps=document.getElementById('rpPartner'); if(!ps) return '';
+  const pc=ps.value;
+  ps.innerHTML='<option value="">'+t('all_partners')+'</option>'+parts.map(p=>'<option value="'+p+'">'+p+'</option>').join('');
+  ps.value=pc; return ps.value;
+}
+function drvById(id){ return DRIVERS.find(d=>d.id===id)||{}; }
+function inPartner(pf,drvId,fallback){
+  if(!pf) return true;
+  const d=drvById(drvId);
+  return (d.partner||fallback||'')===pf;
+}
+function dOnly(v){ return String(v||'').slice(0,10); }
+
+/* group helper: returns [{k,n,c}] sorted by n desc */
+function rpGroup(list,keyFn,costFn){
+  const m={};
+  list.forEach(x=>{ const k=keyFn(x)||'—'; if(!m[k]) m[k]={k:k,n:0,c:0};
+    m[k].n++; if(costFn) m[k].c+=(parseFloat(costFn(x))||0); });
+  return Object.values(m).sort((a,b)=>b.n-a.n);
+}
+function rpBreak(title,rows,showCost){
+  if(!rows.length) return '';
+  const tot=rows.reduce((s,r)=>s+r.n,0)||1;
+  const mx=rows[0].n||1;
+  return '<div class="rp-sec"><h4>'+title+'</h4><div class="card" style="padding:10px 14px">'+
+    '<table class="rp-mini"><thead><tr><th></th><th style="width:70px">'+t('rp_c_count')+'</th>'+
+    (showCost?'<th style="width:100px">'+t('rp_c_cost')+'</th>':'')+
+    '<th style="width:130px">'+t('rp_c_share')+'</th></tr></thead><tbody>'+
+    rows.map(r=>'<tr><td><b>'+esc(r.k)+'</b></td><td>'+r.n+'</td>'+
+      (showCost?'<td>'+fmtKD(r.c)+'</td>':'')+
+      '<td><span class="rp-bar" style="width:'+Math.round(r.n/mx*90)+'px"></span> '+
+      Math.round(r.n/tot*100)+'%</td></tr>').join('')+
+    '</tbody></table></div></div>';
+}
+function rpRender(cfg){
+  document.getElementById('rpKpis').innerHTML=kpiHTML(cfg.kpis||[]);
+  document.getElementById('rpBreak').innerHTML=(cfg.breaks||[]).join('');
+  document.getElementById('rpTitle').textContent=cfg.title;
+  document.getElementById('rpCount').textContent=t('rp_recs')+': '+(cfg.rows||[]).length;
+  const T=document.getElementById('rpTable');
+  if(!cfg.rows||!cfg.rows.length){
+    T.innerHTML='<tbody><tr><td class="rp-empty">'+t('rp_none')+'</td></tr></tbody>';
+  }else{
+    const H=Object.keys(cfg.rows[0]);
+    T.innerHTML='<thead><tr>'+H.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
+      cfg.rows.map(r=>'<tr>'+H.map(h=>'<td>'+esc(r[h])+'</td>').join('')+'</tr>').join('')+'</tbody>';
+  }
+  _RP={rows:cfg.rows||[],title:cfg.title,file:cfg.file||'report'};
+  const R=rpRange(), pf=document.getElementById('rpPartner').value;
+  const meta=t('rp_period')+': <b>'+R.from+' → '+R.to+'</b>'+
+    (pf?' · '+t('rp_partner_f')+': <b>'+esc(pf)+'</b>':'')+
+    ' · '+t('rp_gen')+': <b>'+new Date().toLocaleString(RTL()?'ar-KW':'en-GB')+'</b>';
+  document.getElementById('rpMeta').innerHTML=meta;
+  document.getElementById('rpPrintTitle').textContent=cfg.title;
+  document.getElementById('rpPrintMeta').innerHTML=meta.replace(/<\/?b>/g,'');
+}
+function printReport(){ window.print(); }
+function exportReport(){
+  if(!_RP.rows.length){ toast(t('no_export'),true); return; }
+  const R=rpRange();
+  download(_RP.file+'_'+R.from+'_'+R.to+'.csv', toCSV(_RP.rows));
+  toast(t('done_export'));
+}
+
+function renderReports(){
+  rpDefaults();
+  const ty=document.getElementById('rpType').value||'maint';
+  const R=rpRange(), pf=rpPartner();
+  ({maint:rpMaint,fuel:rpFuel,vio:rpVio,ded:rpDed,shifts:rpShifts,req:rpReq,daily:rpDaily}[ty]||rpMaint)(R,pf);
+}
+
+/* ---- 1) MAINTENANCE ---- */
+function rpMaint(R,pf){
+  const CAT={engine:t('cat_engine'),tires:t('cat_tires'),brakes:t('cat_brakes'),ac:t('cat_ac'),
+             body:t('cat_body'),electrical:t('cat_electrical'),other:t('cat_other')};
+  const SEV={low:t('sev_low'),medium:t('sev_med'),high:t('sev_high'),critical:t('sev_crit')};
+  const ST={open:t('mst_open'),in_progress:t('mst_prog'),done:t('mst_done')};
+  const list=MAINT.filter(m=>{const d=dOnly(m.report_date||m.created_at);
+    return d>=R.from&&d<=R.to&&inPartner(pf,m.driver_id);});
+  const cost=list.reduce((s,m)=>s+(parseFloat(m.cost)||0),0);
+  const open=list.filter(m=>m.status==='open').length;
+  const crit=list.filter(m=>m.severity==='critical'||m.severity==='high').length;
+  const fixed=list.filter(m=>m.status==='done');
+  let avg='—';
+  const spans=fixed.map(m=>{ if(!m.resolved_at) return null;
+      const a=new Date(m.report_date||m.created_at), b=new Date(m.resolved_at);
+      return (isNaN(a)||isNaN(b))?null:(b-a)/86400000; }).filter(x=>x!==null&&x>=0);
+  if(spans.length) avg=(spans.reduce((s,x)=>s+x,0)/spans.length).toFixed(1)+' '+t('rp_k_days');
+  rpRender({
+    title:t('rp_r_maint'), file:'maintenance',
+    kpis:[{l:t('rp_k_total'),v:list.length,c:'var(--navy)'},
+          {l:t('k_open_issues'),v:open,c:'var(--red)'},
+          {l:t('k_crit'),v:crit,c:'var(--amber)'},
+          {l:t('k_fixed'),v:fixed.length,c:'var(--green)'},
+          {l:t('rp_k_avgfix'),v:avg,c:'var(--blue)'},
+          {l:t('k_cost'),v:fmtKD(cost),c:'var(--purple)'}],
+    breaks:[rpBreak(t('rp_by_cat'),rpGroup(list,m=>CAT[m.category]||m.category,m=>m.cost),true),
+            rpBreak(t('rp_by_car'),rpGroup(list,m=>m.car_plate,m=>m.cost),true),
+            rpBreak(t('rp_by_sev'),rpGroup(list,m=>SEV[m.severity]||m.severity,m=>m.cost),true),
+            rpBreak(t('rp_by_drv'),rpGroup(list,m=>m.driver_name,m=>m.cost),true)],
+    rows:list.map(m=>{const o={};
+      o[XH('c_date')]=dOnly(m.report_date||m.created_at); o[XH('c_driver')]=m.driver_name||'';
+      o[XH('c_car')]=m.car_plate||''; o[XH('c_type')]=CAT[m.category]||m.category||'';
+      o[XH('c_sev')]=SEV[m.severity]||m.severity||''; o[XH('c_desc')]=m.description||'';
+      o[XH('c_status')]=ST[m.status]||m.status||''; o[XH('rp_c_cost')]=m.cost?fmtKD(m.cost):'';
+      return o;})
+  });
+}
+
+/* ---- 2) FUEL ---- */
+function rpFuel(R,pf){
+  const list=FUEL.filter(f=>{const d=dOnly(f.log_date); return d>=R.from&&d<=R.to&&inPartner(pf,f.driver_id);});
+  const tot=list.reduce((s,f)=>s+(parseFloat(f.amount_kd)||0),0);
+  const km=list.reduce((s,f)=>s+(parseFloat(f.km_since_last)||0),0);
+  const flg=list.filter(f=>f.flagged).length;
+  rpRender({
+    title:t('rp_r_fuel'), file:'fuel',
+    kpis:[{l:t('rp_k_fills'),v:list.length,c:'var(--navy)'},
+          {l:t('rp_k_amount'),v:fmtKD(tot),c:'var(--green)'},
+          {l:t('rp_k_totkm'),v:Math.round(km),c:'var(--blue)'},
+          {l:t('rp_k_kmkd'),v:tot?(km/tot).toFixed(1):'—',c:'var(--purple)'},
+          {l:t('k_susp'),v:flg,c:'var(--red)'}],
+    breaks:[rpBreak(t('rp_by_drv'),rpGroup(list,f=>f.driver_name,f=>f.amount_kd),true),
+            rpBreak(t('rp_by_car'),rpGroup(list,f=>f.car_plate,f=>f.amount_kd),true)],
+    rows:list.map(f=>{const o={};
+      o[XH('c_date')]=dOnly(f.log_date); o[XH('c_driver')]=f.driver_name||'';
+      o[XH('c_car')]=f.car_plate||''; o[XH('c_amount')]=f.amount_kd;
+      o[XH('c_odo')]=f.odometer||''; o[XH('c_km_since')]=f.km_since_last||'';
+      o[XH('c_km_kd')]=(f.km_since_last&&f.amount_kd)?(f.km_since_last/f.amount_kd).toFixed(1):'';
+      o[XH('c_station')]=f.station||''; o[XH('k_susp')]=f.flagged?t('yes'):t('no');
+      return o;})
+  });
+}
+
+/* ---- 3) VIOLATIONS ---- */
+function rpVio(R,pf){
+  const list=VIO.filter(v=>{const d=dOnly(v.vio_date); return d>=R.from&&d<=R.to&&inPartner(pf,v.driver_id);});
+  const amt=list.reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+  const pend=list.filter(v=>v.status==='pending').length;
+  const app=list.filter(v=>v.status==='appealed').length;
+  rpRender({
+    title:t('rp_r_vio'), file:'violations',
+    kpis:[{l:t('rp_k_vios'),v:list.length,c:'var(--navy)'},
+          {l:t('rp_k_amount'),v:fmtKD(amt),c:'var(--red)'},
+          {l:t('f_v_pending'),v:pend,c:'var(--amber)'},
+          {l:t('rp_k_appeals'),v:app,c:'var(--purple)'}],
+    breaks:[rpBreak(t('rp_by_drv'),rpGroup(list,v=>v.driver_name,v=>v.amount),true),
+            rpBreak(t('rp_by_status'),rpGroup(list,v=>v.status,v=>v.amount),true)],
+    rows:list.map(v=>{const o={};
+      o[XH('c_date')]=dOnly(v.vio_date); o[XH('c_driver')]=v.driver_name||'';
+      o['No.']=v.vio_number||''; o[XH('c_amount')]=v.amount?fmtKD(v.amount):'';
+      o[XH('c_reason')]=v.reason||''; o[XH('c_status')]=v.status||'';
+      o['Appeal']=v.appeal_text||'';
+      return o;})
+  });
+}
+
+/* ---- 4) DEDUCTIONS ---- */
+function rpDed(R,pf){
+  const list=DEDS.filter(x=>{const d=dOnly(x.date); return d>=R.from&&d<=R.to&&inPartner(pf,x.driver_id);});
+  const act=list.filter(x=>x.status!=='cancelled');
+  const amt=act.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  rpRender({
+    title:t('rp_r_ded'), file:'deductions',
+    kpis:[{l:t('rp_recs'),v:list.length,c:'var(--navy)'},
+          {l:t('rp_k_amount'),v:fmtKD(amt),c:'var(--red)'},
+          {l:t('st_cancelled'),v:list.length-act.length,c:'var(--muted)'}],
+    breaks:[rpBreak(t('rp_by_drv'),rpGroup(act,x=>x.driver_name,x=>x.amount),true),
+            rpBreak(t('rp_by_type'),rpGroup(act,x=>x.ded_type||'manual',x=>x.amount),true)],
+    rows:list.map(x=>{const o={};
+      o[XH('c_date')]=dOnly(x.date); o[XH('c_driver')]=x.driver_name||'';
+      o[XH('c_type')]=x.ded_type||'manual'; o[XH('c_amount')]=fmtKD(x.amount);
+      o[XH('c_late_min')]=x.minutes_late||''; o[XH('c_reason')]=x.reason||'';
+      o[XH('c_status')]=x.status==='cancelled'?t('st_cancelled'):t('st_active');
+      return o;})
+  });
+}
+
+/* ---- 5) SHIFTS & LATENESS ---- */
+function rpShifts(R,pf){
+  const rows=[]; let late=0,noshow=0,ontime=0,offs=0,mins=0;
+  const days=SCHED.filter(x=>x.date>=R.from&&x.date<=R.to);
+  days.forEach(sh=>{
+    const d=drvById(sh.driver_id); if(pf&&(d.partner||'')!==pf) return;
+    if(sh.shift_type==='off'||sh.shift_type==='holiday'){ offs++; return; }
+    if(!sh.shift_start) return;
+    const ci=firstClockIn(sh.driver_id,sh.date);
+    const lm=ci?Math.round((ci-shiftDT(sh.date,sh.shift_start))/60000):null;
+    let st;
+    if(!ci){ st=t('st_noshow'); noshow++; }
+    else if(lm>=CFG.grace){ st=t('st_late'); late++; mins+=lm; }
+    else { st=t('st_ontime'); ontime++; }
+    const o={};
+    o[XH('c_date')]=sh.date; o[XH('c_driver')]=d.name||sh.driver_id;
+    o[XH('c_partner')]=d.partner||''; o[XH('c_shift')]=shiftLabel(sh.shift_type);
+    o[XH('c_start')]=sh.shift_start||''; 
+    o[XH('c_clockin')]=ci?ci.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'—';
+    o[XH('c_late_min')]=(lm!==null&&lm>0)?lm:'';
+    o[XH('c_status')]=st;
+    rows.push(o);
+  });
+  const work=late+noshow+ontime;
+  rpRender({
+    title:t('rp_r_shifts'), file:'shifts',
+    kpis:[{l:t('rp_k_workdays'),v:work,c:'var(--navy)'},
+          {l:t('st_ontime'),v:ontime,c:'var(--green)'},
+          {l:t('st_late'),v:late,c:'var(--amber)'},
+          {l:t('st_noshow'),v:noshow,c:'var(--red)'},
+          {l:t('rp_k_ontime'),v:work?Math.round(ontime/work*100)+'%':'—',c:'var(--blue)'},
+          {l:t('rp_k_latemin'),v:mins,c:'var(--purple)'}],
+    breaks:[rpBreak(t('rp_by_drv'),rpGroup(rows.filter(r=>r[XH('c_status')]!==t('st_ontime')),r=>r[XH('c_driver')]),false),
+            rpBreak(t('rp_by_status'),rpGroup(rows,r=>r[XH('c_status')]),false)],
+    rows:rows
+  });
+}
+
+/* ---- 6) REQUESTS ---- */
+function rpReq(R,pf){
+  const list=REQS.filter(r=>{const d=dOnly(r.created_at); return d>=R.from&&d<=R.to&&inPartner(pf,r.driver_id);});
+  const lv=list.filter(r=>r.req_type==='leave').length;
+  const ad=list.filter(r=>r.req_type==='advance');
+  const adAmt=ad.filter(r=>r.status==='approved').reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+  const pend=list.filter(r=>r.status==='pending').length;
+  const STT={approved:t('f_st_approved'),rejected:t('f_st_rejected'),pending:t('f_st_pending')};
+  rpRender({
+    title:t('rp_r_req'), file:'requests',
+    kpis:[{l:t('rp_k_reqs'),v:list.length,c:'var(--navy)'},
+          {l:t('r_leave'),v:lv,c:'var(--blue)'},
+          {l:t('r_adv'),v:ad.length,c:'var(--purple)'},
+          {l:t('rp_k_advamt'),v:fmtKD(adAmt),c:'var(--green)'},
+          {l:t('rp_k_pending'),v:pend,c:'var(--amber)'}],
+    breaks:[rpBreak(t('rp_by_drv'),rpGroup(list,r=>r.driver_name)),
+            rpBreak(t('rp_by_status'),rpGroup(list,r=>STT[r.status]||r.status))],
+    rows:list.map(r=>{const o={}; const isL=r.req_type==='leave';
+      o[XH('c_date')]=dOnly(r.created_at); o[XH('c_driver')]=r.driver_name||'';
+      o[XH('c_type')]=isL?t('r_leave'):t('r_adv');
+      o[XH('c_details')]=isL?((r.from_date||'')+' → '+(r.to_date||'')+' ('+(r.days_count||0)+')')
+                            :(fmtKD(r.amount)+' KD / '+(r.installments||1));
+      o[XH('c_reason')]=r.reason||''; o[XH('c_status')]=STT[r.status]||r.status||'';
+      o['Note']=r.admin_note||'';
+      return o;})
+  });
+}
+
+/* ---- 7) DAILY PERFORMANCE ---- */
+function rpDaily(R,pf){
+  const list=DAILY.filter(r=>{const d=dOnly(r.report_date);
+    return d>=R.from&&d<=R.to&&inPartner(pf,r.driver_id,r.partner);});
+  const ords=list.reduce((s,r)=>s+(parseInt(r.orders_count)||0),0);
+  const hrs=list.reduce((s,r)=>s+(parseFloat(r.duty_hours)||0),0);
+  const fuel=list.reduce((s,r)=>s+(parseFloat(r.fuel_amount)||0),0);
+  let flagged=0;
+  const rows=list.map(r=>{
+    const d=drvById(r.driver_id);
+    const actH=actualHours(r.driver_id,r.report_date);
+    const actF=actualFuel(r.driver_id,r.report_date);
+    const fl=auditReport(r); if(fl.length) flagged++;
+    const o={};
+    o[XH('c_date')]=dOnly(r.report_date); o[XH('c_driver')]=r.driver_name||'';
+    o[XH('c_partner')]=d.partner||r.partner||''; o[XH('c_orders')]=r.orders_count||0;
+    o[XH('c_rep_hrs')]=r.duty_hours||0; o[XH('c_act_hrs')]=actH===null?'':actH;
+    o[XH('c_fuel')]=r.fuel_amount||0; o[XH('c_receipt')]=actF===null?'':actF.toFixed(3);
+    o[XH('c_audit')]=fl.map(f=>f.m).join(' | ');
+    return o;
+  });
+  const dset=new Set(list.map(r=>dOnly(r.report_date)));
+  rpRender({
+    title:t('rp_r_daily'), file:'daily_performance',
+    kpis:[{l:t('rp_k_reports'),v:list.length,c:'var(--navy)'},
+          {l:t('rp_k_orders'),v:ords,c:'var(--green)'},
+          {l:t('rp_k_avgord'),v:dset.size?Math.round(ords/dset.size):'—',c:'var(--blue)'},
+          {l:t('rp_k_hours'),v:hrs.toFixed(1),c:'var(--purple)'},
+          {l:t('c_fuel'),v:fmtKD(fuel),c:'var(--amber)'},
+          {l:t('rp_k_flagged'),v:flagged,c:'var(--red)'}],
+    breaks:[rpBreak(t('rp_by_drv'),rpGroup(list,r=>r.driver_name,r=>r.orders_count),true)],
+    rows:rows
+  });
 }
 
 /* ═══════════ CSV ═══════════ */
