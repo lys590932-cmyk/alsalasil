@@ -184,6 +184,7 @@ tbody tr:hover{background:#f8fafc}
   <div class="tabs-inner">
     <button class="tab active" data-view="entry"    onclick="switchView('entry')">✏️ إدخال البيانات</button>
     <button class="tab" data-view="dashboard" onclick="switchView('dashboard')">📊 اللوحة والتنبيهات</button>
+    <button class="tab" data-view="profit"    onclick="switchView('profit')">📈 المبيعات والربحية</button>
     <button class="tab" data-view="forecast"  onclick="switchView('forecast')">🔮 توقع الاحتياج</button>
     <button class="tab" data-view="cost"      onclick="switchView('cost')">💰 التكلفة</button>
     <button class="tab" data-view="report"    onclick="switchView('report')">📄 التقرير</button>
@@ -211,6 +212,7 @@ tbody tr:hover{background:#f8fafc}
       <div class="kpi" style="--kpi-color:var(--amber)"><div class="kpi-label">دجاج</div><div class="kpi-value" id="totalChicken">0</div><div class="kpi-unit">كجم 🐔</div></div>
       <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">لحوم</div><div class="kpi-value" id="totalMeat">0</div><div class="kpi-unit">كجم 🥩</div></div>
       <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">تكلفة اليوم</div><div class="kpi-value" id="totalCostEntry">0</div><div class="kpi-unit">د.ك</div></div>
+      <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">مبيعات اليوم</div><div class="kpi-value" id="totalSalesEntry">0</div><div class="kpi-unit">د.ك 🧾</div></div>
     </div>
   </div>
 
@@ -252,6 +254,38 @@ tbody tr:hover{background:#f8fafc}
   <div class="card">
     <div class="card-title">📋 التفصيل اليومي حسب الفرع</div>
     <div class="table-scroll"><table id="detailTable"></table></div>
+  </div>
+</div>
+
+<!-- ══════════ PROFIT ══════════ -->
+<div class="view" id="profitView">
+  <div class="card no-print">
+    <div class="toolbar" style="margin-bottom:0">
+      <div class="field"><label>من تاريخ</label><input type="date" id="pFrom" onchange="renderProfit()"></div>
+      <div class="field"><label>إلى تاريخ</label><input type="date" id="pTo" onchange="renderProfit()"></div>
+      <button class="btn ghost" onclick="setProfitRange(7)">آخر ٧ أيام</button>
+      <button class="btn ghost" onclick="setProfitRange(30)">آخر ٣٠ يوم</button>
+      <button class="btn ghost" onclick="clearProfitRange()">كل الفترة</button>
+    </div>
+  </div>
+  <div class="kpi-grid" id="profitKpis"></div>
+  <div class="insight" id="profitInsight"></div>
+
+  <div class="card">
+    <div class="card-title">📊 المبيعات مقابل الكميات — يوم بيوم</div>
+    <div class="card-sub">لو الأعمدة (كميات) بتعلى والخط (مبيعات) واقف، يبقى فيه هدر أو الطلب قلّ.</div>
+    <div class="chart-box" style="height:320px"><canvas id="salesVsKgChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏆 ترتيب الفروع بالربحية</div>
+    <div class="card-sub" id="profitTableNote"></div>
+    <div class="table-scroll"><table id="profitTable"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💵 مبيعات كل كيلو حسب الفرع</div>
+    <div class="chart-box"><canvas id="salesPerKgChart"></canvas></div>
   </div>
 </div>
 
@@ -376,6 +410,9 @@ const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 // ═══════════════════════════════════════════════════════════════════
 function makeId(date, branch){ return date + '_' + branch; }
 function recTotal(r){ return (+r.chicken||0)+(+r.meat||0)+(+r.naimi||0)+(+r.dawaner||0); }
+function recSales(r){ return +r.sales||0; }
+/* نسبة تكلفة الخامات من المبيعات — أهم مؤشر في المطاعم */
+function foodCostPct(cost,sales){ return sales>0 ? cost/sales : null; }
 function fmt(n,d=0){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
 function branchOf(id){ return BRANCHES.find(b=>b.id===id); }
 
@@ -467,6 +504,7 @@ async function pullFromCloud(){
     const raw = (data||[]).map(r=>({
       id:r.id, date:r.date, branch:r.branch, keeper:r.keeper,
       chicken:+r.chicken||0, meat:+r.meat||0, naimi:+r.naimi||0, dawaner:+r.dawaner||0,
+      sales:+r.sales||0,
       notes:r.notes, createdAt:r.created_at, updatedAt:r.updated_at,
     }));
     const clean = dedupe(raw);
@@ -494,6 +532,7 @@ async function pushToCloud(records){
       id:makeId(r.date,r.branch), date:r.date, branch:r.branch,
       keeper:r.keeper||'المخزن',
       chicken:+r.chicken||0, meat:+r.meat||0, naimi:+r.naimi||0, dawaner:+r.dawaner||0,
+      sales:+r.sales||0,
       notes:r.notes||null,
     }));
     const {error} = await sb.from('warehouse_records').upsert(rows,{onConflict:'id'});
@@ -589,8 +628,8 @@ function switchView(view){
 function refreshActiveView(){
   const active=document.querySelector('.view.active');
   if(!active) return;
-  ({dashboardView:renderDashboard, forecastView:renderForecast, costView:renderCost,
-    reportView:renderReport, historyView:renderHistory}[active.id]||(()=>{}))();
+  ({dashboardView:renderDashboard, profitView:renderProfit, forecastView:renderForecast,
+    costView:renderCost, reportView:renderReport, historyView:renderHistory}[active.id]||(()=>{}))();
 }
 function showSettings(){
   const cfg=getConfig();
@@ -625,6 +664,12 @@ function buildEntryForm(){
           <div class="branch-type">${b.type}</div>
         </div>
         <div>${rows}</div>
+        <div class="item-row" style="margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)">
+          <label style="color:var(--blue)">🧾 مبيعات اليوم</label>
+          <input type="number" min="0" step="0.001" placeholder="0.000" style="border-color:#bfdbfe;background:#f8fbff"
+                 data-sales="${b.id}" oninput="updateSummary()">
+          <div class="unit">د.ك</div>
+        </div>
         <div class="branch-total" id="total_${b.id}">إجمالي: 0 كجم</div>
       </div>`;
     if(b.type==='شاورما') shHtml+=html; else swHtml+=html;
@@ -638,7 +683,7 @@ function updateBranchTotal(branchId){
   document.getElementById('total_'+branchId).textContent=`إجمالي: ${fmt(total,total%1?1:0)} كجم`;
 }
 function updateSummary(){
-  let totalKg=0,chicken=0,meat=0,cost=0;
+  let totalKg=0,chicken=0,meat=0,cost=0,sales=0;
   const p=getPrices();
   document.querySelectorAll('input[data-branch]').forEach(i=>{
     const v=Number(i.value)||0, k=i.dataset.item;
@@ -646,19 +691,28 @@ function updateSummary(){
     if(k==='chicken') chicken+=v;
     if(k==='meat'||k==='naimi') meat+=v;
   });
+  document.querySelectorAll('input[data-sales]').forEach(i=>sales+=Number(i.value)||0);
   document.getElementById('totalKg').textContent=fmt(totalKg,totalKg%1?1:0);
   document.getElementById('totalChicken').textContent=fmt(chicken,chicken%1?1:0);
   document.getElementById('totalMeat').textContent=fmt(meat,meat%1?1:0);
   document.getElementById('totalCostEntry').textContent=fmt(cost,3);
+  document.getElementById('totalSalesEntry').textContent=fmt(sales,3);
 }
 function fillForm(records){
   document.querySelectorAll('input[data-branch]').forEach(i=>i.value='');
-  records.forEach(r=>ALL_ITEM_KEYS.forEach(k=>{
-    if(r[k]>0){
-      const el=document.querySelector(`input[data-branch="${r.branch}"][data-item="${k}"]`);
-      if(el) el.value=r[k];
+  document.querySelectorAll('input[data-sales]').forEach(i=>i.value='');
+  records.forEach(r=>{
+    ALL_ITEM_KEYS.forEach(k=>{
+      if(r[k]>0){
+        const el=document.querySelector(`input[data-branch="${r.branch}"][data-item="${k}"]`);
+        if(el) el.value=r[k];
+      }
+    });
+    if(recSales(r)>0){
+      const s=document.querySelector(`input[data-sales="${r.branch}"]`);
+      if(s) s.value=recSales(r);
     }
-  }));
+  });
   BRANCHES.forEach(b=>updateBranchTotal(b.id));
   updateSummary();
 }
@@ -677,11 +731,14 @@ function copyPrevDay(){
   if(!earlier.length){ toast('مفيش يوم سابق أنسخ منه',true); return; }
   const prevDate=earlier[0].date;
   fillForm(earlier.filter(r=>r.date===prevDate));
-  toast(`📋 اتنسخت كميات ${prevDate} — عدّل اللي محتاج وبعدين احفظ`);
+  // المبيعات مابتتنسخش — دي أرقام فعلية لازم تتكتب لكل يوم لوحده
+  document.querySelectorAll('input[data-sales]').forEach(i=>i.value='');
+  updateSummary();
+  toast(`📋 اتنسخت كميات ${prevDate} (من غير المبيعات) — عدّل واحفظ`);
 }
 function clearForm(){
-  if(!confirm('مسح كل الكميات المكتوبة؟')) return;
-  document.querySelectorAll('input[data-branch]').forEach(i=>i.value='');
+  if(!confirm('مسح كل الكميات والمبيعات المكتوبة؟')) return;
+  document.querySelectorAll('input[data-branch],input[data-sales]').forEach(i=>i.value='');
   BRANCHES.forEach(b=>updateBranchTotal(b.id));
   updateSummary();
 }
@@ -696,16 +753,19 @@ async function saveEntry(){
   const kept=[], removedIds=[];
   BRANCHES.forEach(b=>{
     const rec={ id:makeId(date,b.id), date, branch:b.id, keeper,
-                chicken:0, meat:0, naimi:0, dawaner:0, createdAt:now, updatedAt:now };
+                chicken:0, meat:0, naimi:0, dawaner:0, sales:0, createdAt:now, updatedAt:now };
     let hasData=false;
     (b.type==='شاورما'?[...b.items,'dawaner']:b.items).forEach(k=>{
       const v=Number(document.querySelector(`input[data-branch="${b.id}"][data-item="${k}"]`)?.value)||0;
       if(v>0){ rec[k]=v; hasData=true; }
     });
+    // المبيعات لوحدها كفاية تخلّي الصف يتحفظ — فرع ممكن يبيع من غير ما يستلم كميات في نفس اليوم
+    const s=Number(document.querySelector(`input[data-sales="${b.id}"]`)?.value)||0;
+    if(s>0){ rec.sales=s; hasData=true; }
     if(hasData) kept.push(rec); else removedIds.push(makeId(date,b.id));
   });
 
-  if(!kept.length){ toast('مفيش أي كميات مكتوبة',true); return; }
+  if(!kept.length){ toast('مفيش أي كميات أو مبيعات مكتوبة',true); return; }
 
   const others=loadRecords().filter(r=>r.date!==date);
   saveRecords([...others,...kept]);
@@ -831,9 +891,46 @@ function buildAlerts(){
     }
   }
 
-  // 5) الأسعار مش مدخلة
+  // 5) مبيعات — فروع أخدت كميات ومسجّلتش مبيعات
+  const salesExist=records.some(r=>recSales(r)>0);
+  if(salesExist){
+    const missing=todayRecs.filter(r=>recTotal(r)>0 && recSales(r)<=0);
+    if(missing.length) alerts.push({level:'mid',icon:'🧾',
+      title:`${missing.length} فرع استلم كميات يوم ${latest} ومسجّلش مبيعات`,
+      text:`الفروع: ${missing.map(r=>branchOf(r.branch)?.name).filter(Boolean).join('، ')}. من غير المبيعات مش هينفع نحسب ربحيتها.`});
+
+    // نسبة تكلفة عالية
+    const p=getPrices();
+    if(pricesSet()){
+      BRANCHES.forEach(b=>{
+        const rs=records.filter(r=>r.branch===b.id && recSales(r)>0);
+        if(rs.length<3) return;
+        const sales=rs.reduce((s,r)=>s+recSales(r),0);
+        const cost=rs.reduce((s,r)=>s+recCost(r,p),0);
+        const fc=foodCostPct(cost,sales);
+        if(fc!==null && fc>0.40) alerts.push({level:fc>0.55?'high':'mid',icon:'💸',
+          title:`${b.name} — نسبة تكلفة الخامات ${fmt(fc*100,1)}%`,
+          text:`المبيعات <b>${fmt(sales,3)} د.ك</b> والخامات <b>${fmt(cost,3)} د.ك</b>. المعدل الصحي في المطاعم ٢٥–٣٥٪ — النسبة دي معناها هدر، أو تسعير قليل، أو كميات أكتر من اللزوم.`});
+      });
+    }
+
+    // انخفاض مبيعات فرع عن معدله
+    BRANCHES.forEach(b=>{
+      const hist=recent.map(d=>records.find(r=>r.date===d&&r.branch===b.id)).filter(Boolean).map(recSales).filter(v=>v>0);
+      if(hist.length<3) return;
+      const avg=mean(hist);
+      const today=todayRecs.find(r=>r.branch===b.id);
+      if(!today||recSales(today)<=0||avg<=0) return;
+      const diff=(recSales(today)-avg)/avg;
+      if(diff<=-0.3) alerts.push({level:diff<=-0.5?'high':'mid',icon:'📉',
+        title:`${b.name} — المبيعات أقل من المعتاد بـ${Math.round(Math.abs(diff)*100)}%`,
+        text:`باع <b>${fmt(recSales(today),3)} د.ك</b> يوم ${latest}، ومتوسطه <b>${fmt(avg,3)} د.ك</b>.`});
+    });
+  }
+
+  // 6) الأسعار مش مدخلة
   if(!pricesSet()) alerts.push({level:'low',icon:'💰',title:'أسعار الكيلو لسه مادخلتش',
-    text:'أرقام التكلفة كلها هتفضل صفر لحد ما تدخل الأسعار من تبويب <b>التكلفة</b>.'});
+    text:'أرقام التكلفة ونسبة الربحية هتفضل فاضية لحد ما تدخل الأسعار من تبويب <b>التكلفة</b>.'});
 
   const rank={high:0,mid:1,low:2};
   return alerts.sort((a,b)=>rank[a.level]-rank[b.level]);
@@ -962,6 +1059,128 @@ function resetFilters(){
   document.getElementById('filterTo').value='';
   document.getElementById('filterBranch').value='all';
   renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PROFIT — المبيعات مقابل الكميات وترتيب الفروع
+// ═══════════════════════════════════════════════════════════════════
+function profitRecords(){
+  const from=document.getElementById('pFrom').value;
+  const to=document.getElementById('pTo').value;
+  let rs=loadRecords();
+  if(from) rs=rs.filter(r=>r.date>=from);
+  if(to) rs=rs.filter(r=>r.date<=to);
+  return rs;
+}
+function setProfitRange(days){
+  const dates=[...new Set(loadRecords().map(r=>r.date))].sort();
+  if(!dates.length) return;
+  const to=dates[dates.length-1];
+  const from=new Date(to); from.setDate(from.getDate()-days+1);
+  document.getElementById('pTo').value=to;
+  document.getElementById('pFrom').value=from.toISOString().slice(0,10);
+  renderProfit();
+}
+function clearProfitRange(){
+  document.getElementById('pFrom').value='';
+  document.getElementById('pTo').value='';
+  renderProfit();
+}
+function renderProfit(){
+  const records=profitRecords();
+  const p=getPrices(), hasPrices=pricesSet();
+  const totalKg=records.reduce((s,r)=>s+recTotal(r),0);
+  const totalSales=records.reduce((s,r)=>s+recSales(r),0);
+  const totalCost=records.reduce((s,r)=>s+recCost(r,p),0);
+  const days=new Set(records.filter(r=>recSales(r)>0).map(r=>r.date)).size;
+  const fc=foodCostPct(totalCost,totalSales);
+
+  document.getElementById('profitKpis').innerHTML=[
+    {l:'إجمالي المبيعات',v:fmt(totalSales,3),u:'د.ك',c:'var(--blue)'},
+    {l:'إجمالي الكميات',v:fmt(totalKg),u:'كجم',c:'var(--accent)'},
+    {l:'مبيعات لكل كيلو',v:totalKg?fmt(totalSales/totalKg,3):'—',u:'د.ك/كجم',c:'var(--orange)'},
+    {l:'نسبة تكلفة الخامات',v:fc!==null&&hasPrices?fmt(fc*100,1)+'%':'—',u:'من المبيعات',c:'var(--red)'},
+    {l:'الهامش بعد الخامات',v:hasPrices&&totalSales>0?fmt(totalSales-totalCost,3):'—',u:'د.ك',c:'var(--green)'},
+    {l:'أيام فيها مبيعات',v:days,u:'يوم',c:'var(--amber)'},
+  ].map(k=>`<div class="kpi" style="--kpi-color:${k.c}"><div class="kpi-label">${k.l}</div>
+    <div class="kpi-value" style="font-size:${String(k.v).length>7?'19px':'27px'}">${k.v}</div><div class="kpi-unit">${k.u}</div></div>`).join('');
+
+  const ins=document.getElementById('profitInsight');
+  if(totalSales<=0){
+    ins.innerHTML='🧾 لسه مافيش أي مبيعات مسجّلة. ادخل تبويب <b>إدخال البيانات</b> واكتب مبيعات كل فرع في الخانة الزرقا، وهتلاقي كل المؤشرات هنا اشتغلت.';
+  }else{
+    const perKg=totalKg?totalSales/totalKg:0;
+    ins.innerHTML=`💵 كل كيلو بيجيب في المتوسط <b style="color:var(--primary)">${fmt(perKg,3)} د.ك</b>.
+      ${hasPrices&&fc!==null?`نسبة تكلفة الخامات <b style="color:${fc>0.40?'var(--red)':'var(--green)'}">${fmt(fc*100,1)}%</b> من المبيعات —
+      ${fc>0.40?'دي نسبة عالية، راجع الأسعار أو الهدر.':'نسبة في المعدل الطبيعي للمطاعم (٢٥–٣٥٪).'}`
+      :'دخّل أسعار الكيلو من تبويب <b>التكلفة</b> عشان تشوف نسبة التكلفة والهامش.'}`;
+  }
+
+  // ── المبيعات مقابل الكميات ──
+  destroyChart('salesVsKg');
+  const byDate=groupByDate(records);
+  const dates=Object.keys(byDate).sort();
+  charts.salesVsKg=new Chart(document.getElementById('salesVsKgChart'),{
+    data:{labels:dates.map(d=>d.slice(5).replace('-','/')),datasets:[
+      {type:'bar',label:'الكميات (كجم)',yAxisID:'y',
+       data:dates.map(d=>byDate[d].reduce((s,r)=>s+recTotal(r),0)),
+       backgroundColor:'rgba(20,184,166,.55)',borderRadius:5},
+      {type:'line',label:'المبيعات (د.ك)',yAxisID:'y1',
+       data:dates.map(d=>byDate[d].reduce((s,r)=>s+recSales(r),0)),
+       borderColor:'#1e40af',backgroundColor:'rgba(30,64,175,.08)',borderWidth:3,tension:.35,pointRadius:4,fill:true},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'}},
+      scales:{
+        y:{position:'right',beginAtZero:true,title:{display:true,text:'كجم'},grid:{drawOnChartArea:false}},
+        y1:{position:'left',beginAtZero:true,title:{display:true,text:'د.ك'}},
+      }}
+  });
+
+  // ── ترتيب الفروع ──
+  const rows=BRANCHES.map(b=>{
+    const rs=records.filter(r=>r.branch===b.id);
+    const kg=rs.reduce((s,r)=>s+recTotal(r),0);
+    const sales=rs.reduce((s,r)=>s+recSales(r),0);
+    const cost=rs.reduce((s,r)=>s+recCost(r,p),0);
+    return {b,kg,sales,cost,margin:sales-cost,perKg:kg?sales/kg:0,fc:foodCostPct(cost,sales)};
+  }).filter(x=>x.kg>0||x.sales>0);
+
+  const sortKey = (hasPrices&&totalSales>0) ? 'margin' : (totalSales>0 ? 'perKg' : 'kg');
+  rows.sort((x,y)=>y[sortKey]-x[sortKey]);
+  document.getElementById('profitTableNote').textContent =
+    sortKey==='margin' ? 'مرتّبة بالهامش بعد خصم تكلفة الخامات (الأعلى أولاً).'
+    : sortKey==='perKg' ? 'مرتّبة بمبيعات الكيلو. دخّل الأسعار عشان الترتيب يبقى بالهامش الحقيقي.'
+    : 'مرتّبة بالكميات — لسه مافيش مبيعات مسجّلة.';
+
+  let html='<thead><tr><th>#</th><th class="t-right">الفرع</th><th>كميات (كجم)</th><th>مبيعات (د.ك)</th>'
+    +'<th>مبيعات/كجم</th><th>تكلفة (د.ك)</th><th>نسبة التكلفة</th><th class="day-total">الهامش (د.ك)</th></tr></thead><tbody>';
+  rows.forEach((x,i)=>{
+    const fcTxt = x.fc!==null&&hasPrices ? fmt(x.fc*100,1)+'%' : '—';
+    const fcColor = x.fc===null||!hasPrices ? 'var(--muted)' : x.fc>0.40?'var(--red)':x.fc>0.35?'var(--orange)':'var(--green)';
+    html+=`<tr>
+      <td>${i+1}</td>
+      <td class="t-right" style="color:${x.b.color};font-weight:800">${x.b.name}</td>
+      <td>${fmt(x.kg)}</td>
+      <td style="font-weight:800">${x.sales?fmt(x.sales,3):'—'}</td>
+      <td>${x.perKg?fmt(x.perKg,3):'—'}</td>
+      <td>${hasPrices?fmt(x.cost,3):'—'}</td>
+      <td style="color:${fcColor};font-weight:800">${fcTxt}</td>
+      <td class="day-total">${hasPrices&&x.sales?fmt(x.margin,3):'—'}</td></tr>`;
+  });
+  if(!rows.length) html+='<tr><td colspan="8" style="padding:26px;color:var(--muted)">مفيش بيانات في الفترة دي.</td></tr>';
+  document.getElementById('profitTable').innerHTML=html+'</tbody>';
+
+  // ── مبيعات كل كيلو ──
+  destroyChart('salesPerKg');
+  const sorted=[...rows].sort((x,y)=>y.perKg-x.perKg);
+  charts.salesPerKg=new Chart(document.getElementById('salesPerKgChart'),{
+    type:'bar',
+    data:{labels:sorted.map(x=>x.b.name),
+      datasets:[{label:'د.ك لكل كجم',data:sorted.map(x=>+x.perKg.toFixed(3)),
+        backgroundColor:sorted.map(x=>x.b.color),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}}}
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1131,9 +1350,14 @@ function renderReport(){
   const total=records.reduce((s,r)=>s+recTotal(r),0);
   const cost=records.reduce((s,r)=>s+recCost(r,p),0);
   const days=new Set(records.map(r=>r.date)).size;
+  const totalSales=records.reduce((s,r)=>s+recSales(r),0);
   const byBranch=BRANCHES.map(b=>{
     const rs=records.filter(r=>r.branch===b.id);
-    return {b, kg:rs.reduce((s,r)=>s+recTotal(r),0), cost:rs.reduce((s,r)=>s+recCost(r,p),0), days:new Set(rs.map(r=>r.date)).size};
+    const kg=rs.reduce((s,r)=>s+recTotal(r),0);
+    const c=rs.reduce((s,r)=>s+recCost(r,p),0);
+    const sl=rs.reduce((s,r)=>s+recSales(r),0);
+    return {b, kg, cost:c, sales:sl, margin:sl-c, perKg:kg?sl/kg:0,
+            fc:foodCostPct(c,sl), days:new Set(rs.map(r=>r.date)).size};
   }).sort((x,y)=>y.kg-x.kg);
   const alerts=buildAlerts().filter(a=>a.level==='high').slice(0,5);
 
@@ -1148,14 +1372,15 @@ function renderReport(){
       <div class="kpi" style="--kpi-color:var(--accent)"><div class="kpi-label">إجمالي الكميات</div><div class="kpi-value">${fmt(total)}</div><div class="kpi-unit">كجم</div></div>
       <div class="kpi" style="--kpi-color:var(--orange)"><div class="kpi-label">متوسط يومي</div><div class="kpi-value">${fmt(total/days,1)}</div><div class="kpi-unit">كجم/يوم</div></div>
       <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">التكلفة</div><div class="kpi-value" style="font-size:21px">${fmt(cost,3)}</div><div class="kpi-unit">د.ك</div></div>
-      <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">فروع نشطة</div><div class="kpi-value">${byBranch.filter(x=>x.kg>0).length}</div><div class="kpi-unit">من ${BRANCHES.length}</div></div>
+      <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">المبيعات</div><div class="kpi-value" style="font-size:21px">${totalSales?fmt(totalSales,3):'—'}</div><div class="kpi-unit">د.ك</div></div>
+      <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">نسبة تكلفة الخامات</div><div class="kpi-value" style="font-size:21px">${totalSales>0&&pricesSet()?fmt(cost/totalSales*100,1)+'%':'—'}</div><div class="kpi-unit">من المبيعات</div></div>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">🏪 الأداء حسب الفرع</div>
     <div class="table-scroll"><table>
-      <thead><tr><th class="t-right">#</th><th class="t-right">الفرع</th><th>النوع</th><th>الكمية (كجم)</th><th>النسبة</th><th>أيام</th><th>متوسط/يوم</th><th class="day-total">التكلفة (د.ك)</th></tr></thead>
+      <thead><tr><th>#</th><th class="t-right">الفرع</th><th>النوع</th><th>الكمية (كجم)</th><th>النسبة</th><th>أيام</th><th>متوسط/يوم</th><th>التكلفة (د.ك)</th><th>المبيعات (د.ك)</th><th>مبيعات/كجم</th><th class="day-total">الهامش (د.ك)</th></tr></thead>
       <tbody>${byBranch.map((x,i)=>`<tr>
         <td>${i+1}</td>
         <td class="t-right" style="color:${x.b.color};font-weight:800">${x.b.name}</td>
@@ -1164,7 +1389,10 @@ function renderReport(){
         <td>${total?fmt(x.kg/total*100,1):'0'}%</td>
         <td>${x.days}</td>
         <td>${x.days?fmt(x.kg/x.days,1):'-'}</td>
-        <td class="day-total">${fmt(x.cost,3)}</td></tr>`).join('')}
+        <td>${fmt(x.cost,3)}</td>
+        <td style="font-weight:800">${x.sales?fmt(x.sales,3):'—'}</td>
+        <td>${x.perKg?fmt(x.perKg,3):'—'}</td>
+        <td class="day-total">${x.sales&&pricesSet()?fmt(x.margin,3):'—'}</td></tr>`).join('')}
       </tbody></table></div>
   </div>
 
@@ -1204,10 +1432,12 @@ function renderHistory(){
     const rs=byDate[d];
     const kg=rs.reduce((s,r)=>s+recTotal(r),0);
     const c=rs.reduce((s,r)=>s+recCost(r,p),0);
+    const sl=rs.reduce((s,r)=>s+recSales(r),0);
     return `<div class="record-row" onclick="editDate('${d}')">
       <div><div class="record-date">📅 ${d} <span style="font-weight:600;font-size:11px;color:var(--muted)">${WEEKDAYS[new Date(d).getDay()]}</span></div>
       <div class="record-branch">${rs.length} فرع · أمين: ${rs[0].keeper||'غير محدد'}</div></div>
-      <div style="display:flex;gap:7px">
+      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
+        ${sl>0?`<div class="v" style="background:#dbeafe;color:#1e40af">🧾 ${fmt(sl,3)} د.ك</div>`:''}
         ${c>0?`<div class="v" style="background:#dcfce7;color:#166534">${fmt(c,3)} د.ك</div>`:''}
         <div class="v" style="background:var(--accent-soft);color:var(--primary)">${fmt(kg)} كجم</div>
       </div></div>`;
@@ -1239,6 +1469,9 @@ function exportExcel(){
     'دوانر (كجم)':+r.dawaner||0,
     'الإجمالي (كجم)':recTotal(r),
     'التكلفة (د.ك)':+recCost(r,p).toFixed(3),
+    'المبيعات (د.ك)':+recSales(r).toFixed(3),
+    'مبيعات/كجم':recTotal(r)?+(recSales(r)/recTotal(r)).toFixed(3):'',
+    'الهامش (د.ك)':+(recSales(r)-recCost(r,p)).toFixed(3),
     'أمين المخزن':r.keeper||'',
   }));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'السجلات');
@@ -1249,15 +1482,23 @@ function exportExcel(){
     'عدد الفروع':byDate[d].length,
     'الإجمالي (كجم)':byDate[d].reduce((s,r)=>s+recTotal(r),0),
     'التكلفة (د.ك)':+byDate[d].reduce((s,r)=>s+recCost(r,p),0).toFixed(3),
+    'المبيعات (د.ك)':+byDate[d].reduce((s,r)=>s+recSales(r),0).toFixed(3),
   }));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(daily),'ملخص يومي');
 
   const branchSummary=BRANCHES.map(b=>{
     const rs=records.filter(r=>r.branch===b.id);
+    const kg=rs.reduce((s,r)=>s+recTotal(r),0);
+    const sales=rs.reduce((s,r)=>s+recSales(r),0);
+    const cost=rs.reduce((s,r)=>s+recCost(r,p),0);
     return {'الفرع':b.name,'النوع':b.type,
-      'الإجمالي (كجم)':rs.reduce((s,r)=>s+recTotal(r),0),
+      'الإجمالي (كجم)':kg,
       'أيام مسجّلة':new Set(rs.map(r=>r.date)).size,
-      'التكلفة (د.ك)':+rs.reduce((s,r)=>s+recCost(r,p),0).toFixed(3)};
+      'التكلفة (د.ك)':+cost.toFixed(3),
+      'المبيعات (د.ك)':+sales.toFixed(3),
+      'مبيعات/كجم':kg?+(sales/kg).toFixed(3):'',
+      'نسبة التكلفة %':sales>0?+(cost/sales*100).toFixed(1):'',
+      'الهامش (د.ك)':+(sales-cost).toFixed(3)};
   });
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(branchSummary),'ملخص الفروع');
 
@@ -1294,9 +1535,13 @@ window.addEventListener('DOMContentLoaded',async()=>{
   await initSupabase();
   const dates=[...new Set(loadRecords().map(r=>r.date))].sort();
   if(dates.length){
-    document.getElementById('repTo').value=dates[dates.length-1];
-    const f=new Date(dates[dates.length-1]); f.setDate(f.getDate()-29);
-    document.getElementById('repFrom').value=f.toISOString().slice(0,10);
+    const last=dates[dates.length-1];
+    const f=new Date(last); f.setDate(f.getDate()-29);
+    const fromStr=f.toISOString().slice(0,10);
+    document.getElementById('repTo').value=last;
+    document.getElementById('repFrom').value=fromStr;
+    document.getElementById('pTo').value=last;
+    document.getElementById('pFrom').value=fromStr;
   }
 });
 </script>
