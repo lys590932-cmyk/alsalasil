@@ -1329,6 +1329,7 @@ table td{padding:11px 12px!important;font-size:13px!important}
         <select id="a_health"><option value="available">متاحة</option><option value="">غير متاحة</option></select>
       </div>
       <div class="fg full"><label>تاريخ الانضمام</label><input id="a_start" type="date"></div>
+      <div class="fg full"><label>تاريخ انتهاء الخدمة <span style="font-weight:400;opacity:.65">(اتركه فارغاً إن كان على رأس العمل)</span></label><input id="a_end" type="date"></div>
       <div class="fg full"><label>الراتب الأساسي (د.ك / شهر)</label><input id="a_salary" type="number" placeholder="0.000" step="0.001"></div>
     </div>
     <div class="macts">
@@ -1730,6 +1731,115 @@ let srchQ    = '';
 let upTarget = null;
 let selColor = COLORS[0];
 
+// ============================================================
+//  وحدة الأهلية والتوظيف — المصدر الوحيد للحقيقة في المحاسبة والتقارير
+//  القواعد:
+//   1. طقم الإدارة (staff_type==='admin') لا يدخل تقارير السائقين ولا مقاماتها
+//   2. السائق غير الموزّع على شريك لا يظهر في التقارير إطلاقاً
+//   3. لا يُحمّل راتب على شهر قبل تاريخ بدء العمل — والشهر الجزئي يُقسّط بالأيام
+// ============================================================
+
+/** موظف إدارة؟ */
+function isAdminStaff(d){ return !!d && d.staff_type === 'admin'; }
+
+/** السائق موزّع على شريك حقيقي؟ ('admin' و '' و 'other' لا تُعتبر شريك) */
+function hasRealPartner(d){
+  if(!d) return false;
+  const p = String(d.partner || '').trim();
+  if(!p || p === 'admin' || p === 'none' || p === 'other') return false;
+  return PARTNERS.some(x => x.id === p);
+}
+
+/** السائق مؤهّل للظهور في التقارير المالية والتشغيلية؟ */
+function isReportableDriver(d){ return !!d && !isAdminStaff(d) && hasRealPartner(d); }
+
+/** كل السائقين المؤهّلين (بغضّ النظر عن التاريخ) */
+function reportableDrivers(){ return DRV.filter(isReportableDriver); }
+
+/** طقم الإدارة فقط */
+function adminStaff(){ return DRV.filter(isAdminStaff); }
+
+/** تاريخ بدء العمل كنص YYYY-MM-DD أو null */
+function empStart(d){
+  const s = String((d && (d.startDate || d.start_date)) || '').slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+/** تاريخ انتهاء الخدمة إن وُجد */
+function empEnd(d){
+  const s = String((d && (d.endDate || d.end_date || d.leaveDate)) || '').slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
+function _daysInMonth(m, y){ return new Date(y, m, 0).getDate(); }
+function _ymd(y, m, day){
+  return String(y) + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+}
+
+/**
+ * عدد أيام التوظيف الفعلية للموظف داخل شهر/سنة معيّنين.
+ * يرجع 0 لو الموظف لم يكن مُلتحقاً بعد أو انتهت خدمته قبل الشهر.
+ * ملاحظة: لو تاريخ البدء غير مسجّل يُفترض أنه موجود طوال الشهر (سلوك متسامح).
+ */
+function employedDaysInMonth(d, m, y){
+  const dim = _daysInMonth(m, y);
+  const mStart = _ymd(y, m, 1), mEnd = _ymd(y, m, dim);
+  const s = empStart(d), e = empEnd(d);
+  if(s && s > mEnd) return 0;            // لم يلتحق بعد
+  if(e && e < mStart) return 0;          // انتهت خدمته قبل الشهر
+  const from = (s && s > mStart) ? s : mStart;
+  const to   = (e && e < mEnd)   ? e : mEnd;
+  const fromDay = parseInt(from.slice(8,10), 10);
+  const toDay   = parseInt(to.slice(8,10), 10);
+  return Math.max(0, toDay - fromDay + 1);
+}
+
+/** نسبة الشهر التي كان الموظف فيها على رأس العمل (0 إلى 1) */
+function employedFractionOfMonth(d, m, y){
+  return employedDaysInMonth(d, m, y) / _daysInMonth(m, y);
+}
+
+/** هل كان الموظف على رأس العمل في أي جزء من هذا الشهر؟ */
+function wasEmployedInMonth(d, m, y){ return employedDaysInMonth(d, m, y) > 0; }
+
+/** عدد أيام التوظيف داخل مدى تواريخ [from,to] بصيغة YYYY-MM-DD */
+function employedDaysInRange(d, from, to){
+  if(!from || !to || from > to) return 0;
+  const s = empStart(d), e = empEnd(d);
+  if(s && s > to) return 0;
+  if(e && e < from) return 0;
+  const a = (s && s > from) ? s : from;
+  const b = (e && e < to)   ? e : to;
+  const A = new Date(a + 'T00:00:00'), B = new Date(b + 'T00:00:00');
+  return Math.max(0, Math.round((B - A) / 86400000) + 1);
+}
+
+/** السائقون المؤهّلون الذين كانوا على رأس العمل في هذا الشهر */
+function driversInMonth(m, y){
+  return reportableDrivers().filter(d => wasEmployedInMonth(d, m, y));
+}
+/** السائقون المؤهّلون الذين كانوا على رأس العمل في أي جزء من المدى */
+function driversInRange(from, to){
+  return reportableDrivers().filter(d => employedDaysInRange(d, from, to) > 0);
+}
+
+/**
+ * راتب سائق واحد عن شهر معيّن — مُقسّط بالأيام حسب تاريخ بدء العمل،
+ * ناقص خصومات نفس الشهر. يرجع 0 لو لم يكن على رأس العمل.
+ */
+function driverSalaryForMonth(d, m, y){
+  if(!isReportableDriver(d)) return {gross:0, prorated:0, deductions:0, net:0, days:0, dim:_daysInMonth(m,y)};
+  const dim  = _daysInMonth(m, y);
+  const days = employedDaysInMonth(d, m, y);
+  const sal  = getSalData(d.id);
+  const base = parseFloat(sal.base) || 0;
+  if(days <= 0) return {gross:base, prorated:0, deductions:0, net:0, days:0, dim:dim};
+  const prorated = base * (days / dim);
+  const ded = (sal.deductions||[])
+    .filter(x => (+x.month) === m && (+x.year) === y)
+    .reduce((s,x) => s + (parseFloat(x.amount)||0), 0);
+  return {gross:base, prorated:prorated, deductions:ded, net:Math.max(0, prorated - ded), days:days, dim:dim};
+}
+
 // ==========================================
 // HELPERS
 // ==========================================
@@ -1770,7 +1880,7 @@ function getFiltered(){
 function renderFilterBar(){
   const el = document.getElementById('filterBar');
   const adminCnt = DRV.filter(d=>d.staff_type==='admin').length;
-  const drvCnt   = DRV.filter(d=>d.staff_type!=='admin').length;
+  const drvCnt   = DRV.filter(d=>!isAdminStaff(d)).length;
   el.innerHTML = '<span class="ftab'+(filter==='all'?' on':'')+'" onclick="setFilter(\'all\')">الكل <span style="font-size:9px;opacity:.75">'+DRV.length+'</span></span>'
     + PARTNERS.map(p=>{
         const cnt = DRV.filter(d=>d.partner===p.id && d.staff_type!=='admin').length;
@@ -1781,7 +1891,8 @@ function renderFilterBar(){
 }
 
 function renderTopStats(){
-  document.getElementById('st-total').textContent = DRV.length;
+  // إجمالي السائقين = سائقون فقط (طقم الإدارة له عدّاده الخاص)
+  document.getElementById('st-total').textContent = DRV.filter(d=>!isAdminStaff(d)).length;
   const now=Date.now(), in60=now+60*86400000;
   document.getElementById('st-exp').textContent = DRV.filter(d=>{
     if(!d.license) return false;
@@ -1874,6 +1985,7 @@ function renderDetail(){
           <div class="irow"><i class="ti ti-world iico"></i><span class="ilbl">الجنسية</span><span class="ival">${F(d.nationality,'nationality')}</span></div>
           <div class="irow"><i class="ti ti-cake iico"></i><span class="ilbl">العمر</span><span class="ival">${F(d.age||'','age',{t:'number'})}</span></div>
           <div class="irow"><i class="ti ti-calendar iico"></i><span class="ilbl">تاريخ الانضمام</span><span class="ival">${F(d.startDate,'startDate',{t:'date'})}</span></div>
+          <div class="irow"><i class="ti ti-calendar-off iico"></i><span class="ilbl">انتهاء الخدمة</span><span class="ival">${editing ? F(d.endDate||'','endDate',{t:'date'}) : (d.endDate ? '<span class="ival bad">'+d.endDate+'</span>' : '<span class="ival ok">على رأس العمل</span>')}</span></div>
         </div>
       </div>
       <div class="isec">
@@ -1927,7 +2039,7 @@ function cancelEdit(){ editing=false; renderDetail(); }
 
 function saveDriver(){
   const d = DRV.find(x=>x.id===selId); if(!d) return;
-  ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate'].forEach(f=>{
+  ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate'].forEach(f=>{
     const el=document.getElementById('e_'+f); if(el) d[f]=el.value;
   });
   const ag=document.getElementById('e_age'); if(ag) d.age=parseInt(ag.value)||0;
@@ -2007,6 +2119,7 @@ function addDriver(){
     nationality:document.getElementById('a_nat').value.trim(),
     age:parseInt(document.getElementById('a_age').value)||0,
     startDate:document.getElementById('a_start').value,
+    endDate:document.getElementById('a_end').value || '',
     civil:document.getElementById('a_civil').value.trim(),
     license: isAdmin ? '' : document.getElementById('a_lic').value,
     partner: isAdmin ? 'admin' : document.getElementById('a_par').value,
@@ -2023,7 +2136,7 @@ function addDriver(){
     saveSalaries();
     salInput.value='';
   }
-  ['a_name','a_bankname','a_iban','a_id','a_car','a_pet','a_sim','a_dev','a_nat','a_age','a_start','a_civil','a_lic','a_position'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  ['a_name','a_bankname','a_iban','a_id','a_car','a_pet','a_sim','a_dev','a_nat','a_age','a_start','a_end','a_civil','a_lic','a_position'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
 }
 
 // ==========================================
@@ -2708,7 +2821,7 @@ function renderDash() {
   function ini(n){ return (n||'?').trim().split(/\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase(); }
   function pColor(id){ const p=PARTNERS.find(x=>x.id===id); return p?p.color:'#7d8590'; }
 
-  const expNow  = DRV.filter(d => { if(!d.license) return false; return new Date(d.license).getTime() < now; });
+  const expNow  = DRV.filter(d => { if(isAdminStaff(d) || !d.license) return false; return new Date(d.license).getTime() < now; });
   const expSoon = DRV.filter(d => { if(!d.license) return false; const t=new Date(d.license).getTime(); return t>=now && t<in90; });
 
   const todayAtt = Object.entries(ATTENDANCE).filter(([k])=>k.endsWith('_'+today));
@@ -2717,7 +2830,11 @@ function renderDash() {
 
   const thisMonth = new Date().getMonth()+1, thisYear = new Date().getFullYear();
   const monthVio  = VIOLATIONS.filter(v=>{ const d=new Date(v.date); return d.getMonth()+1===thisMonth && d.getFullYear()===thisYear; });
-  const totalSalary = DRV.reduce((s,d)=>{ const sal=getSalData(d.id); return s+(sal.base||0); },0);
+  // رواتب السائقين فقط، مقسّطة بأيام العمل للشهر الحالي — الإدارة منفصلة
+  const totalSalary      = _monthlySalaryCost(thisMonth, thisYear);
+  const totalAdminSalary = _monthlyAdminSalaryCost(thisMonth, thisYear);
+  const dashDrivers      = driversInMonth(thisMonth, thisYear);
+  const dashDrvCount     = dashDrivers.length;
 
   const ciStatus = {};
   CLOCKIN_RECORDS.forEach(r => { if(!ciStatus[r.driver_id]) ciStatus[r.driver_id]=r; });
@@ -2925,7 +3042,7 @@ function renderDash() {
     '<div class="kpi-metrics">' +
       '<div class="kpi-metric" style="border-right-color:#7c3aed" onclick="setMainView(\'drivers\')">' +
         '<div class="kpi-metric-label">إجمالي السائقين</div>' +
-        '<div class="kpi-metric-value" style="color:#7c3aed">'+DRV.length+'</div>' +
+        '<div class="kpi-metric-value" style="color:#7c3aed">'+dashDrvCount+'</div>' +
         '<div class="kpi-metric-formula">Total Drivers</div>' +
       '</div>' +
       '<div class="kpi-metric" style="border-right-color:#7c3aed" onclick="setMainView(\'drivers\')">' +
@@ -2952,8 +3069,9 @@ function renderDash() {
   '</div>';
 
   // ═══════════ Section 2: Attendance ═══════════
-  const absent = DRV.length - (present + late);
-  const attendanceRate = DRV.length > 0 ? Math.round(((present+late)/DRV.length)*100) : 0;
+  // المقام = السائقون العاملون فعلاً هذا الشهر (بدون إدارة وبدون غير موزّعين)
+  const absent = Math.max(0, dashDrvCount - (present + late));
+  const attendanceRate = dashDrvCount > 0 ? Math.round(((present+late)/dashDrvCount)*100) : 0;
   html += '<div class="kpi-section" style="border-color:#10b98144">' +
     '<div class="kpi-sec-head">' +
       '<div class="kpi-sec-icon" style="background:linear-gradient(135deg,#059669,#10b981)"><i class="ti ti-calendar-check"></i></div>' +
@@ -3053,7 +3171,7 @@ function renderDash() {
       '</div>' +
       '<div class="kpi-metric" style="border-right-color:#059669">' +
         '<div class="kpi-metric-label">معدل الالتزام</div>' +
-        '<div class="kpi-metric-value" style="color:#059669">'+(DRV.length>0?Math.round(((DRV.length-monthVio.length)/DRV.length)*100):100)+'%</div>' +
+        '<div class="kpi-metric-value" style="color:#059669">'+(dashDrvCount>0?Math.round(((dashDrvCount-monthVio.length)/dashDrvCount)*100):100)+'%</div>' +
         '<div class="kpi-metric-formula">Compliance %</div>' +
       '</div>' +
     '</div>' +
@@ -3119,7 +3237,7 @@ function renderDash() {
       '</div>' +
       '<div class="kpi-metric" style="border-right-color:#14b8a6">' +
         '<div class="kpi-metric-label">متوسط راتب/سائق</div>' +
-        '<div class="kpi-metric-value" style="color:#14b8a6">'+(DRV.length>0?(totalSalary/DRV.length).toFixed(0):0)+'</div>' +
+        '<div class="kpi-metric-value" style="color:#14b8a6">'+(dashDrvCount>0?(totalSalary/dashDrvCount).toFixed(0):0)+'</div>' +
         '<div class="kpi-metric-formula">Avg Salary KD</div>' +
       '</div>' +
       '<div class="kpi-metric" style="border-right-color:#14b8a6">' +
@@ -3140,7 +3258,7 @@ function renderDash() {
     const cnt = Object.entries(ATTENDANCE).filter(([k,v])=>k.endsWith('_'+key)&&(v.status==='present'||v.status==='late')).length;
     days.push({date:key, label: i===0?'اليوم':daysArDash[d.getDay()], count:cnt});
   }
-  const maxCount = Math.max.apply(null, days.map(x=>x.count).concat([1, DRV.length]));
+  const maxCount = Math.max.apply(null, days.map(x=>x.count).concat([1, dashDrvCount]));
   html += '<div class="dash-row">';
   html += '<div class="panel">'+
     '<div class="panel-head"><div><div class="panel-title"><i class="ti ti-chart-bar"></i> الحضور خلال آخر 7 أيام</div>'+
@@ -3149,8 +3267,8 @@ function renderDash() {
     days.map(function(d){ const h=Math.max((d.count/maxCount)*100,3); return '<div class="bar-wrap"><div class="bar-bg"><div class="bar" style="height:'+h+'%"></div></div><div class="bar-val">'+d.count+'</div><div class="bar-lbl">'+d.label+'</div></div>'; }).join('')+
     '</div></div>';
 
-  const partnerStats = PARTNERS.map(p => ({id:p.id, name:p.name, color:p.color, cnt: DRV.filter(d=>d.partner===p.id).length}));
-  const totalDrv = DRV.length || 1;
+  const partnerStats = PARTNERS.map(p => ({id:p.id, name:p.name, color:p.color, cnt: dashDrivers.filter(d=>d.partner===p.id).length}));
+  const totalDrv = dashDrvCount || 1;
   let acc = 0;
   let donutCircles = '';
   partnerStats.forEach(function(p){
@@ -3166,7 +3284,7 @@ function renderDash() {
       '<div class="donut"><svg viewBox="0 0 36 36">'+
         '<circle cx="18" cy="18" r="15.9" fill="none" stroke="#2a3346" stroke-width="3.2"/>'+
         donutCircles+
-      '</svg><div class="donut-center"><div class="donut-val">'+DRV.length+'</div><div class="donut-lbl">سائق</div></div></div>'+
+      '</svg><div class="donut-center"><div class="donut-val">'+dashDrvCount+'</div><div class="donut-lbl">سائق</div></div></div>'+
       '<div class="donut-legend">'+
       partnerStats.map(function(p){return '<div class="lg-row"><span class="lg-dot" style="background:'+p.color+'"></span><span class="lg-name">'+p.name+'</span><span class="lg-val">'+p.cnt+'</span></div>';}).join('')+
       '</div>'+
@@ -3929,7 +4047,7 @@ async function renderClockin() {
 
   // STATS
   html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">';
-  html += statCard('#3b82f6','ti-users', DRV.length, 'إجمالي السائقين');
+  html += statCard('#3b82f6','ti-users', DRV.filter(d=>!isAdminStaff(d)).length, 'إجمالي السائقين');
   html += statCard('#10b981','ti-login', inDrivers.length, 'داخل الآن');
   html += statCard('#ef4444','ti-logout', outDrivers.length, 'خارج');
   html += statCard('#f59e0b','ti-clock', totalToday, 'تسجيل اليوم');
@@ -4281,7 +4399,8 @@ async function refreshDriverReport(){
 
   // Aggregate per driver
   const result = [];
-  const drivers = DRV.filter(d => d.staff_type !== 'admin');
+  // سائقون مؤهّلون فقط + كانوا على رأس العمل في هذا الشهر (تاريخ البدء مُطبَّق)
+  const drivers = driversInMonth(month+1, year);
   drivers.forEach(d => {
     const dailies = dailyRows.filter(r => r.driver_id === d.id);
     const orders = dailies.reduce((s,r)=>s+(parseInt(r.orders_count)||0), 0);
@@ -4290,7 +4409,8 @@ async function refreshDriverReport(){
 
     const presentDays = clockinRows.filter(c => c.driver_id === d.id && c.in_time).length;
     // Calculate expected days in month vs present
-    const totalDays = new Date(year, month+1, 0).getDate();
+    // أيام العمل المتوقّعة = أيام التوظيف الفعلية داخل الشهر (تحترم تاريخ بدء العمل)
+    const totalDays = employedDaysInMonth(d, month+1, year);
     const absentDays = Math.max(0, totalDays - presentDays);
 
     // Violations for this driver in this period
@@ -5695,16 +5815,52 @@ function _matchMonth(dateStr, m, y){
   const dt = new Date(dateStr);
   return dt.getMonth()+1===m && dt.getFullYear()===y;
 }
+/**
+ * تكلفة مرتبات السائقين عن شهر معيّن.
+ * — طقم الإدارة مستبعد (له دالة منفصلة _monthlyAdminSalaryCost)
+ * — السائق غير الموزّع على شريك مستبعد
+ * — الراتب مُقسّط بالأيام حسب تاريخ بدء العمل (لا تحميل راتب على شهر قبل الالتحاق)
+ */
 function _monthlySalaryCost(m, y){
   // If user added a manual 'salaries' expense for this month, use that (avoid double count)
   const manual = EXPENSES.filter(x=>x.category==='salaries' && _matchMonth(x.date,m,y)).reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
   if(manual > 0) return manual;
   // Otherwise auto-calculate from internal salary system
-  return DRV.reduce((s,d)=>{
-    const sal = getSalData(d.id);
-    const ded = (sal.deductions||[]).filter(x=>(+x.month)===m && (+x.year)===y).reduce((ss,x)=>ss+(parseFloat(x.amount)||0),0);
-    return s + ((sal.base||0) - ded);
+  return reportableDrivers().reduce((s,d)=> s + driverSalaryForMonth(d, m, y).net, 0);
+}
+
+/** تكلفة مرتبات طقم الإدارة عن شهر معيّن — مفصولة عن مرتبات السائقين */
+function _monthlyAdminSalaryCost(m, y){
+  return adminStaff().reduce((s,d)=>{
+    const dim  = _daysInMonth(m, y);
+    const days = employedDaysInMonth(d, m, y);
+    if(days <= 0) return s;
+    const sal  = getSalData(d.id);
+    const base = parseFloat(sal.base) || 0;
+    const ded  = (sal.deductions||[])
+      .filter(x => (+x.month) === m && (+x.year) === y)
+      .reduce((ss,x) => ss + (parseFloat(x.amount)||0), 0);
+    return s + Math.max(0, base * (days/dim) - ded);
   }, 0);
+}
+
+/** تفصيل مرتبات الشهر: سائقون + إدارة + مستبعدون (للعرض والمراجعة) */
+function _monthlySalaryBreakdown(m, y){
+  const rows = reportableDrivers().map(d => {
+    const r = driverSalaryForMonth(d, m, y);
+    return {id:d.id, name:d.name, partner:d.partner, start:empStart(d),
+            base:r.gross, days:r.days, dim:r.dim, prorated:r.prorated,
+            deductions:r.deductions, net:r.net, partial:(r.days>0 && r.days<r.dim), notYet:(r.days===0)};
+  });
+  return {
+    drivers: rows.filter(r=>!r.notYet),
+    notYetStarted: rows.filter(r=>r.notYet),
+    partialMonth: rows.filter(r=>r.partial),
+    unassigned: DRV.filter(d=>!isAdminStaff(d) && !hasRealPartner(d)).map(d=>({id:d.id, name:d.name})),
+    driversTotal: rows.reduce((s,r)=>s+r.net,0),
+    adminTotal: _monthlyAdminSalaryCost(m, y),
+    adminCount: adminStaff().filter(d=>wasEmployedInMonth(d,m,y)).length
+  };
 }
 
 function openIncomeModal(){
@@ -5795,8 +5951,10 @@ function renderAccounting(){
   const monthExpensesNonSal = monthExpenses.filter(x=>x.category!=='salaries');
   const totalIncome   = monthIncomes.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
   const totalExpense  = monthExpensesNonSal.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-  const salaryCost    = _monthlySalaryCost(accMonth, accYear);
-  const netProfit     = totalIncome - totalExpense - salaryCost;
+  const salaryCost    = _monthlySalaryCost(accMonth, accYear);       // سائقون فقط — مقسّط بالأيام
+  const adminCost     = _monthlyAdminSalaryCost(accMonth, accYear);  // طقم الإدارة — بند منفصل
+  const salBrk        = _monthlySalaryBreakdown(accMonth, accYear);
+  const netProfit     = totalIncome - totalExpense - salaryCost - adminCost;
 
   let mOpts = '', yOpts = '';
   for(let i=0;i<12;i++) mOpts+='<option value="'+(i+1)+'" '+((i+1)===accMonth?'selected':'')+'>'+months[i]+'</option>';
@@ -5821,11 +5979,43 @@ function renderAccounting(){
   h += '<div class="kpis">';
   h += '<div class="kpi ok"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-arrow-down-circle"></i></div></div><div class="kpi-val">'+totalIncome.toFixed(3)+'</div><div class="kpi-lbl">إجمالي الإيرادات</div></div>';
   h += '<div class="kpi err"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-arrow-up-circle"></i></div></div><div class="kpi-val">'+totalExpense.toFixed(3)+'</div><div class="kpi-lbl">إجمالي المصروفات</div></div>';
-  h += '<div class="kpi warn"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-users"></i></div></div><div class="kpi-val">'+salaryCost.toFixed(3)+'</div><div class="kpi-lbl">تكلفة الرواتب (صافي)</div></div>';
+  h += '<div class="kpi warn"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-users"></i></div></div><div class="kpi-val">'+salaryCost.toFixed(3)+'</div><div class="kpi-lbl">رواتب السائقين ('+salBrk.drivers.length+' سائق)</div></div>';
+  h += '<div class="kpi warn"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-briefcase"></i></div></div><div class="kpi-val">'+adminCost.toFixed(3)+'</div><div class="kpi-lbl">رواتب الإدارة ('+salBrk.adminCount+' موظف)</div></div>';
   const profitClass = netProfit >= 0 ? 'ok' : 'err';
   const profitColor = netProfit >= 0 ? 'var(--green)' : 'var(--red)';
   h += '<div class="kpi '+profitClass+'"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-coin"></i></div></div><div class="kpi-val" style="color:'+profitColor+'">'+netProfit.toFixed(3)+'</div><div class="kpi-lbl">صافي الربح</div></div>';
   h += '</div>';
+
+  // === شفافية احتساب المرتبات — يوضّح بالضبط مين دخل ومين اتستبعد وليه ===
+  if(salBrk.partialMonth.length || salBrk.notYetStarted.length || salBrk.unassigned.length){
+    h += '<div class="panel" style="margin-bottom:14px;border-color:rgba(245,158,11,0.35)">'+
+      '<div class="panel-head"><div><div class="panel-title"><i class="ti ti-calculator" style="color:#f59e0b"></i> تفاصيل احتساب مرتبات '+months[accMonth-1]+' '+accYear+'</div>'+
+      '<div class="panel-sub">الراتب يُقسّط بالأيام حسب تاريخ بدء العمل — والمستبعدون موضّحون بالسبب</div></div></div>'+
+      '<div style="padding:4px 14px 12px">';
+    if(salBrk.partialMonth.length){
+      h += '<div style="font-size:11px;font-weight:800;color:#f59e0b;margin:8px 0 6px">⏳ شهر جزئي — راتب مُقسّط ('+salBrk.partialMonth.length+')</div>';
+      salBrk.partialMonth.forEach(r=>{
+        h += '<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:4px 0;border-bottom:1px dashed var(--br)">'+
+          '<span>'+r.name+' <span style="color:var(--muted)">('+r.id+' · بدأ '+r.start+')</span></span>'+
+          '<span style="font-family:JetBrains Mono,monospace;white-space:nowrap">'+r.days+'/'+r.dim+' يوم · '+r.base.toFixed(3)+' → <b style="color:#f59e0b">'+r.net.toFixed(3)+'</b> د.ك</span></div>';
+      });
+    }
+    if(salBrk.notYetStarted.length){
+      h += '<div style="font-size:11px;font-weight:800;color:var(--red);margin:12px 0 6px">🚫 مستبعد — لم يلتحق بعد في هذا الشهر ('+salBrk.notYetStarted.length+')</div>';
+      salBrk.notYetStarted.forEach(r=>{
+        h += '<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:4px 0;border-bottom:1px dashed var(--br)">'+
+          '<span>'+r.name+' <span style="color:var(--muted)">('+r.id+')</span></span>'+
+          '<span style="color:var(--muted)">تاريخ البدء: '+(r.start||'غير مسجّل')+'</span></div>';
+      });
+    }
+    if(salBrk.unassigned.length){
+      h += '<div style="font-size:11px;font-weight:800;color:var(--muted);margin:12px 0 6px">⊘ مستبعد — غير موزّع على شريك ('+salBrk.unassigned.length+')</div>';
+      salBrk.unassigned.forEach(r=>{
+        h += '<div style="font-size:11px;padding:4px 0;color:var(--muted);border-bottom:1px dashed var(--br)">'+r.name+' ('+r.id+')</div>';
+      });
+    }
+    h += '</div></div>';
+  }
 
   // Two-column: Incomes + Expenses
   h += '<div class="dash-bottom">';
@@ -6114,7 +6304,7 @@ function generatePptxReport(){
     return {key:k, name:c.name, icon:c.icon, color:c.color.replace('#',''), amount:v, pct: totalExpense?v/totalExpense*100:0};
   }).sort((a,b)=>b.amount-a.amount);
 
-  const totalDrivers = DRV.length;
+  const totalDrivers = driversInMonth(accMonth, accYear).length;
   const fmt = n => (Math.round(n)).toLocaleString('en-US');
   const fmt3 = n => (parseFloat(n)||0).toFixed(3);
 
@@ -6934,13 +7124,17 @@ function repFinancials(){
   const expNonSal = exp.filter(x=>x.category!=='salaries');
   const totalIncome = inc.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
   const totalExpNonSal = expNonSal.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-  let salaryCost = 0;
+  let salaryCost = 0, adminSalaryCost = 0;
   if(repMode==='year'){
-    for(let m=1; m<=12; m++) salaryCost += (_monthlySalaryCost(m, repYear) || 0);
+    for(let m=1; m<=12; m++){
+      salaryCost      += (_monthlySalaryCost(m, repYear) || 0);
+      adminSalaryCost += (_monthlyAdminSalaryCost(m, repYear) || 0);
+    }
   } else {
-    salaryCost = _monthlySalaryCost(repMonth, repYear) || 0;
+    salaryCost      = _monthlySalaryCost(repMonth, repYear) || 0;
+    adminSalaryCost = _monthlyAdminSalaryCost(repMonth, repYear) || 0;
   }
-  const totalExpense = totalExpNonSal + salaryCost;
+  const totalExpense = totalExpNonSal + salaryCost + adminSalaryCost;
   const netProfit = totalIncome - totalExpense;
   const margin = totalIncome ? (netProfit/totalIncome*100) : 0;
 
@@ -6948,12 +7142,13 @@ function repFinancials(){
   const expByCat = {};
   expNonSal.forEach(e => { expByCat[e.category] = (expByCat[e.category]||0) + (parseFloat(e.amount)||0); });
   if(salaryCost>0) expByCat['salaries'] = salaryCost;
+  if(adminSalaryCost>0) expByCat['admin'] = (expByCat['admin']||0) + adminSalaryCost;
   const expEntries = Object.entries(expByCat).map(([k,v])=>{
     const c = (typeof EXP_CATS !== 'undefined' && EXP_CATS[k]) ? EXP_CATS[k] : {name:k, icon:'•', color:'#888'};
     return { key:k, name:c.name, icon:c.icon, color:c.color, amount:v, pct: totalExpense?v/totalExpense*100:0 };
   }).sort((a,b)=>b.amount-a.amount);
 
-  return { totalIncome, totalExpense, totalExpNonSal, salaryCost, netProfit, margin, expEntries, incomes:inc, expenses:exp, bounds:b };
+  return { totalIncome, totalExpense, totalExpNonSal, salaryCost, adminSalaryCost, netProfit, margin, expEntries, incomes:inc, expenses:exp, bounds:b };
 }
 
 /** Partner mix analysis */
@@ -6961,9 +7156,17 @@ function repPartnerMix(){
   const f = repFinancials();
   const stats = PARTNERS.map(p=>{
     const inc = f.incomes.filter(x=>x.source===p.id).reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-    const driversList = DRV.filter(d=>d.partner===p.id);
+    // سائقو هذا الشريك الذين كانوا فعلاً على رأس العمل خلال الفترة (بدون إدارة، بدون غير موزّعين)
+    const driversList = driversInRange(f.bounds.from, f.bounds.to).filter(d=>d.partner===p.id);
     const driversCount = driversList.length;
-    const salaries = driversList.reduce((s,d)=>{ const sd=getSalData(d.id); return s+(parseFloat(sd.base)||0); },0);
+    // الرواتب مُقسّطة بأيام العمل الفعلية داخل الفترة
+    const _totalDays = Math.round((new Date(f.bounds.to+'T00:00:00') - new Date(f.bounds.from+'T00:00:00'))/86400000) + 1;
+    const salaries = driversList.reduce((s,d)=>{
+      const sd = getSalData(d.id);
+      const wd = employedDaysInRange(d, f.bounds.from, f.bounds.to);
+      const mult = (repMode==='year') ? 12 : 1;
+      return s + (parseFloat(sd.base)||0) * (_totalDays ? wd/_totalDays : 0) * mult;
+    },0);
     return {
       id:p.id, name:p.name, color:p.color,
       income:inc, drivers:driversCount, salaries,
@@ -6978,27 +7181,54 @@ function repPartnerMix(){
 }
 
 /** Driver-level performance ranking */
+/**
+ * أداء السائقين خلال الفترة المختارة.
+ * — طقم الإدارة مستبعد، والسائق غير الموزّع على شريك مستبعد
+ * — السائق الذي لم يكن على رأس العمل خلال الفترة مستبعد (تاريخ البدء)
+ * — الراتب مُقسّط بأيام العمل الفعلية داخل الفترة
+ * — معيار الترتيب المعتمد: incomePerDay (الإيراد ÷ يوم عمل) لعدالة المقارنة
+ */
 function repDriverPerformance(){
   const f = repFinancials();
-  const arr = DRV.map(d=>{
+  const b = f.bounds;
+  const arr = driversInRange(b.from, b.to).map(d=>{
     const sal = getSalData(d.id);
+    const base = parseFloat(sal.base)||0;
     const inc = f.incomes.filter(x=>x.driverId===d.id).reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-    // deductions across period (use date filter)
-    const b = f.bounds;
+    // أيام العمل الفعلية داخل الفترة (تحترم تاريخ بدء العمل وانتهاء الخدمة)
+    const workedDays = employedDaysInRange(d, b.from, b.to);
+    const totalDays  = Math.round((new Date(b.to+'T00:00:00') - new Date(b.from+'T00:00:00'))/86400000) + 1;
+    // الراتب المستحق فعلياً عن الفترة — مقسّط بالأيام
+    const proratedBase = totalDays>0 ? base * (workedDays/totalDays) * (repMode==='year'?12:1) : 0;
     const deds = (sal.deductions||[]).filter(x=>x.date>=b.from && x.date<=b.to);
     const dedAmt = deds.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-    // violations
     const vios = (typeof VIOLATIONS !== 'undefined' ? VIOLATIONS : []).filter(v=>v.driverId===d.id && v.date>=b.from && v.date<=b.to);
     const vioAmt = vios.reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+    const contribution = inc - proratedBase - vioAmt;
     return {
       id:d.id, name:d.name, partner:(PARTNERS.find(p=>p.id===d.partner)||{}).name||'',
-      income:inc, base:parseFloat(sal.base)||0,
-      net:(parseFloat(sal.base)||0) - dedAmt - vioAmt,
+      startDate: empStart(d) || '—',
+      income:inc, base:base, proratedBase:proratedBase,
+      workedDays:workedDays, totalDays:totalDays,
+      partialPeriod: workedDays > 0 && workedDays < totalDays,
+      incomePerDay: workedDays>0 ? inc/workedDays : 0,
+      net: Math.max(0, proratedBase - dedAmt - vioAmt),
       deductions:dedAmt, violationsCount:vios.length, violationsAmt:vioAmt,
-      contribution: inc - (parseFloat(sal.base)||0)
+      contribution: contribution,
+      contributionPerDay: workedDays>0 ? contribution/workedDays : 0
     };
   });
   return arr;
+}
+
+/** ترتيب أعلى السائقين أداءً — المعيار: الإيراد ÷ يوم عمل فعلي.
+ *  minDays يمنع سائق اشتغل يومين بإيراد عالي من تصدّر القائمة بالصدفة. */
+function repTopDrivers(limit, minDays){
+  const L = limit || 10, MIN = (minDays===undefined ? 7 : minDays);
+  const all = repDriverPerformance().filter(d => d.income > 0);
+  const qualified = all.filter(d => d.workedDays >= MIN);
+  const pool = qualified.length ? qualified : all;   // لو الفترة قصيرة، لا نفرّغ القائمة
+  return pool.slice().sort((a,b)=> b.incomePerDay - a.incomePerDay).slice(0, L);
 }
 
 /** Attendance / operational stats */
@@ -7008,9 +7238,16 @@ function repOperational(){
   const fromD = new Date(b.from), toD = new Date(b.to);
   const daysInRange = Math.round((toD - fromD)/86400000) + 1;
 
+  // السائقون المؤهّلون فقط — طقم الإدارة وغير الموزّعين خارج كل الحسابات
+  const elig = driversInRange(b.from, b.to);
+  const eligIds = new Set(elig.map(d=>d.id));
+
   let present=0, late=0, absent=0, off=0, marked=0;
   for(const k in ATTENDANCE){
-    const dateStr = k.split('_')[1] || '';
+    const parts = k.split('_');
+    const drvId = parts[0] || '';
+    const dateStr = parts[1] || '';
+    if(!eligIds.has(drvId)) continue;                 // تجاهل الإدارة وغير المؤهّلين
     if(dateStr < b.from || dateStr > b.to) continue;
     const r = ATTENDANCE[k];
     if(!r || !r.status) continue;
@@ -7025,19 +7262,29 @@ function repOperational(){
     const e = SCHED[k];
     if(e && (e.type==='off' || e.type==='holiday')) off++;
   }
-  const expectedRecs = DRV.length * daysInRange;
+  // المقام الصحيح: مجموع أيام التوظيف الفعلية لكل سائق مؤهّل — لا (عدد السائقين × أيام الفترة)
+  const expectedRecs = elig.reduce((s,d)=> s + employedDaysInRange(d, b.from, b.to), 0);
   const attendanceRate = expectedRecs ? ((present+late)/expectedRecs*100) : 0;
 
-  // violations count
-  const vios = (typeof VIOLATIONS !== 'undefined' ? VIOLATIONS : []).filter(v=>v.date>=b.from && v.date<=b.to);
+  // violations count — للسائقين المؤهّلين فقط
+  const vios = (typeof VIOLATIONS !== 'undefined' ? VIOLATIONS : [])
+    .filter(v=>v.date>=b.from && v.date<=b.to && eligIds.has(v.driverId));
   const vioTotal = vios.reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
 
+  // متوسط الإيراد يُقسم على أيام العمل الفعلية ثم يُضرب في متوسط الأيام — أعدل من القسمة على عدد الرؤوس
+  const avgIncomePerDriver = elig.length ? f.totalIncome/elig.length : 0;
+  const avgIncomePerDriverDay = expectedRecs ? f.totalIncome/expectedRecs : 0;
+
   return {
-    daysInRange, totalDrivers: DRV.length,
+    daysInRange,
+    totalDrivers: elig.length,                 // سائقون مؤهّلون فقط
+    totalHeadcount: DRV.length,                // كل من في النظام (للمرجع)
+    adminCount: adminStaff().length,
+    excludedUnassigned: DRV.filter(d=>!isAdminStaff(d) && !hasRealPartner(d)).length,
     present, late, absent, off, marked,
     expectedRecs, attendanceRate,
     violationsCount: vios.length, violationsAmt: vioTotal,
-    avgIncomePerDriver: DRV.length ? f.totalIncome/DRV.length : 0
+    avgIncomePerDriver, avgIncomePerDriverDay
   };
 }
 
@@ -7058,7 +7305,7 @@ function renderReports(){
   const fmt = n => (parseFloat(n)||0).toFixed(3);
   const fmtI = n => Math.round(parseFloat(n)||0).toLocaleString('en-US');
 
-  const top5 = drivers.slice().sort((a,b)=>b.income-a.income).slice(0,5);
+  const top5 = repTopDrivers(5);
   const worst5 = drivers.slice().sort((a,b)=>b.violationsAmt-a.violationsAmt).slice(0,5).filter(d=>d.violationsAmt>0 || d.deductions>0);
 
   let h = '<div class="rep-wrap">';
@@ -7122,11 +7369,19 @@ function renderReports(){
   // Top 5 + Worst 5
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">';
   h += '<div class="rep-section" style="margin:0">';
-  h += '<h3><i class="ti ti-trophy" style="color:#fbbf24"></i> أفضل 5 سائقين (إيراد)</h3>';
-  h += '<table class="rep-table"><thead><tr><th>#</th><th>السائق</th><th>الشريك</th><th>الإيراد</th></tr></thead><tbody>';
+  h += '<h3><i class="ti ti-trophy" style="color:#fbbf24"></i> أفضل 5 سائقين (إيراد ÷ يوم عمل)</h3>';
+  h += '<div style="font-size:10.5px;color:var(--muted2);padding:0 2px 8px">مُطبّق عليه تاريخ بدء العمل · بدون طقم الإدارة · بدون السائقين غير الموزّعين على شركاء</div>';
+  h += '<table class="rep-table"><thead><tr><th>#</th><th>السائق</th><th>الشريك</th><th>أيام</th><th>الإيراد</th><th>إيراد/يوم</th></tr></thead><tbody>';
+  if(!top5.length){
+    h += '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted2)">لا توجد إيرادات مسجّلة لسائقين مؤهّلين في هذه الفترة</td></tr>';
+  }
   top5.forEach((d,i)=>{
     const medal = ['🥇','🥈','🥉','4.','5.'][i];
-    h += '<tr><td>'+medal+'</td><td>'+d.id+' — '+d.name+'</td><td style="font-size:11px;color:var(--muted)">'+d.partner+'</td><td style="font-family:JetBrains Mono,monospace" class="rep-pos">'+fmt(d.income)+'</td></tr>';
+    h += '<tr><td>'+medal+'</td><td>'+d.id+' — '+d.name+(d.partialPeriod?' <span style="font-size:9px;color:#f59e0b" title="التحق أثناء الفترة">⏳</span>':'')+'</td>'+
+         '<td style="font-size:11px;color:var(--muted)">'+d.partner+'</td>'+
+         '<td style="font-family:JetBrains Mono,monospace;font-size:11px">'+d.workedDays+'</td>'+
+         '<td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--muted)">'+fmt(d.income)+'</td>'+
+         '<td style="font-family:JetBrains Mono,monospace" class="rep-pos"><b>'+fmt(d.incomePerDay)+'</b></td></tr>';
   });
   h += '</tbody></table></div>';
 
@@ -7310,12 +7565,15 @@ function generateFullPdfReport(){
   // ====== PAGE 4: Driver Top/Worst ======
   doc.addPage();
   _pdfHeader(doc, 'Driver Performance Ranking', f.bounds.labelEn);
-  const topSorted = drivers.slice().sort((a,b)=>b.income-a.income).slice(0,10);
+  const topSorted = repTopDrivers(10);
   doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(28,82,48);
-  doc.text('Top 10 Drivers by Revenue', M, 40);
-  doc.autoTable({ startY:44,
-    head:[['#','Code','Name','Partner','Revenue','Base Salary']],
-    body:topSorted.map((d,i)=>[i+1, d.id, _pdfName(d.name, d.id), d.partner, fmt(d.income), fmt(d.base)]),
+  doc.text('Top 10 Drivers by Revenue per Working Day', M, 40);
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(110,110,110);
+  doc.text('Ranked by revenue / actual working day. Admin staff and drivers without a partner are excluded. Start dates applied.', M, 44);
+  doc.autoTable({ startY:47,
+    head:[['#','Code','Name','Partner','Start','Days','Revenue','Rev./Day','Salary (pro-rated)']],
+    body:topSorted.map((d,i)=>[i+1, d.id, _pdfName(d.name, d.id), d.partner, d.startDate, d.workedDays,
+                               fmt(d.income), fmt(d.incomePerDay), fmt(d.proratedBase)]),
     theme:'striped', styles:{fontSize:8, cellPadding:1.6}, headStyles:{fillColor:[28,82,48], textColor:255},
     margin:{left:M,right:M}
   });
@@ -7578,12 +7836,16 @@ function generateFullPptxReport(){
   }
 
   /* ---- S6: Top 10 drivers BAR ---- */
-  const top10 = drivers.slice().sort((a,b)=>b.income-a.income).slice(0,10).filter(d=>d.income>0);
+  const top10 = repTopDrivers(10);
   if(top10.length){
     const s6 = pptx.addSlide(); s6.background={color:BG};
-    s6.addText('Top 10 Drivers by Revenue', {x:0.5,y:0.3,w:12.3,h:0.6,fontSize:24,color:TEXT,bold:true,align:'center',fontFace:'Arial'});
+    s6.addText('Top 10 Drivers by Revenue per Working Day', {x:0.5,y:0.3,w:12.3,h:0.5,fontSize:24,color:TEXT,bold:true,align:'center',fontFace:'Arial'});
+    s6.addText('Normalised by actual working days · admin staff and unassigned drivers excluded · start dates applied',
+      {x:0.5,y:0.82,w:12.3,h:0.3,fontSize:11,color:MUTED,align:'center',fontFace:'Arial'});
     s6.addChart(pptx.ChartType.bar, [{
-      name:'Revenue (KD)', labels:top10.map(d=>d.id+' '+d.name.split(' ')[0]), values:top10.map(d=>parseFloat(d.income.toFixed(3)))
+      name:'Revenue / Working Day (KD)',
+      labels:top10.map(d=>d.id+' '+d.name.split(' ')[0]+' ('+d.workedDays+'d)'),
+      values:top10.map(d=>parseFloat(d.incomePerDay.toFixed(3)))
     }], {
       x:0.5, y:1.1, w:12.3, h:5.8,
       chartColors: ['34d399'],
@@ -7747,14 +8009,19 @@ function generateFullExcelReport(){
     ['المؤشر','القيمة','الوحدة'],
     ['إجمالي الإيرادات', f.totalIncome.toFixed(3), 'د.ك'],
     ['إجمالي المصروفات', f.totalExpense.toFixed(3), 'د.ك'],
-    ['تكلفة الرواتب', f.salaryCost.toFixed(3), 'د.ك'],
+    ['رواتب السائقين (مقسّطة بالأيام)', f.salaryCost.toFixed(3), 'د.ك'],
+    ['رواتب طقم الإدارة', (f.adminSalaryCost||0).toFixed(3), 'د.ك'],
     ['صافي الربح', f.netProfit.toFixed(3), 'د.ك'],
     ['هامش الربح', f.margin.toFixed(2), '%'],
-    ['عدد السائقين', ops.totalDrivers, 'سائق'],
+    ['عدد السائقين المؤهّلين', ops.totalDrivers, 'سائق'],
+    ['طقم الإدارة (خارج تقارير السائقين)', ops.adminCount, 'موظف'],
+    ['سائقون مستبعدون (بدون شريك)', ops.excludedUnassigned, 'سائق'],
+    ['أيام العمل المتوقّعة (بعد تاريخ البدء)', ops.expectedRecs, 'يوم'],
     ['معدل الحضور', ops.attendanceRate.toFixed(1), '%'],
     ['عدد المخالفات', ops.violationsCount, 'مخالفة'],
     ['قيمة المخالفات', ops.violationsAmt.toFixed(3), 'د.ك'],
-    ['متوسط الإيراد/سائق', ops.avgIncomePerDriver.toFixed(3), 'د.ك']
+    ['متوسط الإيراد/سائق', ops.avgIncomePerDriver.toFixed(3), 'د.ك'],
+    ['متوسط الإيراد/سائق/يوم عمل', ops.avgIncomePerDriverDay.toFixed(3), 'د.ك']
   ];
   const ws1 = XLSX.utils.aoa_to_sheet(kpiAoa); ws1['!cols']=[{wch:30},{wch:20},{wch:10}]; ws1['!views']=[{RTL:true}];
   XLSX.utils.book_append_sheet(wb, ws1, 'ملخص KPIs');
@@ -7766,9 +8033,12 @@ function generateFullExcelReport(){
   XLSX.utils.book_append_sheet(wb, ws2, 'تحليل الشركاء');
 
   // Sheet 3: Drivers
-  const dAoa = [['الكود','الاسم','الشريك','الإيراد','الراتب الأساسي','المخالفات','قيمة المخالفات','الخصومات','صافي الراتب']];
-  drivers.forEach(d=>dAoa.push([d.id, d.name, d.partner, d.income.toFixed(3), d.base.toFixed(3), d.violationsCount, d.violationsAmt.toFixed(3), d.deductions.toFixed(3), d.net.toFixed(3)]));
-  const ws3 = XLSX.utils.aoa_to_sheet(dAoa); ws3['!cols']=[{wch:9},{wch:25},{wch:14},{wch:12},{wch:14},{wch:11},{wch:14},{wch:12},{wch:13}]; ws3['!views']=[{RTL:true}];
+  const dRanked = drivers.slice().sort((a,b)=>b.incomePerDay-a.incomePerDay);
+  const dAoa = [['الترتيب','الكود','الاسم','الشريك','تاريخ البدء','أيام العمل','شهر جزئي؟','الإيراد','الإيراد/يوم','الراتب الأساسي','الراتب المستحق (مقسّط)','المخالفات','قيمة المخالفات','الخصومات','صافي الراتب','صافي المساهمة']];
+  dRanked.forEach((d,i)=>dAoa.push([i+1, d.id, d.name, d.partner, d.startDate, d.workedDays, d.partialPeriod?'نعم':'لا',
+    d.income.toFixed(3), d.incomePerDay.toFixed(3), d.base.toFixed(3), d.proratedBase.toFixed(3),
+    d.violationsCount, d.violationsAmt.toFixed(3), d.deductions.toFixed(3), d.net.toFixed(3), d.contribution.toFixed(3)]));
+  const ws3 = XLSX.utils.aoa_to_sheet(dAoa); ws3['!cols']=[{wch:7},{wch:9},{wch:25},{wch:14},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:14},{wch:18},{wch:11},{wch:14},{wch:12},{wch:13},{wch:14}]; ws3['!views']=[{RTL:true}];
   XLSX.utils.book_append_sheet(wb, ws3, 'أداء السائقين');
 
   // Sheet 4: Expenses
@@ -7860,7 +8130,7 @@ async function renderDailyReports(){
 
   // KPIs
   const reportingDrivers = new Set(list.map(r => r.driver_id)).size;
-  const expectedDrivers = DRV.filter(d => d.staff_type !== 'admin').length;
+  const expectedDrivers = driversInRange(drepFrom, drepTo).length;
   const totalOrders = list.reduce((s,r) => s + (parseInt(r.orders_count)||0), 0);
   const totalFuel   = list.reduce((s,r) => s + (parseFloat(r.fuel_amount)||0), 0);
   const totalBalance= list.reduce((s,r) => s + (parseFloat(r.card_balance)||0), 0);
@@ -7869,7 +8139,7 @@ async function renderDailyReports(){
 
   // Partner options
   const partnerOpts = '<option value="all">كل الشركاء</option>' + PARTNERS.map(p => `<option value="${p.id}" ${drepPartner===p.id?'selected':''}>${p.name}</option>`).join('');
-  const driverOpts = '<option value="all">كل السائقين</option>' + DRV.filter(d=>d.staff_type!=='admin').sort((a,b)=>(a.id||'').localeCompare(b.id||'')).map(d => `<option value="${d.id}" ${drepDriver===d.id?'selected':''}>${d.id} — ${d.name}</option>`).join('');
+  const driverOpts = '<option value="all">كل السائقين</option>' + reportableDrivers().sort((a,b)=>(a.id||'').localeCompare(b.id||'')).map(d => `<option value="${d.id}" ${drepDriver===d.id?'selected':''}>${d.id} — ${d.name}</option>`).join('');
 
   let h = '';
   // Header
@@ -9480,7 +9750,7 @@ async function pushScheduleToApp(){
     var sent = 0;
     for(var i=0;i<rows.length;i+=100){
       var chunk = rows.slice(i, i+100);
-      var res = await fetch(SUPA_URL+'/rest/v1/schedules?on_conflict=uniq_key', {
+      var res = await fetch(SUPA_URL+'/rest/v1/schedules?on_conflict=driver_id,date', {
         method:'POST',
         headers:{
           'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY,
