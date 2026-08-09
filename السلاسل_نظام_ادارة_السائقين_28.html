@@ -1098,6 +1098,7 @@ table td{padding:11px 12px!important;font-size:13px!important}
   </div>
   <div class="top-btns">
     <button class="tbtn" onclick="openScheduleModal()" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)"><i class="ti ti-calendar-week"></i> <span data-i18n="btn_schedule">الجدول</span></button>
+    <button class="tbtn" onclick="openOpsCenter('profit')" id="opsCenterBtn" style="color:#3b82f6;border-color:rgba(59,130,246,0.4)" title="الربحية والتنبيهات والتدقيق"><i class="ti ti-dashboard"></i> <span>مركز التشغيل</span><span id="opsAlertBadge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-right:5px;font-weight:800"></span></button>
     <button class="tbtn" onclick="syncDriversToSupabase()" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)" title="Sync drivers to app"><i class="ti ti-arrows-exchange"></i> <span data-i18n="btn_sync_app">مزامنة App</span></button>
     <button class="tbtn" onclick="openSendMsgModal()" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)"><i class="ti ti-message-circle"></i> <span data-i18n="btn_send_msg">إرسال رسالة</span></button>
     <button class="tbtn" onclick="openInboxModal()" style="color:#22d3ee;border-color:rgba(34,211,238,0.35);position:relative"><i class="ti ti-inbox"></i> <span data-i18n="btn_inbox">صندوق الوارد</span><span id="inboxBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,0.4)">0</span></button>
@@ -1840,6 +1841,771 @@ function driverSalaryForMonth(d, m, y){
   return {gross:base, prorated:prorated, deductions:ded, net:Math.max(0, prorated - ded), days:days, dim:dim};
 }
 
+// ============================================================
+//  ARK v2 — طبقات التشغيل
+//  1. نماذج إيراد الشركاء   2. محرّك الربحية   3. التحقق عند الإدخال
+//  4. التنبيهات             5. سجل التدقيق    6. المزامنة   7. الصلاحيات
+// ============================================================
+
+/* ══════════════ 1. نماذج إيراد الشركاء ══════════════
+   per_order     : الإيراد = عدد الطلبات × السعر (أو من سجل الإيرادات لو السعر = 0)
+   fixed_monthly : الإيراد = مبلغ ثابت لكل سائق/شهر — مقسّط بأيام العمل
+   كابوريا تعمل بنظام 450 د.ك لكل سائق شهرياً بغضّ النظر عن عدد الطلبات.        */
+
+const PARTNER_MODEL_DEFAULTS = {
+  caboria: { model:'fixed_monthly', rate:450 }
+};
+
+/** يضمن أن لكل شريك نموذج إيراد — يُستدعى مرة عند التحميل */
+function ensurePartnerModels(){
+  let changed = false;
+  PARTNERS.forEach(p => {
+    if(!p.model){
+      const d = PARTNER_MODEL_DEFAULTS[p.id];
+      p.model = d ? d.model : 'per_order';
+      p.rate  = d ? d.rate  : 0;
+      changed = true;
+    }
+    if(p.rate === undefined || p.rate === null){ p.rate = 0; changed = true; }
+  });
+  if(changed){ try{ saveLS(SK_P, PARTNERS); }catch(e){} }
+  return PARTNERS;
+}
+
+function partnerModel(pid){
+  const p = PARTNERS.find(x => x.id === pid);
+  if(!p) return { model:'per_order', rate:0, name:pid||'—' };
+  return { model: p.model || 'per_order', rate: parseFloat(p.rate)||0, name: p.name };
+}
+function isFixedPartner(pid){ return partnerModel(pid).model === 'fixed_monthly'; }
+
+/** وصف بشري لنموذج الشريك */
+function partnerModelLabel(pid){
+  const m = partnerModel(pid);
+  if(m.model === 'fixed_monthly') return m.rate.toFixed(3) + ' د.ك / سائق / شهر (ثابت)';
+  return m.rate > 0 ? (m.rate.toFixed(3) + ' د.ك / طلب') : 'بالطلب — من سجل الإيرادات';
+}
+
+/* ══════════════ 2. محرّك الربحية لكل سائق ══════════════ */
+
+// كاش بيانات البنزين والطلبات الشهرية المسحوبة من daily_reports
+let PROFIT_DAILY = {};   // { 'SA1001': {orders:n, fuel:x, days:d} }
+let PROFIT_KEY   = '';   // 'YYYY-MM' الخاص بالكاش الحالي
+
+/** يسحب تقارير الشهر من السحابة ويجمّعها لكل سائق */
+async function loadMonthOperations(m, y){
+  const key = y + '-' + String(m).padStart(2,'0');
+  if(PROFIT_KEY === key && Object.keys(PROFIT_DAILY).length) return PROFIT_DAILY;
+  const dim = _daysInMonth(m, y);
+  const from = _ymd(y, m, 1), to = _ymd(y, m, dim);
+  const agg = {};
+  try{
+    const url = SUPA_URL + '/rest/v1/daily_reports?select=driver_id,report_date,orders_count,fuel_amount'
+              + '&report_date=gte.' + from + '&report_date=lte.' + to + '&limit=5000';
+    const r = await fetch(url, { headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY } });
+    if(r.ok){
+      const rows = await r.json();
+      rows.forEach(x => {
+        const id = x.driver_id; if(!id) return;
+        if(!agg[id]) agg[id] = { orders:0, fuel:0, days:0, fuelSuspect:0 };
+        const o = parseInt(x.orders_count)||0;
+        let f = parseFloat(x.fuel_amount)||0;
+        // حارس: قيمة بنزين يومية فوق السقف شبه مؤكد أنها خطأ فاصلة عشرية
+        if(f > VALIDATION_LIMITS.fuelDaily.max){ agg[id].fuelSuspect++; f = 0; }
+        agg[id].orders += o; agg[id].fuel += f; agg[id].days++;
+      });
+    }
+  }catch(e){ console.warn('[profit] fetch failed', e); }
+  PROFIT_DAILY = agg; PROFIT_KEY = key;
+  return agg;
+}
+
+/** إيراد سائق واحد عن شهر — حسب نموذج شريكه */
+function driverRevenueForMonth(d, m, y, ops){
+  const pm = partnerModel(d.partner);
+  const dim = _daysInMonth(m, y);
+  const days = employedDaysInMonth(d, m, y);
+  if(days <= 0) return { revenue:0, basis:'لم يكن على رأس العمل', model:pm.model };
+
+  if(pm.model === 'fixed_monthly'){
+    // مقسّط بأيام العمل — نفس منطق الراتب حتى تكون المقارنة عادلة
+    const rev = pm.rate * (days / dim);
+    return { revenue:rev, basis: pm.rate.toFixed(3)+' × '+days+'/'+dim+' يوم', model:'fixed_monthly' };
+  }
+  // per_order
+  const o = (ops && ops[d.id]) ? ops[d.id].orders : 0;
+  if(pm.rate > 0){
+    return { revenue: o * pm.rate, basis: o+' طلب × '+pm.rate.toFixed(3), model:'per_order' };
+  }
+  // بدون سعر مُعرّف: نأخذ من سجل الإيرادات المرتبط بالسائق
+  const inc = (typeof INCOMES !== 'undefined' ? INCOMES : [])
+    .filter(x => x.driverId === d.id && _matchMonth(x.date, m, y))
+    .reduce((s,x) => s + (parseFloat(x.amount)||0), 0);
+  return { revenue: inc, basis: inc>0 ? 'من سجل الإيرادات' : 'لا يوجد إيراد مسجّل', model:'per_order' };
+}
+
+/** الربح الصافي لسائق واحد عن شهر */
+function driverProfitForMonth(d, m, y, ops){
+  const sal  = driverSalaryForMonth(d, m, y);
+  const rev  = driverRevenueForMonth(d, m, y, ops);
+  const op   = (ops && ops[d.id]) ? ops[d.id] : { orders:0, fuel:0, days:0, fuelSuspect:0 };
+  const vio  = (typeof VIOLATIONS !== 'undefined' ? VIOLATIONS : [])
+    .filter(v => v.driverId === d.id && _matchMonth(v.date, m, y))
+    .reduce((s,v) => s + (parseFloat(v.amount)||0), 0);
+  const profit = rev.revenue - sal.net - op.fuel - vio;
+  return {
+    id:d.id, name:d.name, partner:d.partner,
+    partnerName: partnerModel(d.partner).name,
+    model: rev.model,
+    revenue: rev.revenue, revenueBasis: rev.basis,
+    salary: sal.net, salaryDays: sal.days, monthDays: sal.dim,
+    fuel: op.fuel, fuelSuspect: op.fuelSuspect,
+    orders: op.orders, reportedDays: op.days,
+    violations: vio,
+    profit: profit,
+    margin: rev.revenue > 0 ? (profit / rev.revenue * 100) : null,
+    profitPerDay: sal.days > 0 ? profit / sal.days : 0,
+    costPerOrder: op.orders > 0 ? (sal.net + op.fuel) / op.orders : null
+  };
+}
+
+/** جدول الربحية الكامل لشهر */
+async function profitTableForMonth(m, y){
+  const ops = await loadMonthOperations(m, y);
+  return driversInMonth(m, y)
+    .map(d => driverProfitForMonth(d, m, y, ops))
+    .sort((a,b) => b.profit - a.profit);
+}
+
+/* ══════════════ 3. طبقة التحقق عند الإدخال ══════════════ */
+
+const VALIDATION_LIMITS = {
+  fuelDaily:   { max: 15,   label:'بنزين يومي',        hint:'أعلى تعبئة واقعية ~15 د.ك — تأكد من الفاصلة العشرية' },
+  ordersDaily: { max: 60,   label:'طلبات يومية',       hint:'أكثر من 60 طلب في اليوم غير واقعي' },
+  dutyHours:   { max: 24,   label:'ساعات الدوام',      hint:'لا يمكن تجاوز 24 ساعة' },
+  salary:      { min: 0, max: 2000, label:'الراتب',    hint:'الراتب خارج المدى المعقول' },
+  cardBalance: { max: 100,  label:'رصيد الكرت',        hint:'رصيد الكرت أعلى من المتوقع' }
+};
+
+/** يتحقق من سجل سائق قبل الحفظ. يرجع مصفوفة أخطاء (فارغة = سليم) */
+function validateDriverRecord(rec, isNew){
+  const errs = [], warns = [];
+  const others = DRV.filter(d => d.id !== rec.id);
+
+  if(!String(rec.name||'').trim()) errs.push('الاسم مطلوب');
+
+  // تكرار
+  const norm = s => String(s||'').trim().toUpperCase().replace(/\s+/g,' ');
+  if(rec.civil && others.some(d => d.civil === rec.civil))
+    errs.push('الرقم المدني «'+rec.civil+'» مسجّل بالفعل لـ ' + others.find(d=>d.civil===rec.civil).id);
+  if(rec.petrol && others.some(d => d.petrol === rec.petrol))
+    errs.push('كرت البنزين «'+rec.petrol+'» مربوط بالفعل بـ ' + others.find(d=>d.petrol===rec.petrol).id);
+  if(rec.name && others.some(d => norm(d.name) === norm(rec.name)))
+    warns.push('يوجد موظف بنفس الاسم: ' + others.find(d=>norm(d.name)===norm(rec.name)).id + ' — تأكد أنه ليس تكراراً');
+  if(rec.sim && others.some(d => d.sim === rec.sim))
+    warns.push('رقم الشريحة مستخدم أيضاً لـ ' + others.find(d=>d.sim===rec.sim).id);
+
+  // تواريخ
+  const today = fmtDate(new Date());
+  if(rec.startDate && rec.startDate > today)
+    errs.push('تاريخ بدء العمل («'+rec.startDate+'») في المستقبل');
+  if(rec.endDate && rec.startDate && rec.endDate < rec.startDate)
+    errs.push('تاريخ انتهاء الخدمة قبل تاريخ البدء');
+  if(!rec.startDate) warns.push('تاريخ بدء العمل غير مسجّل — سيُحتسب الراتب كشهر كامل');
+
+  // بيانات تشغيلية
+  if(!isAdminStaff(rec) && !hasRealPartner(rec))
+    warns.push('غير موزّع على شريك — لن يظهر في التقارير المالية');
+  if(rec.license && rec.license < today)
+    warns.push('رخصة القيادة منتهية ('+rec.license+')');
+  if(!rec.license && !isAdminStaff(rec)) warns.push('رخصة القيادة غير مسجّلة');
+
+  return { errors:errs, warnings:warns, ok: errs.length === 0 };
+}
+
+/** يتحقق من قيمة راتب */
+function validateSalary(v){
+  const n = parseFloat(v);
+  if(isNaN(n)) return { ok:false, msg:'قيمة غير رقمية' };
+  const L = VALIDATION_LIMITS.salary;
+  if(n < L.min || n > L.max) return { ok:false, msg:L.hint+' ('+L.min+'–'+L.max+' د.ك)' };
+  return { ok:true };
+}
+
+/** يتحقق من رقم في تقرير يومي — يستخدمه الحارس البصري */
+function validateOperationalValue(kind, v){
+  const L = VALIDATION_LIMITS[kind]; if(!L) return { ok:true };
+  const n = parseFloat(v); if(isNaN(n)) return { ok:true };
+  if(n > L.max) return { ok:false, msg:L.label+': '+n+' تجاوز الحد ('+L.max+') — '+L.hint };
+  return { ok:true };
+}
+
+/* ══════════════ 4. محرّك التنبيهات ══════════════ */
+
+/** يبني قائمة الاستثناءات التي تحتاج تدخّلاً. severity: high | med | low */
+function computeAlerts(){
+  const A = [], today = fmtDate(new Date());
+  const in60 = fmtDate(new Date(Date.now() + 60*86400000));
+  const drv = DRV.filter(d => !isAdminStaff(d));
+
+  drv.forEach(d => {
+    if(d.license && d.license < today)
+      A.push({ sev:'high', type:'رخصة منتهية', who:d.id+' — '+d.name, detail:'انتهت في '+d.license, act:'drivers' });
+    else if(d.license && d.license <= in60)
+      A.push({ sev:'med', type:'رخصة تنتهي قريباً', who:d.id+' — '+d.name, detail:'تنتهي في '+d.license, act:'drivers' });
+    else if(!d.license)
+      A.push({ sev:'med', type:'رخصة غير مسجّلة', who:d.id+' — '+d.name, detail:'الحقل فارغ', act:'drivers' });
+
+    if(!hasRealPartner(d))
+      A.push({ sev:'high', type:'بدون شريك', who:d.id+' — '+d.name, detail:'مستبعد من كل التقارير المالية', act:'drivers' });
+
+    const sal = getSalData(d.id);
+    if(!(parseFloat(sal.base) > 0))
+      A.push({ sev:'high', type:'راتب غير مسجّل', who:d.id+' — '+d.name, detail:'الراتب الأساسي = 0', act:'drivers' });
+
+    if(d.startDate && d.startDate > today)
+      A.push({ sev:'high', type:'تاريخ بدء في المستقبل', who:d.id+' — '+d.name, detail:d.startDate+' — لن يُحتسب في أي تقرير', act:'drivers' });
+    if(!d.startDate)
+      A.push({ sev:'med', type:'تاريخ بدء غير مسجّل', who:d.id+' — '+d.name, detail:'الراتب يُحتسب كشهر كامل', act:'drivers' });
+
+    if(d.health !== 'available')
+      A.push({ sev:'low', type:'بطاقة صحية', who:d.id+' — '+d.name, detail:'غير متاحة', act:'drivers' });
+    if(!d.petrol && !isAdminStaff(d))
+      A.push({ sev:'low', type:'كرت بنزين غير مربوط', who:d.id+' — '+d.name, detail:'لا يمكن تتبّع بنزينه', act:'drivers' });
+  });
+
+  // تكرار
+  const seen = {};
+  DRV.forEach(d => {
+    const k = String(d.civil||'').trim(); if(!k) return;
+    if(seen[k]) A.push({ sev:'high', type:'رقم مدني مكرر', who:d.id+' و '+seen[k], detail:'نفس الرقم المدني '+k, act:'drivers' });
+    else seen[k] = d.id;
+  });
+  const seenP = {};
+  DRV.forEach(d => {
+    const k = String(d.petrol||'').trim(); if(!k) return;
+    if(seenP[k]) A.push({ sev:'high', type:'كرت بنزين مكرر', who:d.id+' و '+seenP[k], detail:'الكرت '+k, act:'drivers' });
+    else seenP[k] = d.id;
+  });
+
+  // أرقام تشغيلية شاذة من كاش الشهر
+  Object.keys(PROFIT_DAILY).forEach(id => {
+    const o = PROFIT_DAILY[id];
+    if(o.fuelSuspect > 0){
+      const d = DRV.find(x => x.id === id);
+      A.push({ sev:'high', type:'قيمة بنزين شاذة', who:id+(d?' — '+d.name:''),
+               detail: o.fuelSuspect+' تقرير بقيمة أعلى من '+VALIDATION_LIMITS.fuelDaily.max+' د.ك — استُبعدت من الحساب', act:'dreports' });
+    }
+  });
+
+  const rank = { high:0, med:1, low:2 };
+  return A.sort((a,b) => rank[a.sev] - rank[b.sev]);
+}
+
+function alertCounts(){
+  const A = computeAlerts();
+  return { total:A.length, high:A.filter(x=>x.sev==='high').length,
+           med:A.filter(x=>x.sev==='med').length, low:A.filter(x=>x.sev==='low').length, list:A };
+}
+
+/* ══════════════ 5. سجل التدقيق ══════════════ */
+
+const SK_AUDIT = 'sl_audit';
+let AUDIT_LOG = (function(){ try{ return JSON.parse(localStorage.getItem(SK_AUDIT)||'[]'); }catch(e){ return []; } })();
+
+function audit(action, entity, entityId, before, after){
+  const e = {
+    id: 'A'+Date.now()+Math.random().toString(36).slice(2,6),
+    ts: new Date().toISOString(),
+    user: (typeof ARK_USER !== 'undefined' && ARK_USER) ? (ARK_USER.email || ARK_USER.name) : 'غير مسجّل',
+    role: (typeof ARK_ROLE !== 'undefined') ? ARK_ROLE : '—',
+    action: action, entity: entity, entityId: entityId,
+    before: before === undefined ? null : before,
+    after:  after  === undefined ? null : after
+  };
+  AUDIT_LOG.unshift(e);
+  if(AUDIT_LOG.length > 2000) AUDIT_LOG.length = 2000;
+  try{ localStorage.setItem(SK_AUDIT, JSON.stringify(AUDIT_LOG)); }catch(err){}
+  // نسخة سحابية — صامتة، لا توقف العمل عند الفشل
+  try{
+    fetch(SUPA_URL + '/rest/v1/audit_log', {
+      method:'POST',
+      headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+                'Content-Type':'application/json', Prefer:'return=minimal' },
+      body: JSON.stringify({ action:action, entity:entity, entity_id:String(entityId||''),
+                             actor:e.user, before_data:e.before, after_data:e.after })
+    }).catch(()=>{});
+  }catch(err){}
+  return e;
+}
+
+/* ══════════════ 6. المزامنة ثنائية الاتجاه ══════════════ */
+
+const SK_DELQ = 'sl_delq';   // طابور الحذف المؤجّل عند انقطاع الشبكة
+function _delQueue(){ try{ return JSON.parse(localStorage.getItem(SK_DELQ)||'[]'); }catch(e){ return []; } }
+function _delQueueSet(a){ try{ localStorage.setItem(SK_DELQ, JSON.stringify(a)); }catch(e){} }
+
+/** يحذف سائقاً من السحابة فعلياً — يُستدعى من deleteDriver */
+async function cloudDeleteDriver(id){
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/drivers?id=eq.' + encodeURIComponent(id), {
+      method:'DELETE',
+      headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, Prefer:'return=minimal' }
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return true;
+  }catch(e){
+    const q = _delQueue(); if(q.indexOf(id) < 0) q.push(id); _delQueueSet(q);
+    console.warn('[sync] delete queued for', id, e);
+    return false;
+  }
+}
+
+/** يفرّغ طابور الحذف المؤجّل */
+async function flushDeleteQueue(){
+  const q = _delQueue(); if(!q.length) return 0;
+  let done = 0;
+  for(const id of q.slice()){
+    if(await cloudDeleteDriver(id)){ done++; const n=_delQueue().filter(x=>x!==id); _delQueueSet(n); }
+  }
+  return done;
+}
+
+/** يقرأ السائقين من السحابة — المصدر الأساسي للحقيقة */
+async function cloudLoadDrivers(){
+  const r = await fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=2000',
+    { headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY } });
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const rows = await r.json();
+  return rows.map(x => ({
+    id:x.id, name:x.name, car:x.car||'', petrol:x.petrol||'', sim:x.sim||'',
+    device:x.device||'', nationality:x.nationality||'', age:x.age||0,
+    startDate:x.start_date||'', endDate:x.end_date||'', civil:x.civil||'',
+    license:x.license||'', partner:x.partner||'', health:x.health||'',
+    staff_type:x.staff_type||'driver', position:x.position||'',
+    iban:x.iban||'', bank_name:x.bank_name||'', status:x.status||'active',
+    _salary_base: x.salary_base, docs:[]
+  }));
+}
+
+/** يقارن السحابة بالمحلي ويعرض الفروق قبل أي إجراء */
+async function reconcileDrivers(){
+  const cloud = await cloudLoadDrivers();
+  const cIds = new Set(cloud.map(d => d.id));
+  const lIds = new Set(DRV.map(d => d.id));
+  return {
+    cloud: cloud,
+    onlyCloud: cloud.filter(d => !lIds.has(d.id)),   // سجلات يتيمة — محذوفة محلياً وباقية سحابياً
+    onlyLocal: DRV.filter(d => !cIds.has(d.id)),     // لم تُرفع بعد
+    both: DRV.filter(d => cIds.has(d.id)).length
+  };
+}
+
+/* ══════════════ 7. الصلاحيات ══════════════ */
+
+let ARK_USER = null;
+let ARK_ROLE = localStorage.getItem('ark_role') || 'admin';   // احتياطي حتى يُفعّل الدخول
+
+/** مصفوفة الصلاحيات — ما يستطيع كل دور فعله */
+const ROLE_PERMS = {
+  admin:      { view:'*', edit:'*', delete:true,  salaries:true,  audit:true,  sync:true },
+  accountant: { view:['dash','acc','reports','dreports','drivers','profit'], edit:['acc'], delete:false, salaries:true,  audit:true,  sync:false },
+  hr:         { view:['dash','drivers','att','apps','vio','profit'],         edit:['drivers','att','apps'], delete:false, salaries:true,  audit:false, sync:false },
+  operations: { view:['dash','drivers','att','clockin','livemap','orders','dreports','profit'], edit:['att','clockin','orders','dreports'], delete:false, salaries:false, audit:false, sync:false },
+  supervisor: { view:['dash','drivers','att','clockin','livemap'],           edit:['att','clockin'], delete:false, salaries:false, audit:false, sync:false }
+};
+
+function currentPerms(){ return ROLE_PERMS[ARK_ROLE] || ROLE_PERMS.supervisor; }
+function canView(section){ const p=currentPerms(); return p.view==='*' || p.view.indexOf(section)>=0; }
+function canEdit(section){ const p=currentPerms(); return p.edit==='*' || p.edit.indexOf(section)>=0; }
+function canDelete(){ return !!currentPerms().delete; }
+function canSeeSalaries(){ return !!currentPerms().salaries; }
+function canSync(){ return !!currentPerms().sync; }
+
+/** يمنع الإجراء ويعرض رسالة — يُستدعى في بداية أي دالة حسّاسة */
+function requirePerm(kind, section){
+  let ok = true;
+  if(kind === 'edit')     ok = canEdit(section);
+  else if(kind === 'delete')   ok = canDelete();
+  else if(kind === 'salaries') ok = canSeeSalaries();
+  else if(kind === 'sync')     ok = canSync();
+  if(!ok){
+    try{ toast('صلاحيتك ('+ARK_ROLE+') لا تسمح بهذا الإجراء','e'); }catch(e){ alert('غير مصرّح'); }
+  }
+  return ok;
+}
+
+/** يقرأ جلسة Supabase إن وُجدت ويحمّل الدور من جدول profiles */
+async function initArkAuth(){
+  let token = null;
+  try{
+    for(let i=0; i<localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        const v = JSON.parse(localStorage.getItem(k)||'{}');
+        if(v && v.access_token){ token = v.access_token; ARK_USER = v.user || null; break; }
+      }
+    }
+  }catch(e){}
+  if(!token) return { authenticated:false, role:ARK_ROLE };
+  try{
+    const uid = ARK_USER && ARK_USER.id;
+    if(uid){
+      const r = await fetch(SUPA_URL + '/rest/v1/profiles?select=role,full_name,is_active&id=eq.'+uid,
+        { headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+token } });
+      if(r.ok){
+        const p = (await r.json())[0];
+        if(p && p.is_active !== false){
+          ARK_ROLE = p.role || 'supervisor';
+          localStorage.setItem('ark_role', ARK_ROLE);
+          if(ARK_USER) ARK_USER.name = p.full_name;
+        }
+      }
+    }
+  }catch(e){ console.warn('[auth] profile load failed', e); }
+  return { authenticated:true, role:ARK_ROLE, user:ARK_USER };
+}
+
+/** يخفي أقسام الواجهة غير المصرّح بها */
+function applyRoleToUI(){
+  try{
+    document.querySelectorAll('[data-view]').forEach(el => {
+      const v = el.getAttribute('data-view');
+      if(v && !canView(v)) el.style.display = 'none';
+    });
+    if(!canSeeSalaries()){
+      document.querySelectorAll('.sal-btn').forEach(el => el.style.display='none');
+    }
+    const badge = document.getElementById('ark-role-badge');
+    if(badge){
+      const names = { admin:'مدير النظام', accountant:'محاسب', hr:'موارد بشرية', operations:'عمليات', supervisor:'مشرف' };
+      badge.textContent = names[ARK_ROLE] || ARK_ROLE;
+    }
+  }catch(e){}
+}
+/* ══════════════ واجهة الربحية والتنبيهات وسجل التدقيق ══════════════ */
+
+let PROFIT_M = new Date().getMonth()+1;
+let PROFIT_Y = new Date().getFullYear();
+let PROFIT_TAB = 'profit';   // profit | alerts | audit | partners | sync
+
+function _kd(v,d){ const n=parseFloat(v)||0; return n.toLocaleString('en-US',{minimumFractionDigits:d===undefined?3:d,maximumFractionDigits:d===undefined?3:d}); }
+function _esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function openOpsCenter(tab){
+  if(tab) PROFIT_TAB = tab;
+  let ov = document.getElementById('opsCenterModal');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.className = 'ov'; ov.id = 'opsCenterModal';
+    ov.setAttribute('onclick', "if(event.target===this)closeModal('opsCenterModal')");
+    ov.innerHTML = '<div class="modal wide" style="max-width:1180px"><div id="opsCenterBody"></div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.classList.add('on');
+  renderOpsCenter();
+}
+
+async function renderOpsCenter(){
+  const el = document.getElementById('opsCenterBody'); if(!el) return;
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  let mOpts='', yOpts='';
+  for(let i=0;i<12;i++) mOpts+='<option value="'+(i+1)+'"'+((i+1)===PROFIT_M?' selected':'')+'>'+months[i]+'</option>';
+  for(let y=PROFIT_Y-1;y<=PROFIT_Y+1;y++) yOpts+='<option value="'+y+'"'+(y===PROFIT_Y?' selected':'')+'>'+y+'</option>';
+
+  const ac = alertCounts();
+  const tabs = [
+    ['profit','الربحية','ti-coin',''],
+    ['alerts','التنبيهات','ti-alert-triangle', ac.total?('<span style="background:'+(ac.high?'#ef4444':'#f59e0b')+';color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-right:5px">'+ac.total+'</span>'):''],
+    ['partners','نماذج الشركاء','ti-handshake',''],
+    ['sync','المزامنة','ti-cloud',''],
+    ['audit','سجل التدقيق','ti-history','']
+  ];
+
+  let h = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
+    + '<h2 style="margin:0"><i class="ti ti-dashboard" style="color:var(--blue)"></i> مركز التشغيل</h2>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<span id="ark-role-badge" style="font-size:11px;background:var(--s2);border:1px solid var(--br);border-radius:8px;padding:4px 10px;font-weight:700"></span>'
+    + '<select onchange="PROFIT_M=parseInt(this.value);PROFIT_KEY=\'\';renderOpsCenter()" style="padding:7px 10px;background:var(--s1);border:1px solid var(--br);border-radius:9px;color:var(--text);font-weight:700">'+mOpts+'</select>'
+    + '<select onchange="PROFIT_Y=parseInt(this.value);PROFIT_KEY=\'\';renderOpsCenter()" style="padding:7px 10px;background:var(--s1);border:1px solid var(--br);border-radius:9px;color:var(--text);font-weight:700">'+yOpts+'</select>'
+    + '<button class="btn btn-c" onclick="closeModal(\'opsCenterModal\')"><i class="ti ti-x"></i></button>'
+    + '</div></div>';
+
+  h += '<div style="display:flex;gap:6px;border-bottom:1px solid var(--br);margin-bottom:14px;flex-wrap:wrap">';
+  tabs.forEach(t => {
+    const on = PROFIT_TAB===t[0];
+    h += '<div onclick="PROFIT_TAB=\''+t[0]+'\';renderOpsCenter()" style="cursor:pointer;padding:8px 14px;font-size:12px;font-weight:800;border-bottom:2px solid '+(on?'var(--blue)':'transparent')+';color:'+(on?'var(--text)':'var(--muted)')+'"><i class="ti '+t[2]+'"></i> '+t[1]+t[3]+'</div>';
+  });
+  h += '</div><div id="opsTabBody" style="max-height:66vh;overflow:auto"><div style="padding:40px;text-align:center;color:var(--muted)"><i class="ti ti-loader-2"></i> جارٍ التحميل…</div></div>';
+  el.innerHTML = h;
+  applyRoleToUI();
+
+  const body = document.getElementById('opsTabBody');
+  if(PROFIT_TAB==='profit')        body.innerHTML = await renderProfitTab();
+  else if(PROFIT_TAB==='alerts')   body.innerHTML = renderAlertsTab();
+  else if(PROFIT_TAB==='partners') body.innerHTML = renderPartnerModelsTab();
+  else if(PROFIT_TAB==='sync')     body.innerHTML = renderSyncTab();
+  else if(PROFIT_TAB==='audit')    body.innerHTML = renderAuditTab();
+}
+
+/* ───────── تبويب الربحية ───────── */
+async function renderProfitTab(){
+  if(!canSeeSalaries())
+    return '<div style="padding:40px;text-align:center;color:var(--muted)"><i class="ti ti-lock" style="font-size:28px;display:block;margin-bottom:8px"></i>صلاحيتك لا تسمح بعرض البيانات المالية</div>';
+
+  const rows = await profitTableForMonth(PROFIT_M, PROFIT_Y);
+  if(!rows.length) return '<div style="padding:40px;text-align:center;color:var(--muted)">لا يوجد سائقون على رأس العمل في هذا الشهر</div>';
+
+  const T = rows.reduce((a,r)=>({rev:a.rev+r.revenue, sal:a.sal+r.salary, fuel:a.fuel+r.fuel,
+                                 vio:a.vio+r.violations, pro:a.pro+r.profit, ord:a.ord+r.orders}),
+                        {rev:0,sal:0,fuel:0,vio:0,pro:0,ord:0});
+  const suspect = rows.reduce((s,r)=>s+r.fuelSuspect,0);
+
+  // تجميع حسب الشريك ونموذج الإيراد
+  const byP = {};
+  rows.forEach(r => {
+    if(!byP[r.partner]) byP[r.partner] = { name:r.partnerName, model:r.model, n:0, rev:0, cost:0, pro:0, ord:0 };
+    const b = byP[r.partner];
+    b.n++; b.rev+=r.revenue; b.cost += r.salary+r.fuel+r.violations; b.pro+=r.profit; b.ord+=r.orders;
+  });
+
+  let h = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">';
+  const kpis = [
+    ['الإيراد', T.rev, 'var(--green)'], ['الرواتب', T.sal, '#f59e0b'],
+    ['البنزين', T.fuel, '#f97316'], ['المخالفات', T.vio, 'var(--red)'],
+    ['صافي الربح', T.pro, T.pro>=0?'var(--green)':'var(--red)']
+  ];
+  kpis.forEach(k => {
+    h += '<div style="background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:12px">'
+      + '<div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px">'+k[0]+'</div>'
+      + '<div style="font-size:19px;font-weight:900;color:'+k[2]+';font-family:JetBrains Mono,monospace">'+_kd(k[1])+'</div></div>';
+  });
+  h += '</div>';
+
+  if(suspect > 0)
+    h += '<div style="background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px">'
+       + '<b style="color:var(--red)">⚠️ '+suspect+' تقرير بنزين بقيمة شاذة</b> — استُبعدت من الحساب تلقائياً (الحد '+VALIDATION_LIMITS.fuelDaily.max+' د.ك/يوم). راجعها في التقارير اليومية.</div>';
+
+  // ملخص الشركاء
+  h += '<div style="font-size:12px;font-weight:800;margin:4px 0 8px">الربحية حسب الشريك</div>';
+  h += '<table class="rep-table" style="width:100%;margin-bottom:18px"><thead><tr>'
+     + '<th>الشريك</th><th>النموذج</th><th>سائقين</th><th>الطلبات</th><th>الإيراد</th><th>التكلفة</th><th>صافي الربح</th><th>الهامش</th></tr></thead><tbody>';
+  Object.keys(byP).forEach(pid => {
+    const b = byP[pid];
+    const mg = b.rev>0 ? b.pro/b.rev*100 : 0;
+    h += '<tr><td><b>'+_esc(b.name)+'</b></td>'
+       + '<td style="font-size:11px;color:var(--muted)">'+_esc(partnerModelLabel(pid))+'</td>'
+       + '<td>'+b.n+'</td><td>'+b.ord.toLocaleString('en-US')+'</td>'
+       + '<td style="font-family:JetBrains Mono,monospace">'+_kd(b.rev)+'</td>'
+       + '<td style="font-family:JetBrains Mono,monospace">'+_kd(b.cost)+'</td>'
+       + '<td style="font-family:JetBrains Mono,monospace;font-weight:900;color:'+(b.pro>=0?'var(--green)':'var(--red)')+'">'+_kd(b.pro)+'</td>'
+       + '<td style="font-weight:800;color:'+(mg>=25?'var(--green)':mg>=0?'#f59e0b':'var(--red)')+'">'+mg.toFixed(1)+'%</td></tr>';
+  });
+  h += '</tbody></table>';
+
+  // تفصيل السائقين
+  h += '<div style="font-size:12px;font-weight:800;margin:4px 0 8px">الربحية لكل سائق <span style="font-weight:400;color:var(--muted2);font-size:10.5px">— مرتّبة بصافي الربح</span></div>';
+  h += '<table class="rep-table" style="width:100%"><thead><tr>'
+     + '<th>#</th><th>السائق</th><th>الشريك</th><th>أيام</th><th>الطلبات</th><th>الإيراد</th><th>أساس الإيراد</th>'
+     + '<th>الراتب</th><th>البنزين</th><th>مخالفات</th><th>صافي الربح</th><th>الهامش</th><th>تكلفة/طلب</th></tr></thead><tbody>';
+  rows.forEach((r,i) => {
+    const neg = r.profit < 0;
+    h += '<tr'+(neg?' style="background:rgba(239,68,68,.06)"':'')+'>'
+      + '<td>'+(i+1)+'</td>'
+      + '<td style="text-align:right"><b>'+_esc(r.name)+'</b><div style="font-size:10px;color:var(--muted)">'+r.id+'</div></td>'
+      + '<td style="font-size:11px">'+_esc(r.partnerName)+(r.model==='fixed_monthly'?' <span style="font-size:9px;color:var(--green)">ثابت</span>':'')+'</td>'
+      + '<td>'+r.salaryDays+'/'+r.monthDays+'</td>'
+      + '<td>'+r.orders.toLocaleString('en-US')+'</td>'
+      + '<td style="font-family:JetBrains Mono,monospace">'+_kd(r.revenue)+'</td>'
+      + '<td style="font-size:10px;color:var(--muted);text-align:right">'+_esc(r.revenueBasis)+'</td>'
+      + '<td style="font-family:JetBrains Mono,monospace">'+_kd(r.salary)+'</td>'
+      + '<td style="font-family:JetBrains Mono,monospace">'+_kd(r.fuel)+(r.fuelSuspect?' <span title="قيم شاذة مستبعدة" style="color:var(--red)">⚠</span>':'')+'</td>'
+      + '<td style="font-family:JetBrains Mono,monospace">'+(r.violations?_kd(r.violations):'—')+'</td>'
+      + '<td style="font-family:JetBrains Mono,monospace;font-weight:900;color:'+(neg?'var(--red)':'var(--green)')+'">'+_kd(r.profit)+'</td>'
+      + '<td style="font-weight:800">'+(r.margin===null?'—':r.margin.toFixed(1)+'%')+'</td>'
+      + '<td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.costPerOrder===null?'—':_kd(r.costPerOrder))+'</td></tr>';
+  });
+  h += '</tbody></table>';
+
+  h += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'
+     + '<button class="btn btn-s" onclick="exportProfitXlsx()"><i class="ti ti-file-spreadsheet"></i> تصدير Excel</button></div>';
+
+  h += '<div style="margin-top:12px;font-size:10.5px;color:var(--muted2);line-height:1.9;border-top:1px solid var(--br);padding-top:10px">'
+     + '<b>المنهجية:</b> الإيراد يُحتسب حسب نموذج كل شريك — الشركاء بنظام ثابت (مثل كابوريا) يُقسّط مبلغهم بأيام العمل الفعلية، والشركاء بالطلب يُحتسبون من عدد الطلبات أو من سجل الإيرادات. '
+     + 'الراتب مقسّط بتاريخ بدء العمل. البنزين من التقارير اليومية بعد استبعاد القيم الشاذة. طقم الإدارة والسائقون غير الموزّعين على شركاء مستبعدون.</div>';
+  return h;
+}
+
+async function exportProfitXlsx(){
+  if(typeof XLSX === 'undefined'){ toast('مكتبة Excel غير محمّلة','e'); return; }
+  const rows = await profitTableForMonth(PROFIT_M, PROFIT_Y);
+  const aoa = [['الكود','السائق','الشريك','النموذج','أيام العمل','أيام الشهر','الطلبات','الإيراد','أساس الإيراد','الراتب','البنزين','المخالفات','صافي الربح','الهامش %','تكلفة/طلب']];
+  rows.forEach(r => aoa.push([r.id,r.name,r.partnerName, r.model==='fixed_monthly'?'ثابت شهري':'بالطلب',
+    r.salaryDays, r.monthDays, r.orders, +r.revenue.toFixed(3), r.revenueBasis,
+    +r.salary.toFixed(3), +r.fuel.toFixed(3), +r.violations.toFixed(3), +r.profit.toFixed(3),
+    r.margin===null?'':+r.margin.toFixed(1), r.costPerOrder===null?'':+r.costPerOrder.toFixed(3)]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:9},{wch:26},{wch:12},{wch:12},{wch:10},{wch:10},{wch:9},{wch:12},{wch:26},{wch:11},{wch:11},{wch:11},{wch:13},{wch:10},{wch:12}];
+  ws['!views']=[{RTL:true}];
+  XLSX.utils.book_append_sheet(wb, ws, 'الربحية');
+  XLSX.writeFile(wb, 'ربحية_السائقين_'+PROFIT_Y+'-'+String(PROFIT_M).padStart(2,'0')+'.xlsx');
+  audit('export','profit', PROFIT_Y+'-'+PROFIT_M, null, {rows:rows.length});
+}
+
+/* ───────── تبويب التنبيهات ───────── */
+function renderAlertsTab(){
+  const A = computeAlerts();
+  if(!A.length) return '<div style="padding:44px;text-align:center;color:var(--green)"><i class="ti ti-circle-check" style="font-size:34px;display:block;margin-bottom:10px"></i>لا توجد تنبيهات — كل البيانات سليمة</div>';
+  const colors = { high:['#ef4444','عاجل'], med:['#f59e0b','متوسط'], low:['#64748b','منخفض'] };
+  const g = { high:[], med:[], low:[] };
+  A.forEach(a => g[a.sev].push(a));
+  let h = '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">';
+  ['high','med','low'].forEach(s => {
+    h += '<div style="flex:1;min-width:110px;background:var(--s2);border:1px solid '+colors[s][0]+'55;border-radius:12px;padding:12px;text-align:center">'
+      + '<div style="font-size:24px;font-weight:900;color:'+colors[s][0]+'">'+g[s].length+'</div>'
+      + '<div style="font-size:10.5px;color:var(--muted);font-weight:700">'+colors[s][1]+'</div></div>';
+  });
+  h += '</div>';
+  ['high','med','low'].forEach(s => {
+    if(!g[s].length) return;
+    h += '<div style="font-size:12px;font-weight:800;margin:14px 0 8px;color:'+colors[s][0]+'">'+colors[s][1]+' ('+g[s].length+')</div>';
+    h += '<table class="rep-table" style="width:100%"><thead><tr><th>النوع</th><th>الموظف</th><th>التفاصيل</th></tr></thead><tbody>';
+    g[s].forEach(a => {
+      h += '<tr><td style="font-weight:800;white-space:nowrap">'+_esc(a.type)+'</td>'
+        + '<td style="text-align:right">'+_esc(a.who)+'</td>'
+        + '<td style="text-align:right;font-size:11px;color:var(--muted)">'+_esc(a.detail)+'</td></tr>';
+    });
+    h += '</tbody></table>';
+  });
+  return h;
+}
+
+/* ───────── تبويب نماذج الشركاء ───────── */
+function renderPartnerModelsTab(){
+  ensurePartnerModels();
+  let h = '<div style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.8">'
+    + 'نموذج الإيراد يحدّد كيف تُحتسب ربحية سائقي كل شريك.<br>'
+    + '<b>ثابت شهري</b> — مبلغ لكل سائق بغضّ النظر عن عدد الطلبات (مثل كابوريا 450 د.ك). يُقسّط بأيام العمل الفعلية.<br>'
+    + '<b>بالطلب</b> — سعر لكل طلب. لو تُرك 0 يُقرأ الإيراد من سجل الإيرادات اليدوي.</div>';
+  h += '<table class="rep-table" style="width:100%"><thead><tr><th>الشريك</th><th>سائقين</th><th>النموذج</th><th>القيمة (د.ك)</th><th>الإيراد الشهري المتوقع</th></tr></thead><tbody>';
+  PARTNERS.forEach(p => {
+    const n = reportableDrivers().filter(d => d.partner === p.id).length;
+    const rate = parseFloat(p.rate)||0;
+    const exp  = p.model==='fixed_monthly' ? (rate*n) : null;
+    h += '<tr><td><span style="display:inline-block;width:10px;height:10px;background:'+p.color+';border-radius:50%;margin-left:6px"></span><b>'+_esc(p.name)+'</b></td>'
+      + '<td>'+n+'</td>'
+      + '<td><select id="pm_'+p.id+'" '+(canEdit('drivers')?'':'disabled')+' onchange="savePartnerModel(\''+p.id+'\')" style="background:var(--s1);border:1px solid var(--br);border-radius:7px;color:var(--text);padding:5px 8px;font-size:11.5px">'
+      + '<option value="per_order"'+(p.model!=='fixed_monthly'?' selected':'')+'>بالطلب</option>'
+      + '<option value="fixed_monthly"'+(p.model==='fixed_monthly'?' selected':'')+'>ثابت شهري / سائق</option></select></td>'
+      + '<td><input id="pr_'+p.id+'" type="number" step="0.001" value="'+rate+'" '+(canEdit('drivers')?'':'disabled')+' onchange="savePartnerModel(\''+p.id+'\')" style="width:100px;background:var(--s1);border:1px solid var(--br);border-radius:7px;color:var(--text);padding:5px 8px;font-family:JetBrains Mono,monospace"></td>'
+      + '<td style="font-family:JetBrains Mono,monospace;font-weight:800;color:var(--green)">'+(exp===null?'—':_kd(exp))+'</td></tr>';
+  });
+  h += '</tbody></table>';
+  const fixedTotal = PARTNERS.filter(p=>p.model==='fixed_monthly')
+    .reduce((s,p)=> s + (parseFloat(p.rate)||0) * reportableDrivers().filter(d=>d.partner===p.id).length, 0);
+  if(fixedTotal>0)
+    h += '<div style="margin-top:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px;font-size:12px">'
+       + '<b>الإيراد الثابت المضمون شهرياً: '+_kd(fixedTotal)+' د.ك</b> — من الشركاء بنظام المبلغ الثابت، مستقلّ تماماً عن عدد الطلبات.</div>';
+  return h;
+}
+
+function savePartnerModel(pid){
+  if(!requirePerm('edit','drivers')) return;
+  const p = PARTNERS.find(x => x.id === pid); if(!p) return;
+  const before = { model:p.model, rate:p.rate };
+  const mEl = document.getElementById('pm_'+pid), rEl = document.getElementById('pr_'+pid);
+  p.model = mEl ? mEl.value : p.model;
+  p.rate  = rEl ? (parseFloat(rEl.value)||0) : p.rate;
+  saveLS(SK_P, PARTNERS);
+  audit('update','partner', pid, before, { model:p.model, rate:p.rate });
+  toast('تم تحديث نموذج '+p.name,'s');
+  renderOpsCenter();
+}
+
+/* ───────── تبويب المزامنة ───────── */
+function renderSyncTab(){
+  const q = _delQueue();
+  let h = '<div style="font-size:11.5px;color:var(--muted);margin-bottom:14px;line-height:1.8">'
+    + 'قاعدة البيانات السحابية هي المرجع. المقارنة توضّح الفروق قبل أي إجراء — لا يتم أي حذف تلقائي.</div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">'
+    + '<button class="btn btn-s" onclick="runReconcile()"><i class="ti ti-refresh"></i> مقارنة المحلي بالسحابة</button>'
+    + '<button class="btn btn-e" onclick="syncDriversToSupabase()" '+(canSync()?'':'disabled')+'><i class="ti ti-cloud-upload"></i> رفع للسحابة</button>'
+    + (q.length ? '<button class="btn btn-d" onclick="runFlushDeletes()"><i class="ti ti-trash"></i> تنفيذ '+q.length+' حذف مؤجّل</button>' : '')
+    + '</div><div id="reconcileOut"></div>';
+  return h;
+}
+
+async function runReconcile(){
+  const out = document.getElementById('reconcileOut');
+  out.innerHTML = '<div style="padding:20px;color:var(--muted)"><i class="ti ti-loader-2"></i> جارٍ المقارنة…</div>';
+  try{
+    const r = await reconcileDrivers();
+    let h = '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:120px;background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900">'+r.cloud.length+'</div><div style="font-size:10.5px;color:var(--muted)">في السحابة</div></div>'
+      + '<div style="flex:1;min-width:120px;background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900">'+DRV.length+'</div><div style="font-size:10.5px;color:var(--muted)">محلياً</div></div>'
+      + '<div style="flex:1;min-width:120px;background:var(--s2);border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--red)">'+r.onlyCloud.length+'</div><div style="font-size:10.5px;color:var(--muted)">يتيمة في السحابة</div></div>'
+      + '<div style="flex:1;min-width:120px;background:var(--s2);border:1px solid rgba(245,158,11,.4);border-radius:12px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:#f59e0b">'+r.onlyLocal.length+'</div><div style="font-size:10.5px;color:var(--muted)">لم تُرفع</div></div></div>';
+    if(r.onlyCloud.length){
+      h += '<div style="font-size:12px;font-weight:800;color:var(--red);margin:10px 0 8px">سجلات موجودة في السحابة وغير موجودة عندك — غالباً محذوفة محلياً</div>';
+      h += '<table class="rep-table" style="width:100%"><thead><tr><th>الكود</th><th>الاسم</th><th>الشريك</th><th>إجراء</th></tr></thead><tbody>';
+      r.onlyCloud.forEach(d => {
+        h += '<tr><td>'+_esc(d.id)+'</td><td style="text-align:right">'+_esc(d.name)+'</td><td>'+_esc(d.partner||'—')+'</td>'
+          + '<td><button class="btn btn-d" style="padding:4px 10px;font-size:11px" onclick="removeOrphan(\''+d.id+'\')" '+(canDelete()?'':'disabled')+'>حذف من السحابة</button></td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+    if(r.onlyLocal.length){
+      h += '<div style="font-size:12px;font-weight:800;color:#f59e0b;margin:14px 0 8px">سجلات عندك ولم تُرفع بعد</div>';
+      h += '<div style="font-size:11.5px;color:var(--muted)">'+r.onlyLocal.map(d=>_esc(d.id+' — '+d.name)).join(' · ')+'</div>';
+    }
+    if(!r.onlyCloud.length && !r.onlyLocal.length)
+      h += '<div style="padding:24px;text-align:center;color:var(--green)"><i class="ti ti-circle-check" style="font-size:26px;display:block;margin-bottom:8px"></i>السحابة والمحلي متطابقان</div>';
+    out.innerHTML = h;
+  }catch(e){
+    out.innerHTML = '<div style="padding:20px;color:var(--red)">تعذّر الاتصال بالسحابة: '+_esc(e.message)+'</div>';
+  }
+}
+
+async function removeOrphan(id){
+  if(!requirePerm('delete')) return;
+  if(!confirm('حذف السجل '+id+' من قاعدة البيانات السحابية نهائياً؟')) return;
+  const ok = await cloudDeleteDriver(id);
+  audit('delete','driver_cloud', id, null, null);
+  toast(ok ? 'تم حذف '+id+' من السحابة' : 'تعذّر الحذف — أُضيف للطابور', ok?'s':'e');
+  runReconcile();
+}
+async function runFlushDeletes(){
+  const n = await flushDeleteQueue();
+  toast('تم تنفيذ '+n+' عملية حذف مؤجّلة','s');
+  renderOpsCenter();
+}
+
+/* ───────── تبويب سجل التدقيق ───────── */
+function renderAuditTab(){
+  if(!currentPerms().audit)
+    return '<div style="padding:40px;text-align:center;color:var(--muted)"><i class="ti ti-lock" style="font-size:28px;display:block;margin-bottom:8px"></i>صلاحيتك لا تسمح بعرض سجل التدقيق</div>';
+  if(!AUDIT_LOG.length) return '<div style="padding:40px;text-align:center;color:var(--muted)">لا توجد عمليات مسجّلة بعد</div>';
+  const AC = { create:['#10b981','إضافة'], update:['#3b82f6','تعديل'], delete:['#ef4444','حذف'], export:['#a855f7','تصدير'] };
+  let h = '<table class="rep-table" style="width:100%"><thead><tr><th>الوقت</th><th>المستخدم</th><th>العملية</th><th>العنصر</th><th>التغيير</th></tr></thead><tbody>';
+  AUDIT_LOG.slice(0,300).forEach(e => {
+    const a = AC[e.action] || ['#64748b', e.action];
+    let diff = '—';
+    if(e.before && e.after){
+      const ks = Object.keys(e.after).filter(k => JSON.stringify(e.before[k]) !== JSON.stringify(e.after[k]));
+      if(ks.length) diff = ks.map(k => k+': '+_esc(String(e.before[k]))+' ← '+_esc(String(e.after[k]))).join(' · ');
+    } else if(e.after) diff = Object.keys(e.after).slice(0,3).map(k=>k+'='+_esc(String(e.after[k]))).join(' · ');
+    h += '<tr><td style="font-size:10.5px;white-space:nowrap">'+new Date(e.ts).toLocaleString('ar-KW')+'</td>'
+      + '<td style="font-size:11px">'+_esc(e.user)+'</td>'
+      + '<td><span style="background:'+a[0]+'22;color:'+a[0]+';border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:800">'+a[1]+'</span></td>'
+      + '<td style="font-size:11px">'+_esc(e.entity)+' '+_esc(e.entityId||'')+'</td>'
+      + '<td style="font-size:10.5px;color:var(--muted);text-align:right">'+diff+'</td></tr>';
+  });
+  h += '</tbody></table>';
+  return h;
+}
+
+
 // ==========================================
 // HELPERS
 // ==========================================
@@ -2039,9 +2805,19 @@ function cancelEdit(){ editing=false; renderDetail(); }
 
 function saveDriver(){
   const d = DRV.find(x=>x.id===selId); if(!d) return;
-  ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate'].forEach(f=>{
+  if(!requirePerm('edit','drivers')) return;
+  const _before = JSON.parse(JSON.stringify(d));
+  const _fields = ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate'];
+  // ── تحقق على نسخة مؤقتة قبل تطبيق التعديل ──
+  const _cand = Object.assign({}, d);
+  _fields.forEach(f=>{ const el=document.getElementById('e_'+f); if(el) _cand[f]=el.value; });
+  const _v = validateDriverRecord(_cand, false);
+  if(!_v.ok){ alert('لا يمكن الحفظ:\n\n• ' + _v.errors.join('\n• ')); return; }
+  if(_v.warnings.length && !confirm('تنبيهات:\n\n• ' + _v.warnings.join('\n• ') + '\n\nهل تريد المتابعة؟')) return;
+  _fields.forEach(f=>{
     const el=document.getElementById('e_'+f); if(el) d[f]=el.value;
   });
+  audit('update','driver',d.id,_before,JSON.parse(JSON.stringify(d)));
   const ag=document.getElementById('e_age'); if(ag) d.age=parseInt(ag.value)||0;
   // Handle ID change
   const idEl = document.getElementById('e_id');
@@ -2072,9 +2848,15 @@ function saveDriver(){
 }
 
 function deleteDriver(){
-  if(!confirm('هل أنت متأكد من حذف هذا السائق؟')) return;
+  if(!requirePerm('delete')) return;
+  if(!confirm('هل أنت متأكد من حذف هذا السائق؟\n\nسيُحذف من السحابة أيضاً.')) return;
+  const _gone = DRV.find(d=>d.id===selId);
+  const _id = selId;
   DRV=DRV.filter(d=>d.id!==selId); selId=null; editing=false;
-  save(); renderList();
+  save();
+  audit('delete','driver',_id,_gone?{name:_gone.name,partner:_gone.partner}:null,null);
+  cloudDeleteDriver(_id).then(ok=>{ if(!ok) toast('تعذّر الحذف من السحابة — أُضيف لطابور المزامنة','e'); });
+  renderList();
   document.getElementById('mainArea').innerHTML='<div class="empty-state"><i class="ti ti-trash" style="color:var(--red)"></i><h2>تم حذف السائق</h2><p>اختر سائقاً آخر</p></div>';
   toast('تم حذف السائق','e');
 }
@@ -2106,6 +2888,26 @@ function addDriver(){
   const isAdmin = (stype === 'admin');
   const newId=document.getElementById('a_id').value.trim()||((isAdmin?'AD':'SA')+String(Date.now()).slice(-4));
   if(DRV.find(d=>d.id===newId)){alert('كود الموظف موجود بالفعل');return}
+  if(!requirePerm('edit','drivers')) return;
+  // ── طبقة التحقق قبل الحفظ ──
+  const _candidate = {
+    id:newId, name:nm, staff_type:stype,
+    civil:document.getElementById('a_civil').value.trim(),
+    petrol:isAdmin?'':document.getElementById('a_pet').value.trim(),
+    sim:document.getElementById('a_sim').value.trim(),
+    startDate:document.getElementById('a_start').value,
+    endDate:(document.getElementById('a_end')||{}).value||'',
+    license:isAdmin?'':document.getElementById('a_lic').value,
+    partner:isAdmin?'admin':document.getElementById('a_par').value
+  };
+  const _v = validateDriverRecord(_candidate, true);
+  if(!_v.ok){ alert('لا يمكن الحفظ:\n\n• ' + _v.errors.join('\n• ')); return; }
+  if(_v.warnings.length && !confirm('تنبيهات:\n\n• ' + _v.warnings.join('\n• ') + '\n\nهل تريد المتابعة؟')) return;
+  const _salIn = document.getElementById('a_salary');
+  if(_salIn && _salIn.value !== ''){
+    const _sv = validateSalary(_salIn.value);
+    if(!_sv.ok){ alert('الراتب: ' + _sv.msg); return; }
+  }
   DRV.push({
     id:newId, name:nm,
     bank_name:document.getElementById('a_bankname').value.trim(),
@@ -2127,6 +2929,7 @@ function addDriver(){
     docs:[]
   });
   save(); closeModal('addModal'); selId=newId; editing=false;
+  audit('create','driver',newId,null,{name:nm,partner:_candidate.partner,staff_type:stype});
   renderList(); renderDetail(); toast(isAdmin?'تمت إضافة موظف الإدارة':'تمت إضافة السائق','s');
   // save salary
   const salInput = document.getElementById('a_salary');
@@ -2330,10 +3133,18 @@ function renderSalaryModal() {
 }
 
 function updateBaseSalary() {
-  const val = parseFloat(document.getElementById('sal-base-input').value) || 0;
+  if(!requirePerm('salaries')) return;
+  const raw = document.getElementById('sal-base-input').value;
+  if(raw !== ''){
+    const v = validateSalary(raw);
+    if(!v.ok){ toast('الراتب: '+v.msg,'e'); return; }
+  }
+  const val = parseFloat(raw) || 0;
   const sal = getSalData(selId);
+  const before = sal.base;
   sal.base = val;
   saveSalaries();
+  if(before !== val) audit('update','salary',selId,{base:before},{base:val});
   renderSalaryModal();
 }
 
@@ -5145,6 +5956,28 @@ function showMapModal(record) {
 // ==========================================
 renderList();
 renderDetail();
+
+// ── إقلاع ARK v2 ──
+(function bootArkV2(){
+  try{
+    ensurePartnerModels();                    // كابوريا 450 ثابت، الباقي بالطلب
+    initArkAuth().then(()=>{ applyRoleToUI(); });
+    refreshAlertBadge();
+    setInterval(refreshAlertBadge, 300000);   // تحديث كل 5 دقائق
+    flushDeleteQueue();                       // تنفيذ أي حذف مؤجّل من جلسة سابقة
+  }catch(e){ console.warn('[ark v2] boot', e); }
+})();
+
+function refreshAlertBadge(){
+  try{
+    const c = alertCounts();
+    const b = document.getElementById('opsAlertBadge');
+    if(!b) return;
+    if(c.high > 0){ b.textContent = c.high; b.style.display=''; b.style.background='#ef4444'; }
+    else if(c.total > 0){ b.textContent = c.total; b.style.display=''; b.style.background='#f59e0b'; }
+    else b.style.display='none';
+  }catch(e){}
+}
 
 
 // ==========================================
