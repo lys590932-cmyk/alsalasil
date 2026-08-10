@@ -2447,104 +2447,86 @@ async function exportProfitXlsx(){
   const dim    = _daysInMonth(PROFIT_M, PROFIT_Y);
   const wb     = XLSX.utils.book_new();
 
-  /* ═══════════ شيت 1: الافتراضات ═══════════ */
-  const PROW = 4;                          // أول صف بيانات الشركاء
-  const PEND = PROW + 19;                  // مدى ثابت يتسع لإضافة شركاء
-  const aoaA = [
-    ['الافتراضات — عدّل الخلايا الزرقاء وكل الأرقام تتحدّث تلقائياً'],
-    ['نموذج الإيراد لكل شريك · ثابت؟ 1 = مبلغ شهري ثابت لكل سائق · 0 = بالطلب'],
-    ['معرّف الشريك','اسم الشريك','ثابت؟','القيمة (د.ك)','الوصف']
-  ];
-  PARTNERS.forEach(p => {
-    const fixed = (p.model === 'fixed_monthly') ? 1 : 0;
-    aoaA.push([p.id, p.name, fixed, parseFloat(p.rate)||0,
-               fixed ? 'د.ك لكل سائق شهرياً — يُقسّط بأيام العمل' : 'د.ك لكل طلب (0 = يُقرأ من عمود الإيراد اليدوي)']);
-  });
-  while(aoaA.length - 1 < PEND) aoaA.push(['','','','','']);   // صفوف فارغة لإضافة شركاء
-  aoaA.push([]);
-  aoaA.push(['ثوابت الشهر']);
-  aoaA.push(['أيام الشهر', dim, '', '', 'يُستخدم في تقسيط الرواتب والمبالغ الثابتة']);
-  aoaA.push(['الشهر', label]);
-  aoaA.push([]);
-  aoaA.push(['دليل الألوان']);
-  aoaA.push(['أزرق','خلية إدخال — عدّلها']);
-  aoaA.push(['أسود','معادلة — لا تعدّلها']);
-  const wsA = XLSX.utils.aoa_to_sheet(aoaA);
-  const dimRow = PEND + 3;                 // صف "أيام الشهر" (1-based)
-  wsA['!cols'] = [{wch:16},{wch:20},{wch:9},{wch:14},{wch:48}];
-  wsA['!views'] = [{RTL:true}];
-
-  /* ═══════════ شيت 2: الربحية ═══════════ */
+  /* ═══════════ شيت واحد: الربحية ═══════════
+     نفس ترتيب أعمدة الشاشة. الأعمدة المعلَّمة ✏️ إدخال — عدّلها بحرّية
+     (خصوصاً «الطلبات» لو رقم السائق مختلف عن فاتورة الشريك)
+     والأعمدة المعلَّمة ƒ معادلة تعيد الحساب لوحدها.
+     أعمدة N..R على أقصى اليسار هي مدخلات المعادلة (سعر الطلب، الراتب الأساسي…) */
   const HDR = 3;                           // صف العناوين (1-based)
-  const aoaB = [
+  const aoa = [
     ['الربحية لكل سائق — ' + label],
-    ['الأزرق = إدخال · الأسود = معادلة · غيّر أي رقم أزرق وسيعاد الحساب بالكامل'],
-    ['#','الكود','السائق','معرّف الشريك','الشريك','ثابت؟','قيمة النموذج',
-     'أيام العمل','أيام الشهر','الطلبات','الراتب الأساسي','البنزين','المخالفات','إيراد يدوي',
-     'الإيراد','الراتب المستحق','صافي الربح','الهامش %','تكلفة/طلب']
+    ['✏️ = خلية إدخال، غيّرها وكل المعادلات تتحدّث · ƒ = محسوبة تلقائياً، لا تكتب فوقها'],
+    ['#','الكود','السائق','الشريك',
+     'أيام العمل ✏️','الطلبات ✏️',
+     'الإيراد ƒ','الراتب المستحق ƒ','البنزين ✏️','المخالفات ✏️',
+     'صافي الربح ƒ','الهامش % ƒ','تكلفة/طلب ƒ',
+     'أيام الشهر ✏️','ثابت؟ ✏️','قيمة النموذج ✏️','الراتب الأساسي ✏️','إيراد يدوي ✏️','أساس الإيراد']
   ];
   rows.forEach((r,i) => {
-    const manual = (r.model === 'per_order' && partnerModel(r.partner).rate === 0) ? +r.revenue.toFixed(3) : 0;
-    aoaB.push([ i+1, r.id, r.name, r.partner, r.partnerName,
-      0, 0,                                     // F,G تُستبدل بمعادلات
-      r.salaryDays, r.monthDays, r.orders,
-      +(getSalData(r.id).base || 0).toFixed(3),
-      +r.fuel.toFixed(3), +r.violations.toFixed(3), manual,
-      0,0,0,0,0 ]);                             // O..S تُستبدل بمعادلات
+    const pm     = partnerModel(r.partner);
+    const fixed  = (r.model === 'fixed_monthly') ? 1 : 0;
+    const rate   = parseFloat(pm.rate) || 0;
+    const manual = (!fixed && rate === 0) ? +r.revenue.toFixed(3) : 0;
+    aoa.push([ i+1, r.id, r.name, r.partnerName,
+      r.salaryDays, r.orders,
+      0, 0,                                            // G,H تُستبدل بمعادلات
+      +r.fuel.toFixed(3), +r.violations.toFixed(3),
+      0, 0, 0,                                         // K,L,M تُستبدل بمعادلات
+      r.monthDays, fixed, rate,
+      +(getSalData(r.id).base || 0).toFixed(3), manual,
+      r.revenueBasis || '' ]);
   });
-  const wsB = XLSX.utils.aoa_to_sheet(aoaB);
+  const ws    = XLSX.utils.aoa_to_sheet(aoa);
   const first = HDR + 1, last = HDR + rows.length, tot = last + 1;
-  const AS = "'الافتراضات'";
 
   for(let r = first; r <= last; r++){
-    wsB['F'+r] = { t:'n', f:`IFERROR(INDEX(${AS}!$C$${PROW}:$C$${PEND},MATCH($D${r},${AS}!$A$${PROW}:$A$${PEND},0)),0)`, z:'0' };
-    wsB['G'+r] = { t:'n', f:`IFERROR(INDEX(${AS}!$D$${PROW}:$D$${PEND},MATCH($D${r},${AS}!$A$${PROW}:$A$${PEND},0)),0)`, z:'#,##0.000' };
-    wsB['I'+r] = { t:'n', f:`${AS}!$B$${dimRow}`, z:'0' };
-    wsB['O'+r] = { t:'n', f:`IF($F${r}=1,$G${r}*$H${r}/$I${r},IF($G${r}>0,$J${r}*$G${r},$N${r}))`, z:'#,##0.000' };
-    wsB['P'+r] = { t:'n', f:`IFERROR($K${r}*$H${r}/$I${r},0)`, z:'#,##0.000' };
-    wsB['Q'+r] = { t:'n', f:`$O${r}-$P${r}-$L${r}-$M${r}`, z:'#,##0.000' };
-    wsB['R'+r] = { t:'n', f:`IFERROR($Q${r}/$O${r},"")`, z:'0.0%' };
-    wsB['S'+r] = { t:'n', f:`IFERROR(($P${r}+$L${r})/$J${r},"")`, z:'#,##0.000' };
+    // الإيراد: شريك ثابت ← مقسّط بأيام العمل · بالطلب ← طلبات × سعر · بدون سعر ← الإيراد اليدوي
+    ws['G'+r] = { t:'n', f:`IF($O${r}=1,$P${r}*$E${r}/$N${r},IF($P${r}>0,$F${r}*$P${r},$R${r}))`, z:'#,##0.000' };
+    ws['H'+r] = { t:'n', f:`IFERROR($Q${r}*$E${r}/$N${r},0)`, z:'#,##0.000' };
+    ws['K'+r] = { t:'n', f:`$G${r}-$H${r}-$I${r}-$J${r}`,   z:'#,##0.000' };
+    ws['L'+r] = { t:'n', f:`IFERROR($K${r}/$G${r},"")`,     z:'0.0%' };
+    ws['M'+r] = { t:'n', f:`IFERROR(($H${r}+$I${r})/$F${r},"")`, z:'#,##0.000' };
   }
-  // صف الإجمالي
-  wsB['C'+tot] = { t:'s', v:'الإجمالي' };
-  ['J','L','M','N','O','P','Q'].forEach(c => {
-    wsB[c+tot] = { t:'n', f:`SUM(${c}${first}:${c}${last})`, z: c==='J' ? '#,##0' : '#,##0.000' };
-  });
-  wsB['R'+tot] = { t:'n', f:`IFERROR($Q${tot}/$O${tot},"")`, z:'0.0%' };
-  wsB['S'+tot] = { t:'n', f:`IFERROR(($P${tot}+$L${tot})/$J${tot},"")`, z:'#,##0.000' };
 
-  // ملخص حسب الشريك — يتحدّث تلقائياً مع أي تغيير
+  // صف الإجمالي
+  ws['C'+tot] = { t:'s', v:'الإجمالي' };
+  ['F','G','H','I','J','K'].forEach(c => {
+    ws[c+tot] = { t:'n', f:`SUM(${c}${first}:${c}${last})`, z: c==='F' ? '#,##0' : '#,##0.000' };
+  });
+  ws['L'+tot] = { t:'n', f:`IFERROR($K${tot}/$G${tot},"")`,          z:'0.0%' };
+  ws['M'+tot] = { t:'n', f:`IFERROR(($H${tot}+$I${tot})/$F${tot},"")`, z:'#,##0.000' };
+
+  // ملخص حسب الشريك — SUMIF على اسم الشريك، يتحدّث مع أي تعديل
   let sr = tot + 2;
-  wsB['C'+sr] = { t:'s', v:'الملخص حسب الشريك (يتحدّث تلقائياً)' };
-  sr++;
-  const sHdr = sr;
+  ws['C'+sr] = { t:'s', v:'الملخص حسب الشريك (يتحدّث تلقائياً)' };
+  const sHdr = ++sr;
   ['C','D','E','F','G'].forEach((c,i) => {
-    wsB[c+sHdr] = { t:'s', v:['الشريك','سائقين','الطلبات','الإيراد','صافي الربح'][i] };
+    ws[c+sHdr] = { t:'s', v:['الشريك','سائقين','الطلبات','الإيراد','صافي الربح'][i] };
   });
   PARTNERS.forEach((p,i) => {
-    const r = sHdr + 1 + i;
-    wsB['C'+r] = { t:'s', v:p.name };
-    wsB['D'+r] = { t:'n', f:`COUNTIF($D$${first}:$D$${last},"${p.id}")`, z:'#,##0' };
-    wsB['E'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${p.id}",$J$${first}:$J$${last})`, z:'#,##0' };
-    wsB['F'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${p.id}",$O$${first}:$O$${last})`, z:'#,##0.000' };
-    wsB['G'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${p.id}",$Q$${first}:$Q$${last})`, z:'#,##0.000' };
+    const r  = sHdr + 1 + i;
+    const nm = String(p.name).replace(/"/g,'""');
+    ws['C'+r] = { t:'s', v:p.name };
+    ws['D'+r] = { t:'n', f:`COUNTIF($D$${first}:$D$${last},"${nm}")`, z:'#,##0' };
+    ws['E'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${nm}",$F$${first}:$F$${last})`, z:'#,##0' };
+    ws['F'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${nm}",$G$${first}:$G$${last})`, z:'#,##0.000' };
+    ws['G'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${nm}",$K$${first}:$K$${last})`, z:'#,##0.000' };
   });
 
-  // توسيع نطاق الورقة ليشمل الخلايا المضافة يدوياً
   const lastRow = sHdr + PARTNERS.length;
-  wsB['!ref'] = 'A1:S' + lastRow;
-  wsB['!cols'] = [{wch:5},{wch:10},{wch:24},{wch:13},{wch:12},{wch:8},{wch:13},
-                  {wch:10},{wch:10},{wch:9},{wch:14},{wch:11},{wch:11},{wch:12},
-                  {wch:12},{wch:14},{wch:13},{wch:10},{wch:12}];
-  wsB['!views'] = [{RTL:true}];
-  wsB['!freeze'] = { xSplit:0, ySplit:HDR };
+  ws['!ref']  = 'A1:S' + lastRow;
+  ws['!cols'] = [{wch:5},{wch:10},{wch:24},{wch:13},
+                 {wch:11},{wch:10},
+                 {wch:12},{wch:14},{wch:11},{wch:11},
+                 {wch:13},{wch:10},{wch:12},
+                 {wch:11},{wch:9},{wch:14},{wch:15},{wch:12},{wch:26}];
+  ws['!views']  = [{RTL:true}];
+  ws['!freeze'] = { xSplit:0, ySplit:HDR };
 
-  XLSX.utils.book_append_sheet(wb, wsB, 'الربحية');
-  XLSX.utils.book_append_sheet(wb, wsA, 'الافتراضات');
+  XLSX.utils.book_append_sheet(wb, ws, 'الربحية');
   XLSX.writeFile(wb, 'ربحية_السائقين_' + PROFIT_Y + '-' + String(PROFIT_M).padStart(2,'0') + '.xlsx');
-  audit('export','profit', PROFIT_Y+'-'+PROFIT_M, null, { rows:rows.length, mode:'formulas' });
-  toast('تم التصدير — الشيت بمعادلات حية','s');
+  audit('export','profit', PROFIT_Y+'-'+PROFIT_M, null, { rows:rows.length, mode:'single-sheet-formulas' });
+  toast('تم التصدير — شيت واحد، عدّل أي رقم ✏️ والباقي يتحدّث','s');
 }
 
 /* ───────── تبويب التنبيهات ───────── */
