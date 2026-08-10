@@ -1055,7 +1055,659 @@ table td{padding:11px 12px!important;font-size:13px!important}
   background:rgba(255,255,255,0.22)!important;
   color:#fff!important;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   ARK v30 — إعادة بناء الواجهة
+   سكة تنقّل رأسية + هيدر مضغوط + كثافة مناسبة لشاشة 1366×768
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --rail-w:76px;          /* عرض سكة التنقّل المطوية */
+  --rail-w-open:212px;    /* عرض السكة مفتوحة */
+  --hdr-h:52px;           /* ارتفاع الهيدر — كان 56 موزّع على صفّين */
+  --ease:cubic-bezier(.22,.68,.36,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ink:#0b1220;
+  --rail-bg:linear-gradient(180deg,#0f2f42 0%,#123c52 45%,#0d4a49 100%);
+  --glass:rgba(255,255,255,.72);
+  --ring:0 0 0 3px rgba(28,88,120,.14);
+}
+
+/* ── خلفية الصفحة: تدرّج ناعم + هالتان لونيتان ── */
+body{
+  background:
+    radial-gradient(1100px 620px at 88% -12%, rgba(13,148,137,.10), transparent 62%),
+    radial-gradient(900px 560px at -8% 8%,  rgba(28,88,120,.09),  transparent 60%),
+    linear-gradient(180deg,#f6f8fc 0%,#eef2f8 100%) !important;
+  background-attachment:fixed;
+  color:var(--text);
+}
+
+/* ── الهيكل: سكة | (هيدر / محتوى) ── */
+.app{
+  display:grid !important;
+  grid-template-columns:var(--rail-w) 1fr !important;
+  grid-template-rows:var(--hdr-h) 1fr !important;
+  grid-template-areas:"rail head" "rail main" !important;
+  height:100vh !important;
+  overflow:hidden;
+  transition:grid-template-columns .28s var(--ease);
+}
+.app.rail-open{ grid-template-columns:var(--rail-w-open) 1fr !important; }
+.top{ grid-area:head; }
+.body,
+#view-dash,#view-att,#view-vio,#view-acc,#view-reports,
+#view-orders,#view-dreports,#view-apps,#view-livemap,#view-clockin{
+  grid-area:main;
+  min-height:0;
+  height:auto !important;
+  max-height:none !important;
+}
+
+/* ══ سكة التنقّل الرأسية ══ */
+.rail{
+  grid-area:rail;
+  background:var(--rail-bg);
+  display:flex; flex-direction:column;
+  padding:10px 10px 12px;
+  gap:3px;
+  overflow:hidden;
+  position:relative;
+  box-shadow:2px 0 26px rgba(9,26,38,.20);
+  z-index:60;
+}
+.rail::after{                                    /* لمعة خفيفة على الحافة */
+  content:''; position:absolute; inset:0 0 0 auto; width:1px;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.16),transparent);
+}
+.rail-brand{
+  display:flex; align-items:center; gap:10px;
+  padding:6px 8px 12px; margin-bottom:6px;
+  border-bottom:1px solid rgba(255,255,255,.10);
+  cursor:pointer; user-select:none;
+}
+.rail-logo{
+  width:36px;height:36px;flex:0 0 36px;border-radius:11px;
+  background:linear-gradient(135deg,#2fa8a0,#1c5878);
+  display:grid;place-items:center;color:#fff;font-size:18px;
+  box-shadow:0 6px 18px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.28);
+  transition:transform .4s var(--ease-out);
+}
+.rail-brand:hover .rail-logo{ transform:rotate(-8deg) scale(1.06); }
+.rail-name{
+  white-space:nowrap; overflow:hidden;
+  opacity:0; width:0; transition:opacity .2s ease, width .28s var(--ease);
+}
+.app.rail-open .rail-name{ opacity:1; width:auto; }
+.rail-name b{ display:block;color:#fff;font-size:13.5px;font-weight:900;letter-spacing:.3px;line-height:1.2 }
+.rail-name span{ display:block;color:rgba(255,255,255,.55);font-size:9.5px;font-weight:500 }
+
+.rail-scroll{ flex:1; overflow-y:auto; overflow-x:hidden; margin:0 -4px; padding:0 4px; }
+.rail-scroll::-webkit-scrollbar{ width:3px }
+.rail-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.18); border-radius:2px }
+.rail-sec{
+  color:rgba(255,255,255,.34); font-size:9px; font-weight:800; letter-spacing:.8px;
+  padding:11px 10px 5px; white-space:nowrap; overflow:hidden;
+  opacity:0; height:0; transition:opacity .2s ease, height .2s ease, padding .2s ease;
+}
+.app.rail-open .rail-sec{ opacity:1; height:auto; }
+
+/* زر التنقّل — يحتفظ بنفس المعرّفات nav-* */
+.rail .nav-tab{
+  all:unset;
+  box-sizing:border-box;
+  display:flex !important; align-items:center; gap:11px;
+  width:100%; padding:9px 10px !important; border-radius:11px !important;
+  cursor:pointer; position:relative; overflow:hidden;
+  color:rgba(255,255,255,.72) !important;
+  font:700 12.5px/1 Cairo,sans-serif;
+  transition:background .18s ease, color .18s ease, transform .18s var(--ease);
+}
+.rail .nav-tab i{
+  width:34px;height:34px;flex:0 0 34px;
+  display:grid !important; place-items:center; border-radius:10px;
+  background:rgba(255,255,255,.09) !important;
+  color:rgba(255,255,255,.86) !important;
+  font-size:17px;
+  transition:background .2s ease, color .2s ease, transform .3s var(--ease-out);
+}
+.rail .nav-tab > span{
+  white-space:nowrap; overflow:hidden;
+  opacity:0; transition:opacity .18s ease;
+}
+.app.rail-open .rail .nav-tab > span{ opacity:1; }
+.rail .nav-tab:hover{ background:rgba(255,255,255,.08); color:#fff !important; }
+.rail .nav-tab:hover i{ background:rgba(255,255,255,.16) !important; transform:translateY(-2px); }
+.rail .nav-tab.on{
+  background:linear-gradient(90deg,rgba(255,255,255,.17),rgba(255,255,255,.05)) !important;
+  color:#fff !important;
+}
+.rail .nav-tab.on i{
+  background:linear-gradient(135deg,#3ec9bd,#2a8fb0) !important;
+  color:#04222e !important;
+  box-shadow:0 5px 16px rgba(62,201,189,.34);
+}
+.rail .nav-tab.on::before{                        /* مؤشّر الحالة النشطة */
+  content:''; position:absolute; inset-inline-end:0; top:50%;
+  width:3px; height:0; border-radius:3px 0 0 3px; background:#5ee6d8;
+  transform:translateY(-50%);
+  animation:railMark .34s var(--ease-out) forwards;
+}
+@keyframes railMark{ to{ height:24px } }
+
+/* تلميح يظهر وقت الطي */
+.rail .nav-tab::after{
+  content:attr(data-tip);
+  position:absolute; inset-inline-start:calc(100% + 10px); top:50%;
+  transform:translateY(-50%) scale(.9);
+  background:var(--ink); color:#fff; font-size:11px; font-weight:700;
+  padding:6px 10px; border-radius:8px; white-space:nowrap;
+  opacity:0; pointer-events:none; transition:opacity .16s ease, transform .16s var(--ease-out);
+  box-shadow:0 8px 20px rgba(0,0,0,.3); z-index:200;
+}
+.rail .nav-tab:hover::after{ opacity:1; transform:translateY(-50%) scale(1); }
+.app.rail-open .rail .nav-tab::after{ display:none }
+
+.rail-foot{ border-top:1px solid rgba(255,255,255,.10); padding-top:8px; margin-top:6px }
+.rail-toggle{
+  all:unset; box-sizing:border-box; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; padding:8px; border-radius:10px;
+  color:rgba(255,255,255,.55); font:700 11px Cairo,sans-serif;
+  transition:background .18s ease,color .18s ease;
+}
+.rail-toggle:hover{ background:rgba(255,255,255,.08); color:#fff }
+.rail-toggle i{ transition:transform .3s var(--ease) }
+.app.rail-open .rail-toggle i{ transform:rotate(180deg) }
+
+/* شارة العدّاد على أيقونة السكة */
+.rail .nav-tab .badge-dot{
+  position:absolute; top:6px; inset-inline-start:30px;
+  min-width:17px; height:17px; padding:0 4px; border-radius:9px;
+  background:#ef4444; color:#fff; font-size:9.5px; font-weight:900;
+  display:grid; place-items:center;
+  box-shadow:0 0 0 2px #123c52;
+  animation:pulseDot 2.4s ease-in-out infinite;
+}
+@keyframes pulseDot{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.14)} }
+
+/* ══ الهيدر المضغوط ══ */
+.top{
+  height:var(--hdr-h) !important;
+  padding:0 16px !important;
+  gap:12px !important;
+  background:var(--glass) !important;
+  backdrop-filter:saturate(180%) blur(14px);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--br) !important;
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 2px 14px rgba(15,23,41,.05) !important;
+}
+.top .logo{ display:none !important }              /* البراند اتنقل للسكة */
+.hdr-title{ display:flex; flex-direction:column; line-height:1.15; min-width:132px }
+.hdr-title b{ font-size:13.5px; font-weight:900; color:var(--text) }
+.hdr-title span{ font-size:10px; color:var(--muted2); font-weight:600 }
+
+/* شرائح المؤشرات */
+.top-stats{ gap:8px !important; margin-inline-start:auto !important; margin-inline-end:0 !important }
+.top-stats .ts, #st-partners > div{
+  display:flex; align-items:center; gap:7px;
+  background:#fff; border:1px solid var(--br); border-radius:10px;
+  padding:5px 11px; box-shadow:var(--shadow-xs);
+  transition:transform .2s var(--ease), box-shadow .2s ease, border-color .2s ease;
+}
+.top-stats .ts:hover, #st-partners > div:hover{
+  transform:translateY(-2px); box-shadow:var(--shadow-sm); border-color:#cbd5e1;
+}
+.top-stats .ts-n{ font:900 15px/1 JetBrains Mono,monospace }
+.top-stats .ts-l{ font-size:9.5px; color:var(--muted2); font-weight:700 }
+#st-partners{ gap:8px !important }
+
+/* ══ قائمة الأدوات — بديل صفّ الـ14 زرار ══ */
+.tools-wrap{ position:relative }
+.tools-btn{
+  all:unset; box-sizing:border-box; cursor:pointer;
+  display:flex; align-items:center; gap:7px;
+  padding:7px 13px; border-radius:10px;
+  background:var(--grad); color:#fff; font:800 12px Cairo,sans-serif;
+  box-shadow:0 4px 14px rgba(28,88,120,.26);
+  transition:transform .2s var(--ease), box-shadow .2s ease, filter .2s ease;
+}
+.tools-btn:hover{ transform:translateY(-1px); box-shadow:0 7px 20px rgba(28,88,120,.34); filter:brightness(1.07) }
+.tools-btn i:last-child{ font-size:13px; transition:transform .25s var(--ease) }
+.tools-wrap.open .tools-btn i:last-child{ transform:rotate(180deg) }
+
+.tools-menu{
+  position:absolute; top:calc(100% + 9px); inset-inline-end:0;
+  width:610px; max-width:calc(100vw - 120px);
+  max-height:calc(100vh - var(--hdr-h) - 26px); overflow-y:auto;
+  background:#fff; border:1px solid var(--br); border-radius:16px;
+  box-shadow:0 26px 64px rgba(15,23,41,.20), 0 2px 8px rgba(15,23,41,.06);
+  padding:13px; z-index:300;
+  display:grid; grid-template-columns:1fr 1fr; gap:5px 14px;
+  opacity:0; visibility:hidden; transform:translateY(-10px) scale(.97);
+  transform-origin:top left;
+  transition:opacity .2s ease, transform .24s var(--ease-out), visibility .24s;
+}
+.tools-wrap.open .tools-menu{ opacity:1; visibility:visible; transform:translateY(0) scale(1) }
+.tools-menu h6{
+  grid-column:1/-1; font-size:9.5px; font-weight:900; letter-spacing:.7px;
+  color:var(--muted2); padding:9px 6px 4px; border-top:1px solid var(--br); margin-top:4px;
+}
+.tools-menu h6:first-child{ border-top:none; margin-top:0; padding-top:2px }
+.tools-menu .tbtn{
+  width:100%; justify-content:flex-start !important;
+  padding:8px 10px !important; border:1px solid transparent !important;
+  background:transparent !important; box-shadow:none !important;
+  font-size:12px !important; border-radius:9px !important;
+  display:flex !important; align-items:center; gap:9px;
+}
+.tools-menu .tbtn:hover{
+  background:var(--s3) !important; border-color:var(--br) !important;
+  transform:translateX(-3px); box-shadow:none !important;
+}
+.tools-menu .tbtn i:first-child{
+  width:27px;height:27px;flex:0 0 27px;border-radius:8px;
+  display:grid;place-items:center;background:var(--blue-soft);font-size:14px;
+}
+
+/* ══ سايدبار السائقين — أنحف وأطول ══ */
+.body{ grid-template-columns:264px 1fr !important }
+.sb{ background:rgba(255,255,255,.86) !important; backdrop-filter:blur(8px) }
+.sb-search{ padding:9px !important }
+.sb-filters{ padding:6px 9px !important }
+.sb-list{ padding:6px !important }
+.main{ padding:16px 18px !important }
+
+/* ══ كروت ولوحات ══ */
+.card,.dash-card,.rep-card,.kpi,.panel{
+  border-radius:var(--r2);
+  transition:transform .24s var(--ease), box-shadow .24s ease;
+}
+.card:hover,.dash-card:hover,.kpi:hover{
+  transform:translateY(-3px); box-shadow:var(--shadow);
+}
+
+/* ══════ الأنيميشن ══════ */
+@keyframes fadeUp   { from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+@keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+@keyframes slideIn  { from{opacity:0; transform:translateX(-18px)} to{opacity:1; transform:none} }
+@keyframes popIn    { 0%{opacity:0;transform:scale(.94)} 60%{transform:scale(1.02)} 100%{opacity:1;transform:scale(1)} }
+@keyframes shimmer  { 0%{background-position:-460px 0} 100%{background-position:460px 0} }
+@keyframes floatY   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes spinSlow { to{ transform:rotate(360deg) } }
+
+/* دخول الشاشات */
+.view-enter{ animation:fadeUp .40s var(--ease-out) both }
+#view-dash>div,#view-att>div,#view-vio>div,#view-acc>div,
+#view-reports>div,#view-orders>div,#view-dreports>div,#view-apps>div{
+  animation:fadeUp .38s var(--ease-out) both;
+}
+/* ظهور متتابع لكروت الداشبورد */
+.stagger > *{ animation:fadeUp .42s var(--ease-out) both }
+.stagger > *:nth-child(1){animation-delay:.02s} .stagger > *:nth-child(2){animation-delay:.06s}
+.stagger > *:nth-child(3){animation-delay:.10s} .stagger > *:nth-child(4){animation-delay:.14s}
+.stagger > *:nth-child(5){animation-delay:.18s} .stagger > *:nth-child(6){animation-delay:.22s}
+.stagger > *:nth-child(7){animation-delay:.26s} .stagger > *:nth-child(8){animation-delay:.30s}
+
+/* صفوف الجداول تدخل بالتتابع */
+.rep-table tbody tr{ animation:fadeIn .3s ease both }
+.rep-table tbody tr:nth-child(1){animation-delay:.01s} .rep-table tbody tr:nth-child(2){animation-delay:.03s}
+.rep-table tbody tr:nth-child(3){animation-delay:.05s} .rep-table tbody tr:nth-child(4){animation-delay:.07s}
+.rep-table tbody tr:nth-child(5){animation-delay:.09s} .rep-table tbody tr:nth-child(6){animation-delay:.11s}
+.rep-table tbody tr:nth-child(n+7){animation-delay:.13s}
+.rep-table tbody tr:hover{ background:var(--s3) !important; transition:background .15s ease }
+
+/* كروت السائقين في السايدبار */
+.sb-list .drv-card{ animation:slideIn .3s var(--ease-out) both; transition:transform .18s var(--ease), box-shadow .18s ease }
+.sb-list .drv-card:hover{ transform:translateX(-3px); box-shadow:var(--shadow-xs) }
+
+/* النوافذ المنبثقة */
+.ov{ backdrop-filter:blur(3px); transition:opacity .2s ease }
+.ov .modal{ animation:popIn .3s var(--ease-out) both }
+
+/* هيكل تحميل */
+.skel{
+  background:linear-gradient(90deg,#eef2f8 8%,#f8fafd 18%,#eef2f8 33%);
+  background-size:920px 100%; animation:shimmer 1.3s linear infinite; border-radius:8px;
+}
+
+/* أزرار عامة */
+.btn{ transition:transform .18s var(--ease), box-shadow .18s ease, filter .18s ease }
+.btn:hover{ transform:translateY(-1px) }
+.btn:active{ transform:translateY(0) scale(.985) }
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important }
+}
+
+/* ══ كثافة أعلى لشاشات اللاب توب القصيرة ══ */
+@media (max-height:800px){
+  :root{ --hdr-h:48px }
+  .main{ padding:12px 14px !important }
+  .top-stats .ts, #st-partners > div{ padding:4px 9px }
+  .top-stats .ts-n{ font-size:14px }
+  .rail .nav-tab{ padding:7px 10px !important }
+  .rail .nav-tab i{ width:31px;height:31px;flex:0 0 31px;font-size:16px }
+  .kpi,.dash-card{ padding:11px 13px !important }
+}
+@media (max-height:700px){
+  .rail .nav-tab{ padding:5px 10px !important }
+  .rail .nav-tab i{ width:29px;height:29px;flex:0 0 29px }
+  .rail-brand{ padding-bottom:9px }
+}
+@media (max-width:1280px){
+  .top-stats .ts-l{ display:none }
+  .tools-menu{ width:420px; grid-template-columns:1fr }
+}
+
+/* ══════════ كارت المستخدم في السكة ══════════ */
+.rail-user{
+  display:flex; align-items:center; gap:10px; cursor:pointer;
+  padding:8px; border-radius:11px; margin-bottom:5px;
+  transition:background .18s ease;
+}
+.rail-user:hover{ background:rgba(255,255,255,.09) }
+.rail-avatar{
+  width:32px;height:32px;flex:0 0 32px;border-radius:10px;
+  background:linear-gradient(135deg,#c29449,#e6b95d);
+  display:grid;place-items:center;color:#0f3a52;font:900 12px Cairo,sans-serif;
+  box-shadow:0 4px 12px rgba(194,148,73,.32);
+}
+.rail-user .rail-name b{ font-size:11.5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.rail-user .rail-name span{ font-size:9px; color:rgba(255,255,255,.5) }
+.rail-user .ti-logout{ opacity:0; transition:opacity .2s ease }
+.app.rail-open .rail-user .ti-logout{ opacity:.6 }
+
+/* ══════════ شاشة الترحيب ══════════ */
+#welcomeScreen{
+  position:fixed; inset:0; z-index:99998; display:none;
+  align-items:center; justify-content:center; overflow:hidden;
+}
+#welcomeScreen.on{ display:flex }
+#welcomeScreen.out{ animation:wlOut .7s var(--ease-out) forwards }
+@keyframes wlOut{ to{ opacity:0; visibility:hidden; transform:scale(1.04) } }
+.wl-bg{
+  position:absolute; inset:0;
+  background:linear-gradient(135deg,#0b2b3d 0%,#12475f 46%,#0d4a49 100%);
+}
+.wl-bg::before,.wl-bg::after{
+  content:''; position:absolute; border-radius:50%; filter:blur(70px); opacity:.34;
+}
+.wl-bg::before{ width:440px;height:440px;background:#0d9488;top:-140px;right:-120px; animation:wlDrift 9s ease-in-out infinite }
+.wl-bg::after { width:380px;height:380px;background:#c29449;bottom:-130px;left:-100px; animation:wlDrift 11s ease-in-out infinite reverse }
+@keyframes wlDrift{ 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(40px,-34px) scale(1.12)} }
+
+.wl-card{ position:relative; text-align:center; color:#fff; padding:20px }
+.wl-ring{
+  width:104px;height:104px;margin:0 auto 26px;border-radius:50%;
+  display:grid;place-items:center;position:relative;
+  animation:wlPop .8s var(--ease-out) both;
+}
+.wl-ring::before,.wl-ring::after{
+  content:''; position:absolute; inset:0; border-radius:50%;
+  border:2px solid rgba(194,148,73,.55);
+  animation:wlPulse 2.4s ease-out infinite;
+}
+.wl-ring::after{ animation-delay:1.2s }
+@keyframes wlPulse{ 0%{transform:scale(1);opacity:.75} 100%{transform:scale(1.75);opacity:0} }
+@keyframes wlPop{ 0%{opacity:0;transform:scale(.4) rotate(-30deg)} 65%{transform:scale(1.08)} 100%{opacity:1;transform:none} }
+.wl-logo{
+  width:88px;height:88px;border-radius:50%;
+  background:linear-gradient(135deg,#c29449,#e6b95d);
+  display:grid;place-items:center;font:900 38px Cairo,sans-serif;color:#0f3a52;
+  box-shadow:0 14px 40px rgba(194,148,73,.5);
+}
+.wl-hi{
+  font:700 15px/1 Cairo,sans-serif; letter-spacing:7px; text-transform:uppercase;
+  color:#c29449; margin-bottom:12px; opacity:0;
+  animation:wlUp .7s var(--ease-out) .28s both;
+}
+.wl-name{
+  font-size:46px; font-weight:900; letter-spacing:-.5px; margin-bottom:12px;
+  background:linear-gradient(120deg,#fff 20%,#8fe3d8 60%,#e6b95d 100%);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:#fff;
+  opacity:0; animation:wlUp .8s var(--ease-out) .46s both;
+}
+.wl-role{
+  font-size:13.5px; color:rgba(255,255,255,.62); font-weight:600; margin-bottom:30px;
+  opacity:0; animation:wlUp .7s var(--ease-out) .64s both;
+}
+@keyframes wlUp{ from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+.wl-bar{
+  width:230px;height:3px;margin:0 auto 14px;border-radius:3px;
+  background:rgba(255,255,255,.14); overflow:hidden;
+  opacity:0; animation:wlUp .5s var(--ease-out) .8s both;
+}
+.wl-bar i{
+  display:block;height:100%;width:0;border-radius:3px;
+  background:linear-gradient(90deg,#0d9488,#c29449);
+  animation:wlFill 1.5s var(--ease-out) .9s forwards;
+}
+@keyframes wlFill{ to{ width:100% } }
+.wl-sub{
+  font-size:11.5px;color:rgba(255,255,255,.42);font-weight:600;
+  opacity:0; animation:wlUp .5s var(--ease-out) .95s both;
+}
+@media (max-height:700px){
+  .wl-name{ font-size:36px } .wl-ring{ width:84px;height:84px;margin-bottom:18px }
+  .wl-logo{ width:70px;height:70px;font-size:30px } .wl-role{ margin-bottom:22px }
+}
+
+/* ══════════ شاشة البداية ══════════ */
+.hm{ max-width:1180px; margin:0 auto; animation:fadeUp .4s var(--ease-out) both }
+.hm-hero{
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(120deg,#123c52 0%,#0f5c58 58%,#12756a 100%);
+  border-radius:20px; padding:26px 30px; margin-bottom:18px; color:#fff;
+  position:relative; overflow:hidden;
+  box-shadow:0 16px 42px rgba(15,60,82,.26);
+}
+.hm-hero::before{
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(520px 260px at 82% -30%, rgba(94,230,216,.30), transparent 66%);
+}
+.hm-greet{ font-size:12.5px; opacity:.72; font-weight:700; margin-bottom:5px; position:relative }
+.hm-title{ font-size:25px; font-weight:900; letter-spacing:-.3px; margin-bottom:9px; position:relative }
+.hm-date{ font-size:12px; opacity:.66; display:flex; align-items:center; gap:6px; position:relative }
+.hm-hero-art{ font-size:76px; opacity:.13; animation:spinSlow 26s linear infinite; position:relative }
+
+.hm-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:13px; margin-bottom:18px }
+.hm-kpi{
+  background:#fff; border:1px solid var(--br); border-radius:16px; padding:16px 18px;
+  display:flex; align-items:center; gap:14px; box-shadow:var(--shadow-xs);
+  transition:transform .24s var(--ease), box-shadow .24s ease, border-color .2s ease;
+}
+.hm-kpi:hover{ transform:translateY(-4px); box-shadow:var(--shadow); border-color:#cbd5e1 }
+.hm-ic{ width:46px;height:46px;flex:0 0 46px;border-radius:14px;display:grid;place-items:center;font-size:22px }
+.hm-n{ font:900 25px/1 JetBrains Mono,monospace; margin-bottom:4px }
+.hm-l{ font-size:12px; font-weight:800; color:var(--text) }
+.hm-s{ font-size:10px; color:var(--muted2); margin-top:2px }
+
+.hm-cols{ display:grid; grid-template-columns:1.15fr 1fr; gap:14px; align-items:start }
+.hm-panel{ background:#fff; border:1px solid var(--br); border-radius:16px; padding:16px 18px; box-shadow:var(--shadow-xs) }
+.hm-ph{ display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:13px }
+.hm-ph b{ font-weight:900 }
+.hm-more{
+  all:unset;cursor:pointer;margin-inline-start:auto;font:800 11px Cairo,sans-serif;color:var(--blue);
+  display:flex;align-items:center;gap:4px;padding:4px 9px;border-radius:8px;transition:background .18s
+}
+.hm-more:hover{ background:var(--blue-soft) }
+
+.hm-part{ margin-bottom:12px }
+.hm-part-h{ display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:5px }
+.hm-part-m{ font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:20px;background:var(--s3);color:var(--muted) }
+.hm-part-n{ margin-inline-start:auto; font:900 14px JetBrains Mono,monospace; color:var(--blue) }
+.hm-bar{ height:7px; background:var(--s3); border-radius:4px; overflow:hidden }
+.hm-bar i{ display:block; height:100%; background:var(--grad); border-radius:4px; animation:growW .8s var(--ease-out) both }
+@keyframes growW{ from{ width:0 !important } }
+
+.hm-acts{ display:flex; flex-direction:column; gap:6px }
+.hm-act{
+  all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:11px;
+  padding:10px 12px;border-radius:11px;border:1px solid var(--br);background:var(--s2);
+  font:700 12px Cairo,sans-serif;color:var(--text);transition:all .2s var(--ease);
+}
+.hm-act i:first-child{ font-size:17px }
+.hm-act:hover{ background:#fff;border-color:#cbd5e1;transform:translateX(-4px);box-shadow:var(--shadow-xs) }
+.hm-hint{
+  margin-top:16px;padding:12px 16px;border-radius:12px;background:var(--blue-soft);
+  font-size:11.5px;color:var(--blue);display:flex;align-items:center;gap:8px;font-weight:700
+}
+@media (max-width:1150px){ .hm-cols{ grid-template-columns:1fr } }
+@media (max-height:800px){
+  .hm-hero{ padding:18px 24px;border-radius:16px;margin-bottom:13px }
+  .hm-title{ font-size:21px } .hm-hero-art{ font-size:58px }
+  .hm-kpi{ padding:12px 14px } .hm-n{ font-size:22px }
+  .hm-ic{ width:40px;height:40px;flex:0 0 40px;font-size:19px }
+}
+
+/* ── شاشات عريضة جداً: نمنع تمدّد المحتوى لعرض غير مريح ── */
+@media (min-width:1750px){
+  .main > *{ max-width:1480px; margin-inline:auto }
+  #view-dash>div,#view-acc>div,#view-reports>div,#view-dreports>div,
+  #view-orders>div,#view-att>div,#view-vio>div,#view-apps>div{ max-width:1620px; margin-inline:auto }
+  .body{ grid-template-columns:300px 1fr !important }
+  :root{ --rail-w:84px }
+}
+
+/* ── تفوّق على قواعد v29 القديمة اللي بمُحدِّد ID (وإلا أيقونات السكة تبهت) ── */
+.rail #nav-acc i, .rail #nav-apps i, .rail #nav-reports i, .rail #nav-clockin i,
+.rail #nav-livemap i, .rail #nav-orders i, .rail #nav-vio i, .rail #nav-dreports i,
+.rail #nav-analytics i, .rail #nav-flyctl i, .rail #nav-drivers i, .rail #nav-dash i, .rail #nav-att i{
+  background:rgba(255,255,255,.09) !important;
+  color:rgba(255,255,255,.86) !important;
+}
+.rail .nav-tab.on#nav-acc i, .rail .nav-tab.on#nav-apps i, .rail .nav-tab.on#nav-reports i,
+.rail .nav-tab.on#nav-clockin i, .rail .nav-tab.on#nav-livemap i, .rail .nav-tab.on#nav-orders i,
+.rail .nav-tab.on#nav-vio i, .rail .nav-tab.on#nav-dreports i, .rail .nav-tab.on#nav-analytics i,
+.rail .nav-tab.on#nav-flyctl i, .rail .nav-tab.on#nav-drivers i, .rail .nav-tab.on#nav-dash i,
+.rail .nav-tab.on#nav-att i{
+  background:linear-gradient(135deg,#3ec9bd,#2a8fb0) !important;
+  color:#04222e !important;
+}
+.rail .nav-tab.on{ padding:9px 10px !important; font-weight:800 !important; font-size:12.5px !important }
+.rail .nav-tab:hover #nav-none{ /* حارس فارغ */ }
+/* ألوان مميّزة خفيفة تفضل ظاهرة على الحافة اليسرى للأيقونة */
+.rail #nav-clockin.on i, .rail #nav-orders.on i{ background:linear-gradient(135deg,#4ade80,#059669) !important; color:#04240f !important }
+.rail #nav-vio.on i{ background:linear-gradient(135deg,#fca5a5,#b91c1c) !important; color:#fff !important }
+.rail #nav-livemap.on i{ background:linear-gradient(135deg,#c4b5fd,#7c3aed) !important; color:#fff !important }
+.rail #nav-acc.on i, .rail #nav-apps.on i{ background:linear-gradient(135deg,#fcd34d,#d97706) !important; color:#3b1d00 !important }
 </style>
+<!-- ══════════════════════════════════════════════════════════════════
+     حارس الجلسة — لازم يفضل أول حاجة في الصفحة
+     بيخفي النظام كله لحد ما الجلسة تتأكد، عشان البيانات ماتومضش
+     ══════════════════════════════════════════════════════════════════ -->
+<style id="authGate">
+  /* الإخفاء بيتشال بمجرد ما الكلاس يتضاف — مش بقاعدة تانية تتنافس معاه
+     (لو استخدمنا body.ark-authed > * كانت هتخسر في الأولوية وتفضل الشاشة بيضا) */
+  body:not(.ark-authed) > *:not(#authScreen):not(#welcomeScreen){ visibility:hidden !important }
+  body.ark-authed #authScreen{ display:none !important }
+
+  #authScreen{
+    position:fixed; inset:0; z-index:99999;
+    background:linear-gradient(135deg,#0b2b3d 0%,#12475f 48%,#0d4a49 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; color:#fff; font-family:Cairo,sans-serif; visibility:visible !important;
+  }
+  #authScreen .lg{
+    width:76px;height:76px;border-radius:50%;
+    background:linear-gradient(135deg,#c29449,#e6b95d);
+    display:grid;place-items:center;font-size:32px;font-weight:900;color:#0f3a52;
+    box-shadow:0 10px 30px rgba(194,148,73,.45);
+  }
+  #authScreen .ring{
+    width:40px;height:40px;border:3px solid rgba(255,255,255,.18);
+    border-top-color:#c29449;border-radius:50%;animation:authSpin .8s linear infinite;
+  }
+  @keyframes authSpin{ to{ transform:rotate(360deg) } }
+  #authScreen .msg{ font-size:13px; opacity:.8; font-weight:600; text-align:center; line-height:1.9; max-width:400px; padding:0 20px }
+  #authScreen .act{
+    margin-top:6px;padding:11px 26px;border:none;border-radius:11px;cursor:pointer;
+    background:linear-gradient(135deg,#1c5878,#0d9488);color:#fff;
+    font:800 13px Cairo,sans-serif;box-shadow:0 8px 22px rgba(0,0,0,.3);display:none;
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* الجلسة والدور — بيتقرّوا قبل أي حاجة تانية */
+window.ARK_USER = null;
+window.ARK_ROLE = 'supervisor';
+
+(async function arkAuthGate(){
+  // السكربت ده في <head>، فعناصر شاشة القفل لسه ماتقرتش —
+  // نستنى الـ DOM قبل أي لمسة، من غير ما نأخّر طلب الشبكة نفسه
+  const domReady = () => document.readyState !== 'loading'
+    ? Promise.resolve()
+    : new Promise(r => document.addEventListener('DOMContentLoaded', r, { once:true }));
+
+  const fail = async t => {
+    await domReady();
+    const msg  = document.getElementById('authMsg');
+    const ring = document.getElementById('authRing');
+    const btn  = document.getElementById('authBtn');
+    if(ring) ring.style.display = 'none';
+    if(msg)  msg.innerHTML = t;
+    if(btn)  btn.style.display = 'block';
+  };
+  const unlock = async () => {
+    await domReady();
+    document.body.classList.add('ark-authed');
+  };
+
+  // منفذ طوارئ للتطوير: ?nologin=1 — بيشتغل بس على الملفات المحلية
+  const dev = new URLSearchParams(location.search).get('nologin') === '1'
+              && (location.protocol === 'file:' || /^(localhost|127\.)/.test(location.hostname));
+  if(dev){
+    window.ARK_USER = { name:'وضع التطوير', role:'admin', email:'—' };
+    window.ARK_ROLE = 'admin';
+    await unlock();
+    window.dispatchEvent(new CustomEvent('ark-auth-ready', { detail: window.ARK_USER }));
+    return;
+  }
+
+  try{
+    if(!window.supabase){ await fail('مكتبة الاتصال ماتحمّلتش.<br>اتأكد من النت وأعد التحميل.'); return; }
+    const sb = window.supabase.createClient(
+      'https://pqpowedqewjgkrzvmgyv.supabase.co',
+      'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT',
+      { auth:{ persistSession:true, autoRefreshToken:true, storage:window.localStorage } }
+    );
+    window.ARK_SB = sb;
+
+    const { data:{ session } } = await sb.auth.getSession();
+    if(!session){ await fail('مفيش جلسة دخول.<br>لازم تسجّل دخولك الأول.'); return; }
+
+    const { data:profile, error } = await sb.from('profiles')
+      .select('full_name, full_name_ar, role, is_active').eq('id', session.user.id).maybeSingle();
+
+    if(error){    await fail('مقدرتش أقرأ الصلاحيات:<br>' + error.message); return; }
+    if(!profile){ await sb.auth.signOut(); await fail('الحساب مالوش صلاحيات في النظام.'); return; }
+    if(profile.is_active === false){ await sb.auth.signOut(); await fail('الحساب موقوف.'); return; }
+
+    window.ARK_USER = {
+      id: session.user.id, email: session.user.email,
+      name: profile.full_name_ar || profile.full_name || session.user.email,
+      nameEn: profile.full_name || '', role: profile.role
+    };
+    window.ARK_ROLE = profile.role || 'supervisor';
+    try{ localStorage.setItem('ark_session_user', JSON.stringify(window.ARK_USER)); }catch(e){}
+
+    await unlock();
+    window.dispatchEvent(new CustomEvent('ark-auth-ready', { detail: window.ARK_USER }));
+  }catch(e){
+    await fail('خطأ في التحقق:<br>' + (e.message || e));
+  }
+})();
+
+async function arkLogout(){
+  if(!confirm('تسجيل الخروج من النظام؟')) return;
+  try{ await window.ARK_SB?.auth.signOut(); }catch(e){}
+  try{ localStorage.removeItem('ark_session_user'); localStorage.removeItem('ark_show_welcome'); }catch(e){}
+  location.href = 'login.html';
+}
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
@@ -1068,55 +1720,117 @@ table td{padding:11px 12px!important;font-size:13px!important}
 <!-- <script src="cloud-sync.js"></script> -->
 </head>
 <body>
-<div class="app">
 
-<!-- TOPBAR -->
+<!-- شاشة القفل — أول عنصر في الصفحة، بتتشال لما الجلسة تتأكد -->
+<div id="authScreen">
+  <div class="lg">س</div>
+  <div class="ring" id="authRing"></div>
+  <div class="msg" id="authMsg">بيتحقق من صلاحية الدخول…</div>
+  <button class="act" id="authBtn" onclick="location.href='login.html'">الذهاب لصفحة الدخول</button>
+</div>
+
+<div class="app" id="appShell">
+
+<!-- ══════════ سكة التنقّل الرأسية ══════════ -->
+<nav class="rail" id="navRail">
+  <div class="rail-brand" onclick="toggleRail()" title="AL-SALASIL ARK">
+    <div class="rail-logo"><i class="ti ti-steering-wheel"></i></div>
+    <div class="rail-name"><b data-i18n="brand_name">AL-SALASIL ARK</b><span data-i18n="brand_sub">نظام إدارة السائقين</span></div>
+  </div>
+
+  <div class="rail-scroll">
+    <div class="rail-sec">التشغيل</div>
+    <button class="nav-tab on" id="nav-drivers" data-tip="السائقون" onclick="setMainView('drivers')"><i class="ti ti-users"></i> <span data-i18n="nav_drivers">السائقون</span></button>
+    <button class="nav-tab" id="nav-dash" data-tip="لوحة التحكم" onclick="setMainView('dash')"><i class="ti ti-dashboard"></i> <span data-i18n="nav_dashboard">لوحة التحكم</span></button>
+    <button class="nav-tab" id="nav-att" data-tip="الحضور" onclick="setMainView('att')"><i class="ti ti-calendar-check"></i> <span data-i18n="nav_attendance">الحضور</span></button>
+    <button class="nav-tab" id="nav-dreports" data-tip="التقارير اليومية" onclick="setMainView('dreports')"><i class="ti ti-report"></i> <span>تقارير يومية</span></button>
+
+    <div class="rail-sec">المتابعة المباشرة</div>
+    <button class="nav-tab" id="nav-clockin" data-tip="حضور مباشر" onclick="setMainView('clockin')"><i class="ti ti-map-pin"></i> <span data-i18n="nav_live_clockin">حضور مباشر</span></button>
+    <button class="nav-tab" id="nav-livemap" data-tip="خريطة مباشرة" onclick="setMainView('livemap')"><i class="ti ti-map-2"></i> <span data-i18n="nav_live_map">خريطة مباشرة</span></button>
+    <button class="nav-tab" id="nav-orders" data-tip="الأوردرات" onclick="setMainView('orders')"><i class="ti ti-package"></i> <span data-i18n="nav_orders">الأوردرات</span><span id="navOrdersBadge" class="badge-dot" style="display:none">0</span></button>
+
+    <div class="rail-sec">المال والتحليل</div>
+    <button class="nav-tab" id="nav-acc" data-tip="المحاسبة" onclick="setMainView('acc')"><i class="ti ti-cash-banknote"></i> <span data-i18n="nav_accounting">المحاسبة</span></button>
+    <button class="nav-tab" id="nav-reports" data-tip="تقارير الشركة" onclick="setMainView('reports')"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
+    <button class="nav-tab" id="nav-vio" data-tip="المخالفات" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> <span data-i18n="nav_violations">المخالفات</span></button>
+    <button class="nav-tab" id="nav-apps" data-tip="طلبات التقديم" onclick="setMainView('apps')"><i class="ti ti-user-plus"></i> <span data-i18n="nav_applications">طلبات التقديم</span></button>
+
+    <div class="rail-sec">أنظمة مرتبطة</div>
+    <button class="nav-tab" id="nav-analytics" data-tip="Analytics BI" onclick="window.open('analytics.html','_blank')"><i class="ti ti-chart-histogram"></i> <span>Analytics BI</span></button>
+    <button class="nav-tab" id="nav-flyctl" data-tip="تحكم FLY" onclick="window.open('fly-control.html','_blank')"><i class="ti ti-device-mobile-cog"></i> <span>تحكم FLY</span></button>
+  </div>
+
+  <div class="rail-foot">
+    <div class="rail-user" id="railUser" onclick="arkLogout()" title="تسجيل الخروج">
+      <div class="rail-avatar" id="railAvatar">—</div>
+      <div class="rail-name" style="flex:1;min-width:0">
+        <b id="railUserName">—</b><span id="railUserRole">—</span>
+      </div>
+      <i class="ti ti-logout" style="font-size:15px;opacity:.6"></i>
+    </div>
+    <button class="rail-toggle" onclick="toggleRail()"><i class="ti ti-chevron-left"></i> <span class="rail-name">طيّ القائمة</span></button>
+  </div>
+</nav>
+
+<!-- ══════════ شاشة الترحيب بعد الدخول ══════════ -->
+<div id="welcomeScreen">
+  <div class="wl-bg"></div>
+  <div class="wl-card">
+    <div class="wl-ring"><div class="wl-logo">س</div></div>
+    <div class="wl-hi">Welcome</div>
+    <h1 class="wl-name" id="wlName">Mr Ali</h1>
+    <div class="wl-role" id="wlRole">مدير النظام</div>
+    <div class="wl-bar"><i></i></div>
+    <div class="wl-sub" id="wlSub">جاري تجهيز لوحة التحكم…</div>
+  </div>
+</div>
+
+<!-- ══════════ الهيدر ══════════ -->
 <div class="top">
-  <div class="logo">
-    <div class="logo-ic"><i class="ti ti-car" style="font-size:17px;color:#fff"></i></div>
-    <div><span data-i18n="brand_name">AL-SALASIL ARK</span><sub data-i18n="brand_sub">نظام إدارة السائقين</sub></div>
-  </div>
-  <div style="display:flex;gap:6px;margin-right:8px">
-    <button class="nav-tab on" id="nav-drivers" onclick="setMainView('drivers')"><i class="ti ti-users"></i> <span data-i18n="nav_drivers">السائقون</span></button>
-    <button class="nav-tab" id="nav-dash" onclick="setMainView('dash')"><i class="ti ti-dashboard"></i> <span data-i18n="nav_dashboard">لوحة التحكم</span></button>
-    <button class="nav-tab" id="nav-att" onclick="setMainView('att')"><i class="ti ti-calendar-check"></i> <span data-i18n="nav_attendance">الحضور</span></button>
-    <button class="nav-tab" id="nav-vio" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> <span data-i18n="nav_violations">المخالفات</span></button>
-    <button class="nav-tab" id="nav-clockin" onclick="setMainView('clockin')"><i class="ti ti-map-pin" style="color:#10b981"></i> <span style="color:#10b981" data-i18n="nav_live_clockin">حضور مباشر</span></button>
-    <button class="nav-tab" id="nav-livemap" onclick="setMainView('livemap')" style="color:#a78bfa"><i class="ti ti-map-2"></i> <span data-i18n="nav_live_map">خريطة مباشرة</span></button>
-    <button class="nav-tab" id="nav-apps" onclick="setMainView('apps')" style="color:#fbbf24"><i class="ti ti-user-plus"></i> <span data-i18n="nav_applications">طلبات التقديم</span></button>
-    <button class="nav-tab" id="nav-acc" onclick="setMainView('acc')" style="color:#fbbf24"><i class="ti ti-cash-banknote"></i> <span data-i18n="nav_accounting">المحاسبة</span></button>
-    <button class="nav-tab" id="nav-reports" onclick="setMainView('reports')" style="color:#22d3ee"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
-    <button class="nav-tab" id="nav-orders" onclick="setMainView('orders')" style="color:#10b981;position:relative"><i class="ti ti-package"></i> <span data-i18n="nav_orders">الأوردرات</span> <span id="navOrdersBadge" style="display:none;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 5px;margin-right:4px">0</span></button>
-    <button class="nav-tab" id="nav-dreports" onclick="setMainView('dreports')" style="color:#8b5cf6"><i class="ti ti-report"></i> تقارير يومية</button>
-    <button class="nav-tab" id="nav-analytics" onclick="window.open('analytics.html', '_blank')" style="color:#c29449;border-color:rgba(194,148,73,0.4);font-weight:900"><i class="ti ti-chart-histogram"></i> 📊 Analytics BI</button>
-    <button class="nav-tab" id="nav-flyctl" onclick="window.open('fly-control.html', '_blank')" style="color:#10b981;border-color:rgba(16,185,129,0.4);font-weight:900"><i class="ti ti-device-mobile-cog"></i> 🎛️ تحكم FLY</button>
-  </div>
+  <div class="hdr-title"><b id="hdrViewName">السائقون</b><span id="hdrViewSub">إدارة ملفات السائقين</span></div>
+
+  <button class="tools-btn" onclick="openAIPanel()" style="background:linear-gradient(135deg,#7c3aed,#2a8fb0);box-shadow:0 4px 14px rgba(124,58,237,.28)" title="المساعد الذكي">
+    <i class="ti ti-sparkles"></i> <span>المساعد الذكي</span>
+    <span id="aiInsightBadge" class="badge-dot" style="display:none;position:static;box-shadow:none">0</span>
+  </button>
+
   <div class="top-stats">
     <div class="ts"><div class="ts-n" id="st-total" style="color:var(--blue)">0</div><div class="ts-l">إجمالي</div></div>
-    <div id="st-partners" style="display:flex;gap:20px"></div>
+    <div id="st-partners" style="display:flex;gap:8px"></div>
     <div class="ts"><div class="ts-n" id="st-exp" style="color:var(--amber)">0</div><div class="ts-l">رخصة قريبة</div></div>
   </div>
-  <div class="top-btns">
-    <button class="tbtn" onclick="openScheduleModal()" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)"><i class="ti ti-calendar-week"></i> <span data-i18n="btn_schedule">الجدول</span></button>
-    <button class="tbtn" onclick="openOpsCenter('profit')" id="opsCenterBtn" style="color:#3b82f6;border-color:rgba(59,130,246,0.4)" title="الربحية والتنبيهات والتدقيق"><i class="ti ti-dashboard"></i> <span>مركز التشغيل</span><span id="opsAlertBadge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-right:5px;font-weight:800"></span></button>
-    <button class="tbtn" onclick="syncDriversToSupabase()" style="color:#f59e0b;border-color:rgba(245,158,11,0.35)" title="Sync drivers to app"><i class="ti ti-arrows-exchange"></i> <span data-i18n="btn_sync_app">مزامنة App</span></button>
-    <button class="tbtn" onclick="openSendMsgModal()" style="color:#a78bfa;border-color:rgba(167,139,250,0.35)"><i class="ti ti-message-circle"></i> <span data-i18n="btn_send_msg">إرسال رسالة</span></button>
-    <button class="tbtn" onclick="openInboxModal()" style="color:#22d3ee;border-color:rgba(34,211,238,0.35);position:relative"><i class="ti ti-inbox"></i> <span data-i18n="btn_inbox">صندوق الوارد</span><span id="inboxBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,0.4)">0</span></button>
-    <button class="tbtn" onclick="openSocietiesModal()" style="color:#c29449;border-color:rgba(194,148,73,0.45)"><i class="ti ti-building-bank"></i> الجمعيات</button>
-    <button class="tbtn" onclick="openDriverReportModal()" style="color:#ec4899;border-color:rgba(236,72,153,0.45);font-weight:900"><i class="ti ti-file-analytics"></i> تقرير السائقين</button>
-    <button class="tbtn" onclick="openFuelCardsReport()" style="color:#22c55e;border-color:rgba(34,197,94,0.45);font-weight:900"><i class="ti ti-gas-station"></i> كروت البنزين</button>
-    <button class="tbtn" onclick="manualSaveFile()" style="color:#fbbf24;border-color:rgba(251,191,36,0.35)"><i class="ti ti-device-floppy"></i> <span data-i18n="btn_save_file">حفظ الملف</span></button>
-    <button class="tbtn" onclick="openBackupModal()" style="color:#22c55e;border-color:rgba(34,197,94,0.4);position:relative" title="نسخة احتياطية على السحابة">
-      <i class="ti ti-cloud-upload"></i> <span data-i18n="btn_backup">نسخ احتياطي</span>
-      <span id="backupStatusDot" style="position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#94a3b8" title="حالة آخر نسخة"></span>
-    </button>
-    <button class="tbtn" onclick="openPartnersModal()"><i class="ti ti-building"></i> <span data-i18n="btn_partners">الشركاء</span></button>
-    <button class="tbtn" onclick="exportSalaryExcel()" style="color:var(--green);border-color:rgba(16,185,129,0.4)"><i class="ti ti-table-export"></i> <span data-i18n="btn_salary_sheet">شيت الرواتب</span></button>
-    <button class="tbtn" onclick="exportBankSheet()" style="color:#0d9488;border-color:rgba(13,148,136,0.4);font-weight:900"><i class="ti ti-building-bank"></i> <span data-i18n="btn_bank_sheet">شيت البنك</span></button>
-    <button class="tbtn" onclick="doExport()"><i class="ti ti-download"></i> <span data-i18n="btn_export">تصدير</span></button>
-    <button class="tbtn" onclick="document.getElementById('impFile').click()"><i class="ti ti-upload"></i> <span data-i18n="import">استيراد</span></button>
-    <button class="tbtn" onclick="toggleArkLang()" style="color:#0d9488;border-color:rgba(13,148,136,0.4);font-weight:900" title="Toggle language"><i class="ti ti-language"></i> <span id="lang-toggle-txt">EN</span></button>
+
+  <div class="tools-wrap" id="toolsWrap">
+    <button class="tools-btn" onclick="toggleTools(event)"><i class="ti ti-layout-grid"></i> <span>الأدوات</span><i class="ti ti-chevron-down"></i></button>
+    <div class="tools-menu" id="toolsMenu" onclick="event.stopPropagation()">
+      <h6>التشغيل اليومي</h6>
+      <button class="tbtn" onclick="openOpsCenter('profit')" id="opsCenterBtn" title="الربحية والتنبيهات والتدقيق"><i class="ti ti-dashboard"></i> <span>مركز التشغيل</span><span id="opsAlertBadge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-right:auto;font-weight:800"></span></button>
+      <button class="tbtn" onclick="openScheduleModal()"><i class="ti ti-calendar-week"></i> <span data-i18n="btn_schedule">الجدول</span></button>
+      <button class="tbtn" onclick="openSendMsgModal()"><i class="ti ti-message-circle"></i> <span data-i18n="btn_send_msg">إرسال رسالة</span></button>
+      <button class="tbtn" onclick="openInboxModal()"><i class="ti ti-inbox"></i> <span data-i18n="btn_inbox">صندوق الوارد</span><span id="inboxBadge" style="display:none;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;margin-right:auto">0</span></button>
+
+      <h6>التقارير والكشوف</h6>
+      <button class="tbtn" onclick="openDriverReportModal()"><i class="ti ti-file-analytics"></i> <span>تقرير السائقين</span></button>
+      <button class="tbtn" onclick="openFuelCardsReport()"><i class="ti ti-gas-station"></i> <span>كروت البنزين</span></button>
+      <button class="tbtn" onclick="exportSalaryExcel()"><i class="ti ti-table-export"></i> <span data-i18n="btn_salary_sheet">شيت الرواتب</span></button>
+      <button class="tbtn" onclick="exportBankSheet()"><i class="ti ti-building-bank"></i> <span data-i18n="btn_bank_sheet">شيت البنك</span></button>
+
+      <h6>البيانات والمزامنة</h6>
+      <button class="tbtn" onclick="syncDriversToSupabase()"><i class="ti ti-arrows-exchange"></i> <span data-i18n="btn_sync_app">مزامنة App</span></button>
+      <button class="tbtn" onclick="manualSaveFile()"><i class="ti ti-device-floppy"></i> <span data-i18n="btn_save_file">حفظ الملف</span></button>
+      <button class="tbtn" onclick="openBackupModal()" style="position:relative"><i class="ti ti-cloud-upload"></i> <span data-i18n="btn_backup">نسخ احتياطي</span><span id="backupStatusDot" style="width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:auto" title="حالة آخر نسخة"></span></button>
+      <button class="tbtn" onclick="doExport()"><i class="ti ti-download"></i> <span data-i18n="btn_export">تصدير</span></button>
+      <button class="tbtn" onclick="document.getElementById('impFile').click()"><i class="ti ti-upload"></i> <span data-i18n="import">استيراد</span></button>
+
+      <h6>الإعدادات</h6>
+      <button class="tbtn" onclick="openPartnersModal()"><i class="ti ti-building"></i> <span data-i18n="btn_partners">الشركاء</span></button>
+      <button class="tbtn" onclick="openSocietiesModal()"><i class="ti ti-building-bank"></i> <span>الجمعيات</span></button>
+      <button class="tbtn" onclick="openAISettings()"><i class="ti ti-robot"></i> <span>إعداد المساعد الذكي</span></button>
+      <button class="tbtn" onclick="toggleArkLang()" title="Toggle language"><i class="ti ti-language"></i> <span>اللغة — <b id="lang-toggle-txt">EN</b></span></button>
+    </div>
   </div>
+
   <div class="saved-msg" id="savedMsg"><i class="ti ti-cloud-check"></i> تم الحفظ</div>
   <input type="file" id="impFile" accept=".json" style="display:none" onchange="doImport(this)">
 </div>
@@ -2782,7 +3496,17 @@ function F(val, fld, opts={}){
 function renderDetail(){
   const m = document.getElementById('mainArea');
   const d = DRV.find(x=>x.id===selId);
-  if(!d){ m.innerHTML='<div class="empty-state"><i class="ti ti-steering-wheel"></i><h2>اختر سائقاً من القائمة</h2><p>أو ابحث عن اسم أو رقم سيارة</p></div>'; return; }
+  if(!d){
+    // arkHomeHTML متعرّفة في بلوك سكربت لاحق — لو لسه ماتحمّلش نعرض البديل ونعيد الرسم بعدين
+    if(typeof arkHomeHTML === 'function'){
+      m.innerHTML = arkHomeHTML();
+      setTimeout(()=>{ try{ arkHomeFill(); }catch(e){ console.warn('[home]', e); } }, 30);
+    }else{
+      m.innerHTML = '<div class="empty-state"><i class="ti ti-steering-wheel"></i>'
+                  + '<h2>جاري التحميل…</h2><p>ثانية واحدة</p></div>';
+    }
+    return;
+  }
   const ls = licStat(d.license);
   const parOpts = [{v:'',l:'—'}].concat(PARTNERS.map(p=>({v:p.id,l:p.name})));
 
@@ -10714,6 +11438,946 @@ async function openLateSettings(){
     if(!r2.ok) throw new Error(await r2.text());
     toast('✅ تم حفظ الإعدادات','s');
   }catch(e){ toast('خطأ: '+e.message,'e'); }
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ARK v30 — طبقة الواجهة: السكة، الأدوات، الحركة
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+/* ══════════════════════════════════════════════════════════
+   المستخدم الحالي + شاشة الترحيب
+   ══════════════════════════════════════════════════════════ */
+const ARK_ROLE_AR = {
+  admin:'مدير النظام', accountant:'محاسب', hr:'شؤون الموظفين',
+  operations:'العمليات', supervisor:'مشرف'
+};
+
+/** اللقب المناسب بالإنجليزي: Mr / Ms حسب المتاح، والاسم الأول بس */
+function arkDisplayName(u){
+  if(!u) return 'Mr Ali';
+  const en = (u.nameEn || '').trim();
+  const src = en || (u.name || '').trim() || (u.email || '').split('@')[0];
+  const first = src.split(/\s+/)[0] || src;
+  // لو الاسم عربي نسيبه زي ما هو من غير Mr
+  if(/[؀-ۿ]/.test(first)) return first;
+  return 'Mr ' + first.charAt(0).toUpperCase() + first.slice(1);
+}
+
+function arkInitials(u){
+  const s = ((u && (u.nameEn || u.name)) || 'A').trim();
+  const p = s.split(/\s+/);
+  return ((p[0]||'A')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
+}
+
+/** يملأ كارت المستخدم في السكة */
+function arkFillUserChip(){
+  const u = window.ARK_USER; if(!u) return;
+  const set = (id,v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  set('railAvatar', arkInitials(u));
+  set('railUserName', u.name || u.email || '—');
+  set('railUserRole', ARK_ROLE_AR[u.role] || u.role || '—');
+}
+
+/** شاشة الترحيب — بتظهر بعد أول دخول بس */
+function arkShowWelcome(){
+  let first = false;
+  try{ first = localStorage.getItem('ark_show_welcome') === '1';
+       localStorage.removeItem('ark_show_welcome'); }catch(e){}
+  if(!first) return;
+
+  const u  = window.ARK_USER;
+  const el = document.getElementById('welcomeScreen'); if(!el) return;
+  document.getElementById('wlName').textContent = arkDisplayName(u);
+  document.getElementById('wlRole').textContent = ARK_ROLE_AR[u && u.role] || 'مستخدم';
+  const h = new Date().getHours();
+  document.getElementById('wlSub').textContent =
+    (h < 12 ? 'صباح الخير — ' : 'مساء الخير — ') + 'جاري تجهيز لوحة التحكم…';
+
+  el.classList.add('on');
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => { el.classList.remove('on','out'); }, 720);
+  }, 2600);
+  // اضغط في أي مكان عشان تتخطاها
+  el.onclick = () => { el.classList.add('out'); setTimeout(()=>el.classList.remove('on','out'), 720); };
+}
+
+window.addEventListener('ark-auth-ready', () => {
+  arkFillUserChip();
+  arkShowWelcome();
+  // إخفاء ما لا يخصّ الدور
+  try{ arkApplyRole(); }catch(e){ console.warn('[role]', e); }
+});
+
+/** إخفاء الشاشات المالية عن الأدوار اللي مالهاش علاقة */
+function arkApplyRole(){
+  const r = window.ARK_ROLE;
+  const hideFor = {
+    supervisor: ['nav-acc','nav-reports'],
+    operations: ['nav-acc'],
+    hr:         []
+  };
+  (hideFor[r] || []).forEach(id => {
+    const el = document.getElementById(id); if(el) el.style.display = 'none';
+  });
+  if(r !== 'admin' && r !== 'accountant'){
+    const b = document.getElementById('opsCenterBtn');
+    if(b) b.style.display = 'none';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   شاشة البداية — بدل المساحة الفاضية لما مافيش سائق مختار
+   ══════════════════════════════════════════════════════════ */
+function arkHomeHTML(){
+  const now = new Date();
+  const hh  = now.getHours();
+  const greet = hh < 12 ? 'صباح الخير' : hh < 17 ? 'مساء الخير' : 'مساء الخير';
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const dateTxt = now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+
+  const total   = (typeof DRV !== 'undefined' ? DRV : []).length;
+  const parts   = (typeof PARTNERS !== 'undefined' ? PARTNERS : []);
+  const byP = {};
+  (typeof DRV !== 'undefined' ? DRV : []).forEach(x => { if(x.partner) byP[x.partner] = (byP[x.partner]||0)+1; });
+
+  const card = (ic, color, id, label, sub) =>
+    `<div class="hm-kpi"><div class="hm-ic" style="background:${color}1a;color:${color}"><i class="ti ${ic}"></i></div>`
+    + `<div><div class="hm-n" id="${id}" style="color:${color}">—</div>`
+    + `<div class="hm-l">${label}</div>${sub?`<div class="hm-s">${sub}</div>`:''}</div></div>`;
+
+  const quick = (ic, label, fn, color) =>
+    `<button class="hm-act" onclick="${fn}"><i class="ti ${ic}" style="color:${color}"></i><span>${label}</span>`
+    + `<i class="ti ti-arrow-narrow-left" style="margin-inline-start:auto;opacity:.4"></i></button>`;
+
+  return `
+  <div class="hm">
+    <div class="hm-hero">
+      <div>
+        <div class="hm-greet">${greet} 👋</div>
+        <h1 class="hm-title">نظرة عامة على التشغيل</h1>
+        <div class="hm-date"><i class="ti ti-calendar"></i> ${dateTxt}</div>
+      </div>
+      <div class="hm-hero-art"><i class="ti ti-steering-wheel"></i></div>
+    </div>
+
+    <div class="hm-grid stagger">
+      ${card('ti-users','#1c5878','hmTotal','إجمالي السائقين', parts.length + ' شريك نشط').replace('>—<','>'+total+'<')}
+      ${card('ti-coin','#059669','hmRev','إيراد الشهر (د.ك)','محسوب من نماذج الشركاء')}
+      ${card('ti-chart-arrows-vertical','#7c3aed','hmProfit','صافي الربح (د.ك)','بعد الرواتب والبنزين والمخالفات')}
+      ${card('ti-gas-station','#d97706','hmFuel','بنزين الشهر (د.ك)','من التقارير اليومية')}
+    </div>
+
+    <div class="hm-cols">
+      <div class="hm-panel">
+        <div class="hm-ph"><i class="ti ti-sparkles" style="color:#7c3aed"></i> <b>أهم ما يحتاج انتباهك</b>
+          <button class="hm-more" onclick="openAIPanel()">كل الرؤى <i class="ti ti-arrow-narrow-left"></i></button></div>
+        <div id="hmInsights">
+          <div class="skel" style="height:52px;margin-bottom:8px"></div>
+          <div class="skel" style="height:52px;margin-bottom:8px"></div>
+          <div class="skel" style="height:52px"></div>
+        </div>
+      </div>
+
+      <div class="hm-panel">
+        <div class="hm-ph"><i class="ti ti-building" style="color:#0d9488"></i> <b>السائقون حسب الشريك</b></div>
+        <div class="hm-parts">
+          ${parts.map(p => {
+            const n = byP[p.id] || 0, pct = total ? Math.round(n/total*100) : 0;
+            return `<div class="hm-part">
+              <div class="hm-part-h"><b>${_esc(p.name)}</b>
+                <span class="hm-part-m">${p.model==='fixed_monthly'?'مبلغ ثابت':'بالطلب'}</span>
+                <span class="hm-part-n">${n}</span></div>
+              <div class="hm-bar"><i style="width:${pct}%"></i></div></div>`;
+          }).join('') || '<div style="color:var(--muted2);font-size:12px;padding:14px">مافيش شركاء متعرّفين</div>'}
+        </div>
+        <div class="hm-ph" style="margin-top:16px"><i class="ti ti-bolt" style="color:#d97706"></i> <b>وصول سريع</b></div>
+        <div class="hm-acts">
+          ${quick('ti-dashboard','مركز التشغيل والربحية',"openOpsCenter('profit')",'#1c5878')}
+          ${quick('ti-report','التقارير اليومية',"setMainView('dreports')",'#7c3aed')}
+          ${quick('ti-cash-banknote','المحاسبة',"setMainView('acc')",'#d97706')}
+          ${quick('ti-user-plus','إضافة سائق جديد','openAddModal()','#059669')}
+        </div>
+      </div>
+    </div>
+
+    <div class="hm-hint"><i class="ti ti-info-circle"></i>
+      اختر سائقاً من القائمة على اليمين لفتح ملفه، أو ابحث بالاسم أو رقم السيارة.</div>
+  </div>`;
+}
+
+/* يملأ أرقام شاشة البداية من البيانات الحقيقية */
+async function arkHomeFill(){
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  set('hmTotal', (typeof DRV !== 'undefined' ? DRV : []).length);
+
+  let rows = [];
+  try{
+    const n = new Date();
+    if(typeof profitTableForMonth === 'function') rows = await profitTableForMonth(n.getMonth()+1, n.getFullYear());
+  }catch(e){}
+
+  if(rows.length){
+    const s = k => rows.reduce((a,r)=>a+(r[k]||0),0);
+    set('hmRev',    s('revenue').toFixed(0));
+    set('hmProfit', s('profit').toFixed(0));
+    set('hmFuel',   s('fuel').toFixed(0));
+  }else{
+    ['hmRev','hmProfit','hmFuel'].forEach(i => set(i,'—'));
+  }
+  arkAnimateCounters(document.querySelector('.hm'));
+
+  // أهم ٣ رؤى
+  const box = document.getElementById('hmInsights');
+  if(!box) return;
+  let list = [];
+  try{ list = await arkRunIntel(); }catch(e){}
+  if(!list.length){
+    box.innerHTML = '<div style="padding:26px;text-align:center;color:var(--green);font-size:12.5px">'
+      + '<i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:9px"></i>'
+      + 'كل المؤشرات في نطاقها الطبيعي</div>';
+    return;
+  }
+  box.innerHTML = list.slice(0,4).map((i,ix) =>
+    `<div class="ins ${i.sev}" style="animation-delay:${(ix*0.06).toFixed(2)}s;margin-bottom:8px">
+       <div class="ins-h"><i class="ti ${i.icon}"></i><b>${_esc(i.title)}</b>
+         <span class="ins-k">${_esc(i.kind)}</span></div>
+       <div class="ins-d">${_esc(i.detail)}</div></div>`).join('');
+}
+
+/* ───────── سكة التنقّل ───────── */
+function toggleRail(){
+  const app = document.getElementById('appShell');
+  const open = app.classList.toggle('rail-open');
+  try{ localStorage.setItem('ark_rail_open', open ? '1' : '0'); }catch(e){}
+  window.dispatchEvent(new Event('resize'));   // الخرائط والرسوم تعيد القياس
+}
+
+/* ───────── قائمة الأدوات ───────── */
+function toggleTools(ev){
+  if(ev) ev.stopPropagation();
+  document.getElementById('toolsWrap').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const w = document.getElementById('toolsWrap');
+  if(w && !w.contains(e.target)) w.classList.remove('open');
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){
+    document.getElementById('toolsWrap')?.classList.remove('open');
+    const ai = document.getElementById('aiPanel');
+    if(ai && ai.classList.contains('open')) closeAIPanel();
+  }
+  // اختصارات: Alt + رقم للتنقّل السريع
+  if(e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key)){
+    const order = ['drivers','dash','att','dreports','clockin','livemap','orders','acc','reports'];
+    const v = order[parseInt(e.key,10)-1];
+    if(v){ e.preventDefault(); setMainView(v); }
+  }
+});
+
+/* ───────── عنوان الهيدر يتبع الشاشة ───────── */
+const ARK_VIEW_META = {
+  drivers:['السائقون','إدارة ملفات السائقين'],
+  dash:['لوحة التحكم','نظرة عامة على التشغيل'],
+  att:['الحضور','سجل الحضور والغياب'],
+  vio:['المخالفات','المخالفات المرورية والخصومات'],
+  clockin:['حضور مباشر','تسجيل الدخول والخروج لحظياً'],
+  livemap:['خريطة مباشرة','تتبّع مواقع السائقين'],
+  apps:['طلبات التقديم','المتقدّمون للوظائف'],
+  acc:['المحاسبة','الإيرادات والمصروفات'],
+  reports:['تقارير الشركة','التقارير التحليلية'],
+  orders:['الأوردرات','الطلبات الواردة'],
+  dreports:['التقارير اليومية','تقارير السائقين اليومية']
+};
+(function wrapSetMainView(){
+  if(typeof window.setMainView !== 'function') return;
+  const orig = window.setMainView;
+  window.setMainView = function(view){
+    const r = orig.apply(this, arguments);
+    const meta = ARK_VIEW_META[view];
+    if(meta){
+      const n = document.getElementById('hdrViewName'), s = document.getElementById('hdrViewSub');
+      if(n) n.textContent = meta[0];
+      if(s) s.textContent = meta[1];
+    }
+    // أنيميشن دخول الشاشة
+    const host = view === 'drivers' ? document.querySelector('.body') : document.getElementById('view-'+view);
+    if(host){ host.classList.remove('view-enter'); void host.offsetWidth; host.classList.add('view-enter'); }
+    setTimeout(arkAnimateCounters, 60);
+    return r;
+  };
+})();
+
+/* ───────── عدّادات متحركة ───────── */
+function arkAnimateCounters(root){
+  const scope = root || document;
+  scope.querySelectorAll('.ts-n, .kpi-val, [data-count]').forEach(el => {
+    const raw = (el.textContent || '').trim();
+    const num = parseFloat(raw.replace(/[^\d.\-]/g,''));
+    if(!isFinite(num) || num === 0) return;
+    if(el.dataset.animatedTo === String(num)) return;     // متعمّلها قبل كده
+    el.dataset.animatedTo = String(num);
+    const dec = (raw.split('.')[1]||'').replace(/[^\d]/g,'').length;
+    const pre = raw.match(/^[^\d\-]*/)[0], suf = raw.match(/[^\d.]*$/)[0];
+    const t0 = performance.now(), dur = 620;
+    (function step(t){
+      const p = Math.min(1, (t - t0)/dur);
+      const e = 1 - Math.pow(1 - p, 3);                   // easeOutCubic
+      el.textContent = pre + (num*e).toFixed(dec) + suf;
+      if(p < 1) requestAnimationFrame(step);
+    })(t0);
+  });
+}
+
+/* ───────── التهيئة ───────── */
+document.addEventListener('DOMContentLoaded', () => {
+  try{ if(localStorage.getItem('ark_rail_open') === '1')
+        document.getElementById('appShell')?.classList.add('rail-open'); }catch(e){}
+  // إعادة رسم شاشة البداية — أول نداء لـ renderDetail بيحصل قبل ما البلوك ده يتحمّل
+  try{
+    const m = document.getElementById('mainArea');
+    if(m && !m.querySelector('.hm') && typeof selId !== 'undefined' && !selId) renderDetail();
+  }catch(e){ console.warn('[home-init]', e); }
+  setTimeout(arkAnimateCounters, 400);
+  setTimeout(() => { try{ arkRunIntel(); }catch(e){ console.warn('[intel]', e); } }, 1400);
+
+  // احتياطي: لو التحقق خلص قبل ما المستمع ده يتسجّل (سباق تحميل)
+  if(window.ARK_USER){
+    try{ arkFillUserChip(); arkShowWelcome(); arkApplyRole(); }catch(e){ console.warn('[auth-late]', e); }
+  }
+});
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ARK v30 — محرّك الذكاء المحلي (بدون أي API)
+     كشف الشذوذ · التوقّع · ترتيب الأولويات
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+let ARK_INSIGHTS = [];
+
+/* أدوات إحصائية صغيرة */
+function _mean(a){ return a.length ? a.reduce((s,x)=>s+x,0)/a.length : 0; }
+function _sd(a){ if(a.length<2) return 0; const m=_mean(a); return Math.sqrt(_mean(a.map(x=>(x-m)*(x-m)))); }
+function _median(a){ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y), i=s.length>>1;
+  return s.length%2 ? s[i] : (s[i-1]+s[i])/2; }
+/* انحدار خطي بسيط → الميل والتقاطع للتوقّع */
+function _trend(ys){
+  const n = ys.length; if(n < 3) return null;
+  const xs = ys.map((_,i)=>i), mx = _mean(xs), my = _mean(ys);
+  let num=0, den=0;
+  for(let i=0;i<n;i++){ num += (xs[i]-mx)*(ys[i]-my); den += (xs[i]-mx)**2; }
+  if(!den) return null;
+  const slope = num/den;
+  return { slope, at:(x)=> my + slope*(x-mx) };
+}
+
+/**
+ * يحلّل بيانات الشهر ويطلع قائمة رؤى مرتّبة بالأولوية.
+ * كله محلي — لا يخرج أي بيان خارج المتصفح.
+ */
+async function arkRunIntel(){
+  const out = [];
+  const now = new Date(), m = now.getMonth()+1, y = now.getFullYear();
+
+  let rows = [];
+  try{ if(typeof profitTableForMonth === 'function') rows = await profitTableForMonth(m, y); }
+  catch(e){ console.warn('[intel] profit', e); }
+
+  if(rows.length){
+    /* ① تكلفة الطلب الشاذة — مين برّه النطاق الطبيعي */
+    const cpo = rows.filter(r => r.costPerOrder != null && isFinite(r.costPerOrder)).map(r => r.costPerOrder);
+    if(cpo.length >= 4){
+      const med = _median(cpo), sd = _sd(cpo);
+      rows.forEach(r => {
+        if(r.costPerOrder == null || !sd) return;
+        const z = (r.costPerOrder - med)/sd;
+        if(z > 1.8) out.push({
+          sev: z > 2.6 ? 'high' : 'med', icon:'ti-arrow-up-right', kind:'تكلفة',
+          title: r.name + ' — تكلفة الطلب أعلى من المعتاد',
+          detail: 'يكلّفك ' + r.costPerOrder.toFixed(3) + ' د.ك/طلب مقابل ' + med.toFixed(3) + ' متوسط الفريق ('
+                  + ((r.costPerOrder/med - 1)*100).toFixed(0) + '%+)',
+          act:'راجع عدد طلباته وبنزينه — غالباً طلبات أقل بنفس التكلفة'
+        });
+      });
+    }
+
+    /* ② سائقون بربح سالب */
+    rows.filter(r => r.profit < 0).forEach(r => out.push({
+      sev:'high', icon:'ti-trending-down', kind:'ربحية',
+      title: r.name + ' — يشتغل بخسارة',
+      detail: 'إيراد ' + r.revenue.toFixed(3) + ' مقابل تكلفة ' + (r.salary + r.fuel + r.violations).toFixed(3) + ' د.ك',
+      act:'راجع نموذج شريكه أو عدد أيام عمله'
+    }));
+
+    /* ③ شركاء بنظام ثابت: مين بيستهلك الميزة ومين لأ */
+    const byP = {};
+    rows.forEach(r => {
+      if(r.model !== 'fixed_monthly') return;
+      (byP[r.partnerName] = byP[r.partnerName] || []).push(r);
+    });
+    Object.entries(byP).forEach(([pn, list]) => {
+      if(list.length < 2) return;
+      const ords = list.map(r => r.orders);
+      const hi = Math.max(...ords), lo = Math.min(...ords);
+      if(lo > 0 && hi / lo >= 1.7){
+        const worst = list.find(r => r.orders === lo);
+        out.push({
+          sev:'med', icon:'ti-scale', kind:'كفاءة',
+          title: pn + ' — فجوة إنتاجية بين السائقين',
+          detail: 'أعلى سائق ' + hi + ' طلب وأقل سائق ' + lo + ' طلب بنفس الإيراد الثابت',
+          act:'الإيراد ثابت، فالفرق ده صافي ربح ضايع — راجع ' + worst.name
+        });
+      }
+    });
+
+    /* ④ الهامش الكلي مقارنة بحدّ الأمان */
+    const tRev = rows.reduce((s,r)=>s+r.revenue,0), tPro = rows.reduce((s,r)=>s+r.profit,0);
+    if(tRev > 0){
+      const mg = tPro/tRev*100;
+      out.push({
+        sev: mg < 15 ? 'high' : mg < 30 ? 'med' : 'low',
+        icon: mg < 30 ? 'ti-alert-circle' : 'ti-circle-check', kind:'هامش',
+        title:'هامش الشهر ' + mg.toFixed(1) + '%',
+        detail:'إيراد ' + tRev.toFixed(0) + ' د.ك · صافي ' + tPro.toFixed(0) + ' د.ك على ' + rows.length + ' سائق',
+        act: mg < 30 ? 'الهامش تحت 30% — الضغط غالباً من البنزين أو سائقين بإنتاجية ضعيفة' : 'الوضع سليم'
+      });
+    }
+  }
+
+  /* ⑤ توقّع البنزين لآخر الشهر — انحدار على المصروف اليومي */
+  try{
+    if(typeof PROFIT_DAILY === 'object' && rows.length){
+      const totalFuel = rows.reduce((s,r)=>s+r.fuel,0);
+      const dayNow = now.getDate(), dim = _daysInMonth(m, y);
+      if(dayNow >= 5 && totalFuel > 0){
+        const proj = totalFuel / dayNow * dim;
+        out.push({
+          sev: 'low', icon:'ti-gas-station', kind:'توقّع',
+          title:'البنزين المتوقّع آخر الشهر ≈ ' + proj.toFixed(0) + ' د.ك',
+          detail:'صرفت ' + totalFuel.toFixed(0) + ' د.ك في ' + dayNow + ' يوم — بنفس المعدّل',
+          act:'التوقّع خطّي على المعدّل الحالي، بيتحسّن كل ما الشهر يعدّي'
+        });
+      }
+    }
+  }catch(e){}
+
+  /* ⑥ ندمج تنبيهات النظام القائمة (رخص، بيانات ناقصة…) */
+  try{
+    if(typeof computeAlerts === 'function'){
+      computeAlerts().filter(a => a.sev === 'high').slice(0, 6).forEach(a => out.push({
+        sev:'high', icon:'ti-shield-exclamation', kind:'بيانات',
+        title:a.type, detail:(a.who||'') + ' — ' + (a.detail||''), act:'من مركز التشغيل ← التنبيهات'
+      }));
+    }
+  }catch(e){}
+
+  const rank = { high:0, med:1, low:2 };
+  ARK_INSIGHTS = out.sort((a,b) => rank[a.sev] - rank[b.sev]);
+
+  const badge = document.getElementById('aiInsightBadge');
+  const urgent = ARK_INSIGHTS.filter(i => i.sev === 'high').length;
+  if(badge){ badge.style.display = urgent ? 'grid' : 'none'; badge.textContent = urgent; }
+  return ARK_INSIGHTS;
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ARK v30 — مساعد Claude: محادثة + ملخّصات وتوصيات
+     ══════════════════════════════════════════════════════════════════ -->
+<style>
+.ai-panel{
+  position:fixed; top:0; inset-inline-end:0; height:100vh; width:452px; max-width:94vw;
+  background:#fff; border-inline-start:1px solid var(--br);
+  box-shadow:-24px 0 60px rgba(15,23,41,.16);
+  z-index:900; display:flex; flex-direction:column;
+  transform:translateX(-100%); opacity:0; visibility:hidden;
+  transition:transform .34s var(--ease-out), opacity .24s ease, visibility .34s;
+}
+html[dir="ltr"] .ai-panel{ transform:translateX(100%) }
+/* !important لازم — قواعد html[dir=...] فوق أقوى في الأولوية من .open */
+.ai-panel.open{ transform:translateX(0) !important; opacity:1 !important; visibility:visible !important }
+.ai-head{
+  padding:15px 17px; border-bottom:1px solid var(--br);
+  background:linear-gradient(135deg,#7c3aed 0%,#2a8fb0 100%); color:#fff;
+  display:flex; align-items:center; gap:11px; flex-shrink:0;
+}
+.ai-head .ic{
+  width:37px;height:37px;border-radius:11px;background:rgba(255,255,255,.19);
+  display:grid;place-items:center;font-size:19px; animation:floatY 3.4s ease-in-out infinite;
+}
+.ai-head b{ font-size:14.5px; display:block; line-height:1.25 }
+.ai-head span{ font-size:10.5px; opacity:.8 }
+.ai-close{ all:unset;cursor:pointer;margin-inline-start:auto;font-size:19px;opacity:.75;padding:5px }
+.ai-close:hover{ opacity:1 }
+.ai-tabs{ display:flex; gap:5px; padding:9px 13px 0; border-bottom:1px solid var(--br); flex-shrink:0 }
+.ai-tab{
+  all:unset;cursor:pointer;padding:8px 13px;border-radius:9px 9px 0 0;
+  font:800 12px Cairo,sans-serif;color:var(--muted);border-bottom:2px solid transparent;
+  transition:color .18s,border-color .18s,background .18s;
+}
+.ai-tab:hover{ background:var(--s3) }
+.ai-tab.on{ color:var(--violet); border-bottom-color:var(--violet); background:rgba(124,58,237,.06) }
+.ai-body{ flex:1; overflow-y:auto; padding:14px }
+.ai-body::-webkit-scrollbar{ width:4px } .ai-body::-webkit-scrollbar-thumb{ background:var(--br);border-radius:2px }
+
+.ins{
+  border:1px solid var(--br); border-inline-start-width:3px; border-radius:12px;
+  padding:11px 13px; margin-bottom:9px; background:var(--s2);
+  animation:fadeUp .34s var(--ease-out) both;
+  transition:transform .18s var(--ease), box-shadow .18s ease;
+}
+.ins:hover{ transform:translateX(-3px); box-shadow:var(--shadow-xs) }
+.ins.high{ border-inline-start-color:#b91c1c; background:rgba(185,28,28,.045) }
+.ins.med { border-inline-start-color:#d97706; background:rgba(217,119,6,.045) }
+.ins.low { border-inline-start-color:#059669; background:rgba(5,150,105,.04) }
+.ins-h{ display:flex; align-items:center; gap:8px; margin-bottom:5px }
+.ins-h i{ font-size:15px } .ins-h b{ font-size:12.5px; font-weight:900; line-height:1.4 }
+.ins-k{ font-size:9px;font-weight:900;padding:2px 7px;border-radius:20px;background:var(--s3);color:var(--muted);margin-inline-start:auto;flex-shrink:0 }
+.ins-d{ font-size:11.5px; color:var(--muted); line-height:1.75 }
+.ins-a{ font-size:11px; color:var(--blue); margin-top:6px; font-weight:700; display:flex; gap:5px }
+
+.chat-msg{ margin-bottom:11px; animation:fadeUp .3s var(--ease-out) both }
+.chat-msg .bub{ padding:10px 13px; border-radius:14px; font-size:12.5px; line-height:1.85; white-space:pre-wrap; max-width:88% }
+.chat-msg.me{ display:flex; justify-content:flex-start }
+.chat-msg.me .bub{ background:var(--grad); color:#fff; border-end-start-radius:4px }
+.chat-msg.ai{ display:flex; justify-content:flex-end }
+.chat-msg.ai .bub{ background:var(--s2); border:1px solid var(--br); border-end-end-radius:4px }
+.ai-foot{ padding:11px 13px; border-top:1px solid var(--br); flex-shrink:0; background:var(--s2) }
+.ai-input{
+  width:100%; border:1px solid var(--br); border-radius:12px; padding:10px 13px;
+  font:400 12.5px Cairo,sans-serif; resize:none; background:#fff; color:var(--text);
+  transition:border-color .18s, box-shadow .18s;
+}
+.ai-input:focus{ outline:none; border-color:var(--violet); box-shadow:0 0 0 3px rgba(124,58,237,.12) }
+.ai-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:9px }
+.ai-chip{
+  all:unset;cursor:pointer;font:700 10.5px Cairo,sans-serif;padding:5px 10px;border-radius:20px;
+  background:#fff;border:1px solid var(--br);color:var(--muted);transition:all .18s var(--ease);
+}
+.ai-chip:hover{ border-color:var(--violet);color:var(--violet);transform:translateY(-1px) }
+.typing{ display:inline-flex; gap:4px; padding:4px 0 }
+.typing i{ width:6px;height:6px;border-radius:50%;background:var(--muted2);animation:floatY .9s ease-in-out infinite }
+.typing i:nth-child(2){ animation-delay:.15s } .typing i:nth-child(3){ animation-delay:.3s }
+.ai-scrim{
+  position:fixed;inset:0;background:rgba(11,18,32,.32);backdrop-filter:blur(2px);z-index:899;
+  opacity:0;visibility:hidden;transition:opacity .28s ease,visibility .28s;
+}
+.ai-scrim.open{ opacity:1;visibility:visible }
+</style>
+
+<div class="ai-scrim" id="aiScrim" onclick="closeAIPanel()"></div>
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-head">
+    <div class="ic"><i class="ti ti-sparkles"></i></div>
+    <div><b>المساعد الذكي</b><span id="aiSubtitle">تحليل محلي — لا يحتاج إنترنت</span></div>
+    <button class="ai-close" onclick="closeAIPanel()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="ai-tabs">
+    <button class="ai-tab on" id="aiTabIns"  onclick="aiSwitch('ins')"><i class="ti ti-bulb"></i> الرؤى</button>
+    <button class="ai-tab"    id="aiTabChat" onclick="aiSwitch('chat')"><i class="ti ti-message-2"></i> اسأل</button>
+    <button class="ai-tab"    id="aiTabSum"  onclick="aiSwitch('sum')"><i class="ti ti-file-text"></i> التحليل الشهري</button>
+  </div>
+  <div class="ai-body" id="aiBody"></div>
+  <div class="ai-foot" id="aiFoot" style="display:none">
+    <div class="ai-chips" id="aiChips">
+      <button class="ai-chip" onclick="aiAsk('مين أقل سائق ربحية الشهر ده وليه؟')">أقل سائق ربحية؟</button>
+      <button class="ai-chip" onclick="aiAsk('قارن ربحية الشركاء وقوللي مين الأفضل')">قارن الشركاء</button>
+      <button class="ai-chip" onclick="aiAsk('إيه أهم 3 حاجات أعملها الأسبوع ده؟')">أهم 3 خطوات</button>
+      <button class="ai-chip" onclick="aiAsk('البنزين بيتصرف صح ولا فيه هدر؟')">تحليل البنزين</button>
+    </div>
+    <textarea class="ai-input" id="aiInput" rows="2" placeholder="اسأل بالعربي عن بياناتك… (Enter للإرسال)"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiAsk()}"></textarea>
+  </div>
+</div>
+
+<script>
+/* ───────── حالة المساعد ───────── */
+let AI_TAB = 'ins', AI_HISTORY = [], AI_BUSY = false;
+const AI_KEY_LS = 'ark_claude_key';
+const AI_MDL_LS = 'ark_claude_model';
+const aiKey   = () => { try{ return localStorage.getItem(AI_KEY_LS) || ''; }catch(e){ return ''; } };
+const aiModel = () => { try{ return localStorage.getItem(AI_MDL_LS) || 'claude-sonnet-4-5'; }catch(e){ return 'claude-sonnet-4-5'; } };
+
+function openAIPanel(){
+  document.getElementById('aiPanel').classList.add('open');
+  document.getElementById('aiScrim').classList.add('open');
+  aiSwitch(AI_TAB);
+}
+function closeAIPanel(){
+  document.getElementById('aiPanel').classList.remove('open');
+  document.getElementById('aiScrim').classList.remove('open');
+}
+function aiSwitch(tab){
+  AI_TAB = tab;
+  ['ins','chat','sum'].forEach(t => document.getElementById('aiTab'+t[0].toUpperCase()+t.slice(1)).classList.toggle('on', t===tab));
+  document.getElementById('aiFoot').style.display = tab === 'chat' ? 'block' : 'none';
+  if(tab === 'ins')  aiRenderInsights();
+  if(tab === 'chat') aiRenderChat();
+  if(tab === 'sum')  aiRenderSummary();
+}
+
+/* ───────── تبويب الرؤى (محلي بالكامل) ───────── */
+async function aiRenderInsights(){
+  const b = document.getElementById('aiBody');
+  document.getElementById('aiSubtitle').textContent = 'تحليل محلي — لا يحتاج إنترنت';
+  b.innerHTML = '<div class="skel" style="height:74px;margin-bottom:9px"></div>'.repeat(3);
+  const list = await arkRunIntel();
+  if(!list.length){
+    b.innerHTML = '<div style="padding:46px 18px;text-align:center;color:var(--green)">'
+      + '<i class="ti ti-circle-check" style="font-size:40px;display:block;margin-bottom:12px"></i>'
+      + '<b style="font-size:13px">مافيش حاجة تستدعي انتباهك</b>'
+      + '<div style="font-size:11.5px;color:var(--muted);margin-top:6px">كل المؤشرات في نطاقها الطبيعي</div></div>';
+    return;
+  }
+  const names = { high:'عاجل', med:'يستاهل نظرة', low:'للعلم' };
+  let h = '<div style="font-size:11px;color:var(--muted2);margin-bottom:11px;line-height:1.7">'
+        + list.length + ' رؤية مرتّبة بالأولوية — محسوبة من بياناتك داخل المتصفح.</div>';
+  ['high','med','low'].forEach(sev => {
+    const g = list.filter(i => i.sev === sev);
+    if(!g.length) return;
+    h += '<div style="font-size:9.5px;font-weight:900;letter-spacing:.6px;color:var(--muted2);margin:13px 2px 7px">'
+       + names[sev].toUpperCase() + ' · ' + g.length + '</div>';
+    g.forEach((i, idx) => {
+      h += '<div class="ins ' + sev + '" style="animation-delay:' + (idx*0.045).toFixed(2) + 's">'
+         + '<div class="ins-h"><i class="ti ' + i.icon + '"></i><b>' + _esc(i.title) + '</b>'
+         + '<span class="ins-k">' + _esc(i.kind) + '</span></div>'
+         + '<div class="ins-d">' + _esc(i.detail) + '</div>'
+         + (i.act ? '<div class="ins-a"><i class="ti ti-arrow-narrow-left"></i>' + _esc(i.act) + '</div>' : '')
+         + '</div>';
+    });
+  });
+  b.innerHTML = h;
+}
+
+/* ───────── لقطة البيانات اللي بتتبعت لـ Claude ───────── */
+async function aiSnapshot(){
+  const now = new Date(), m = now.getMonth()+1, y = now.getFullYear();
+  let rows = [];
+  try{ rows = await profitTableForMonth(m, y); }catch(e){}
+  return {
+    الشهر: y + '-' + String(m).padStart(2,'0'),
+    عدد_السائقين: rows.length,
+    الإجمالي: {
+      إيراد: +rows.reduce((s,r)=>s+r.revenue,0).toFixed(3),
+      رواتب: +rows.reduce((s,r)=>s+r.salary,0).toFixed(3),
+      بنزين: +rows.reduce((s,r)=>s+r.fuel,0).toFixed(3),
+      مخالفات:+rows.reduce((s,r)=>s+r.violations,0).toFixed(3),
+      صافي:  +rows.reduce((s,r)=>s+r.profit,0).toFixed(3),
+      طلبات: rows.reduce((s,r)=>s+r.orders,0)
+    },
+    الشركاء: (typeof PARTNERS !== 'undefined' ? PARTNERS : []).map(p => ({
+      الاسم:p.name, النموذج:p.model === 'fixed_monthly' ? 'مبلغ ثابت شهري لكل سائق' : 'بالطلب', القيمة:p.rate
+    })),
+    السائقون: rows.map(r => ({
+      الاسم:r.name, الشريك:r.partnerName, أيام:r.salaryDays, طلبات:r.orders,
+      إيراد:+r.revenue.toFixed(3), راتب:+r.salary.toFixed(3), بنزين:+r.fuel.toFixed(3),
+      صافي:+r.profit.toFixed(3), تكلفة_الطلب: r.costPerOrder == null ? null : +r.costPerOrder.toFixed(3)
+    })),
+    رؤى_محلية: ARK_INSIGHTS.slice(0,10).map(i => i.title + ' — ' + i.detail)
+  };
+}
+
+/* ───────── نداء Claude API ───────── */
+/** يترجم رد الـ API لرسالة عربية مفهومة بدل كود رقمي */
+function aiExplainError(status, bodyTxt){
+  let apiMsg = '';
+  try{ apiMsg = (JSON.parse(bodyTxt).error || {}).message || ''; }catch(e){ apiMsg = (bodyTxt||'').slice(0,200); }
+  const tail = apiMsg ? '\n\nرد الخدمة: ' + apiMsg : '';
+  switch(status){
+    case 401: return 'المفتاح وصل لـ Anthropic لكن اترفض (401).\n\nالأسباب المعتادة:\n'
+      + '• المفتاح اتمسح أو اتلغى من الحساب\n'
+      + '• نسخته ناقص منه حرف أو فيه مسافة\n'
+      + '• ده مفتاح Admin مش مفتاح API عادي\n'
+      + '• المفتاح من حساب/مؤسسة تانية\n\n'
+      + 'افتح console.anthropic.com ← API Keys واعمل مفتاح جديد وانسخه كامل.' + tail;
+    case 403: return 'المفتاح صحيح بس مالوش صلاحية على الموديل ده (403).' + tail;
+    case 404: return 'الموديل «' + aiModel() + '» مش موجود على حسابك (404).\n'
+      + 'غيّره من إعداد المساعد الذكي.' + tail;
+    case 400: return 'الطلب مرفوض (400) — غالباً اسم الموديل غلط أو البيانات كبيرة أوي.' + tail;
+    case 429: return 'تجاوزت حد الاستخدام (429). استنى شوية وجرّب تاني.' + tail;
+    case 402: return 'الرصيد خلص (402). اشحن من console.anthropic.com ← Billing.' + tail;
+    case 529:
+    case 503: return 'الخدمة مزحومة دلوقتي (' + status + '). جرّب بعد دقيقة.' + tail;
+    default:  return 'الخدمة ردّت بخطأ ' + status + '.' + tail;
+  }
+}
+
+async function aiCall(system, userMsg, history){
+  const key = aiKey();
+  if(!key) throw new Error('NO_KEY');
+  const msgs = [...(history||[]), { role:'user', content:userMsg }];
+  let r;
+  try{
+    r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({ model:aiModel(), max_tokens:1600, system, messages:msgs })
+    });
+  }catch(netErr){
+    // فشل قبل ما يوصل رد — شبكة أو CORS
+    throw new Error('مقدرش يوصل لـ api.anthropic.com.\n\n'
+      + (location.protocol === 'file:'
+          ? 'الملف مفتوح بـ file:// — بعض المتصفحات بتمنع الطلبات من الملفات المحلية.\n'
+            + 'جرّب ترفعه على GitHub Pages أو تشغّله من سيرفر محلي.\n\n'
+          : '')
+      + 'تفاصيل: ' + netErr.message);
+  }
+  if(!r.ok) throw new Error(aiExplainError(r.status, await r.text()));
+  const j = await r.json();
+  return (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+}
+
+const AI_SYSTEM = 'أنت محلل تشغيل ومالية لشركة «السلاسل» لتوصيل الطلبات في الكويت. '
+  + 'تتكلم بالعربي المصري البسيط وبإيجاز. تجاوب من البيانات المرفقة فقط ولا تخترع أرقام. '
+  + 'لو البيان ناقص قول إنه ناقص وحدد إيه المطلوب. اذكر الأرقام بالدينار الكويتي بثلاث خانات عشرية. '
+  + 'خلّي الإجابة عملية: الخلاصة الأول، وبعدين الأرقام اللي بتدعمها، وبعدين خطوة واحدة واضحة.';
+
+function aiNoKeyHTML(what){
+  return '<div style="padding:32px 20px;text-align:center">'
+    + '<i class="ti ti-key" style="font-size:36px;color:var(--muted2);display:block;margin-bottom:13px"></i>'
+    + '<b style="font-size:13px">' + what + ' محتاج مفتاح Claude API</b>'
+    + '<div style="font-size:11.5px;color:var(--muted);margin:9px 0 16px;line-height:1.9">'
+    + 'تبويب «الرؤى» شغال دلوقتي من غير أي مفتاح.<br>المفتاح بيتخزّن في متصفحك بس ومابيتبعتش لأي حد غير Anthropic.</div>'
+    + '<button class="btn btn-s" onclick="openAISettings()"><i class="ti ti-settings"></i> إضافة المفتاح</button></div>';
+}
+
+/* ───────── تبويب المحادثة ───────── */
+function aiRenderChat(){
+  const b = document.getElementById('aiBody');
+  document.getElementById('aiSubtitle').textContent = 'مدعوم بـ Claude — يقرأ بيانات الشهر الحالي';
+  if(!aiKey()){ b.innerHTML = aiNoKeyHTML('المحادثة'); document.getElementById('aiFoot').style.display='none'; return; }
+  document.getElementById('aiFoot').style.display = 'block';
+  if(!AI_HISTORY.length){
+    b.innerHTML = '<div style="padding:26px 16px;text-align:center;color:var(--muted)">'
+      + '<i class="ti ti-message-2" style="font-size:32px;display:block;margin-bottom:11px;color:var(--violet)"></i>'
+      + '<div style="font-size:12px;line-height:1.9">اسألني عن أي حاجة في بيانات الشهر —<br>الربحية، البنزين، الشركاء، أداء السائقين.</div></div>';
+    return;
+  }
+  b.innerHTML = AI_HISTORY.map(mm =>
+    '<div class="chat-msg ' + (mm.role==='user'?'me':'ai') + '"><div class="bub">' + _esc(mm.content) + '</div></div>'
+  ).join('');
+  b.scrollTop = b.scrollHeight;
+}
+
+async function aiAsk(preset){
+  if(AI_BUSY) return;
+  const inp = document.getElementById('aiInput');
+  const q = (preset || inp.value || '').trim();
+  if(!q) return;
+  if(AI_TAB !== 'chat') aiSwitch('chat');
+  if(!aiKey()){ aiRenderChat(); return; }
+  inp.value = '';
+  AI_HISTORY.push({ role:'user', content:q });
+  aiRenderChat();
+
+  const b = document.getElementById('aiBody');
+  b.insertAdjacentHTML('beforeend',
+    '<div class="chat-msg ai" id="aiTyping"><div class="bub"><span class="typing"><i></i><i></i><i></i></span></div></div>');
+  b.scrollTop = b.scrollHeight;
+
+  AI_BUSY = true;
+  try{
+    const snap = await aiSnapshot();
+    const withData = 'بيانات الشهر الحالي:\n```json\n' + JSON.stringify(snap, null, 1) + '\n```\n\nالسؤال: ' + q;
+    // نبعت آخر 6 رسائل فقط عشان نوفّر التوكنز، والبيانات بتتحدّث كل مرة
+    const hist = AI_HISTORY.slice(0, -1).slice(-6);
+    const ans = await aiCall(AI_SYSTEM, withData, hist);
+    AI_HISTORY.push({ role:'assistant', content: ans || '(رد فارغ)' });
+  }catch(e){
+    AI_HISTORY.push({ role:'assistant', content:'⚠️ ' + (e.message === 'NO_KEY' ? 'مافيش مفتاح API' : e.message) });
+  }finally{
+    AI_BUSY = false;
+    document.getElementById('aiTyping')?.remove();
+    aiRenderChat();
+  }
+}
+
+/* ───────── تبويب التحليل الشهري ───────── */
+async function aiRenderSummary(){
+  const b = document.getElementById('aiBody');
+  document.getElementById('aiSubtitle').textContent = 'تحليل مكتوب لأداء الشهر';
+  if(!aiKey()){ b.innerHTML = aiNoKeyHTML('التحليل المكتوب'); return; }
+  b.innerHTML = '<div style="padding:16px"><div class="skel" style="height:15px;margin-bottom:9px"></div>'
+              + '<div class="skel" style="height:15px;width:88%;margin-bottom:9px"></div>'
+              + '<div class="skel" style="height:15px;width:72%;margin-bottom:20px"></div>'
+              + '<div style="font-size:11.5px;color:var(--muted);text-align:center">بيحلّل بيانات الشهر…</div></div>';
+  try{
+    const snap = await aiSnapshot();
+    const prompt = 'اكتب تحليل شهري لأداء الشركة من البيانات دي:\n```json\n'
+      + JSON.stringify(snap, null, 1) + '\n```\n\n'
+      + 'بالترتيب ده وبعناوين واضحة:\n'
+      + '١. الخلاصة في سطرين\n٢. الأرقام اللي تستاهل وقفة (٣ أرقام بحد أقصى، وليه)\n'
+      + '٣. مقارنة الشركاء — مين بيجيب أعلى صافي ومين أقل\n'
+      + '٤. أهم ٣ خطوات للشهر الجاي، كل خطوة بجملة واحدة قابلة للتنفيذ\n\n'
+      + 'من غير مقدمات ولا خواتيم. اكتب بالعربي المصري.';
+    const txt = await aiCall(AI_SYSTEM, prompt, []);
+    b.innerHTML = '<div style="font-size:12.5px;line-height:2;white-space:pre-wrap;animation:fadeUp .34s var(--ease-out) both">'
+      + _esc(txt) + '</div>'
+      + '<div style="display:flex;gap:7px;margin-top:18px;padding-top:13px;border-top:1px solid var(--br)">'
+      + '<button class="btn btn-s" onclick="aiRenderSummary()"><i class="ti ti-refresh"></i> إعادة التحليل</button>'
+      + '<button class="btn btn-c" onclick="aiCopySummary(this)"><i class="ti ti-copy"></i> نسخ</button></div>';
+  }catch(e){
+    b.innerHTML = '<div style="padding:28px 18px;text-align:center;color:var(--red);font-size:12.5px;line-height:1.9">'
+      + '<i class="ti ti-alert-triangle" style="font-size:30px;display:block;margin-bottom:11px"></i>'
+      + _esc(e.message === 'NO_KEY' ? 'مافيش مفتاح API' : e.message) + '</div>';
+  }
+}
+function aiCopySummary(btn){
+  const txt = btn.closest('.ai-body').querySelector('div').innerText;
+  navigator.clipboard.writeText(txt).then(() => {
+    if(typeof toast === 'function') toast('اتنسخ','s');
+  });
+}
+
+/* ───────── إعداد المفتاح ───────── */
+function openAISettings(){
+  document.getElementById('toolsWrap')?.classList.remove('open');
+  let ov = document.getElementById('aiSetModal');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'aiSetModal'; ov.className = 'ov';
+    ov.onclick = e => { if(e.target === ov) ov.classList.remove('on'); };
+    ov.style.zIndex = '1000';          // فوق لوحة المساعد (900)
+    document.body.appendChild(ov);
+  }
+  const cur = aiKey(), mdl = aiModel();
+  const opt = (v,l) => '<option value="'+v+'"'+(mdl===v?' selected':'')+'>'+l+'</option>';
+  ov.innerHTML = `
+   <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
+     <h2><i class="ti ti-robot" style="color:#7c3aed"></i> إعداد المساعد الذكي</h2>
+
+     <div style="background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:12px 14px;margin-bottom:15px;font-size:11.5px;line-height:1.95;color:var(--muted)">
+       <b style="color:var(--green)">تبويب «الرؤى» شغال دلوقتي من غير أي مفتاح</b> — كل التحليل بيتحسب جوّه المتصفح.<br>
+       المفتاح مطلوب بس لـ «اسأل» و«التحليل الشهري». بيتخزّن عندك محلياً ومابيروحش غير لـ Anthropic.
+     </div>
+
+     <div class="fgrid">
+       <div class="fg full"><label>مفتاح Claude API</label>
+         <div style="display:flex;gap:6px">
+           <input id="aiKeyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}" style="flex:1;font-family:JetBrains Mono,monospace;font-size:12px">
+           <button class="btn btn-c" style="padding:0 12px" onclick="const i=document.getElementById('aiKeyIn');i.type=i.type==='password'?'text':'password'" title="إظهار/إخفاء"><i class="ti ti-eye"></i></button>
+         </div>
+         <div style="font-size:10.5px;color:var(--muted2);margin-top:5px;line-height:1.8">
+           من <b>console.anthropic.com ← API Keys</b>. لازم يبدأ بـ <code>sk-ant-</code> — وخد بالك إنه بيتعرض مرة واحدة بس وقت إنشائه.
+         </div>
+       </div>
+       <div class="fg full"><label>الموديل</label>
+         <select id="aiMdlIn">
+           ${opt('claude-sonnet-4-5','Claude Sonnet 4.5 — متوازن (الافتراضي)')}
+           ${opt('claude-opus-4-1','Claude Opus 4.1 — أدق وأغلى')}
+           ${opt('claude-haiku-4-5-20251001','Claude Haiku 4.5 — أسرع وأرخص')}
+           ${opt('claude-sonnet-5','Claude Sonnet 5')}
+           ${opt('claude-opus-5','Claude Opus 5')}
+         </select>
+         <div style="font-size:10.5px;color:var(--muted2);margin-top:5px">لو طلع خطأ 404 يبقى الموديل ده مش متاح على حسابك — جرّب غيره.</div>
+       </div>
+     </div>
+
+     <div id="aiTestOut" style="display:none;margin-top:13px;padding:12px 14px;border-radius:12px;font-size:11.5px;line-height:1.9;white-space:pre-wrap"></div>
+
+     <div class="macts" style="justify-content:space-between">
+       <button class="btn btn-c" onclick="aiClearKey()" style="color:var(--red)"><i class="ti ti-trash"></i> مسح المفتاح</button>
+       <div style="display:flex;gap:8px">
+         <button class="btn btn-c" onclick="document.getElementById('aiSetModal').classList.remove('on')">إغلاق</button>
+         <button class="btn btn-c" id="aiTestBtn" onclick="aiTestConnection()"><i class="ti ti-plug-connected"></i> فحص الاتصال</button>
+         <button class="btn btn-s" onclick="aiSaveKey()"><i class="ti ti-check"></i> حفظ</button>
+       </div>
+     </div>
+   </div>`;
+  ov.classList.add('on');
+}
+
+function aiSaveKey(){
+  const k = (document.getElementById('aiKeyIn').value || '').trim();
+  const m = document.getElementById('aiMdlIn').value;
+  if(k && !/^sk-ant-/.test(k)){
+    aiTestShow('err', 'المفتاح لازم يبدأ بـ sk-ant-\nاللي مدخّله بيبدأ بـ: ' + k.slice(0,12));
+    return;
+  }
+  try{
+    if(k) localStorage.setItem(AI_KEY_LS, k); else localStorage.removeItem(AI_KEY_LS);
+    localStorage.setItem(AI_MDL_LS, m);
+    aiTestShow('ok', k ? 'اتحفظ. اضغط «فحص الاتصال» عشان تتأكد إنه شغال.' : 'اتمسح المفتاح.');
+  }catch(e){ aiTestShow('err','المتصفح مانع الحفظ المحلي — اسمح بالـ localStorage للموقع ده.'); }
+  if(document.getElementById('aiPanel')?.classList.contains('open')) aiSwitch(AI_TAB);
+}
+
+function aiClearKey(){
+  try{ localStorage.removeItem(AI_KEY_LS); }catch(e){}
+  const i = document.getElementById('aiKeyIn'); if(i) i.value = '';
+  aiTestShow('ok','اتمسح المفتاح. تبويب «الرؤى» هيفضل شغال عادي.');
+  if(document.getElementById('aiPanel')?.classList.contains('open')) aiSwitch(AI_TAB);
+}
+
+function aiTestShow(kind, msg){
+  const o = document.getElementById('aiTestOut'); if(!o) return;
+  const c = kind === 'ok' ? ['rgba(5,150,105,.08)','#059669','ti-circle-check']
+          : kind === 'warn' ? ['rgba(217,119,6,.08)','#b45309','ti-alert-triangle']
+          : ['rgba(185,28,28,.07)','#b91c1c','ti-alert-circle'];
+  o.style.display = 'block';
+  o.style.background = c[0]; o.style.color = c[1]; o.style.border = '1px solid ' + c[1] + '33';
+  o.innerHTML = '<b style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><i class="ti ' + c[2] + '"></i>'
+              + (kind==='ok'?'تمام':kind==='warn'?'تنبيه':'المشكلة') + '</b>' + _esc(msg);
+}
+
+/** يبعت أصغر طلب ممكن ويقول بالظبط إيه اللي حصل */
+async function aiTestConnection(){
+  const btn = document.getElementById('aiTestBtn');
+  const k = (document.getElementById('aiKeyIn').value || '').trim();
+  const m = document.getElementById('aiMdlIn').value;
+
+  if(!k){ aiTestShow('warn','مافيش مفتاح مدخّل.'); return; }
+  if(!/^sk-ant-/.test(k)){ aiTestShow('err','المفتاح لازم يبدأ بـ sk-ant-\nاللي مدخّله بيبدأ بـ: ' + k.slice(0,12)); return; }
+  if(/\s/.test(k)){ aiTestShow('err','فيه مسافة أو سطر جديد جوّه المفتاح — انسخه تاني من غير أي فراغات.'); return; }
+
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> بيفحص…';
+  aiTestShow('warn','بيبعت طلب تجريبي صغير…');
+  try{
+    let r;
+    try{
+      r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{ 'content-type':'application/json', 'x-api-key':k,
+                  'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+        body: JSON.stringify({ model:m, max_tokens:8, messages:[{role:'user',content:'قول: تمام'}] })
+      });
+    }catch(netErr){
+      aiTestShow('err','الطلب مخرجش من المتصفح أصلاً — يعني المشكلة مش في المفتاح.\n\n'
+        + (location.protocol === 'file:'
+            ? 'الصفحة مفتوحة بـ file:// وده بيخلي الـ Origin = null، وفي المتصفحات دي الطلب بيتمنع.\n\n'
+              + 'الحل: ارفع الملف على GitHub Pages، أو شغّل سيرفر محلي في نفس الفولدر:\n'
+              + '  python -m http.server 8080\n'
+              + 'وبعدين افتح: http://localhost:8080\n\n'
+            : 'غالباً النت مقطوع أو فيه جدار حماية بيمنع api.anthropic.com.\n\n')
+        + 'تفاصيل: ' + netErr.message);
+      return;
+    }
+    const txt = await r.text();
+    if(r.ok){
+      let said = '';
+      try{ said = (JSON.parse(txt).content||[]).map(c=>c.text).join(''); }catch(e){}
+      try{ localStorage.setItem(AI_KEY_LS, k); localStorage.setItem(AI_MDL_LS, m); }catch(e){}
+      aiTestShow('ok','الاتصال شغال والمفتاح اتحفظ.\nالموديل: ' + m + (said ? '\nرد التجربة: ' + said.trim() : ''));
+      if(document.getElementById('aiPanel')?.classList.contains('open')) aiSwitch(AI_TAB);
+    }else{
+      aiTestShow('err', aiExplainError(r.status, txt));
+    }
+  }finally{
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-plug-connected"></i> فحص الاتصال';
+  }
+}
+
+/* حماية: لو _esc مش معرّفة لأي سبب */
+if(typeof _esc !== 'function'){
+  window._esc = s => String(s==null?'':s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 </script>
 </body>
