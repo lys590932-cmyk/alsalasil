@@ -2439,18 +2439,112 @@ async function renderProfitTab(){
 async function exportProfitXlsx(){
   if(typeof XLSX === 'undefined'){ toast('مكتبة Excel غير محمّلة','e'); return; }
   const rows = await profitTableForMonth(PROFIT_M, PROFIT_Y);
-  const aoa = [['الكود','السائق','الشريك','النموذج','أيام العمل','أيام الشهر','الطلبات','الإيراد','أساس الإيراد','الراتب','البنزين','المخالفات','صافي الربح','الهامش %','تكلفة/طلب']];
-  rows.forEach(r => aoa.push([r.id,r.name,r.partnerName, r.model==='fixed_monthly'?'ثابت شهري':'بالطلب',
-    r.salaryDays, r.monthDays, r.orders, +r.revenue.toFixed(3), r.revenueBasis,
-    +r.salary.toFixed(3), +r.fuel.toFixed(3), +r.violations.toFixed(3), +r.profit.toFixed(3),
-    r.margin===null?'':+r.margin.toFixed(1), r.costPerOrder===null?'':+r.costPerOrder.toFixed(3)]));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols']=[{wch:9},{wch:26},{wch:12},{wch:12},{wch:10},{wch:10},{wch:9},{wch:12},{wch:26},{wch:11},{wch:11},{wch:11},{wch:13},{wch:10},{wch:12}];
-  ws['!views']=[{RTL:true}];
-  XLSX.utils.book_append_sheet(wb, ws, 'الربحية');
-  XLSX.writeFile(wb, 'ربحية_السائقين_'+PROFIT_Y+'-'+String(PROFIT_M).padStart(2,'0')+'.xlsx');
-  audit('export','profit', PROFIT_Y+'-'+PROFIT_M, null, {rows:rows.length});
+  if(!rows.length){ toast('لا توجد بيانات لهذا الشهر','e'); return; }
+  ensurePartnerModels();
+
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const label  = months[PROFIT_M-1] + ' ' + PROFIT_Y;
+  const dim    = _daysInMonth(PROFIT_M, PROFIT_Y);
+  const wb     = XLSX.utils.book_new();
+
+  /* ═══════════ شيت 1: الافتراضات ═══════════ */
+  const PROW = 4;                          // أول صف بيانات الشركاء
+  const PEND = PROW + 19;                  // مدى ثابت يتسع لإضافة شركاء
+  const aoaA = [
+    ['الافتراضات — عدّل الخلايا الزرقاء وكل الأرقام تتحدّث تلقائياً'],
+    ['نموذج الإيراد لكل شريك · ثابت؟ 1 = مبلغ شهري ثابت لكل سائق · 0 = بالطلب'],
+    ['معرّف الشريك','اسم الشريك','ثابت؟','القيمة (د.ك)','الوصف']
+  ];
+  PARTNERS.forEach(p => {
+    const fixed = (p.model === 'fixed_monthly') ? 1 : 0;
+    aoaA.push([p.id, p.name, fixed, parseFloat(p.rate)||0,
+               fixed ? 'د.ك لكل سائق شهرياً — يُقسّط بأيام العمل' : 'د.ك لكل طلب (0 = يُقرأ من عمود الإيراد اليدوي)']);
+  });
+  while(aoaA.length - 1 < PEND) aoaA.push(['','','','','']);   // صفوف فارغة لإضافة شركاء
+  aoaA.push([]);
+  aoaA.push(['ثوابت الشهر']);
+  aoaA.push(['أيام الشهر', dim, '', '', 'يُستخدم في تقسيط الرواتب والمبالغ الثابتة']);
+  aoaA.push(['الشهر', label]);
+  aoaA.push([]);
+  aoaA.push(['دليل الألوان']);
+  aoaA.push(['أزرق','خلية إدخال — عدّلها']);
+  aoaA.push(['أسود','معادلة — لا تعدّلها']);
+  const wsA = XLSX.utils.aoa_to_sheet(aoaA);
+  const dimRow = PEND + 3;                 // صف "أيام الشهر" (1-based)
+  wsA['!cols'] = [{wch:16},{wch:20},{wch:9},{wch:14},{wch:48}];
+  wsA['!views'] = [{RTL:true}];
+
+  /* ═══════════ شيت 2: الربحية ═══════════ */
+  const HDR = 3;                           // صف العناوين (1-based)
+  const aoaB = [
+    ['الربحية لكل سائق — ' + label],
+    ['الأزرق = إدخال · الأسود = معادلة · غيّر أي رقم أزرق وسيعاد الحساب بالكامل'],
+    ['#','الكود','السائق','معرّف الشريك','الشريك','ثابت؟','قيمة النموذج',
+     'أيام العمل','أيام الشهر','الطلبات','الراتب الأساسي','البنزين','المخالفات','إيراد يدوي',
+     'الإيراد','الراتب المستحق','صافي الربح','الهامش %','تكلفة/طلب']
+  ];
+  rows.forEach((r,i) => {
+    const manual = (r.model === 'per_order' && partnerModel(r.partner).rate === 0) ? +r.revenue.toFixed(3) : 0;
+    aoaB.push([ i+1, r.id, r.name, r.partner, r.partnerName,
+      0, 0,                                     // F,G تُستبدل بمعادلات
+      r.salaryDays, r.monthDays, r.orders,
+      +(getSalData(r.id).base || 0).toFixed(3),
+      +r.fuel.toFixed(3), +r.violations.toFixed(3), manual,
+      0,0,0,0,0 ]);                             // O..S تُستبدل بمعادلات
+  });
+  const wsB = XLSX.utils.aoa_to_sheet(aoaB);
+  const first = HDR + 1, last = HDR + rows.length, tot = last + 1;
+  const AS = "'الافتراضات'";
+
+  for(let r = first; r <= last; r++){
+    wsB['F'+r] = { t:'n', f:`IFERROR(INDEX(${AS}!$C$${PROW}:$C$${PEND},MATCH($D${r},${AS}!$A$${PROW}:$A$${PEND},0)),0)`, z:'0' };
+    wsB['G'+r] = { t:'n', f:`IFERROR(INDEX(${AS}!$D$${PROW}:$D$${PEND},MATCH($D${r},${AS}!$A$${PROW}:$A$${PEND},0)),0)`, z:'#,##0.000' };
+    wsB['I'+r] = { t:'n', f:`${AS}!$B$${dimRow}`, z:'0' };
+    wsB['O'+r] = { t:'n', f:`IF($F${r}=1,$G${r}*$H${r}/$I${r},IF($G${r}>0,$J${r}*$G${r},$N${r}))`, z:'#,##0.000' };
+    wsB['P'+r] = { t:'n', f:`IFERROR($K${r}*$H${r}/$I${r},0)`, z:'#,##0.000' };
+    wsB['Q'+r] = { t:'n', f:`$O${r}-$P${r}-$L${r}-$M${r}`, z:'#,##0.000' };
+    wsB['R'+r] = { t:'n', f:`IFERROR($Q${r}/$O${r},"")`, z:'0.0%' };
+    wsB['S'+r] = { t:'n', f:`IFERROR(($P${r}+$L${r})/$J${r},"")`, z:'#,##0.000' };
+  }
+  // صف الإجمالي
+  wsB['C'+tot] = { t:'s', v:'الإجمالي' };
+  ['J','L','M','N','O','P','Q'].forEach(c => {
+    wsB[c+tot] = { t:'n', f:`SUM(${c}${first}:${c}${last})`, z: c==='J' ? '#,##0' : '#,##0.000' };
+  });
+  wsB['R'+tot] = { t:'n', f:`IFERROR($Q${tot}/$O${tot},"")`, z:'0.0%' };
+  wsB['S'+tot] = { t:'n', f:`IFERROR(($P${tot}+$L${tot})/$J${tot},"")`, z:'#,##0.000' };
+
+  // ملخص حسب الشريك — يتحدّث تلقائياً مع أي تغيير
+  let sr = tot + 2;
+  wsB['C'+sr] = { t:'s', v:'الملخص حسب الشريك (يتحدّث تلقائياً)' };
+  sr++;
+  const sHdr = sr;
+  ['C','D','E','F','G'].forEach((c,i) => {
+    wsB[c+sHdr] = { t:'s', v:['الشريك','سائقين','الطلبات','الإيراد','صافي الربح'][i] };
+  });
+  PARTNERS.forEach((p,i) => {
+    const r = sHdr + 1 + i;
+    wsB['C'+r] = { t:'s', v:p.name };
+    wsB['D'+r] = { t:'n', f:`COUNTIF($D$${first}:$D$${last},"${p.id}")`, z:'#,##0' };
+    wsB['E'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${p.id}",$J$${first}:$J$${last})`, z:'#,##0' };
+    wsB['F'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${p.id}",$O$${first}:$O$${last})`, z:'#,##0.000' };
+    wsB['G'+r] = { t:'n', f:`SUMIF($D$${first}:$D$${last},"${p.id}",$Q$${first}:$Q$${last})`, z:'#,##0.000' };
+  });
+
+  // توسيع نطاق الورقة ليشمل الخلايا المضافة يدوياً
+  const lastRow = sHdr + PARTNERS.length;
+  wsB['!ref'] = 'A1:S' + lastRow;
+  wsB['!cols'] = [{wch:5},{wch:10},{wch:24},{wch:13},{wch:12},{wch:8},{wch:13},
+                  {wch:10},{wch:10},{wch:9},{wch:14},{wch:11},{wch:11},{wch:12},
+                  {wch:12},{wch:14},{wch:13},{wch:10},{wch:12}];
+  wsB['!views'] = [{RTL:true}];
+  wsB['!freeze'] = { xSplit:0, ySplit:HDR };
+
+  XLSX.utils.book_append_sheet(wb, wsB, 'الربحية');
+  XLSX.utils.book_append_sheet(wb, wsA, 'الافتراضات');
+  XLSX.writeFile(wb, 'ربحية_السائقين_' + PROFIT_Y + '-' + String(PROFIT_M).padStart(2,'0') + '.xlsx');
+  audit('export','profit', PROFIT_Y+'-'+PROFIT_M, null, { rows:rows.length, mode:'formulas' });
+  toast('تم التصدير — الشيت بمعادلات حية','s');
 }
 
 /* ───────── تبويب التنبيهات ───────── */
