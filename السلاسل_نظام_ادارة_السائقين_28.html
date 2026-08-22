@@ -3048,6 +3048,7 @@ async function cloudLoadDrivers(){
     device:x.device||'', nationality:x.nationality||'', age:x.age||0,
     startDate:x.start_date||'', endDate:x.end_date||'', civil:x.civil||'',
     license:x.license||'', partner:x.partner||'', health:x.health||'',
+    email:x.email||'', email_consent_at:x.email_consent_at||'',
     staff_type:x.staff_type||'driver', position:x.position||'',
     iban:x.iban||'', bank_name:x.bank_name||'', status:x.status||'active',
     _salary_base: x.salary_base, docs:[]
@@ -3682,6 +3683,7 @@ function renderDetail(){
              <button class="btn btn-c" onclick="cancelEdit()"><i class="ti ti-x"></i> إلغاء</button>`
           : `<button class="btn btn-e" onclick="startEdit()"><i class="ti ti-pencil"></i> تعديل</button>`}
         <button class="btn btn-d" onclick="deleteDriver()"><i class="ti ti-trash"></i> حذف</button>
+        <button class="sal-btn" onclick="openMailModal()" style="background:linear-gradient(135deg,#1c5878,#0d9488)"><i class="ti ti-mail-forward"></i> إرسال إيميل</button>
         <button class="sal-btn" onclick="openSalaryModal()"><i class="ti ti-coin"></i> الراتب والخصومات</button>
       </div>
     </div>
@@ -3701,6 +3703,7 @@ function renderDetail(){
         <div class="irows">
           <div class="irow"><i class="ti ti-user iico"></i><span class="ilbl">الاسم</span><span class="ival">${F(d.name,'name')}</span></div>
           <div class="irow"><i class="ti ti-world iico"></i><span class="ilbl">الجنسية</span><span class="ival">${F(d.nationality,'nationality')}</span></div>
+          <div class="irow"><i class="ti ti-mail iico"></i><span class="ilbl">البريد الإلكتروني</span><span class="ival">${editing ? F(d.email||'','email',{t:'email'}) : (d.email ? '<span class="ival" style="direction:ltr;display:inline-block">'+_esc(d.email)+'</span>' : '<span class="ival bad">غير مسجّل</span>')}</span></div>
           <div class="irow"><i class="ti ti-cake iico"></i><span class="ilbl">العمر</span><span class="ival">${F(d.age||'','age',{t:'number'})}</span></div>
           <div class="irow"><i class="ti ti-calendar iico"></i><span class="ilbl">تاريخ الانضمام</span><span class="ival">${F(d.startDate,'startDate',{t:'date'})}</span></div>
           <div class="irow"><i class="ti ti-calendar-off iico"></i><span class="ilbl">انتهاء الخدمة</span><span class="ival">${editing ? F(d.endDate||'','endDate',{t:'date'}) : (d.endDate ? '<span class="ival bad">'+d.endDate+'</span>' : '<span class="ival ok">على رأس العمل</span>')}</span></div>
@@ -3759,7 +3762,7 @@ function saveDriver(){
   const d = DRV.find(x=>x.id===selId); if(!d) return;
   if(!requirePerm('edit','drivers')) return;
   const _before = JSON.parse(JSON.stringify(d));
-  const _fields = ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate'];
+  const _fields = ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate','email'];
   // ── تحقق على نسخة مؤقتة قبل تطبيق التعديل ──
   const _cand = Object.assign({}, d);
   _fields.forEach(f=>{ const el=document.getElementById('e_'+f); if(el) _cand[f]=el.value; });
@@ -6395,7 +6398,8 @@ async function syncDriversToSupabase() {
           nationality: d.nationality || '',
           age: parseInt(d.age) || 0,
           start_date: d.startDate || '',
-          health: d.health || ''
+          health: d.health || '',
+          ...((d.email||'').trim() ? { email: d.email.trim() } : {})
         })
       });
       if (res.ok) drvOk++;
@@ -13942,6 +13946,262 @@ window.addEventListener('ark-auth-ready', function(){
   }, 2500);
 });
 
+
+
+
+/* ══════════════════════════════════════════════════════════════
+   إرسال بريد رسمي للسائق — قوالب جاهزة
+   ══════════════════════════════════════════════════════════════ */
+const MAIL_ORG = 'شركة السلاسل لتوصيل الطلبات الاستهلاكية';
+let mmDrv = null, mmTpl = 'warning';
+
+const MAIL_TPLS = {
+  warning: {
+    name: '⚠️ إنذار', color: '#b91c1c',
+    fields: [['reason','سبب الإنذار','مثال: تكرار التأخير عن موعد الدوام'],
+             ['date','تاريخ الواقعة','']],
+    subj: d => 'إنذار رسمي — ' + d.name + ' (' + d.id + ')',
+    body: (d,f) =>
+`السيد / ${d.name}
+الكود الوظيفي: ${d.id}
+
+تحية طيبة وبعد،
+
+تُنهي إليكم إدارة ${MAIL_ORG} أنه قد لوحظ ما يلي:
+
+${f.reason || '— يُذكر السبب —'}
+${f.date ? '\nتاريخ الواقعة: ' + f.date : ''}
+
+وعليه، يُوجَّه إليكم هذا الإنذار الرسمي، ونطالبكم بالالتزام التام بتعليمات العمل واللوائح المعمول بها في الشركة.
+
+وفي حال تكرار المخالفة، ستضطر الشركة لاتخاذ الإجراءات الإدارية المنصوص عليها في عقد العمل وقانون العمل الكويتي.
+
+يُرجى الإفادة برد على هذا البريد خلال 3 أيام من تاريخه.
+
+مع التقدير،
+إدارة ${MAIL_ORG}
+${new Date().toLocaleDateString('ar-KW')}
+
+──────────────────────────────
+Dear ${d.name} (${d.id}),
+
+This is a formal written warning regarding the matter stated above. You are required to comply fully with company work rules. Repetition may lead to administrative action under your employment contract and Kuwaiti labour law. Please reply to this email within 3 days.
+
+${MAIL_ORG}`
+  },
+  deduction: {
+    name: '💸 إشعار خصم', color: '#c77b1e',
+    fields: [['amount','قيمة الخصم (د.ك)',''],
+             ['reason','سبب الخصم','مثال: غياب بدون إذن'],
+             ['date','تاريخ الاستحقاق',''],
+             ['month','شهر الخصم','مثال: أغسطس 2026']],
+    subj: d => 'إشعار خصم — ' + d.name + ' (' + d.id + ')',
+    body: (d,f) =>
+`السيد / ${d.name}
+الكود الوظيفي: ${d.id}
+
+تحية طيبة وبعد،
+
+نفيدكم بأنه سيتم خصم مبلغ ${f.amount || '—'} د.ك من راتب شهر ${f.month || '—'}، وذلك للسبب التالي:
+
+${f.reason || '— يُذكر السبب —'}
+${f.date ? '\nتاريخ الواقعة: ' + f.date : ''}
+
+الخصم مطبَّق وفقاً للائحة الجزاءات المعتمدة والموقَّعة منكم.
+
+لكم حق الاعتراض على هذا الخصم خلال 7 أيام من تاريخ هذا البريد، بالرد عليه موضحاً أسباب الاعتراض والمستندات المؤيدة، وسيتم النظر فيه.
+
+مع التقدير،
+إدارة ${MAIL_ORG}
+${new Date().toLocaleDateString('ar-KW')}
+
+──────────────────────────────
+Dear ${d.name} (${d.id}),
+
+A deduction of ${f.amount || '—'} KD will be applied to your ${f.month || '—'} salary for the reason stated above, in line with the signed penalties policy. You may object within 7 days by replying to this email with your reasons and any supporting documents.
+
+${MAIL_ORG}`
+  },
+  letter: {
+    name: '📄 خطاب رسمي', color: '#1c5878',
+    fields: [['subject','موضوع الخطاب',''],
+             ['content','نص الخطاب','']],
+    subj: (d,f) => (f && f.subject ? f.subject : 'خطاب رسمي') + ' — ' + d.name,
+    body: (d,f) =>
+`السيد / ${d.name}
+الكود الوظيفي: ${d.id}
+
+تحية طيبة وبعد،
+
+${f.content || '— نص الخطاب —'}
+
+مع التقدير،
+إدارة ${MAIL_ORG}
+${new Date().toLocaleDateString('ar-KW')}`
+  },
+  meeting: {
+    name: '📅 دعوة اجتماع', color: '#4a7c2f',
+    fields: [['when','الموعد','مثال: السبت 22 أغسطس 2026 — 12:00 ظهراً'],
+             ['place','المكان','مكتب التدريب — العارضية'],
+             ['topic','الموضوع','']],
+    subj: d => 'دعوة لاجتماع — ' + d.name,
+    body: (d,f) =>
+`السيد / ${d.name}
+الكود الوظيفي: ${d.id}
+
+تحية طيبة وبعد،
+
+تدعوكم إدارة ${MAIL_ORG} لحضور اجتماع:
+
+📅 الموعد: ${f.when || '—'}
+📍 المكان: ${f.place || 'مكتب التدريب — العارضية'}
+📌 الموضوع: ${f.topic || '—'}
+
+الحضور إلزامي، ويُرجى الالتزام بالموعد المحدد.
+
+مع التقدير،
+إدارة ${MAIL_ORG}
+
+──────────────────────────────
+Dear ${d.name} (${d.id}),
+
+You are required to attend a meeting on ${f.when || '—'} at ${f.place || 'the Training Office — Ardiya}'}. Subject: ${f.topic || '—'}. Attendance is mandatory.
+
+${MAIL_ORG}`
+  }
+};
+
+function openMailModal(){
+  const d = DRV.find(x => x.id === selId);
+  if(!d){ toast('اختار سائق الأول','e'); return; }
+  mmDrv = d; mmTpl = 'warning';
+  const has = (d.email||'').trim();
+  document.getElementById('mm-to').innerHTML =
+    '<b>إلى:</b> ' + _esc(d.name) + ' — <span style="direction:ltr;display:inline-block">' + (has ? _esc(d.email) : '—') + '</span>';
+  document.getElementById('mm-warn').innerHTML = has ? '' :
+    '<div style="background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.35);color:var(--amber);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.8;margin-bottom:14px">'
+    + '⚠️ السائق ده مالوش إيميل مسجّل. اطلب منه يسجّله من تطبيق FLY (بياناتي ← البريد الإلكتروني)، أو اكتبه انت من زرار «تعديل» في بطاقته.</div>';
+  mmRenderTpls();
+  mmPick('warning');
+  document.getElementById('mailModal').classList.add('on');
+}
+
+function mmRenderTpls(){
+  document.getElementById('mm-tpls').innerHTML = Object.keys(MAIL_TPLS).map(k => {
+    const t = MAIL_TPLS[k], on = mmTpl === k;
+    return '<button onclick="mmPick(\''+k+'\')" style="padding:7px 13px;border-radius:20px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;'
+      + (on ? 'background:'+t.color+';border:1.5px solid '+t.color+';color:#fff'
+            : 'background:var(--s2);border:1.5px solid var(--br);color:var(--muted)') + '">' + t.name + '</button>';
+  }).join('');
+}
+
+function mmPick(k){
+  mmTpl = k; mmRenderTpls();
+  const t = MAIL_TPLS[k];
+  document.getElementById('mm-fields').innerHTML = t.fields.map(f =>
+    '<label style="display:flex;flex-direction:column;gap:4px'+(f[0]==='content'?';grid-column:1/-1':'')+'">'
+    + '<span style="font-size:10.5px;font-weight:800;color:var(--muted)">'+f[1]+'</span>'
+    + (f[0]==='content'
+        ? '<textarea id="mmf_'+f[0]+'" rows="4" oninput="mmBuild()" placeholder="'+(f[2]||'')+'" style="padding:9px 11px;border:1px solid var(--br);border-radius:9px;background:var(--s2);color:var(--text);font-family:inherit;font-size:12.5px;line-height:1.8;resize:vertical"></textarea>'
+        : '<input id="mmf_'+f[0]+'" oninput="mmBuild()" placeholder="'+(f[2]||'')+'" style="padding:9px 11px;border:1px solid var(--br);border-radius:9px;background:var(--s2);color:var(--text);font-family:inherit;font-size:12.5px">')
+    + '</label>').join('');
+  mmBuild();
+}
+
+function mmVals(){
+  const t = MAIL_TPLS[mmTpl], o = {};
+  t.fields.forEach(f => { const el = document.getElementById('mmf_'+f[0]); o[f[0]] = el ? el.value.trim() : ''; });
+  return o;
+}
+
+function mmBuild(){
+  if(!mmDrv) return;
+  const t = MAIL_TPLS[mmTpl], f = mmVals();
+  document.getElementById('mm-subj').value = (typeof t.subj === 'function') ? t.subj(mmDrv, f) : t.subj;
+  document.getElementById('mm-body').value = t.body(mmDrv, f);
+}
+
+function mmOpen(){
+  if(!mmDrv) return;
+  const to = (mmDrv.email||'').trim();
+  if(!to){ toast('مفيش إيميل مسجّل للسائق ده','e'); return; }
+  const subj = document.getElementById('mm-subj').value;
+  const body = document.getElementById('mm-body').value;
+  const url = 'mailto:' + encodeURIComponent(to)
+            + '?subject=' + encodeURIComponent(subj)
+            + '&body='    + encodeURIComponent(body);
+  if(url.length > 1900) toast('الرسالة طويلة — لو ماتفتحتش كاملة استخدم «نسخ النص»','e');
+  window.location.href = url;
+  audit('create','email',mmDrv.id,null,{type:mmTpl,to:to,subject:subj});
+}
+
+function mmCopy(){
+  const txt = document.getElementById('mm-subj').value + '\n\n' + document.getElementById('mm-body').value;
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject())
+    .then(() => toast('اتنسخ النص ✅','s'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); toast('اتنسخ النص ✅','s'); }catch(e){ toast('مقدرتش أنسخ','e'); }
+      document.body.removeChild(ta);
+    });
+}
+
+function mmMissing(){
+  const miss = DRV.filter(d => !(d.email||'').trim() && !(typeof isAdminStaff==='function' && isAdminStaff(d)));
+  if(!miss.length){ toast('كل السائقين مسجّلين إيميلاتهم ✅','s'); return; }
+  const byP = {};
+  miss.forEach(d => { const p = getPartner(d.partner); const k = p ? p.name : 'بدون شريك'; (byP[k] = byP[k]||[]).push(d); });
+  let h = '<div class="ov on" id="mmMissModal" onclick="if(event.target===this)this.remove()" style="z-index:220">'
+        + '<div class="modal" style="max-width:560px;max-height:88vh;overflow-y:auto">'
+        + '<h2><i class="ti ti-user-off" style="color:var(--amber)"></i> سائقون بدون بريد إلكتروني</h2>'
+        + '<div style="font-size:12.5px;color:var(--muted);margin:6px 0 16px">'+miss.length+' من '+DRV.length+' سائق — اطلب منهم يفتحوا تطبيق FLY ويسجّلوا بريدهم.</div>';
+  Object.keys(byP).sort().forEach(k => {
+    h += '<div style="font-size:12px;font-weight:800;color:var(--accent);margin:12px 0 7px">'+_esc(k)+' ('+byP[k].length+')</div>';
+    h += byP[k].map(d => '<div style="display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--s2);border:1px solid var(--br);border-radius:9px;margin-bottom:5px">'
+      + '<span style="font-size:12.5px;font-weight:700;flex:1">'+_esc(d.name)+'</span>'
+      + '<span class="mono" style="font-size:11px;color:var(--muted)">'+_esc(d.id)+'</span>'
+      + (d.sim ? '<span class="mono" style="font-size:11px;color:var(--muted)">'+_esc(d.sim)+'</span>' : '')
+      + '</div>').join('');
+  });
+  h += '<div class="modal-actions" style="margin-top:16px"><button class="btn btn-cancel" onclick="document.getElementById(\'mmMissModal\').remove()">إغلاق</button></div>'
+     + '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
 </script>
+
+<!-- ══════════ مودال إرسال الإيميل ══════════ -->
+<div class="ov" id="mailModal" onclick="if(event.target===this)closeModal('mailModal')">
+  <div class="modal" style="max-width:760px;max-height:92vh;overflow-y:auto">
+    <h2 style="display:flex;align-items:center;gap:8px"><i class="ti ti-mail-forward" style="color:#0d9488"></i> إرسال بريد رسمي</h2>
+    <div id="mm-to" style="font-size:12px;color:var(--muted);margin:4px 0 14px"></div>
+    <div id="mm-warn"></div>
+
+    <div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:7px">نوع الخطاب</div>
+    <div id="mm-tpls" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px"></div>
+
+    <div id="mm-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+
+    <div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:6px">الموضوع</div>
+    <input id="mm-subj" class="fin" style="width:100%;margin-bottom:12px;padding:9px 11px;border:1px solid var(--br);border-radius:9px;background:var(--s2);color:var(--text);font-family:inherit;font-size:13px">
+
+    <div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:6px">نص الرسالة</div>
+    <textarea id="mm-body" rows="14" style="width:100%;padding:11px;border:1px solid var(--br);border-radius:11px;background:var(--s2);color:var(--text);font-family:inherit;font-size:12.5px;line-height:1.9;resize:vertical"></textarea>
+
+    <div style="font-size:11px;color:var(--muted);margin-top:9px;line-height:1.8">
+      💡 «فتح في الإيميل» بيفتح برنامج البريد عندك بالرسالة جاهزة — ترفق المرفق (الخطاب PDF/Word) وتبعت.
+    </div>
+
+    <div class="modal-actions" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn btn-cancel" onclick="closeModal('mailModal')">إغلاق</button>
+      <button class="btn btn-cancel" onclick="mmMissing()"><i class="ti ti-user-off"></i> مين مالوش إيميل</button>
+      <button class="btn btn-cancel" onclick="mmCopy()"><i class="ti ti-copy"></i> نسخ النص</button>
+      <button class="btn btn-save" onclick="mmOpen()" style="background:linear-gradient(135deg,#1c5878,#0d9488)"><i class="ti ti-external-link"></i> فتح في الإيميل</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

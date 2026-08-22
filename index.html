@@ -295,6 +295,32 @@ button,input,select{font-family:'Cairo',sans-serif}
 .sheet-head h3{font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px}
 .sheet-close{width:32px;height:32px;border-radius:10px;background:var(--s1);border:1px solid var(--br);color:var(--text);display:grid;place-items:center;cursor:pointer}
 .sheet-body{overflow-y:auto;flex:1}
+/* ===== EMAIL GATE — تسجيل البريد الإلكتروني ===== */
+.emg-ov{position:fixed;inset:0;z-index:400;background:rgba(5,8,12,.86);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+.emg-ov.hide{display:none}
+.emg-card{width:100%;max-width:420px;background:var(--s1);border:1px solid var(--br);border-radius:22px;padding:26px 20px 20px;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:emgIn .32s cubic-bezier(.16,1,.3,1) both}
+@keyframes emgIn{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+.emg-ic{width:60px;height:60px;border-radius:19px;margin:0 auto 14px;display:grid;place-items:center;font-size:27px;background:linear-gradient(140deg,#1c5878,#0d9488);color:#fff;box-shadow:0 10px 26px rgba(13,148,136,.32)}
+.emg-card h2{font-size:19px;font-weight:900;text-align:center;margin-bottom:8px;color:var(--text)}
+.emg-card p.emg-desc{font-size:13px;color:var(--muted);text-align:center;line-height:1.8;margin-bottom:18px}
+.emg-lbl{font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:6px;display:block}
+.emg-in{width:100%;padding:13px 14px;border-radius:13px;border:1.5px solid var(--br);background:var(--s2);color:var(--text);font-family:'Cairo',sans-serif;font-size:15px;outline:none;direction:ltr;text-align:left;transition:.16s}
+.emg-in:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(59,130,246,.14)}
+.emg-in.bad{border-color:var(--red)}
+.emg-err{font-size:12px;color:var(--red);margin-top:7px;line-height:1.6}
+.emg-err.hide{display:none}
+.emg-agree{display:flex;gap:10px;align-items:flex-start;margin:15px 0 6px;padding:12px;border-radius:13px;background:var(--s2);border:1px solid var(--br);cursor:pointer}
+.emg-agree input{width:19px;height:19px;flex-shrink:0;margin-top:1px;accent-color:var(--green);cursor:pointer}
+.emg-agree span{font-size:11.5px;color:var(--muted);line-height:1.85}
+.emg-btn{width:100%;padding:14px;border:none;border-radius:14px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:11px;transition:.16s}
+.emg-btn:active{transform:scale(.98)}
+.emg-btn:disabled{opacity:.5;cursor:not-allowed}
+.emg-save{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+.emg-skip{background:transparent;color:var(--muted);border:1px solid var(--br)}
+.emg-skip.hide{display:none}
+.emg-note{font-size:10.5px;color:var(--muted2);text-align:center;margin-top:12px;line-height:1.7}
+.em-editbtn{background:var(--s2);border:1px solid var(--br);color:var(--blue);border-radius:9px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;font-size:14px;flex-shrink:0}
+.em-missing{color:var(--amber);font-weight:800}
 
 /* license alert banner */
 .lic-banner{display:flex;align-items:center;gap:11px;padding:13px 15px;border-radius:var(--r2);margin-top:12px}
@@ -310,6 +336,25 @@ button,input,select{font-family:'Cairo',sans-serif}
 .gps-hint{font-size:11px;color:var(--muted2);text-align:center;margin-top:9px;display:flex;align-items:center;justify-content:center;gap:5px}
 .offline-bar{background:var(--amber);color:#000;font-size:12px;font-weight:800;text-align:center;padding:6px;display:none}
 .offline-bar.show{display:block}
+</style>
+
+<!-- ARK-WATERMARK : علامة السلاسل المائية -->
+<style id="ark-watermark-style">
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url('ark-watermark.png');
+  background-repeat:no-repeat;
+  background-position:center center;
+  background-size:min(38vw,420px) auto;
+  opacity:.05;
+  pointer-events:none;
+  user-select:none;
+  z-index:99990;
+}
+@media (max-width:760px){ body::after{ background-size:min(62vw,300px) auto; opacity:.04 } }
+@media print{ body::after{ display:none !important } }
 </style>
 </head>
 <body>
@@ -1100,6 +1145,7 @@ function enterApp(fromCache){
   renderAppBar();
   switchTab('home');
   if(!fromCache) refreshAll();
+  maybeEmailGate();
   setTimeout(function(){ if(isCurrentlyIn()) startLiveTracking(); }, 1500);
 }
 
@@ -2297,6 +2343,7 @@ function renderProfile(){
   html+='<div class="sec-title">'+t('sec_personal')+'</div>';
   html+='<div class="card">';
   html+=infoRow('ti-phone',t('phone'), d.sim||t('not_registered_m'),'',true);
+  html+=emailRowHTML();
   if(d.age) html+=infoRow('ti-cake',t('age'), t('age_years',d.age),'',false);
   var sd = d.start_date||d.startdate||d.startDate;
   if(sd) html+=infoRow('ti-calendar-plus',t('join_date'), fmtDate(sd),'',false);
@@ -2313,6 +2360,147 @@ function renderProfile(){
   '</div>';
 
   el.innerHTML=html;
+}
+
+/* =========================================================
+   البريد الإلكتروني للسائق + الإقرار الموثّق
+   ========================================================= */
+var SK_EM_SKIP = 'fly_em_skip_v1';
+var EM_MAX_SKIP = 2;
+var emGateMode  = 'force';
+
+function emT(ar, en){ return (typeof LANG !== 'undefined' && LANG === 'en') ? en : ar; }
+
+function emConsentText(){
+  return emT(
+    'أُقرّ بأن هذا هو بريدي الإلكتروني الشخصي وأنه صحيح وتحت تصرّفي، وأوافق على أن ترسل شركة السلاسل عليه الخطابات والإنذارات وإشعارات الخصم وأي مراسلات رسمية، وأن الإرسال إليه يُعتبر إخطاراً صحيحاً وواصلاً.',
+    'I confirm that this is my own personal email address, that it is correct and under my control, and I agree that Al-Salasil may send official letters, warnings, deduction notices and any formal correspondence to it, and that delivery to this address constitutes valid and received notice.'
+  );
+}
+function isEmailOk(v){
+  v = (v||'').trim();
+  return /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v) && v.length <= 150;
+}
+function emSkipCount(){ var n = parseInt(localStorage.getItem(SK_EM_SKIP)||'0'); return isNaN(n)?0:n; }
+
+function openEmailGate(mode){
+  emGateMode = mode || 'force';
+  var editing = emGateMode === 'edit';
+  var left = EM_MAX_SKIP - emSkipCount();
+
+  $('emgTitle').textContent = editing
+    ? emT('تعديل البريد الإلكتروني','Update your email')
+    : emT('سجّل بريدك الإلكتروني','Register your email');
+  $('emgDesc').textContent = editing
+    ? emT('البريد الجديد هيبقى هو المعتمد للمراسلات الرسمية من دلوقتي.','The new address becomes the official one for all correspondence from now on.')
+    : emT('الشركة هتبعتلك الخطابات الرسمية وإشعارات الخصم والإنذارات على البريد ده. لازم يكون بريدك انت وشغّال.','The company will send you official letters, deduction notices and warnings to this address. It must be yours and active.');
+  $('emgLbl').textContent   = emT('البريد الإلكتروني','Email address');
+  $('emgConsent').textContent = emConsentText();
+  $('emgSaveTxt').textContent = emT('حفظ وتأكيد','Save and confirm');
+  $('emgNote').textContent  = emT('بياناتك محفوظة داخل نظام الشركة ومش بتتشارك مع أي جهة تانية.','Your data stays inside the company system and is not shared with anyone else.');
+
+  var sk = $('emgSkip');
+  if(!editing && left > 0){
+    sk.classList.remove('hide');
+    sk.textContent = emT('فكّرني بعدين ('+left+' متبقية)','Remind me later ('+left+' left)');
+  } else sk.classList.add('hide');
+
+  $('emgInput').value = (DRIVER && DRIVER.email) ? DRIVER.email : '';
+  $('emgInput').classList.remove('bad');
+  $('emgAgree').checked = false;
+  $('emgErr').classList.add('hide');
+  $('emailGate').classList.remove('hide');
+  setTimeout(function(){ try{ $('emgInput').focus(); }catch(e){} }, 260);
+}
+function closeEmailGate(){ $('emailGate').classList.add('hide'); }
+
+function emSkip(){
+  localStorage.setItem(SK_EM_SKIP, String(emSkipCount()+1));
+  closeEmailGate();
+  toast(emT('هنفكّرك تاني قريّب','We will remind you again soon'), 'warn');
+}
+
+function emErr(msg){
+  var e = $('emgErr');
+  e.textContent = msg; e.classList.remove('hide');
+  $('emgInput').classList.add('bad');
+}
+
+function emSave(){
+  var val = ($('emgInput').value||'').trim().toLowerCase();
+  $('emgInput').classList.remove('bad');
+  $('emgErr').classList.add('hide');
+
+  if(!val){ emErr(emT('اكتب بريدك الإلكتروني','Enter your email address')); return; }
+  if(!isEmailOk(val)){ emErr(emT('البريد ده شكله مش مظبوط — راجعه كويس','That email does not look valid — please check it')); return; }
+  if(!$('emgAgree').checked){ emErr(emT('لازم توافق على الإقرار قبل الحفظ','You must agree to the acknowledgement before saving')); return; }
+  if(!DRIVER || !DRIVER.id){ emErr(emT('مفيش جلسة — أعد الدخول','No session — please log in again')); return; }
+
+  var btn = $('emgSave'); btn.disabled = true;
+  $('emgSaveTxt').textContent = emT('جاري الحفظ…','Saving…');
+
+  var prev = DRIVER.email || null;
+  var now  = new Date().toISOString();
+
+  sb('drivers?id=eq.'+encodeURIComponent(DRIVER.id), {
+    method:'PATCH',
+    headers:{ 'Prefer':'return=minimal' },
+    body: JSON.stringify({ email: val, email_consent_at: now, email_updated_at: now })
+  }).then(function(){
+    return sb('driver_email_consents', {
+      method:'POST',
+      headers:{ 'Prefer':'return=minimal' },
+      body: JSON.stringify({
+        driver_id: DRIVER.id,
+        driver_name: DRIVER.name || '',
+        email: val,
+        previous_email: prev,
+        consent_text: emConsentText(),
+        agreed: true,
+        lang: (typeof LANG !== 'undefined' ? LANG : 'ar'),
+        source: 'fly_app',
+        user_agent: (navigator.userAgent||'').slice(0,300)
+      })
+    }).catch(function(e){ console.warn('[email] consent log failed', e); });
+  }).then(function(){
+    DRIVER.email = val;
+    DRIVER.email_consent_at = now;
+    try{ if(typeof saveCache === 'function') saveCache(); }catch(e){}
+    localStorage.removeItem(SK_EM_SKIP);
+    closeEmailGate();
+    toast(emT('اتسجّل بريدك ✅','Your email is registered ✅'), 'ok');
+    if(typeof currentTab !== 'undefined' && currentTab === 'profile') renderProfile();
+  }).catch(function(err){
+    console.error('[email] save failed', err);
+    emErr(emT('مقدرتش أحفظ — اتأكد من النت وجرّب تاني','Could not save — check your connection and try again'));
+  }).then(function(){
+    btn.disabled = false;
+    $('emgSaveTxt').textContent = emT('حفظ وتأكيد','Save and confirm');
+  });
+}
+
+function maybeEmailGate(){
+  if(!DRIVER) return;
+  if((DRIVER.email||'').trim()) return;
+  if(emSkipCount() >= EM_MAX_SKIP){
+    setTimeout(function(){ openEmailGate('force'); }, 1000);   // خلصت التأجيلات — إجباري
+    return;
+  }
+  setTimeout(function(){ openEmailGate('force'); }, 1000);
+}
+
+function emailRowHTML(){
+  var has = DRIVER && (DRIVER.email||'').trim();
+  var val = has
+    ? '<span style="direction:ltr;display:inline-block">'+DRIVER.email+'</span>'
+    : '<span class="em-missing">'+emT('غير مسجّل','Not registered')+'</span>';
+  return '<div class="irow">'+
+    '<div class="irow-ic"><i class="ti ti-mail"></i></div>'+
+    '<div class="irow-body"><div class="irow-lbl">'+emT('البريد الإلكتروني','Email')+'</div>'+
+    '<div class="irow-val">'+val+'</div></div>'+
+    '<button class="em-editbtn" onclick="openEmailGate(\''+(has?'edit':'force')+'\')" title="'+emT('تعديل','Edit')+'">'+
+      '<i class="ti ti-'+(has?'pencil':'plus')+'"></i></button>'+
+  '</div>';
 }
 
 function infoRow(icon,label,value,extra,mono){
@@ -3774,11 +3962,21 @@ function createLateDeduction(minutesLate, shiftStart){
     ? 'تأخير '+minutesLate+' دقيقة عن بداية الشفت ('+shiftStart+') — خصم '+fracTxt
     : 'Late '+minutesLate+' min from shift start ('+shiftStart+') — '+fracTxt+' deduction';
 
+  // month/year مطلوبان — شيت الرواتب في ARK يفلتر بهما حصراً
+  // بدونهما يُحفظ الخصم في القاعدة لكنه لا يظهر أبداً في كشف الراتب
+  var _td = todayStr();                       // 'YYYY-MM-DD'
+  var _tp = _td.split('-');
+  var _yr = parseInt(_tp[0], 10);
+  var _mo = parseInt(_tp[1], 10);             // 1-12 (بدون أصفار بادئة)
+
   var rec = {
-    uniq_key: 'LATE_'+DRIVER.id+'_'+todayStr(),
+    uniq_key: 'LATE_'+DRIVER.id+'_'+_td,
     driver_id: DRIVER.id,
     driver_name: DRIVER.name,
-    date: todayStr(),
+    date: _td,
+    month: _mo,
+    year: _yr,
+    days: SHIFT_CFG.fraction,                 // 0.5 = نصف يوم | 1 = يوم كامل
     amount: amount,
     reason: reason,
     ded_type: 'late',
@@ -4388,6 +4586,101 @@ renderHome = function(){
   el.appendChild(d);
 };
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   🏷️ رقم الإصدار — للتأكد من وصول التحديث
+   ═══════════════════════════════════════════════════════════════════ */
+var FLY_VERSION = '6.0';
+var FLY_BUILD   = '2026-07-25';
+
+/* شارة الإصدار في أسفل شاشة "بياناتي" */
+var _origRenderProfile2 = renderProfile;
+renderProfile = function(){
+  _origRenderProfile2();
+  var el = $('scrProfile'); if(!el) return;
+  var ar = LANG==='ar';
+  var d = document.createElement('div');
+  d.style.cssText = 'margin-top:20px;padding:16px;background:var(--s2);border:1px solid var(--br);border-radius:14px;text-align:center';
+  d.innerHTML =
+    '<div style="font-size:11px;color:var(--muted2);font-weight:700;margin-bottom:4px">'+(ar?'إصدار التطبيق':'App version')+'</div>'+
+    '<div style="font-size:24px;font-weight:900;color:#10b981;line-height:1;margin-bottom:3px">v'+FLY_VERSION+'</div>'+
+    '<div style="font-size:10.5px;color:var(--muted2);font-weight:700;margin-bottom:13px">'+FLY_BUILD+'</div>'+
+    '<button onclick="forceUpdateApp()" style="width:100%;padding:12px;border:none;border-radius:11px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-family:inherit;font-weight:900;font-size:13.5px;cursor:pointer">'+
+      '🔄 '+(ar?'تحديث التطبيق':'Update app')+'</button>'+
+    '<div style="font-size:10.5px;color:var(--muted2);margin-top:8px;line-height:1.6">'+
+      (ar?'اضغط لو الإدارة قالت إن فيه تحديث ومش ظاهر عندك':'Tap if management says there\'s an update you can\'t see')+'</div>';
+  el.appendChild(d);
+};
+
+/* تحديث قسري — يمسح كل شيء ويعيد التحميل */
+async function forceUpdateApp(){
+  var ar = LANG==='ar';
+  if(!confirm(ar ? 'سيتم تحميل أحدث نسخة. تسجيل دخولك محفوظ. متابعة؟'
+                 : 'The latest version will be loaded. Your login is saved. Continue?')) return;
+  toast(ar?'⏳ جاري التحديث...':'⏳ Updating...','ok');
+  try{
+    // 1) امسح الكاش
+    if('caches' in window){
+      var keys = await caches.keys();
+      await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+    }
+    // 2) ألغِ تسجيل الـSW
+    if('serviceWorker' in navigator){
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function(r){ return r.unregister(); }));
+    }
+  }catch(e){ console.warn('forceUpdate', e); }
+  // 3) أعد التحميل مع كسر الكاش
+  setTimeout(function(){
+    location.replace(location.pathname + '?fresh=' + Date.now());
+  }, 800);
+}
+
+/* شارة الإصدار في الهيدر (صغيرة جداً) */
+setTimeout(function(){
+  try{
+    var bar = document.querySelector('.appbar') || document.querySelector('header');
+    if(bar && !document.getElementById('flyVerTag')){
+      var s = document.createElement('span');
+      s.id = 'flyVerTag';
+      s.textContent = 'v'+FLY_VERSION;
+      s.style.cssText = 'position:absolute;bottom:2px;'+(LANG==='ar'?'left':'right')+':8px;font-size:8.5px;color:rgba(255,255,255,.4);font-weight:700;pointer-events:none';
+      if(getComputedStyle(bar).position === 'static') bar.style.position = 'relative';
+      bar.appendChild(s);
+    }
+  }catch(e){}
+}, 1200);
+
+/* فحص التحديث تلقائياً كل مرة يفتح التطبيق */
+setTimeout(function(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if(reg) { try{ reg.update(); }catch(e){} }
+    }).catch(function(){});
+  }
+}, 2000);
+
 </script>
+
+<!-- ══ شاشة تسجيل البريد الإلكتروني ══ -->
+<div class="emg-ov hide" id="emailGate">
+  <div class="emg-card">
+    <div class="emg-ic"><i class="ti ti-mail-plus"></i></div>
+    <h2 id="emgTitle">—</h2>
+    <p class="emg-desc" id="emgDesc">—</p>
+    <label class="emg-lbl" id="emgLbl">—</label>
+    <input class="emg-in" type="email" id="emgInput" inputmode="email" autocomplete="email"
+           autocapitalize="off" spellcheck="false" placeholder="name@example.com">
+    <div class="emg-err hide" id="emgErr"></div>
+    <label class="emg-agree" for="emgAgree">
+      <input type="checkbox" id="emgAgree">
+      <span id="emgConsent">—</span>
+    </label>
+    <button class="emg-btn emg-save" id="emgSave" onclick="emSave()"><i class="ti ti-check"></i> <span id="emgSaveTxt">—</span></button>
+    <button class="emg-btn emg-skip hide" id="emgSkip" onclick="emSkip()">—</button>
+    <div class="emg-note" id="emgNote">—</div>
+  </div>
+</div>
+
 </body>
 </html>
