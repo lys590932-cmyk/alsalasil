@@ -475,6 +475,110 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);heigh
 .sq-btn:hover{border-color:var(--accent);color:var(--accent)}
 .cell-time{font-size:8px;opacity:.85;display:block;margin-top:1px}
 
+/* ===== SCHEDULE v2 — لوحة الدوامات التفاعلية ===== */
+.schv2-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:12px 14px;background:var(--s2);border:1px solid var(--br);border-radius:14px;margin-bottom:10px}
+.schv2-search{position:relative;flex:1 1 190px;min-width:170px}
+.schv2-search i{position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none}
+.schv2-search input{width:100%;padding:8px 10px;padding-inline-start:32px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12.5px;outline:none;transition:.15s}
+.schv2-search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(28,88,120,.10)}
+.schv2-fld{display:flex;flex-direction:column;gap:4px}
+.schv2-fld>span{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.3px}
+.schv2-fld select,.schv2-fld input{padding:7px 9px;background:var(--s1);border:1px solid var(--br);border-radius:9px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;outline:none}
+.schv2-fld input[type=number]{width:74px;text-align:center;font-family:'JetBrains Mono',monospace}
+.schv2-fld select:focus,.schv2-fld input:focus{border-color:var(--accent)}
+.schv2-spacer{flex:1 1 auto}
+.schv2-btn{padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s}
+.schv2-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.schv2-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.schv2-pal{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.schv2-pal-lbl{font-size:11px;font-weight:800;color:var(--muted);display:inline-flex;align-items:center;gap:5px;margin-inline-end:2px}
+.schv2-chip{padding:5px 11px;border-radius:20px;border:1.5px solid var(--br);background:var(--s1);font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--muted);transition:.15s;display:inline-flex;align-items:center;gap:4px}
+.schv2-chip:hover{transform:translateY(-1px)}
+.schv2-chip.on{box-shadow:0 3px 10px rgba(15,23,41,.16)}
+.schv2-hint{font-size:10.5px;color:var(--muted);margin-inline-start:4px}
+
+.schv2-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-bottom:12px}
+.schv2-kpi{background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:10px 12px}
+.schv2-kpi-t{font-size:10.5px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.schv2-kpi-t i{font-size:14px}
+.schv2-kpi-v{font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1.1}
+.schv2-kpi-s{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600}
+
+.schv2-cover{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:12px 14px 10px;margin-bottom:14px}
+.schv2-cover-h{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:10px}
+.schv2-cover-h b{font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;gap:6px;color:var(--text)}
+.schv2-cover-h b i{color:var(--accent)}
+.schv2-cover-lg{display:flex;flex-wrap:wrap;gap:10px;margin-inline-start:auto;font-size:10.5px;color:var(--muted);font-weight:600}
+.schv2-cover-lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-inline-end:4px;vertical-align:middle}
+.schv2-cover-b{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;min-height:150px}
+.schv2-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;border-radius:9px;padding:4px 2px 5px;transition:.15s}
+.schv2-col.peak{background:rgba(217,119,6,.07)}
+.schv2-col.today{background:rgba(28,88,120,.09)}
+.schv2-num{font-size:14px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1}
+.schv2-num i{font-size:11px}
+.schv2-bar-wrap{display:flex;flex-direction:column-reverse;width:60%;max-width:46px;min-height:2px;border-radius:5px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,41,.12)}
+.schv2-seg{width:100%}
+.schv2-day{font-size:10.5px;font-weight:700;color:var(--muted);text-align:center;line-height:1.35}
+.schv2-day b{color:var(--amber);font-size:9px}
+.schv2-day span{display:block;font-size:9px;opacity:.75;font-family:'JetBrains Mono',monospace}
+.schv2-target{position:absolute;inset-inline:0;border-top:1.5px dashed var(--red);opacity:.65;pointer-events:none}
+.schv2-target span{position:absolute;inset-inline-end:0;top:-8px;font-size:9px;font-weight:800;color:var(--red);background:var(--s1);padding:0 4px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+
+.schv2-scroll{overflow-x:auto;overflow-y:visible;padding-bottom:4px}
+.schv2-grid{min-width:940px}
+.schv2-head{display:grid;gap:4px;margin-bottom:5px;position:sticky;top:0;z-index:3}
+.schv2-hc{font-size:11px;font-weight:800;color:var(--muted);padding:7px 8px;background:var(--s2);border:1px solid var(--br);border-radius:9px}
+.schv2-hc.c{text-align:center}
+.schv2-hc span{display:block;font-size:9px;opacity:.7;font-weight:600;font-family:'JetBrains Mono',monospace}
+.schv2-hc.today{background:rgba(28,88,120,.13);color:var(--accent);border-color:rgba(28,88,120,.3)}
+.schv2-hc.peak{background:rgba(217,119,6,.11);color:var(--amber);border-color:rgba(217,119,6,.28)}
+.schv2-sticky{position:sticky;inset-inline-start:0;z-index:4;background:var(--s1)}
+.schv2-head .schv2-sticky{background:var(--s2)}
+
+.schv2-row{display:grid;gap:4px;margin-bottom:4px;align-items:stretch;border-radius:11px;transition:.12s}
+.schv2-row:hover{background:rgba(28,88,120,.045)}
+.schv2-row.warn{background:rgba(185,28,28,.055);box-shadow:inset 0 0 0 1px rgba(185,28,28,.22)}
+.schv2-drv{display:flex;align-items:center;gap:7px;padding:7px 9px;min-width:0}
+.schv2-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.schv2-dn{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.25}
+.schv2-dn b{font-size:11.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schv2-dn i{font-size:9px;color:var(--muted);font-style:normal;font-family:'JetBrains Mono',monospace}
+.schv2-acts{display:flex;gap:3px;opacity:0;transition:.15s}
+.schv2-row:hover .schv2-acts{opacity:1}
+.schv2-acts button{width:23px;height:23px;border-radius:7px;border:1px solid var(--br);background:var(--s2);color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:12px;padding:0}
+.schv2-acts button:hover{border-color:var(--accent);color:var(--accent)}
+
+.schv2-cell{border:1.5px solid var(--br);border-radius:9px;padding:5px 4px;min-height:50px;cursor:pointer;transition:.13s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--s1)}
+.schv2-cell:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(15,23,41,.13)}
+.schv2-cell b{font-size:10px;font-weight:800;text-align:center;line-height:1.25}
+.schv2-cell i{font-size:8.5px;font-style:normal;opacity:.85;font-family:'JetBrains Mono',monospace}
+.schv2-cell.gap{border-style:dashed;border-color:#cbd5e1;background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(148,163,184,.07) 6px 12px)}
+.schv2-cell.peak{box-shadow:inset 0 2px 0 rgba(217,119,6,.35)}
+.schv2-gap{font-size:15px;color:#94a3b8;font-weight:800}
+
+.schv2-tot{background:var(--s2);border:1px solid var(--br);border-radius:9px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.schv2-tot b{font-size:15px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1}
+.schv2-tot i{font-size:9px;color:var(--muted);font-style:normal;font-weight:700}
+.schv2-tot.warn{background:rgba(217,119,6,.13);border-color:rgba(217,119,6,.32)}
+.schv2-tot.warn b{color:var(--amber)}
+.schv2-tot.bad{background:rgba(185,28,28,.13);border-color:rgba(185,28,28,.32)}
+.schv2-tot.bad b{color:var(--red)}
+
+.schv2-foot{display:grid;gap:4px;margin-top:6px}
+.schv2-fc{font-size:12px;font-weight:800;color:var(--text);padding:7px 8px;background:var(--s2);border:1px solid var(--br);border-radius:9px;font-family:'JetBrains Mono',monospace}
+.schv2-fc.c{text-align:center}
+.schv2-fc span{font-size:9.5px;color:var(--muted);font-weight:600}
+.schv2-fc.bad{background:rgba(185,28,28,.12);border-color:rgba(185,28,28,.3);color:var(--red)}
+.schv2-fc.schv2-sticky{background:var(--s2);font-family:'Cairo',sans-serif;font-size:11px;color:var(--muted)}
+
+.schv2-empty{text-align:center;padding:34px 16px;color:var(--muted)}
+.schv2-empty i{font-size:34px;opacity:.3;display:block;margin-bottom:8px}
+.schv2-empty p{font-size:12.5px}
+.schv2-cell i,.schv2-hc span,.schv2-day span{direction:ltr;unicode-bidi:isolate}
+.schv2-dn b{unicode-bidi:plaintext}
+.schv2-dn i{direction:ltr;unicode-bidi:isolate}
+
 /* SCHEDULE IMAGE EXPORT */
 #sch-export-canvas{display:none}
 .export-btn-grp{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -1718,6 +1822,25 @@ async function arkLogout(){
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.0/dist/jspdf.plugin.autotable.min.js"></script>
 <!-- Al-Salasil Cloud Sync — DISABLED -->
 <!-- <script src="cloud-sync.js"></script> -->
+
+<!-- ARK-WATERMARK : علامة السلاسل المائية -->
+<style id="ark-watermark-style">
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url('ark-watermark.png');
+  background-repeat:no-repeat;
+  background-position:center center;
+  background-size:min(38vw,420px) auto;
+  opacity:.05;
+  pointer-events:none;
+  user-select:none;
+  z-index:99990;
+}
+@media (max-width:760px){ body::after{ background-size:min(62vw,300px) auto; opacity:.04 } }
+@media print{ body::after{ display:none !important } }
+</style>
 </head>
 <body>
 
@@ -1752,6 +1875,7 @@ async function arkLogout(){
 
     <div class="rail-sec">المال والتحليل</div>
     <button class="nav-tab" id="nav-acc" data-tip="المحاسبة" onclick="setMainView('acc')"><i class="ti ti-cash-banknote"></i> <span data-i18n="nav_accounting">المحاسبة</span></button>
+    <button class="nav-tab" id="nav-custody" data-tip="العهدة" onclick="setMainView('custody')"><i class="ti ti-wallet"></i> <span>العهدة</span></button>
     <button class="nav-tab" id="nav-reports" data-tip="تقارير الشركة" onclick="setMainView('reports')"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
     <button class="nav-tab" id="nav-vio" data-tip="المخالفات" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> <span data-i18n="nav_violations">المخالفات</span></button>
     <button class="nav-tab" id="nav-apps" data-tip="طلبات التقديم" onclick="setMainView('apps')"><i class="ti ti-user-plus"></i> <span data-i18n="nav_applications">طلبات التقديم</span></button>
@@ -1879,6 +2003,11 @@ async function arkLogout(){
 <!-- ACCOUNTING VIEW -->
 <div id="view-acc" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
   <div id="acc-content"></div>
+</div>
+
+<!-- CUSTODY VIEW -->
+<div id="view-custody" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="custody-content"></div>
 </div>
 
 <!-- COMPANY REPORTS VIEW -->
@@ -2486,6 +2615,29 @@ function empEnd(d){
 }
 
 function _daysInMonth(m, y){ return new Date(y, m, 0).getDate(); }
+
+// ============================================================
+// اليومية الموحّدة = الراتب ÷ أيام الشهر الفعلية (28/29/30/31)
+// ------------------------------------------------------------
+// قبل التوحيد: ARK كان يقسم على 26 و FLY على 30 — فنفس المخالفة
+// كانت تُخصم بمبلغين مختلفين حسب النظام الذي أنشأها.
+// أي حساب يومية في ARK يجب أن يمر من هنا.
+// ============================================================
+function arkDailyRate(base, dateStr){
+  base = parseFloat(base) || 0;
+  if (base <= 0) return 0;
+  let y, m;
+  if (dateStr && /^\d{4}-\d{2}/.test(String(dateStr))) {
+    const p = String(dateStr).split('-');
+    y = parseInt(p[0], 10);
+    m = parseInt(p[1], 10);
+  } else {
+    const n = new Date();
+    y = n.getFullYear();
+    m = n.getMonth() + 1;
+  }
+  return base / _daysInMonth(m, y);
+}
 function _ymd(y, m, day){
   return String(y) + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
 }
@@ -3963,7 +4115,7 @@ function calcDedAmount(){
     days = parseFloat(select.value);
   }
 
-  const dailyRate = base / 26; // 26 working days/month
+  const dailyRate = arkDailyRate(base, document.getElementById('ded-date')?.value);
   const amount    = dailyRate * days;
 
   document.getElementById('calc-base').textContent   = base.toFixed(3) + ' KD';
@@ -3991,7 +4143,7 @@ function addDeduction() {
   const base       = sal.base || 0;
   if(!base){ toast('يرجى تحديد الراتب الأساسي أولاً','e'); return; }
 
-  const dailyRate  = base / 26;
+  const dailyRate  = arkDailyRate(base, date);
   const amount     = dailyRate * days;
 
   const month = parseInt(document.getElementById('sal-month').value);
@@ -4376,12 +4528,14 @@ function setMainView(view) {
   if(appsEl) appsEl.style.display = view==='apps' ? 'block' : 'none';
   const repEl = document.getElementById('view-reports');
   if(repEl) repEl.style.display = view==='reports' ? 'block' : 'none';
+  const custEl = document.getElementById('view-custody');
+  if(custEl) custEl.style.display = view==='custody' ? 'block' : 'none';
   const ordEl = document.getElementById('view-orders');
   if(ordEl) ordEl.style.display = view==='orders' ? 'block' : 'none';
   const drepEl = document.getElementById('view-dreports');
   if(drepEl) drepEl.style.display = view==='dreports' ? 'block' : 'none';
   // Update nav tabs
-  ['drivers','dash','att','vio','clockin','acc','livemap','apps','reports','orders','dreports'].forEach(v => {
+  ['drivers','dash','att','vio','clockin','acc','custody','livemap','apps','reports','orders','dreports'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if(el) el.classList.toggle('on', v===view);
   });
@@ -4394,6 +4548,7 @@ function setMainView(view) {
   if(view==='livemap') initLiveMap();
   if(view==='apps')    renderApps();
   if(view==='reports') renderReports();
+  if(view==='custody') renderCustody();
   if(view==='orders')  renderOrdersAdmin();
   if(view==='dreports') renderDailyReports();
   if(view!=='clockin') clearInterval(clockinAutoRefresh);
@@ -5039,6 +5194,7 @@ function renderAtt(){
   html += '<div style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">';
   html += `<button class="att-btn present" onclick="markAll('present')">✅ تسجيل الكل حاضر</button>`;
   html += `<button class="att-btn absent" onclick="markAll('absent')">❌ تسجيل الكل غائب</button>`;
+  html += `<button class="att-btn" style="background:#7c3aed;border-color:#7c3aed;color:#fff" onclick="openAbsenceReview()">🔍 مراجعة الغياب (من الحضور الفعلي)</button>`;
   html += '</div>';
 
   // Driver rows
@@ -5131,7 +5287,7 @@ function showAttDeductionDialog(driverId, status, attKey){
   const isLate   = status === 'late';
   const defDays  = isLate ? 0.5 : 1;
   const defReason= isLate ? 'تأخر عن العمل / Late Arrival' : 'غياب / Absence';
-  const dailyRate= base > 0 ? base / 26 : 0;
+  const dailyRate= arkDailyRate(base, attDate);
   const defAmt   = dailyRate * defDays;
 
   // Build dialog HTML
@@ -5210,7 +5366,7 @@ function updateDlgCalc(driverId){
   const sal     = getSalData(driverId);
   const base    = sal.base || 0;
   const days    = parseFloat(document.getElementById('dlg-days-'+driverId)?.value || 0);
-  const amount  = (base/26) * days;
+  const amount  = arkDailyRate(base, attDate) * days;
   const prevEl  = document.getElementById('dlg-days-preview-'+driverId);
   const amtEl   = document.getElementById('dlg-amt-preview-'+driverId);
   if(prevEl) prevEl.textContent = days;
@@ -5247,10 +5403,12 @@ function confirmAttDeduction(driverId, dlgId, attKey){
 
   if(!base){ toast('يرجى تحديد الراتب الأساسي للسائق أولاً','e'); return; }
 
-  const amount   = (base/26) * days;
-  const now      = new Date();
-  const month    = now.getMonth()+1;
-  const year     = now.getFullYear();
+  const amount   = arkDailyRate(base, attDate) * days;
+  // month/year يجب أن يتبعا تاريخ الغياب نفسه لا تاريخ اليوم —
+  // وإلا فتسجيل غياب عن شهر سابق يُقيَّد على الشهر الحالي بالخطأ
+  const _ap      = String(attDate).split('-');
+  const year     = parseInt(_ap[0], 10);
+  const month    = parseInt(_ap[1], 10);
 
   // Add deduction to salary
   const ded = {
@@ -5362,15 +5520,15 @@ function markAll(status){
         const sal=getSalData(d.id);
         const base=sal.base||0;
         if(base>0){
-          const amount=(base/26)*days;
-          const now=new Date();
+          const amount=arkDailyRate(base, attDate)*days;
+          const _p=String(attDate).split('-');   // الشهر من تاريخ الغياب لا من اليوم
           sal.deductions.push({
             id:'D'+Date.now()+'_'+d.id,
             reason:status==='absent'?'غياب / Absence':'تأخر / Late Arrival',
             amount,days,
             date:attDate,
-            month:now.getMonth()+1,
-            year:now.getFullYear(),
+            month:parseInt(_p[1],10),
+            year:parseInt(_p[0],10),
             attKey:key
           });
         }
@@ -5862,6 +6020,348 @@ async function saveDeductionToSupabase(ded, driverId) {
   } catch(e) {
     console.error('Supabase sync error:', e);
   }
+}
+
+// ============================================================
+// سحب الخصومات التلقائية من Supabase إلى شيت الرواتب
+// ------------------------------------------------------------
+// المشكلة التي يحلها: SALARIES كان يُحمَّل من localStorage فقط،
+// فأي خصم ينشئه تطبيق السائق FLY (خصم تأخير مثلاً) كان يُحفظ في
+// Supabase ولا يصل لشيت الرواتب أبداً — السائق يراه والإدارة لا.
+//
+// نسحب فقط السجلات auto=true (مصدرها FLY) حتى لا تتعارض مع
+// الخصومات اليدوية المُنشأة داخل ARK. المطابقة تتم على uniq_key
+// فالتشغيل المتكرر آمن ولا يضاعف أي خصم.
+// ============================================================
+async function pullDeductionsFromSupabase(opts) {
+  opts = opts || {};
+  try {
+    const res = await fetch(
+      SUPA_URL + '/rest/v1/deductions?auto=eq.true&select=*&order=date.desc',
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+    );
+    if (!res.ok) { console.warn('[ded pull] HTTP ' + res.status); return {added:0, updated:0, removed:0}; }
+
+    const rows = await res.json();
+    let added = 0, updated = 0, removed = 0;
+    const activeKeys = new Set();
+
+    rows.forEach(r => {
+      if (!r.driver_id) return;
+      const key = r.uniq_key || ('SB_' + r.id);
+
+      // اشتقاق month/year محلياً لو كانت ناقصة في القاعدة
+      // (سجلات أُنشئت قبل تشغيل fix_deductions_month_year.sql)
+      let mo = parseInt(r.month, 10), yr = parseInt(r.year, 10);
+      if ((!mo || !yr) && r.date) {
+        const p = String(r.date).split('-');
+        yr = parseInt(p[0], 10);
+        mo = parseInt(p[1], 10);
+      }
+      if (!mo || !yr) return;   // لا تاريخ ولا شهر — نتجاهله بدل تخزين سجل مشوّه
+
+      // الخصومات الملغاة لا تُحتسب
+      if (r.status && r.status !== 'active') return;
+      activeKeys.add(key);
+
+      const sal = getSalData(r.driver_id);
+      if (!Array.isArray(sal.deductions)) sal.deductions = [];
+
+      const rec = {
+        id:     key,
+        reason: r.reason || 'خصم تلقائي',
+        amount: parseFloat(r.amount || 0),
+        days:   parseFloat(r.days || 0),
+        date:   r.date,
+        month:  mo,
+        year:   yr,
+        src:    'fly'          // العلامة التي تميّز السجلات المسحوبة
+      };
+
+      const i = sal.deductions.findIndex(d => d && d.id === key);
+      if (i < 0) {
+        sal.deductions.push(rec);
+        added++;
+      } else {
+        const old = sal.deductions[i];
+        if (old.amount !== rec.amount || old.reason !== rec.reason ||
+            old.month  !== rec.month  || old.year   !== rec.year) {
+          sal.deductions[i] = Object.assign({}, old, rec);
+          updated++;
+        }
+      }
+    });
+
+    // مطابقة عكسية: خصم أُلغي أو حُذف من Supabase يُرفع محلياً كذلك
+    Object.keys(SALARIES).forEach(did => {
+      const sal = SALARIES[did];
+      if (!sal || !Array.isArray(sal.deductions)) return;
+      const before = sal.deductions.length;
+      sal.deductions = sal.deductions.filter(d => d.src !== 'fly' || activeKeys.has(d.id));
+      removed += before - sal.deductions.length;
+    });
+
+    if (added || updated || removed) {
+      saveSalaries();
+      try { if (typeof renderList === 'function') renderList(); } catch(e) {}
+      try {
+        const m = document.getElementById('salaryModal');
+        if (m && m.classList.contains('on') && typeof renderSalaryModal === 'function') renderSalaryModal();
+      } catch(e) {}
+    }
+
+    console.log('[ded pull] added:' + added + ' updated:' + updated + ' removed:' + removed);
+    if (!opts.silent && typeof toast === 'function') {
+      toast(
+        (added || updated || removed)
+          ? ('💸 خصومات FLY: ' + added + ' جديد • ' + updated + ' محدّث' + (removed ? ' • ' + removed + ' ملغي' : ''))
+          : '💸 لا خصومات جديدة من FLY',
+        's'
+      );
+    }
+    return {added, updated, removed};
+
+  } catch(e) {
+    console.error('[ded pull] error:', e);
+    return {added:0, updated:0, removed:0};
+  }
+}
+
+
+// ============================================================
+// مراجعة الغياب — من الحضور الفعلي (clock-in)
+// ------------------------------------------------------------
+// السائق الذي لم يسجّل clock-in في يوم مجدول له = غياب بدون إذن.
+// لا يمكن توليد هذا الخصم من FLY: السائق الغائب هو نفسه الذي لم
+// يفتح التطبيق، فلا كود يعمل عنده. لذلك المسح يتم هنا في ARK.
+//
+// الاستثناءات المحسوبة تلقائياً:
+//   • يوم راحة أو عطلة رسمية في الجدول
+//   • إجازة معتمدة تغطي التاريخ (driver_requests)
+//   • سجّل clock-in فعلاً (حتى لو متأخراً — خصم التأخير منفصل)
+//   • خصم غياب مسجّل مسبقاً لنفس اليوم
+//   • المدير سجّله "حاضر" يدوياً
+// لا يُخصم شيء إلا بعد اعتماد صريح من المدير.
+// ============================================================
+let ABSENCE_CANDIDATES = [];
+
+function _esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// نطاق اليوم بتوقيت الكويت (UTC+3) — clockin.created_at مخزّن timestamptz
+function _kwDayRange(dateStr){
+  const next = new Date(dateStr + 'T00:00:00+03:00');
+  next.setDate(next.getDate() + 1);
+  const n = fmtDate(next);
+  return { from: dateStr + 'T00:00:00+03:00', to: n + 'T00:00:00+03:00' };
+}
+
+async function scanAbsences(dateStr){
+  const rng = _kwDayRange(dateStr);
+  const H   = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+
+  // 1) من سجّل حضوراً فعلياً في هذا اليوم
+  const clockedIn = new Set();
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/clockin?action=eq.clock_in'
+      + '&created_at=gte.' + encodeURIComponent(rng.from)
+      + '&created_at=lt.'  + encodeURIComponent(rng.to)
+      + '&select=driver_id', { headers: H });
+    if (r.ok) (await r.json()).forEach(x => x.driver_id && clockedIn.add(String(x.driver_id)));
+    else throw new Error('HTTP ' + r.status);
+  } catch(e) {
+    console.error('[absence] clockin fetch failed', e);
+    toast('تعذّر قراءة سجل الحضور — تحقق من الاتصال','e');
+    return null;   // لا نُكمل: بدون بيانات الحضور سنتّهم الجميع بالغياب
+  }
+
+  // 2) الإجازات المعتمدة التي تغطي التاريخ
+  const onLeave = new Map();
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/driver_requests?req_type=eq.leave&status=eq.approved'
+      + '&from_date=lte.' + dateStr + '&to_date=gte.' + dateStr
+      + '&select=driver_id,leave_type', { headers: H });
+    if (r.ok) (await r.json()).forEach(x => x.driver_id && onLeave.set(String(x.driver_id), x.leave_type || 'leave'));
+  } catch(e) { console.warn('[absence] leave fetch failed', e); }
+
+  // 3) تقييم كل سائق مؤهّل
+  const out = [];
+  reportableDrivers().forEach(drv => {
+    const entry = SCHED[drv.id + '_' + dateStr];
+    if (!entry || !entry.type) return;                        // غير مجدول أصلاً
+    if (entry.type === 'off' || entry.type === 'holiday') return;  // راحة/عطلة
+    if (clockedIn.has(String(drv.id))) return;                // سجّل حضور
+    if (onLeave.has(String(drv.id))) return;                  // إجازة معتمدة
+
+    const attKey = drv.id + '_' + dateStr;
+    if ((ATTENDANCE[attKey] || {}).status === 'present') return;   // اعتمده المدير حاضراً
+
+    const sal = getSalData(drv.id);
+    const dedKey = 'ABSENT_' + drv.id + '_' + dateStr;
+    const already = (sal.deductions || []).some(d =>
+      d && (d.id === dedKey || (d.date === dateStr && /غياب|Absence/i.test(d.reason || ''))));
+    if (already) return;                                      // مخصوم مسبقاً
+
+    const base   = parseFloat(sal.base) || 0;
+    const amount = +(arkDailyRate(base, dateStr) * 1).toFixed(3);
+    const st     = getST(entry.type);
+    const par    = PARTNERS.find(p => p.id === drv.partner);
+
+    out.push({
+      id: drv.id, name: drv.name,
+      partner: par ? par.name : '',
+      shift: st ? st.labelAr : entry.type,
+      shiftTime: entry.shift || '',
+      base: base, amount: amount, noBase: base <= 0
+    });
+  });
+
+  return out;
+}
+
+async function openAbsenceReview(){
+  toast('⏳ جاري قراءة سجل الحضور...','s');
+  const list = await scanAbsences(attDate);
+  if (list === null) return;                 // فشل القراءة — تم التنبيه بالفعل
+  ABSENCE_CANDIDATES = list;
+
+  const dim = _daysInMonth(parseInt(attDate.split('-')[1],10), parseInt(attDate.split('-')[0],10));
+  document.getElementById('absReviewModal')?.remove();
+
+  let h = '';
+  h += '<div id="absReviewModal" style="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.remove()">';
+  h += '<div style="background:var(--s1,#161b22);border:1px solid var(--br,#30363d);border-radius:16px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">';
+
+  h += '<div style="padding:16px 18px;border-bottom:1px solid var(--br,#30363d)">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">';
+  h += '<h3 style="font-size:16px;font-weight:900">🔍 مراجعة الغياب — ' + _esc(attDate) + '</h3>';
+  h += '<button onclick="document.getElementById(\'absReviewModal\').remove()" style="background:none;border:none;color:var(--muted,#8b949e);font-size:22px;cursor:pointer;line-height:1">×</button>';
+  h += '</div>';
+  h += '<div style="font-size:11px;color:var(--muted,#8b949e);margin-top:6px">سائقون مجدولون لم يسجّلوا حضوراً — بعد استبعاد الراحات والإجازات المعتمدة. اليومية = الراتب ÷ ' + dim + ' يوم.</div>';
+  h += '</div>';
+
+  h += '<div style="padding:14px 18px;overflow-y:auto;flex:1">';
+
+  if (!ABSENCE_CANDIDATES.length) {
+    h += '<div style="text-align:center;padding:40px 20px;color:var(--muted,#8b949e)">';
+    h += '<div style="font-size:44px">✅</div>';
+    h += '<div style="margin-top:10px;font-size:14px;font-weight:700">لا يوجد غياب في هذا اليوم</div>';
+    h += '<div style="font-size:11px;margin-top:4px">كل السائقين المجدولين سجّلوا حضورهم أو لديهم عذر معتمد</div>';
+    h += '</div>';
+  } else {
+    let total = 0;
+    ABSENCE_CANDIDATES.forEach((c, i) => {
+      if (!c.noBase) total += c.amount;
+      h += '<label style="display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--br,#30363d);border-radius:11px;margin-bottom:8px;cursor:pointer;background:' + (c.noBase ? 'rgba(245,158,11,.07)' : 'transparent') + '">';
+      h += '<input type="checkbox" class="abs-chk" data-i="' + i + '" ' + (c.noBase ? 'disabled' : 'checked') + ' style="width:17px;height:17px;flex-shrink:0;cursor:pointer">';
+      h += '<div style="flex:1;min-width:0">';
+      h += '<div style="font-size:13px;font-weight:800">' + _esc(c.name) + '</div>';
+      h += '<div style="font-size:10px;color:var(--muted,#8b949e)">' + _esc(c.id) + ' • ' + _esc(c.partner) + ' • مجدول: ' + _esc(c.shift) + (c.shiftTime ? ' (' + _esc(c.shiftTime) + ')' : '') + '</div>';
+      if (c.noBase) h += '<div style="font-size:10px;color:#f59e0b;font-weight:700;margin-top:3px">⚠️ لا يوجد راتب أساسي مسجّل — حدّده أولاً ليُحتسب الخصم</div>';
+      h += '</div>';
+      h += '<div style="text-align:left;flex-shrink:0"><div style="font-size:14px;font-weight:900;color:' + (c.noBase ? '#8b949e' : '#ef4444') + '">' + c.amount.toFixed(3) + '</div><div style="font-size:9px;color:var(--muted,#8b949e)">د.ك • يوم واحد</div></div>';
+      h += '</label>';
+    });
+    h += '<div style="margin-top:12px;padding:11px 13px;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.3);border-radius:11px;display:flex;justify-content:space-between;align-items:center">';
+    h += '<span style="font-size:12px;font-weight:800">إجمالي الخصم المقترح</span>';
+    h += '<span style="font-size:16px;font-weight:900;color:#ef4444" id="absTotal">' + total.toFixed(3) + ' د.ك</span>';
+    h += '</div>';
+  }
+
+  h += '</div>';
+
+  h += '<div style="padding:14px 18px;border-top:1px solid var(--br,#30363d);display:flex;gap:9px;justify-content:flex-end">';
+  h += '<button onclick="document.getElementById(\'absReviewModal\').remove()" style="padding:10px 18px;border-radius:9px;border:1px solid var(--br,#30363d);background:transparent;color:var(--text,#e6edf3);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">إلغاء</button>';
+  if (ABSENCE_CANDIDATES.length) {
+    h += '<button id="absApplyBtn" onclick="applyAbsenceDeductions()" style="padding:10px 20px;border-radius:9px;border:none;background:#ef4444;color:#fff;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">✔ اعتماد وخصم المحدد</button>';
+  }
+  h += '</div></div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+// حفظ خصم تلقائي في Supabase مع uniq_key — يعيد true عند النجاح فقط
+async function saveAutoDeductionToSupabase(rec){
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/deductions?on_conflict=uniq_key', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(rec)
+    });
+    if (!res.ok) { console.warn('[absence] save HTTP ' + res.status, await res.text()); return false; }
+    return true;
+  } catch(e) { console.error('[absence] save error', e); return false; }
+}
+
+async function applyAbsenceDeductions(){
+  const btn = document.getElementById('absApplyBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...'; }
+
+  const picked = Array.from(document.querySelectorAll('.abs-chk'))
+    .filter(c => c.checked && !c.disabled)
+    .map(c => ABSENCE_CANDIDATES[parseInt(c.dataset.i, 10)])
+    .filter(Boolean);
+
+  if (!picked.length) {
+    toast('لم تحدد أي سائق','e');
+    if (btn) { btn.disabled = false; btn.textContent = '✔ اعتماد وخصم المحدد'; }
+    return;
+  }
+
+  const p     = String(attDate).split('-');
+  const year  = parseInt(p[0], 10);
+  const month = parseInt(p[1], 10);
+  let ok = 0, failed = 0;
+
+  for (const c of picked) {
+    const uniqKey = 'ABSENT_' + c.id + '_' + attDate;
+    const reason  = 'غياب بدون إذن — لم يسجّل حضور / Absent — no clock-in';
+
+    const synced = await saveAutoDeductionToSupabase({
+      uniq_key: uniqKey,
+      driver_id: c.id, driver_name: c.name,
+      date: attDate, month: month, year: year,
+      days: 1, amount: c.amount, reason: reason,
+      ded_type: 'absent', auto: true, status: 'active'
+    });
+
+    const sal = getSalData(c.id);
+    if (!Array.isArray(sal.deductions)) sal.deductions = [];
+    sal.deductions.push({
+      id: uniqKey, reason: reason, amount: c.amount, days: 1,
+      date: attDate, month: month, year: year,
+      attKey: c.id + '_' + attDate,
+      // src='fly' فقط عند نجاح المزامنة، وإلا فسيحذفه السحب التالي
+      src: synced ? 'fly' : 'local'
+    });
+
+    // اعكسها على شاشة الحضور
+    ATTENDANCE[c.id + '_' + attDate] = {
+      status: 'absent',
+      note: (ATTENDANCE[c.id + '_' + attDate] || {}).note || 'تلقائي: لا يوجد clock-in',
+      time: new Date().toLocaleTimeString('ar-KW')
+    };
+
+    synced ? ok++ : failed++;
+    try { audit('create', 'deduction', c.id, null, {type:'absent', date:attDate, amount:c.amount}); } catch(e) {}
+  }
+
+  saveSalaries();
+  saveAtt();
+  document.getElementById('absReviewModal')?.remove();
+  renderAtt();
+
+  toast(failed
+    ? ('⚠️ خُصم ' + ok + ' — و' + failed + ' لم تُزامن مع السحابة (محفوظة محلياً)')
+    : ('✅ تم خصم يوم غياب لـ ' + ok + ' سائق'),
+    failed ? 'e' : 's');
 }
 
 async function syncDriversToSupabase() {
@@ -6765,6 +7265,10 @@ renderDetail();
     refreshAlertBadge();
     setInterval(refreshAlertBadge, 300000);   // تحديث كل 5 دقائق
     flushDeleteQueue();                       // تنفيذ أي حذف مؤجّل من جلسة سابقة
+
+    // سحب خصومات FLY التلقائية (تأخير…) إلى شيت الرواتب
+    pullDeductionsFromSupabase({silent:true});
+    setInterval(function(){ pullDeductionsFromSupabase({silent:true}); }, 300000);
   }catch(e){ console.warn('[ark v2] boot', e); }
 })();
 
@@ -6915,78 +7419,299 @@ function prevWeek(){ schedWeekStart=addDays(schedWeekStart,-7); renderSchedTable
 function nextWeek(){ schedWeekStart=addDays(schedWeekStart,7);  renderSchedTable(); }
 function goToday(){  schedWeekStart=getMonday(new Date());       renderSchedTable(); }
 
-function renderSchedTable(){
-  const el=document.getElementById('sch-table'); if(!el) return;
-  const today=fmtDate(new Date());
-  const days=Array.from({length:7},(_,i)=>addDays(schedWeekStart,i));
-  const lbl=document.getElementById('sch-week-label');
-  if(lbl) lbl.textContent=fmtDAr(days[0])+' — '+fmtDAr(days[6])+'  '+days[0].getFullYear();
+/* ══════════════════════════════════════════════════════════════
+   جدول الدوامات — النسخة التفاعلية
+   مؤشرات حية · رسم التغطية اليومية · بحث وفرز · وضع التلوين · تراجع
+   ══════════════════════════════════════════════════════════════ */
 
-  const drvList = schedFilt==='all' ? DRV : DRV.filter(d=>d.partner===schedFilt);
+let schedSearch   = '';
+let schedSort     = 'name';                                  // name | hours | off | gaps
+let schedPaint    = null;                                    // null = وضع النقر العادي
+let MIN_COVER     = parseInt(localStorage.getItem('sl_min_cover') || '4');
+const SCHED_UNDO  = [];
 
-  // === إعدادات مرنة فوق الجدول ===
-  let html = '';
-  html += '<div class="sch-settings" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:12px 14px;background:var(--s1);border:1px solid var(--br);border-radius:14px;margin-bottom:12px;box-shadow:var(--shadow-sm)">';
-  html += '<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px"><i class="ti ti-settings" style="color:var(--accent)"></i> إعدادات الجدول</div>';
-  html += '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text)"><i class="ti ti-clock" style="color:var(--accent);font-size:15px"></i> ساعات الشيفت: <input type="number" min="1" max="24" value="'+SHIFT_HOURS+'" onchange="setShiftHours(this.value)" style="width:55px;padding:5px 8px;background:var(--s2);border:1px solid var(--br);border-radius:7px;color:var(--text);font-family:JetBrains Mono,monospace;font-weight:800;text-align:center;outline:none"></label>';
-  html += '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text)"><i class="ti ti-calendar-off" style="color:var(--amber);font-size:15px"></i> أقصى إجازات/شهر: <input type="number" min="0" max="7" value="'+MAX_OFF_WEEK+'" onchange="setMaxOff(this.value)" style="width:55px;padding:5px 8px;background:var(--s2);border:1px solid var(--br);border-radius:7px;color:var(--text);font-family:JetBrains Mono,monospace;font-weight:800;text-align:center;outline:none"></label>';
-  html += '<button class="tbtn" onclick="copyWeekToNext()" style="margin-right:auto"><i class="ti ti-copy"></i> نسخ الأسبوع للي بعده</button>';
+function setMinCover(v){
+  MIN_COVER = Math.max(0, Math.min(99, parseInt(v) || 0));
+  try{ localStorage.setItem('sl_min_cover', MIN_COVER); }catch(e){}
+  renderSchedTable();
+}
+function setSchedSearch(v){ schedSearch = (v||'').trim().toLowerCase(); renderSchedTable(true); }
+function setSchedSort(v){ schedSort = v; renderSchedTable(); }
+
+function setPaint(id){
+  schedPaint = (schedPaint === id) ? null : id;
+  renderSchedTable();
+  if(schedPaint){
+    const st = getST(schedPaint);
+    toast('وضع التلوين: ' + (st ? st.labelAr : 'مسح') + ' — دوس على أي خانة', 's');
+  }
+}
+
+/* ─── تراجع ─── */
+function schedSnapshot(){
+  try{ SCHED_UNDO.push(JSON.stringify(SCHED)); }catch(e){}
+  if(SCHED_UNDO.length > 25) SCHED_UNDO.shift();
+}
+function schedUndo(){
+  if(!SCHED_UNDO.length){ toast('مفيش خطوة أرجعها','e'); return; }
+  try{
+    SCHED = JSON.parse(SCHED_UNDO.pop());
+    try{ localStorage.setItem('sl_sched2', JSON.stringify(SCHED)); }catch(e){}
+    renderSchedTable();
+    toast('تم التراجع ↩','s');
+  }catch(e){ toast('مقدرتش أتراجع','e'); }
+}
+
+/* ─── قائمة السائقين المعروضة بعد الفلترة والفرز ─── */
+function schedDrivers(){
+  let list = schedFilt === 'all' ? DRV.slice() : DRV.filter(d => d.partner === schedFilt);
+  if(typeof isAdminStaff === 'function') list = list.filter(d => !isAdminStaff(d));
+  if(schedSearch){
+    list = list.filter(d =>
+      (d.name||'').toLowerCase().includes(schedSearch) ||
+      (d.id||'').toLowerCase().includes(schedSearch));
+  }
+  const gaps = d => {
+    let g = 0;
+    for(let i=0;i<7;i++) if(!SCHED[d.id + '_' + fmtDate(addDays(schedWeekStart,i))]) g++;
+    return g;
+  };
+  if(schedSort === 'hours') list.sort((a,b) => weekWorkStats(b.id,schedWeekStart).total - weekWorkStats(a.id,schedWeekStart).total);
+  else if(schedSort === 'off') list.sort((a,b) => weekWorkStats(b.id,schedWeekStart).off - weekWorkStats(a.id,schedWeekStart).off);
+  else if(schedSort === 'gaps') list.sort((a,b) => gaps(b) - gaps(a));
+  else list.sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ar'));
+  return list;
+}
+
+/* ─── تطبيق وردية على خانة (بدون فتح المودال) ─── */
+function paintCell(drvId, dateStr){
+  const key = drvId + '_' + dateStr;
+  schedSnapshot();
+  if(schedPaint === 'clear'){
+    delete SCHED[key];
+    if(typeof deleteScheduleFromSupabase === 'function') deleteScheduleFromSupabase(drvId, dateStr);
+  }else{
+    const st = getST(schedPaint); if(!st) return;
+    const isOff = (st.id === 'off' || st.id === 'holiday');
+    const shift = isOff ? '' : (st.id === 'morning' ? '07:00-19:00' : st.id === 'evening' ? '19:00-07:00' : '07:00-19:00');
+    SCHED[key] = { type: st.id, shift };
+    const p = shift.split('-');
+    if(typeof syncScheduleToSupabase === 'function') syncScheduleToSupabase(drvId, dateStr, st.id, p[0]||'', p[1]||'');
+  }
+  try{ localStorage.setItem('sl_sched2', JSON.stringify(SCHED)); }catch(e){}
+  renderSchedTable();
+}
+
+/* ─── تعبئة أو مسح أسبوع سائق كامل ─── */
+function fillRow(drvId){
+  const st = getST(schedPaint) || getST('work');
+  if(!confirm('تعبئة الأسبوع كله لهذا السائق بـ«' + st.labelAr + '»؟')) return;
+  schedSnapshot();
+  const isOff = (st.id === 'off' || st.id === 'holiday');
+  const shift = isOff ? '' : (st.id === 'evening' ? '19:00-07:00' : '07:00-19:00');
+  for(let i=0;i<7;i++){
+    const ds = fmtDate(addDays(schedWeekStart, i));
+    SCHED[drvId + '_' + ds] = { type: st.id, shift };
+    const p = shift.split('-');
+    if(typeof syncScheduleToSupabase === 'function') syncScheduleToSupabase(drvId, ds, st.id, p[0]||'', p[1]||'');
+  }
+  try{ localStorage.setItem('sl_sched2', JSON.stringify(SCHED)); }catch(e){}
+  renderSchedTable(); toast('اتعبّى الأسبوع ✅','s');
+}
+function clearRow(drvId){
+  if(!confirm('مسح جدول الأسبوع كله لهذا السائق؟')) return;
+  schedSnapshot();
+  for(let i=0;i<7;i++){
+    const ds = fmtDate(addDays(schedWeekStart, i));
+    delete SCHED[drvId + '_' + ds];
+    if(typeof deleteScheduleFromSupabase === 'function') deleteScheduleFromSupabase(drvId, ds);
+  }
+  try{ localStorage.setItem('sl_sched2', JSON.stringify(SCHED)); }catch(e){}
+  renderSchedTable(); toast('اتمسح الأسبوع','s');
+}
+
+/* ─── إحصاءات الأسبوع المعروض ─── */
+function schedWeekAgg(list, days){
+  const byDay = days.map(() => ({work:0, morning:0, evening:0, off:0, holiday:0, none:0}));
+  let hours = 0, gaps = 0, overOff = 0, workDays = 0;
+  list.forEach(drv => {
+    const s = weekWorkStats(drv.id, schedWeekStart);
+    hours += s.total; workDays += s.work;
+    const monthOff = monthOffCount(drv.id, schedWeekStart.getFullYear(), schedWeekStart.getMonth()+1);
+    if(monthOff > MAX_OFF_WEEK) overOff++;
+    days.forEach((d, i) => {
+      const e = SCHED[drv.id + '_' + fmtDate(d)];
+      if(!e){ byDay[i].none++; gaps++; }
+      else if(byDay[i][e.type] !== undefined) byDay[i][e.type]++;
+      else byDay[i].work++;
+    });
+  });
+  const cover = byDay.map(b => b.work + b.morning + b.evening);
+  return {byDay, cover, hours, gaps, overOff, workDays};
+}
+
+/* ══════════════════════════════════════════════════════════════
+   العرض
+   ══════════════════════════════════════════════════════════════ */
+function renderSchedTable(keepFocus){
+  const el = document.getElementById('sch-table'); if(!el) return;
+  const today = fmtDate(new Date());
+  const days  = Array.from({length:7}, (_,i) => addDays(schedWeekStart, i));
+  const lbl   = document.getElementById('sch-week-label');
+  if(lbl) lbl.textContent = fmtDAr(days[0]) + ' — ' + fmtDAr(days[6]) + '  ' + days[0].getFullYear();
+
+  const list  = schedDrivers();
+  const agg   = schedWeekAgg(list, days);
+  const cells = list.length * 7;
+  const isPeak = d => (d.getDay() === 4 || d.getDay() === 5);   // الخميس والجمعة — ذروة الطلبات
+
+  /* ── شريط الأدوات ── */
+  let tb = '<div class="schv2-bar">';
+  tb += '<div class="schv2-search"><i class="ti ti-search"></i>'
+      + '<input id="schSearchInp" type="search" placeholder="دوّر على سائق…" value="' + _esc(schedSearch) + '" oninput="setSchedSearch(this.value)"></div>';
+  tb += '<label class="schv2-fld"><span>ترتيب</span><select onchange="setSchedSort(this.value)">'
+      + ['name:الاسم','hours:الساعات ↓','off:الإجازات ↓','gaps:غير مجدول ↓']
+        .map(o => { const [v,t] = o.split(':'); return '<option value="'+v+'"'+(schedSort===v?' selected':'')+'>'+t+'</option>'; }).join('')
+      + '</select></label>';
+  tb += '<label class="schv2-fld"><span>ساعات الشيفت</span><input type="number" min="1" max="24" value="' + SHIFT_HOURS + '" onchange="setShiftHours(this.value)"></label>';
+  tb += '<label class="schv2-fld"><span>أقصى إجازات/شهر</span><input type="number" min="0" max="31" value="' + MAX_OFF_WEEK + '" onchange="setMaxOff(this.value)"></label>';
+  tb += '<label class="schv2-fld"><span>أقل تغطية مطلوبة</span><input type="number" min="0" max="99" value="' + MIN_COVER + '" onchange="setMinCover(this.value)"></label>';
+  tb += '<div class="schv2-spacer"></div>';
+  tb += '<button class="schv2-btn" onclick="schedUndo()"' + (SCHED_UNDO.length ? '' : ' disabled') + '><i class="ti ti-arrow-back-up"></i> تراجع</button>';
+  tb += '<button class="schv2-btn" onclick="copyWeekToNext()"><i class="ti ti-copy"></i> نسخ للأسبوع الجاي</button>';
+  tb += '</div>';
+
+  /* ── لوحة التلوين ── */
+  let pal = '<div class="schv2-pal"><span class="schv2-pal-lbl"><i class="ti ti-brush"></i> وضع التلوين</span>';
+  SHIFT_TYPES.forEach(st => {
+    const on = schedPaint === st.id;
+    pal += '<button class="schv2-chip' + (on ? ' on' : '') + '" onclick="setPaint(\'' + st.id + '\')"'
+        + ' style="' + (on ? 'background:' + st.color + ';border-color:' + st.color + ';color:#fff' : 'border-color:' + st.color + '55;color:' + st.color) + '">'
+        + st.icon + ' ' + st.labelAr + '</button>';
+  });
+  pal += '<button class="schv2-chip' + (schedPaint === 'clear' ? ' on' : '') + '" onclick="setPaint(\'clear\')"'
+      + (schedPaint === 'clear' ? ' style="background:#64748b;border-color:#64748b;color:#fff"' : '') + '><i class="ti ti-eraser"></i> مسح</button>';
+  pal += '<span class="schv2-hint">' + (schedPaint ? 'دوس على أي خانة تتلوّن على طول' : 'اختار وردية علشان تلوّن بسرعة — أو دوس خانة لفتح التوقيت') + '</span>';
+  pal += '</div>';
+
+  /* ── المؤشرات ── */
+  const gapPc   = cells ? Math.round(agg.gaps / cells * 100) : 0;
+  const minIdx  = agg.cover.indexOf(Math.min.apply(null, agg.cover));
+  const avgDays = list.length ? (agg.workDays / list.length).toFixed(1) : '0';
+  const kpi = (v, l, c, ic, sub) =>
+    '<div class="schv2-kpi"><div class="schv2-kpi-t"><i class="ti ' + ic + '" style="color:' + c + '"></i>' + l + '</div>'
+    + '<div class="schv2-kpi-v" style="color:' + c + '">' + v + '</div>'
+    + (sub ? '<div class="schv2-kpi-s">' + sub + '</div>' : '') + '</div>';
+  let kpis = '<div class="schv2-kpis">';
+  kpis += kpi(list.length, 'سائقين معروضين', 'var(--accent)', 'ti-users', schedFilt === 'all' ? 'كل الشركاء' : (getPartner(schedFilt) ? getPartner(schedFilt).name : ''));
+  kpis += kpi(agg.hours.toLocaleString('en'), 'ساعة في الأسبوع', 'var(--green)', 'ti-clock-hour-4', agg.workDays + ' يوم عمل');
+  kpis += kpi(avgDays, 'متوسط أيام العمل', 'var(--accent)', 'ti-calendar-stats', 'للسائق الواحد');
+  kpis += kpi(agg.gaps, 'خانة غير مجدولة', gapPc > 15 ? 'var(--red)' : (agg.gaps ? 'var(--amber)' : 'var(--green)'), 'ti-help-circle', gapPc + '% من الجدول');
+  kpis += kpi(agg.overOff, 'تجاوزوا حد الإجازات', agg.overOff ? 'var(--red)' : 'var(--green)', 'ti-alert-triangle', 'الحد ' + MAX_OFF_WEEK + ' في الشهر');
+  kpis += kpi(agg.cover[minIdx] || 0, 'أقل تغطية', (agg.cover[minIdx] || 0) < MIN_COVER ? 'var(--red)' : 'var(--green)', 'ti-shield-half',
+              DAYS_AR[days[minIdx].getDay()] + ' · المطلوب ' + MIN_COVER);
+  kpis += '</div>';
+
+  /* ── رسم التغطية اليومية ── */
+  const maxCov = Math.max(MIN_COVER, Math.max.apply(null, agg.cover), 1);
+  let cov = '<div class="schv2-cover"><div class="schv2-cover-h">'
+          + '<b><i class="ti ti-chart-bar"></i> التغطية اليومية</b>'
+          + '<span class="schv2-cover-lg">'
+          + SHIFT_TYPES.filter(s => s.id !== 'off' && s.id !== 'holiday')
+              .map(s => '<i style="background:' + s.color + '"></i>' + s.labelAr).join('')
+          + '<i style="background:transparent;border:1px dashed var(--red)"></i>الحد الأدنى</span></div>';
+  cov += '<div class="schv2-cover-b">';
+  cov += '<div class="schv2-target" style="bottom:' + (14 + (MIN_COVER / maxCov) * 96) + 'px"><span>' + MIN_COVER + '</span></div>';
+  days.forEach((d, i) => {
+    const b = agg.byDay[i], c = agg.cover[i];
+    const short = c < MIN_COVER;
+    cov += '<div class="schv2-col' + (isPeak(d) ? ' peak' : '') + (fmtDate(d) === today ? ' today' : '') + '">';
+    cov += '<div class="schv2-num" style="color:' + (short ? 'var(--red)' : 'var(--text)') + '">' + c + (short ? ' <i class="ti ti-alert-triangle"></i>' : '') + '</div>';
+    cov += '<div class="schv2-bar-wrap">';
+    [['work','#10b981'],['morning','#3b82f6'],['evening','#a855f7']].forEach(([k, color]) => {
+      if(!b[k]) return;
+      cov += '<div class="schv2-seg" title="' + k + ': ' + b[k] + '" style="height:' + (b[k] / maxCov * 96) + 'px;background:' + color + '"></div>';
+    });
+    cov += '</div>';
+    cov += '<div class="schv2-day">' + DAYS_AR[d.getDay()] + (isPeak(d) ? ' <b>·ذروة</b>' : '') + '<span>' + d.getDate() + '/' + (d.getMonth()+1) + '</span></div>';
+    cov += '</div>';
+  });
+  cov += '</div></div>';
+
+  /* ── الجدول ── */
+  const GRID = 'grid-template-columns:188px repeat(7,minmax(88px,1fr)) 104px 96px;';
+  let html = '<div class="schv2-scroll"><div class="schv2-grid">';
+
+  html += '<div class="schv2-head" style="' + GRID + '">';
+  html += '<div class="schv2-hc schv2-sticky">السائق</div>';
+  days.forEach(d => {
+    const isT = fmtDate(d) === today;
+    html += '<div class="schv2-hc c' + (isT ? ' today' : '') + (isPeak(d) ? ' peak' : '') + '">'
+         + DAYS_AR[d.getDay()] + '<span>' + d.getDate() + '/' + (d.getMonth()+1) + '</span></div>';
+  });
+  html += '<div class="schv2-hc c">إجمالي الأسبوع</div><div class="schv2-hc c">إجازات الشهر</div>';
   html += '</div>';
 
-  html+='<div class="sch-week-header" style="display:grid;grid-template-columns:140px repeat(7,1fr) 110px 110px;gap:4px;align-items:center">';
-  html+='<div style="font-size:11px;color:var(--muted);padding:4px 8px;font-weight:700">السائق</div>';
-  days.forEach(d=>{
-    const isT=fmtDate(d)===today;
-    html+='<div class="sch-day-head'+(isT?' today':'')+'">'+DAYS_AR[d.getDay()]+'<div style="font-size:9px;opacity:.7">'+d.getDate()+'/'+(d.getMonth()+1)+'</div></div>';
-  });
-  html+='<div style="font-size:11px;color:var(--muted);padding:4px;text-align:center;font-weight:700;background:var(--s2);border-radius:7px">إجمالي الأسبوع</div>'+'<div style="font-size:11px;color:var(--muted);padding:4px;text-align:center;font-weight:700;background:var(--s2);border-radius:7px">إجازات الشهر</div>';
-  html+='</div>';
+  if(!list.length){
+    html += '<div class="schv2-empty"><i class="ti ti-user-search"></i><p>مفيش سائقين مطابقين للبحث أو الفلتر.</p></div>';
+  }
 
-  drvList.forEach(drv=>{
-    const pc=pColor(drv.partner);
-    const stats = weekWorkStats(drv.id, schedWeekStart);
-    const exceededOff = stats.off > MAX_OFF_WEEK;
-    const rowExtra = exceededOff ? 'background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:3px' : '';
-    html+='<div class="sch-row" style="display:grid;grid-template-columns:140px repeat(7,1fr) 110px 110px;gap:4px;margin-bottom:4px;align-items:stretch;'+rowExtra+'">';
-    html+='<div class="sch-driver-cell" style="color:'+pc+';padding:8px 10px;font-size:12px;font-weight:800" title="'+drv.name+'">'+drv.name.split(' ')[0]+'<div style="font-size:9px;color:var(--muted);font-weight:600">'+drv.id+'</div></div>';
-    days.forEach(d=>{
-      const key=drv.id+'_'+fmtDate(d);
-      const entry=SCHED[key];
-      const st=entry?getST(entry.type):null;
-      const cs=st?'border-color:'+st.color+'66;background:'+st.color+'1a;color:'+st.color:'';
-      html+='<div class="sch-cell" style="border:1px solid var(--br);border-radius:8px;padding:6px;min-height:50px;cursor:pointer;transition:all .15s;'+cs+'" onclick="toggleCell(\''+drv.id+'\',\''+fmtDate(d)+'\')">';
+  list.forEach(drv => {
+    const pc = pColor(drv.partner);
+    const s  = weekWorkStats(drv.id, schedWeekStart);
+    const monthOff = monthOffCount(drv.id, schedWeekStart.getFullYear(), schedWeekStart.getMonth()+1);
+    const overM = monthOff > MAX_OFF_WEEK, atM = monthOff === MAX_OFF_WEEK;
+
+    html += '<div class="schv2-row' + (overM ? ' warn' : '') + '" style="' + GRID + '">';
+    html += '<div class="schv2-drv schv2-sticky" title="' + _esc(drv.name) + '">'
+         +   '<span class="schv2-dot" style="background:' + pc + '"></span>'
+         +   '<span class="schv2-dn"><b>' + _esc(drv.name) + '</b><i>' + _esc(drv.id) + '</i></span>'
+         +   '<span class="schv2-acts">'
+         +     '<button title="تعبئة الأسبوع" onclick="event.stopPropagation();fillRow(\'' + drv.id + '\')"><i class="ti ti-layout-rows"></i></button>'
+         +     '<button title="مسح الأسبوع" onclick="event.stopPropagation();clearRow(\'' + drv.id + '\')"><i class="ti ti-eraser"></i></button>'
+         +   '</span></div>';
+
+    days.forEach(d => {
+      const ds = fmtDate(d), e = SCHED[drv.id + '_' + ds], st = e ? getST(e.type) : null;
+      const click = schedPaint ? 'paintCell' : 'toggleCell';
+      const style = st ? 'border-color:' + st.color + '66;background:' + st.color + '14;color:' + st.color : '';
+      html += '<div class="schv2-cell' + (st ? '' : ' gap') + (isPeak(d) ? ' peak' : '') + '" style="' + style + '"'
+           +  ' onclick="' + click + '(\'' + drv.id + '\',\'' + ds + '\')">';
       if(st){
-        const parts = entry.shift ? entry.shift.split('-') : [];
-        html+='<div class="cell-inner" style="text-align:center">'+st.icon+' <span style="font-size:9px;font-weight:700">'+st.labelEn+'</span>';
-        if(parts.length===2) html+='<span class="cell-time" style="font-size:8px;opacity:.8;display:block">'+parts[0]+' → '+parts[1]+'</span>';
-        html+='</div>';
-      }
-      else html+='<div style="font-size:10px;opacity:.25;text-align:center;padding:5px">—</div>';
-      html+='</div>';
+        const p = e.shift ? e.shift.split('-') : [];
+        html += '<b>' + st.icon + ' ' + st.labelAr + '</b>';
+        if(p.length === 2) html += '<i>' + p[0] + ' → ' + p[1] + '</i>';
+      }else html += '<span class="schv2-gap">+</span>';
+      html += '</div>';
     });
-    // إجمالي ساعات ومخالفات الإجازة
-    const totalsBg = exceededOff ? 'rgba(248,113,113,0.18)' : 'var(--s2)';
-    const totalsColor = exceededOff ? 'var(--red)' : 'var(--text)';
-    html+='<div style="background:'+totalsBg+';border-radius:8px;padding:6px;text-align:center;border:1px solid '+(exceededOff?'rgba(248,113,113,0.4)':'var(--br)')+'">';
-    html+='<div style="font-size:16px;font-weight:900;font-family:JetBrains Mono,monospace;color:'+totalsColor+';line-height:1">'+stats.total+'</div>';
-    html+='<div style="font-size:9px;color:var(--muted);font-weight:700">ساعة · '+stats.work+' عمل</div>';
-    html+='<div style="font-size:9px;color:'+(exceededOff?'var(--red)':'var(--muted2)')+';font-weight:700;margin-top:2px">'+stats.off+' إجازة'+(exceededOff?' ⚠':'')+'</div>';
-    html+='</div>';
-    // === عمود إجازات الشهر ===
-    const monthYr = schedWeekStart.getFullYear();
-    const monthNo = schedWeekStart.getMonth() + 1;
-    const monthOff = monthOffCount(drv.id, monthYr, monthNo);
-    const exceededMonth = monthOff > MAX_OFF_WEEK;
-    const mBg = exceededMonth ? 'rgba(248,113,113,0.18)' : (monthOff===MAX_OFF_WEEK ? 'rgba(251,191,36,0.15)' : 'var(--s2)');
-    const mColor = exceededMonth ? 'var(--red)' : (monthOff===MAX_OFF_WEEK ? 'var(--amber)' : 'var(--text)');
-    const mBorder = exceededMonth ? 'rgba(248,113,113,0.4)' : (monthOff===MAX_OFF_WEEK ? 'rgba(251,191,36,0.35)' : 'var(--br)');
-    html+='<div style="background:'+mBg+';border-radius:8px;padding:6px;text-align:center;border:1px solid '+mBorder+'">';
-    html+='<div style="font-size:18px;font-weight:900;font-family:JetBrains Mono,monospace;color:'+mColor+';line-height:1">'+monthOff+'/'+MAX_OFF_WEEK+'</div>';
-    html+='<div style="font-size:9px;color:var(--muted);font-weight:700;margin-top:2px">إجازات الشهر'+(exceededMonth?' ⚠':'')+'</div>';
-    html+='</div>';
-    html+='</div>';
+
+    html += '<div class="schv2-tot"><b>' + s.total + '</b><i>ساعة · ' + s.work + ' عمل</i></div>';
+    html += '<div class="schv2-tot ' + (overM ? 'bad' : (atM ? 'warn' : '')) + '"><b>' + monthOff + '/' + MAX_OFF_WEEK + '</b><i>إجازات' + (overM ? ' ⚠' : '') + '</i></div>';
+    html += '</div>';
   });
-  el.innerHTML=html;
+
+  /* صف التغطية أسفل الجدول */
+  if(list.length){
+    html += '<div class="schv2-foot" style="' + GRID + '">';
+    html += '<div class="schv2-fc schv2-sticky">التغطية</div>';
+    days.forEach((d, i) => {
+      const c = agg.cover[i], short = c < MIN_COVER;
+      html += '<div class="schv2-fc c' + (short ? ' bad' : '') + '">' + c + '<span>/' + MIN_COVER + '</span></div>';
+    });
+    html += '<div class="schv2-fc c">' + agg.hours + '</div><div class="schv2-fc c">' + agg.overOff + ' ⚠</div>';
+    html += '</div>';
+  }
+
+  html += '</div></div>';
+
+  const kbox = document.getElementById('sch-kpis');
+  if(kbox) kbox.innerHTML = tb + pal + kpis + cov;
+  el.innerHTML = html;
+
+  if(keepFocus){
+    const inp = document.getElementById('schSearchInp');
+    if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
 }
 
 // === نسخ جدول الأسبوع الحالي للي بعده ===
@@ -7573,6 +8298,703 @@ function deleteExpense(id){
   saveExp(); renderAccounting();
 }
 
+
+// ════════════════════════════════════════════════════════════════════════
+//  ARK-PL-ENGINE v30 — محرك قائمة الأرباح والخسائر
+//  P&L Engine — cost behaviour, depreciation, loan split, break-even
+//  ────────────────────────────────────────────────────────────────────
+//  مبادئ المعالجة المطبَّقة:
+//  1) قسط التمويل ليس مصروفاً. يُفصل إلى سداد أصل (ميزانية) + فائدة (قائمة دخل).
+//  2) الأصل المموَّل يُرسمل ويُهلك على عمره الإنتاجي — الإهلاك هو ما ينزل قائمة الدخل.
+//  3) التكاليف مصنَّفة سلوكياً: متغيرة / شبه متغيرة / ثابتة — لحساب هامش المساهمة ونقطة التعادل.
+//  4) رواتب الإدارة بند مستقل لكنه داخل إجمالي تكاليف الشركة في كل التقارير.
+// ════════════════════════════════════════════════════════════════════════
+
+const FIN = {
+  loan: {
+    lender:'شركة تسهيلات الساير', lenderEn:'Al-Sayer Facilities Co.',
+    ref:'طلب 1220006878 · عميل 42791',
+    principal: 110180,        // سعر الشراء النقدي — عدّله من العقد لو مختلف
+    totalPayable: 110180,     // إجمالي الشيكات
+    installment: 3061,
+    lastInstallment: 3045,
+    months: 36,
+    firstPayment: { y:2026, m:2 }   // 05/02/2026
+  },
+  asset: {
+    name:'الأسطول المموَّل من الساير', nameEn:'Al-Sayer financed fleet',
+    cost: 110180,
+    salvagePct: 15,
+    lifeYears: 10,                  // قرار الإدارة — إهلاك على 10 سنوات
+    inService: { y:2026, m:2 }
+  },
+  disclosure: 'القرض والأصل مسجَّلان قانونياً باسم MNA CO، والسلاسل تسدّد الأقساط وتتحمّل التكلفة نهائياً بلا استرداد. أُثبتا في دفاتر السلاسل تطبيقاً لمبدأ «جوهر المعاملة قبل شكلها القانوني». يُوصى بتوثيق اتفاق مكتوب بين الشركتين.',
+  disclosureEn: 'The loan and the underlying assets are legally registered under MNA CO. Al-Salasil services the instalments and bears the cost with no recourse, therefore both are recognised in Al-Salasil’s books under the substance-over-form principle. A written agreement between the two entities is recommended.'
+};
+
+const _mi = (y,m) => y*12 + (m-1);
+
+/** الإهلاك الشهري بالقسط الثابت — Straight-line monthly depreciation */
+function _monthlyDepreciation(m, y){
+  const a = FIN.asset;
+  const start = _mi(a.inService.y, a.inService.m);
+  const idx   = _mi(y, m);
+  const total = a.lifeYears * 12;
+  if(idx < start || idx >= start + total) return 0;
+  return (a.cost * (1 - a.salvagePct/100)) / total;
+}
+
+/** جدول القرض للشهر — فصل القسط إلى أصل وفائدة */
+function _loanForMonth(m, y){
+  const L = FIN.loan;
+  const n = _mi(y,m) - _mi(L.firstPayment.y, L.firstPayment.m) + 1;
+  if(n < 1 || n > L.months) return {active:false, n:0, installment:0, interest:0, principal:0};
+  const inst = (n === L.months) ? L.lastInstallment : L.installment;
+  const interest = Math.max(0, L.totalPayable - L.principal) / L.months;
+  return {active:true, n, installment:inst, interest, principal:inst - interest};
+}
+
+/** سلوك التكلفة لكل بند — Cost behaviour classification */
+const EXP_BEHAVIOR = {
+  fuel:'variable', violations:'variable', other:'variable',
+  salaries:'semi', maintenance:'semi', residency:'semi', admin:'semi',
+  rent:'fixed', insurance:'fixed'
+};
+
+const BEHAVIOR_META = {
+  variable:{ ar:'تكاليف متغيرة', en:'Variable Costs', color:'#d97706',
+             note:'تتحرك طردياً مع حجم الطلبات — تزيد بزيادة النشاط وتختفي بتوقفه' },
+  semi:    { ar:'تكاليف شبه متغيرة', en:'Semi-Variable Costs', color:'#1c5878',
+             note:'فيها قاعدة ثابتة وجزء يتحرك مع عدد السائقين أو حجم النشاط' },
+  fixed:   { ar:'تكاليف ثابتة', en:'Fixed Costs', color:'#7c3aed',
+             note:'لا تتأثر بحجم النشاط خلال الشهر — تُدفع سواء اشتغلت الشركة أو لا' }
+};
+
+const CAT_EN = {
+  salaries:'Salaries', fuel:'Fuel', maintenance:'Vehicle Maintenance',
+  violations:'Traffic Fines', rent:'Rent', insurance:'Insurance',
+  residency:'Residencies & Licences', admin:'Administrative Expenses', other:'Other'
+};
+
+/**
+ * قائمة الدخل الكاملة لشهر — المصدر الوحيد للحقيقة في كل التقارير
+ * Full P&L for one month — single source of truth for every report
+ */
+function monthlyPL(m, y){
+  const incs = INCOMES.filter(x => _matchMonth(x.date, m, y));
+  const exps = EXPENSES.filter(x => _matchMonth(x.date, m, y));
+  // بند «مرتبات» اليدوي مستبعد هنا لأن _monthlySalaryCost بيرجّعه بالفعل — منعاً للازدواج
+  const expsNonSal = exps.filter(x => x.category !== 'salaries');
+
+  const revLines = [];
+  const revMap = {};
+  incs.forEach(i => {
+    const p = (typeof PARTNERS !== 'undefined' ? PARTNERS : []).find(pp => pp.id === i.source);
+    const ar = p ? p.name : (i.source === 'other' ? 'إيرادات أخرى' : i.source);
+    const en = p ? (p.nameEn || p.name) : (i.source === 'other' ? 'Other Revenue' : i.source);
+    if(!revMap[ar]) { revMap[ar] = {ar, en, amount:0}; revLines.push(revMap[ar]); }
+    revMap[ar].amount += (parseFloat(i.amount) || 0);
+  });
+  revLines.sort((a,b) => b.amount - a.amount);
+  const revenue = revLines.reduce((s,l) => s + l.amount, 0);
+
+  const byCat = {};
+  expsNonSal.forEach(e => { byCat[e.category] = (byCat[e.category]||0) + (parseFloat(e.amount)||0); });
+
+  const driverSal = _monthlySalaryCost(m, y);
+  const adminSal  = _monthlyAdminSalaryCost(m, y);
+  const dep       = _monthlyDepreciation(m, y);
+  const loan      = _loanForMonth(m, y);
+
+  const lines = [];
+  Object.keys(byCat).forEach(cat => {
+    if(!byCat[cat]) return;
+    const meta = EXP_CATS[cat] || EXP_CATS.other;
+    lines.push({ key:cat, ar:meta.name, en:CAT_EN[cat] || cat,
+                 amount:byCat[cat], behavior:EXP_BEHAVIOR[cat] || 'variable' });
+  });
+  if(driverSal > 0) lines.push({ key:'driverSalaries', ar:'رواتب السائقين', en:'Driver Salaries', amount:driverSal, behavior:'semi' });
+  if(adminSal  > 0) lines.push({ key:'adminSalaries',  ar:'رواتب الإدارة',  en:'Administrative Salaries', amount:adminSal,  behavior:'fixed' });
+
+  const sumBy = b => lines.filter(l => l.behavior === b).reduce((s,l) => s + l.amount, 0);
+  const variable = sumBy('variable');
+  const semi     = sumBy('semi');
+  const fixed    = sumBy('fixed');
+  const opex     = variable + semi + fixed;
+
+  const contribution = revenue - variable;
+  const cmRatio      = revenue > 0 ? contribution / revenue : 0;
+  const ebitda       = revenue - opex;
+  const ebit         = ebitda - dep;
+  const net          = ebit - loan.interest;
+
+  // نقطة التعادل: الإيراد اللازم لتغطية كل ما هو غير متغيّر
+  const nonVariable  = semi + fixed + dep + loan.interest;
+  const breakEven    = cmRatio > 0 ? nonVariable / cmRatio : 0;
+
+  // التدفق النقدي: الربح ليس نقداً
+  const cashFlow = net + dep - loan.principal;
+
+  const salBrk = _monthlySalaryBreakdown(m, y);
+
+  return {
+    m, y, ym: y + '-' + String(m).padStart(2,'0'),
+    revLines, revenue,
+    lines, variable, semi, fixed, opex,
+    contribution, cmRatio,
+    ebitda, dep, ebit, loan, net,
+    breakEven, cashFlow,
+    driverSal, adminSal,
+    driverCount: salBrk.drivers.length, adminCount: salBrk.adminCount,
+    orders: 0,
+    margins: {
+      contribution: revenue > 0 ? contribution/revenue : 0,
+      ebitda:       revenue > 0 ? ebitda/revenue       : 0,
+      net:          revenue > 0 ? net/revenue          : 0
+    },
+    hasData: (revenue !== 0 || opex !== 0)
+  };
+}
+
+/** كل الشهور اللي فيها بيانات فعلية — مرتّبة زمنياً */
+function allDataMonths(){
+  const set = new Set();
+  INCOMES.forEach(x => { if(x && x.date) set.add(String(x.date).slice(0,7)); });
+  EXPENSES.forEach(x => { if(x && x.date) set.add(String(x.date).slice(0,7)); });
+  return Array.from(set).filter(s => /^\d{4}-\d{2}$/.test(s)).sort()
+    .map(s => ({ y: +s.slice(0,4), m: +s.slice(5,7), ym: s }));
+}
+
+
+// ════════════════════════════════════════════════════════════════════════
+//  ARK-PL-UI v30 — عرض قائمة الدخل + التصدير
+// ════════════════════════════════════════════════════════════════════════
+
+// _kd معرّفة بالفعل أعلى الملف (سطر ~3025) — نعيد استخدامها بدل إعادة التعريف
+const _plPct = v => (v*100).toFixed(1) + '%';
+
+/** لوحة قائمة الأرباح والخسائر — ثنائية اللغة */
+function plPanelHTML(P){
+  const MA = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const ME = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const row = (ar, en, val, cls, pct, tip) => {
+    const styles = {
+      head:  'background:var(--s3);font-weight:900;font-size:12px',
+      sub:   'font-size:11.5px;color:var(--muted)',
+      total: 'background:var(--s2);font-weight:900;border-top:1.5px solid var(--br)',
+      grand: 'background:linear-gradient(90deg,rgba(28,88,120,.10),transparent);font-weight:900;font-size:13px;border-top:2px solid var(--blue)'
+    };
+    const col = (cls==='grand') ? (val>=0?'var(--green)':'var(--red)') : 'var(--text)';
+    return '<tr style="'+(styles[cls]||'')+'">'+
+      '<td style="padding:7px 12px;border-bottom:1px solid var(--br)">'+
+        '<div>'+ar+'</div><div style="font-size:9.5px;color:var(--muted2);font-weight:400">'+en+'</div>'+
+        (tip?'<div style="font-size:9.5px;color:var(--muted2);margin-top:2px;line-height:1.6">'+tip+'</div>':'')+
+      '</td>'+
+      '<td style="padding:7px 12px;border-bottom:1px solid var(--br);text-align:left;font-family:JetBrains Mono,monospace;white-space:nowrap;color:'+col+'">'+_kd(val)+'</td>'+
+      '<td style="padding:7px 12px;border-bottom:1px solid var(--br);text-align:left;font-size:10.5px;color:var(--muted2);white-space:nowrap">'+(pct||'')+'</td>'+
+    '</tr>';
+  };
+
+  const behaviorBlock = (b) => {
+    const meta = BEHAVIOR_META[b];
+    const ls = P.lines.filter(l => l.behavior === b).sort((a,c) => c.amount - a.amount);
+    if(!ls.length) return '';
+    const tot = ls.reduce((s,l) => s + l.amount, 0);
+    let h = '<tr style="background:'+meta.color+'12"><td colspan="3" style="padding:8px 12px;border-bottom:1px solid var(--br)">'+
+      '<div style="font-weight:900;font-size:11.5px;color:'+meta.color+'">'+meta.ar+' · '+meta.en+'</div>'+
+      '<div style="font-size:9.5px;color:var(--muted2);margin-top:2px">'+meta.note+'</div></td></tr>';
+    ls.forEach(l => { h += row('&nbsp;&nbsp;'+l.ar, '&nbsp;&nbsp;'+l.en, -l.amount, 'sub',
+      P.revenue ? _plPct(l.amount/P.revenue) : ''); });
+    h += row('إجمالي '+meta.ar, 'Total '+meta.en, -tot, 'total', P.revenue ? _plPct(tot/P.revenue) : '');
+    return h;
+  };
+
+  let t = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  t += '<tr style="background:var(--blue);color:#fff"><th style="padding:9px 12px;text-align:right;font-size:11px">البند · Item</th>'+
+       '<th style="padding:9px 12px;text-align:left;font-size:11px">د.ك · KWD</th>'+
+       '<th style="padding:9px 12px;text-align:left;font-size:11px">% الإيراد</th></tr>';
+
+  t += row('الإيرادات','Revenue',0,'head');
+  P.revLines.forEach(l => t += row('&nbsp;&nbsp;'+l.ar, '&nbsp;&nbsp;'+l.en, l.amount, 'sub', P.revenue?_plPct(l.amount/P.revenue):''));
+  t += row('إجمالي الإيرادات','Total Revenue', P.revenue, 'total', '100.0%');
+
+  t += behaviorBlock('variable');
+  t += row('هامش المساهمة','Contribution Margin', P.contribution, 'total', _plPct(P.margins.contribution),
+           'الإيراد ناقص التكاليف المتغيرة — الفائض المتاح لتغطية التكاليف الثابتة');
+
+  t += behaviorBlock('semi');
+  t += behaviorBlock('fixed');
+
+  t += row('EBITDA — الربح قبل الفوائد والإهلاك','EBITDA', P.ebitda, 'total', _plPct(P.margins.ebitda),
+           'أقرب مقياس للنقد الذي يولّده التشغيل — يُستخدم لقياس القدرة على سداد الأقساط');
+  t += row('الإهلاك','Depreciation', -P.dep, 'sub', P.revenue?_plPct(P.dep/P.revenue):'',
+           'الأسطول ' + _kd(FIN.asset.cost) + ' د.ك · خردة ' + FIN.asset.salvagePct + '% · عمر ' + FIN.asset.lifeYears + ' سنوات');
+  t += row('EBIT — الربح التشغيلي','EBIT', P.ebit, 'total', P.revenue?_plPct(P.ebit/P.revenue):'');
+  t += row('تكلفة التمويل (فوائد)','Finance Cost (Interest)', -P.loan.interest, 'sub', '',
+           P.loan.active ? ('القسط '+_kd(P.loan.installment)+' د.ك — قسط رقم '+P.loan.n+' من '+FIN.loan.months) : 'لا يوجد قسط مستحق هذا الشهر');
+  t += row('صافي الربح','Net Profit', P.net, 'grand', _plPct(P.margins.net));
+  t += '</table>';
+
+  // مطابقة نقدية
+  let c = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">';
+  c += '<tr style="background:var(--teal);color:#fff"><th style="padding:9px 12px;text-align:right;font-size:11px">المطابقة النقدية · Cash Reconciliation</th><th style="padding:9px 12px;text-align:left;font-size:11px">د.ك</th><th></th></tr>';
+  c += row('صافي الربح','Net Profit', P.net, 'sub');
+  c += row('يُضاف: الإهلاك','Add back: Depreciation', P.dep, 'sub', '', 'مصروف دفتري لا يخرج من الصندوق');
+  c += row('يُخصم: سداد أصل القرض','Less: Loan Principal Repayment', -P.loan.principal, 'sub', '', 'نقد يخرج فعلياً ولا يظهر كمصروف في قائمة الدخل');
+  c += row('صافي التدفق النقدي التشغيلي','Net Operating Cash Flow', P.cashFlow, 'grand');
+  c += '</table>';
+
+  // مؤشرات
+  const beGap = P.revenue - P.breakEven;
+  let k = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px">';
+  const card = (ar,en,val,col,sub) =>
+    '<div style="background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:11px 13px">'+
+    '<div style="font-size:10.5px;color:var(--muted);font-weight:700">'+ar+'</div>'+
+    '<div style="font-size:9px;color:var(--muted2)">'+en+'</div>'+
+    '<div style="font-size:17px;font-weight:900;font-family:JetBrains Mono,monospace;color:'+col+';margin-top:5px">'+val+'</div>'+
+    (sub?'<div style="font-size:9.5px;color:var(--muted2);margin-top:3px;line-height:1.6">'+sub+'</div>':'')+'</div>';
+  k += card('نسبة هامش المساهمة','Contribution Margin Ratio', _plPct(P.cmRatio), 'var(--blue)', 'كل 1 د.ك إيراد يتبقّى منه '+_kd(P.cmRatio)+' د.ك لتغطية الثابت');
+  k += card('نقطة التعادل','Break-even Revenue', _kd(P.breakEven), 'var(--amber)', 'الإيراد المطلوب شهرياً للوصول لصفر ربح');
+  k += card(beGap>=0?'فوق نقطة التعادل بـ':'أقل من نقطة التعادل بـ', beGap>=0?'Above Break-even by':'Below Break-even by',
+            _kd(Math.abs(beGap)), beGap>=0?'var(--green)':'var(--red)');
+  k += card('التكاليف الثابتة + شبه المتغيرة','Fixed + Semi-Variable', _kd(P.semi+P.fixed), 'var(--violet)', 'العبء الشهري الذي لا يقل بانخفاض الطلبات');
+  k += '</div>';
+
+  return '<div class="panel" style="margin-top:14px">'+
+    '<div class="panel-head"><div>'+
+      '<div class="panel-title"><i class="ti ti-report-money" style="color:var(--blue)"></i> قائمة الأرباح والخسائر — '+MA[P.m-1]+' '+P.y+'</div>'+
+      '<div class="panel-sub">Profit &amp; Loss Statement — '+ME[P.m-1]+' '+P.y+' · بالدينار الكويتي (KWD)</div>'+
+    '</div>'+
+    '<button class="tbtn" onclick="exportPLWorkbook()" style="color:var(--green)"><i class="ti ti-file-spreadsheet"></i> Excel — كل الشهور</button>'+
+    '</div>'+
+    '<div style="padding:0 14px 14px">'+
+      '<div style="overflow-x:auto">'+t+'</div>'+
+      k +
+      '<div style="overflow-x:auto;margin-top:14px">'+c+'</div>'+
+      '<div style="margin-top:12px;padding:11px 13px;background:rgba(217,119,6,.07);border:1px solid rgba(217,119,6,.28);border-radius:11px;font-size:10.5px;line-height:1.9;color:var(--muted)">'+
+        '<b style="color:var(--amber)">إفصاح · Disclosure</b><br>'+FIN.disclosure+
+        '<div style="direction:ltr;text-align:left;margin-top:6px;color:var(--muted2)">'+FIN.disclosureEn+'</div>'+
+      '</div>'+
+    '</div></div>';
+}
+
+/** تصدير Excel ثنائي اللغة لكل الشهور */
+function exportPLWorkbook(){
+  if(typeof XLSX === 'undefined'){ toast('مكتبة Excel لم تُحمّل — تأكد من الاتصال بالإنترنت','e'); return; }
+  const list = allDataMonths();
+  if(!list.length){ toast('لا توجد بيانات لتصديرها','e'); return; }
+  const Ps = list.map(x => monthlyPL(x.m, x.y)).filter(p => p.hasData);
+  if(!Ps.length){ toast('لا توجد بيانات لتصديرها','e'); return; }
+
+  const MA = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const ME = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const hdr = Ps.map(p => MA[p.m-1]+' '+p.y+' / '+ME[p.m-1]+' '+p.y);
+  const wb = XLSX.utils.book_new();
+  const S = (n) => +(n||0).toFixed(3);
+
+  // ── ورقة 1: قائمة الدخل
+  const catKeys = [];
+  Ps.forEach(p => p.lines.forEach(l => { if(!catKeys.find(c => c.key===l.key)) catKeys.push({key:l.key, ar:l.ar, en:l.en, behavior:l.behavior}); }));
+  const revKeys = [];
+  Ps.forEach(p => p.revLines.forEach(l => { if(!revKeys.find(c => c.ar===l.ar)) revKeys.push({ar:l.ar, en:l.en}); }));
+
+  const A = [];
+  A.push(['شركة السلاسل لتوصيل الطلبات الاستهلاكية — Al-Salasil Consumer Delivery Services']);
+  A.push(['قائمة الأرباح والخسائر — Profit & Loss Statement']);
+  A.push(['العملة: دينار كويتي (KWD) · أساس الاستحقاق — Accrual basis']);
+  A.push(['تاريخ الإصدار / Issued: ' + new Date().toISOString().slice(0,10)]);
+  A.push([]);
+  A.push(['البند / Item', ...hdr, 'الإجمالي / Total']);
+
+  const line = (ar, en, get, sign) => {
+    const vals = Ps.map(p => S((sign||1) * get(p)));
+    A.push([ar + ' / ' + en, ...vals, S(vals.reduce((s,v)=>s+v,0))]);
+  };
+
+  A.push(['الإيرادات / REVENUE']);
+  revKeys.forEach(r => line('  '+r.ar, r.en, p => (p.revLines.find(l => l.ar===r.ar)||{amount:0}).amount));
+  line('إجمالي الإيرادات', 'Total Revenue', p => p.revenue);
+  A.push([]);
+
+  ['variable','semi','fixed'].forEach(b => {
+    const ks = catKeys.filter(c => c.behavior === b);
+    if(!ks.length) return;
+    A.push([BEHAVIOR_META[b].ar + ' / ' + BEHAVIOR_META[b].en.toUpperCase()]);
+    ks.forEach(c => line('  '+c.ar, c.en, p => (p.lines.find(l => l.key===c.key)||{amount:0}).amount, -1));
+    line('إجمالي ' + BEHAVIOR_META[b].ar, 'Total ' + BEHAVIOR_META[b].en, p => p[b === 'variable' ? 'variable' : b], -1);
+    if(b === 'variable'){ A.push([]); line('هامش المساهمة', 'Contribution Margin', p => p.contribution); }
+    A.push([]);
+  });
+
+  line('EBITDA', 'EBITDA', p => p.ebitda);
+  line('الإهلاك', 'Depreciation', p => p.dep, -1);
+  line('EBIT — الربح التشغيلي', 'EBIT', p => p.ebit);
+  line('تكلفة التمويل', 'Finance Cost', p => p.loan.interest, -1);
+  line('صافي الربح', 'NET PROFIT', p => p.net);
+  A.push([]);
+  A.push(['الهوامش / MARGINS']);
+  A.push(['  هامش المساهمة % / Contribution %', ...Ps.map(p => +(p.margins.contribution*100).toFixed(1)), '']);
+  A.push(['  هامش EBITDA % / EBITDA %',          ...Ps.map(p => +(p.margins.ebitda*100).toFixed(1)), '']);
+  A.push(['  هامش صافي الربح % / Net %',          ...Ps.map(p => +(p.margins.net*100).toFixed(1)), '']);
+  A.push([]);
+  A.push(['  نقطة التعادل / Break-even Revenue', ...Ps.map(p => S(p.breakEven)), '']);
+  A.push(['  عدد السائقين / Drivers',            ...Ps.map(p => p.driverCount), '']);
+  A.push(['  عدد الإداريين / Admin staff',       ...Ps.map(p => p.adminCount), '']);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(A);
+  ws1['!cols'] = [{wch:46}, ...Ps.map(()=>({wch:17})), {wch:17}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'P&L قائمة الدخل');
+
+  // ── ورقة 2: سلوك التكاليف
+  const B = [['تحليل سلوك التكاليف — Cost Behaviour Analysis'], [],
+             ['الشهر / Month','متغيرة / Variable','شبه متغيرة / Semi-Variable','ثابتة / Fixed','إهلاك / Depreciation','فوائد / Interest','إجمالي التكاليف / Total Cost','الإيراد / Revenue','متغيرة % من الإيراد','ثابتة+شبه % من الإيراد']];
+  Ps.forEach((p,i) => B.push([hdr[i], S(p.variable), S(p.semi), S(p.fixed), S(p.dep), S(p.loan.interest),
+    S(p.opex+p.dep+p.loan.interest), S(p.revenue),
+    p.revenue? +(p.variable/p.revenue*100).toFixed(1):0,
+    p.revenue? +((p.semi+p.fixed)/p.revenue*100).toFixed(1):0]));
+  B.push([]);
+  B.push(['تعريفات / Definitions']);
+  B.push(['متغيرة / Variable', BEHAVIOR_META.variable.note]);
+  B.push(['شبه متغيرة / Semi-Variable', BEHAVIOR_META.semi.note]);
+  B.push(['ثابتة / Fixed', BEHAVIOR_META.fixed.note]);
+  const ws2 = XLSX.utils.aoa_to_sheet(B);
+  ws2['!cols'] = [{wch:24},{wch:18},{wch:22},{wch:16},{wch:18},{wch:16},{wch:22},{wch:16},{wch:20},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'سلوك التكاليف');
+
+  // ── ورقة 3: التدفق النقدي
+  const C = [['المطابقة النقدية — Cash Reconciliation'],
+             ['الربح ليس نقداً: الإهلاك مصروف دفتري لا يخرج، وسداد أصل القرض نقد يخرج ولا يظهر كمصروف'], [],
+             ['الشهر / Month','صافي الربح / Net Profit','+ الإهلاك / Depreciation','− أصل القرض / Loan Principal','= صافي التدفق النقدي / Net Cash Flow','القسط المدفوع / Instalment Paid','رقم القسط / Instalment #']];
+  Ps.forEach((p,i) => C.push([hdr[i], S(p.net), S(p.dep), S(-p.loan.principal), S(p.cashFlow), S(p.loan.installment), p.loan.n || '—']));
+  const ws3 = XLSX.utils.aoa_to_sheet(C);
+  ws3['!cols'] = [{wch:24},{wch:20},{wch:20},{wch:22},{wch:28},{wch:20},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'التدفق النقدي');
+
+  // ── ورقة 4: القرض والإهلاك
+  const L = FIN.loan, AS = FIN.asset;
+  const D = [['القرض والأصول والإهلاك — Loan, Assets & Depreciation'], [],
+    ['الممول / Lender', L.lender + ' / ' + L.lenderEn],
+    ['المرجع / Reference', L.ref],
+    ['إجمالي التمويل / Total Financing', S(L.totalPayable)],
+    ['سعر الشراء النقدي / Cash Price (Principal)', S(L.principal)],
+    ['إجمالي الفوائد / Total Interest', S(L.totalPayable - L.principal)],
+    ['القسط الشهري / Monthly Instalment', S(L.installment)],
+    ['القسط الأخير / Final Instalment', S(L.lastInstallment)],
+    ['عدد الأقساط / Number of Instalments', L.months],
+    ['أول قسط / First Payment', L.firstPayment.y + '-' + String(L.firstPayment.m).padStart(2,'0') + '-05'],
+    [],
+    ['تكلفة الأصل / Asset Cost', S(AS.cost)],
+    ['قيمة الخردة / Salvage Value (' + AS.salvagePct + '%)', S(AS.cost * AS.salvagePct/100)],
+    ['القيمة القابلة للإهلاك / Depreciable Amount', S(AS.cost * (1 - AS.salvagePct/100))],
+    ['العمر الإنتاجي / Useful Life', AS.lifeYears + ' سنوات / years (' + AS.lifeYears*12 + ' شهر)'],
+    ['الإهلاك الشهري / Monthly Depreciation', S(AS.cost * (1-AS.salvagePct/100) / (AS.lifeYears*12))],
+    ['طريقة الإهلاك / Method', 'القسط الثابت / Straight-line'],
+    [],
+    ['إفصاح / Disclosure'], [FIN.disclosure], [FIN.disclosureEn], [],
+    ['جدول الأقساط / Instalment Schedule'],
+    ['رقم / #','الاستحقاق / Due','القسط / Instalment','فائدة / Interest','أصل / Principal','الرصيد / Balance']];
+  let bal = L.totalPayable;
+  for(let n=1; n<=L.months; n++){
+    const idx  = _mi(L.firstPayment.y, L.firstPayment.m) + (n-1);
+    const yy   = Math.floor(idx/12), mm = (idx%12)+1;
+    const inst = (n===L.months) ? L.lastInstallment : L.installment;
+    const intr = Math.max(0, L.totalPayable - L.principal) / L.months;
+    bal -= inst;
+    D.push([n, yy + '-' + String(mm).padStart(2,'0') + '-05', S(inst), S(intr), S(inst-intr), S(Math.max(0,bal))]);
+  }
+  const ws4 = XLSX.utils.aoa_to_sheet(D);
+  ws4['!cols'] = [{wch:34},{wch:22},{wch:18},{wch:16},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'القرض والإهلاك');
+
+  // ── ورقة 5: تفاصيل المصروفات — كل عملية سطر بسطر + مطابقة مع قائمة الدخل
+  const ymSet  = new Set(Ps.map(p => p.ym));
+  const detail = (typeof EXPENSES !== 'undefined' ? EXPENSES : [])
+    .filter(e => e && e.date && ymSet.has(String(e.date).slice(0,7)))
+    .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+
+  const E = [];
+  E.push(['تفاصيل المصروفات — Expense Detail']);
+  E.push(['كل عملية مسجّلة في الفترة سطر بسطر · العملة: دينار كويتي (KWD)']);
+  E.push(['ملاحظة: بند «مرتبات» اليدوي يظهر هنا للمراجعة فقط وهو مستبعد من قائمة الدخل — الرواتب تُحتسب آلياً من ملف السائقين والإدارة منعاً للازدواج']);
+  E.push([]);
+  E.push(['التاريخ / Date','الشهر / Month','البند / Category','Category (EN)','السلوك / Behaviour','السائق / Driver','ملاحظة / Note','المبلغ / Amount','محتسب في P&L؟ / In P&L?']);
+
+  let detTotal = 0, detSkipped = 0;
+  detail.forEach(e => {
+    const cat  = EXP_CATS[e.category] || EXP_CATS.other;
+    const beh  = EXP_BEHAVIOR[e.category] || 'variable';
+    const drv  = e.driverId && typeof DRV !== 'undefined' ? DRV.find(d => d.id === e.driverId) : null;
+    const amt  = parseFloat(e.amount) || 0;
+    const inPL = e.category !== 'salaries';
+    if(inPL) detTotal += amt; else detSkipped += amt;
+    const ymi = String(e.date).slice(0,7);
+    const mm  = +ymi.slice(5,7), yy = +ymi.slice(0,4);
+    E.push([e.date, MA[mm-1] + ' ' + yy, cat.name, CAT_EN[e.category] || e.category,
+            BEHAVIOR_META[beh].ar + ' / ' + BEHAVIOR_META[beh].en,
+            drv ? drv.name : '—', e.note || '', S(amt),
+            inPL ? 'نعم / Yes' : 'لا — مستبعد / No']);
+  });
+  if(!detail.length) E.push(['لا توجد مصروفات مسجّلة في هذه الفترة / No recorded expenses']);
+
+  const sum = f => S(Ps.reduce((s2,p) => s2 + f(p), 0));
+  E.push([]);
+  E.push(['إجمالي المصروفات المحتسبة / Total counted','','','','','','', S(detTotal)]);
+  if(detSkipped) E.push(['بند «مرتبات» يدوي — مستبعد / Manual salary entries — excluded','','','','','','', S(detSkipped)]);
+  E.push([]);
+  E.push(['المطابقة مع قائمة الدخل — Reconciliation to P&L']);
+  E.push(['مصروفات تشغيلية مسجّلة / Recorded operating expenses','','','','','','', S(detTotal)]);
+  E.push(['+ رواتب السائقين (تُحتسب آلياً) / Driver salaries','','','','','','', sum(p => p.driverSal)]);
+  E.push(['+ رواتب الإدارة (تُحتسب آلياً) / Admin salaries','','','','','','', sum(p => p.adminSal)]);
+  E.push(['+ الإهلاك / Depreciation','','','','','','', sum(p => p.dep)]);
+  E.push(['+ تكلفة التمويل / Finance cost','','','','','','', sum(p => p.loan.interest)]);
+  E.push(['= إجمالي التكاليف في قائمة الدخل / Total cost per P&L','','','','','','', sum(p => p.opex + p.dep + p.loan.interest)]);
+
+  E.push([]);
+  E.push(['تجميع بالبند × الشهر — Category by Month']);
+  E.push(['البند / Item', ...hdr, 'الإجمالي / Total']);
+  catKeys.forEach(c => {
+    const vals = Ps.map(p => S((p.lines.find(l => l.key === c.key) || {amount:0}).amount));
+    E.push([c.ar + ' / ' + c.en, ...vals, S(vals.reduce((s2,v) => s2 + v, 0))]);
+  });
+  E.push(['إجمالي التكاليف التشغيلية / Total Operating Cost', ...Ps.map(p => S(p.opex)), sum(p => p.opex)]);
+
+  const ws5 = XLSX.utils.aoa_to_sheet(E);
+  ws5['!cols'] = [{wch:13},{wch:15},{wch:22},{wch:24},{wch:34},{wch:24},{wch:34},{wch:14},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, ws5, 'تفاصيل المصروفات');
+
+  XLSX.writeFile(wb, 'AlSalasil_PnL_' + Ps[0].ym + '_to_' + Ps[Ps.length-1].ym + '.xlsx');
+  toast('تم تصدير قائمة الدخل لـ ' + Ps.length + ' شهر · ' + detail.length + ' مصروف مفصّل ✅','s');
+}
+
+
+
+// ════════════════════════════════════════════════════════════════════════
+//  ARK-PL-REPORT v30 — تقرير قائمة الدخل ثنائي اللغة (طباعة / PDF)
+//  Bilingual P&L report — print-ready A4, Arabic + English side by side
+// ════════════════════════════════════════════════════════════════════════
+
+const PL_MA = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const PL_ME = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/** تقرير قائمة دخل كامل لشهر — HTML جاهز للطباعة */
+function plSectionHTML(P){
+  const n  = v => (v||0).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3});
+  const pc = v => (v*100).toFixed(1) + '%';
+  const dt = new Date().toISOString().slice(0,10);
+
+  const row = (ar,en,val,cls,pct,tip) => {
+    const neg = (val < 0);
+    return '<tr class="'+(cls||'')+'">'
+      + '<td class="lbl"><span class="ar">'+ar+'</span><span class="en">'+en+'</span>'
+      + (tip?'<span class="tip">'+tip+'</span>':'')+'</td>'
+      + '<td class="num'+(neg?' neg':'')+'">'+n(val)+'</td>'
+      + '<td class="pct">'+(pct||'')+'</td></tr>';
+  };
+
+  const block = b => {
+    const meta = BEHAVIOR_META[b];
+    const ls = P.lines.filter(l=>l.behavior===b).sort((a,c)=>c.amount-a.amount);
+    if(!ls.length) return '';
+    const tot = ls.reduce((s,l)=>s+l.amount,0);
+    let h = '<tr class="grp" style="--gc:'+meta.color+'"><td colspan="3">'
+          + '<b>'+meta.ar+'</b> · '+meta.en+'<span class="tip">'+meta.note+'</span></td></tr>';
+    ls.forEach(l => h += row('&nbsp;&nbsp;&nbsp;'+l.ar,'&nbsp;&nbsp;&nbsp;'+l.en,-l.amount,'sub',P.revenue?pc(l.amount/P.revenue):''));
+    h += row('إجمالي '+meta.ar,'Total '+meta.en,-tot,'tot',P.revenue?pc(tot/P.revenue):'');
+    return h;
+  };
+
+  let t = '';
+  t += row('الإيرادات','Revenue',0,'hdr');
+  P.revLines.forEach(l => t += row('&nbsp;&nbsp;&nbsp;'+l.ar,'&nbsp;&nbsp;&nbsp;'+l.en,l.amount,'sub',P.revenue?pc(l.amount/P.revenue):''));
+  t += row('إجمالي الإيرادات','Total Revenue',P.revenue,'tot','100.0%');
+  t += block('variable');
+  t += row('هامش المساهمة','Contribution Margin',P.contribution,'mid',pc(P.margins.contribution),
+           'الإيراد ناقص التكاليف المتغيرة — المتاح لتغطية التكاليف الثابتة');
+  t += block('semi');
+  t += block('fixed');
+  t += row('EBITDA — الربح قبل الفوائد والإهلاك','EBITDA',P.ebitda,'mid',pc(P.margins.ebitda));
+  t += row('&nbsp;&nbsp;&nbsp;الإهلاك','&nbsp;&nbsp;&nbsp;Depreciation',-P.dep,'sub',P.revenue?pc(P.dep/P.revenue):'',
+           'الأسطول '+n(FIN.asset.cost)+' د.ك · خردة '+FIN.asset.salvagePct+'% · عمر '+FIN.asset.lifeYears+' سنوات');
+  t += row('EBIT — الربح التشغيلي','EBIT / Operating Profit',P.ebit,'mid',P.revenue?pc(P.ebit/P.revenue):'');
+  t += row('&nbsp;&nbsp;&nbsp;تكلفة التمويل (فوائد)','&nbsp;&nbsp;&nbsp;Finance Cost (Interest)',-P.loan.interest,'sub','',
+           P.loan.active?('قسط رقم '+P.loan.n+' من '+FIN.loan.months):'لا يوجد قسط مستحق');
+  t += row('صافي الربح','NET PROFIT',P.net,'grand',pc(P.margins.net));
+
+  let c = '';
+  c += row('صافي الربح','Net Profit',P.net,'sub');
+  c += row('يُضاف: الإهلاك','Add back: Depreciation',P.dep,'sub','','مصروف دفتري لا يخرج من الصندوق');
+  c += row('يُخصم: سداد أصل القرض','Less: Loan Principal Repayment',-P.loan.principal,'sub','','نقد يخرج فعلياً ولا يظهر كمصروف');
+  c += row('صافي التدفق النقدي','Net Operating Cash Flow',P.cashFlow,'grand');
+
+  const gap = P.revenue - P.breakEven;
+  const kpi = (ar,en,v,col,sub) =>
+    '<div class="k"><div class="k-ar">'+ar+'</div><div class="k-en">'+en+'</div>'
+    + '<div class="k-v" style="color:'+col+'">'+v+'</div>'
+    + (sub?'<div class="k-s">'+sub+'</div>':'')+'</div>';
+
+  return '<section class="mrep" data-ym="'+P.ym+'">'
++ '<div class="sec"><h3>قائمة الأرباح والخسائر <span>· Profit &amp; Loss Statement</span>'
++ '<em>'+PL_MA[P.m-1]+' '+P.y+' · '+PL_ME[P.m-1]+' '+P.y+'</em></h3><table>'+t+'</table></div>'
++ '<div class="kpis">'
++ kpi('نسبة هامش المساهمة','Contribution Margin Ratio',pc(P.cmRatio),'#1c5878','كل 1 د.ك إيراد يتبقّى منه '+n(P.cmRatio)+' د.ك')
++ kpi('نقطة التعادل','Break-even Revenue',n(P.breakEven),'#d97706','الإيراد المطلوب للوصول لصفر ربح')
++ kpi(gap>=0?'فوق نقطة التعادل بـ':'أقل من نقطة التعادل بـ',gap>=0?'Above Break-even':'Below Break-even',n(Math.abs(gap)),gap>=0?'#059669':'#b91c1c')
++ kpi('السائقون · الإداريون','Drivers · Admin Staff',P.driverCount+' · '+P.adminCount,'#7c3aed')
++ '</div>'
++ '<div class="sec"><h3>المطابقة النقدية <span>· Cash Reconciliation</span></h3>'
++ '<p class="hint">الربح ليس نقداً — الإهلاك مصروف دفتري لا يخرج، وسداد أصل القرض نقد يخرج ولا يظهر كمصروف.</p>'
++ '<table>'+c+'</table></div>'
++ '</section>';
+}
+
+/** مستند التقرير الكامل — كل الشهور في ملف واحد مع تنقّل وطباعة مفردة */
+function plReportHTML(Ps, activeYm){
+  const opts = Ps.map(p => '<option value="'+p.ym+'"'+(p.ym===activeYm?' selected':'')+'>'
+             + PL_MA[p.m-1]+' '+p.y+' — '+PL_ME[p.m-1]+' '+p.y+'</option>').join('');
+  const secs = Ps.map(p => plSectionHTML(p)).join('');
+  const dt = new Date().toISOString().slice(0,10);
+  return '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">'
++ '<title>قائمة الأرباح والخسائر — شركة السلاسل</title>'
++ '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">'
++ '<style>'
++ '*{box-sizing:border-box;margin:0;padding:0}'
++ 'body{font-family:Cairo,sans-serif;background:#eef2f7;color:#0f1729;padding:22px;line-height:1.5}'
++ '.page{max-width:920px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 6px 26px rgba(15,23,41,.10)}'
++ '.top{background:linear-gradient(135deg,#1c5878,#0d9488);color:#fff;padding:22px 26px}'
++ '.top h1{font-size:19px;font-weight:900}.top h2{font-size:13px;font-weight:400;opacity:.92;margin-top:3px}'
++ '.top .meta{font-size:10.5px;opacity:.85;margin-top:9px;display:flex;gap:16px;flex-wrap:wrap}'
++ '.bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:13px 26px;background:#f6f9fc;border-bottom:1px solid #e3e9f1}'
++ '.bar label{font-size:11.5px;font-weight:700;color:#475569}'
++ '.bar select{font-family:Cairo,sans-serif;font-size:12.5px;font-weight:700;padding:7px 12px;border:1px solid #cfd9e4;border-radius:9px;background:#fff;color:#0f1729;cursor:pointer}'
++ '.bar button{font-family:Cairo,sans-serif;font-size:12px;font-weight:700;padding:8px 15px;border:0;border-radius:9px;cursor:pointer}'
++ '.b1{background:#1c5878;color:#fff}.b2{background:#fff;color:#1c5878;border:1px solid #cfd9e4!important}'
++ '.sec{padding:16px 26px}'
++ '.sec h3{font-size:13px;font-weight:900;color:#1c5878;margin-bottom:9px;padding-bottom:6px;border-bottom:2px solid #e3e9f1;display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}'
++ '.sec h3 span{font-weight:400;color:#64748b;font-size:11px}'
++ '.sec h3 em{margin-inline-start:auto;font-style:normal;font-size:11.5px;color:#0d9488;font-weight:700}'
++ '.hint{font-size:10px;color:#64748b;margin-bottom:7px}'
++ 'table{width:100%;border-collapse:collapse;font-size:12px}'
++ 'td{padding:6px 9px;border-bottom:1px solid #edf1f6;vertical-align:middle}'
++ '.lbl .ar{display:block;font-weight:700}'
++ '.lbl .en{display:block;font-size:9.5px;color:#94a3b8;font-weight:400;direction:ltr;text-align:right}'
++ '.lbl .tip{display:block;font-size:9px;color:#94a3b8;margin-top:2px;font-weight:400}'
++ '.num{text-align:left;font-family:"Courier New",monospace;font-weight:700;white-space:nowrap;width:130px}'
++ '.num.neg{color:#b91c1c}.pct{text-align:left;font-size:10px;color:#94a3b8;width:64px;white-space:nowrap}'
++ 'tr.hdr td{background:#eef2f7;font-weight:900}'
++ 'tr.sub .lbl .ar{font-weight:400;color:#475569}'
++ 'tr.tot td{background:#f6f9fc;font-weight:900;border-top:1.5px solid #dbe3ec}'
++ 'tr.mid td{background:#e8f0f5;font-weight:900;border-top:1.5px solid #b9cfdb}'
++ 'tr.grand td{background:#1c5878;color:#fff;font-weight:900;font-size:13.5px}'
++ 'tr.grand .lbl .en{color:#cfe3ee}tr.grand .num.neg{color:#ffb4b4}tr.grand .pct{color:#cfe3ee}'
++ 'tr.grp td{background:color-mix(in srgb,var(--gc) 9%,#fff);border-right:3px solid var(--gc);font-size:11.5px;color:var(--gc)}'
++ 'tr.grp .tip{display:block;font-size:9px;color:#64748b;font-weight:400;margin-top:2px}'
++ '.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;padding:4px 26px 16px}'
++ '.k{background:#f6f9fc;border:1px solid #e3e9f1;border-radius:10px;padding:10px 11px}'
++ '.k-ar{font-size:10px;font-weight:700;color:#475569}.k-en{font-size:8.5px;color:#94a3b8}'
++ '.k-v{font-size:16px;font-weight:900;font-family:"Courier New",monospace;margin-top:4px}'
++ '.k-s{font-size:8.5px;color:#94a3b8;margin-top:2px;line-height:1.5}'
++ '.disc{margin:0 26px 18px;padding:11px 13px;background:#fff8ee;border:1px solid #f0d9b5;border-radius:10px;font-size:9.5px;line-height:1.8;color:#6b5330}'
++ '.disc b{color:#b45309}.disc .ltr{direction:ltr;text-align:left;color:#8a7358;margin-top:5px}'
++ '.foot{background:#f6f9fc;padding:11px 26px;font-size:9.5px;color:#94a3b8;text-align:center;border-top:1px solid #e3e9f1}'
++ '.mrep{display:none}.mrep.on{display:block}'
++ 'body.all .mrep{display:block;break-after:page;page-break-after:always}'
++ 'body.all .mrep:last-of-type{break-after:auto;page-break-after:auto}'
++ '@media print{body{background:#fff;padding:0}.page{box-shadow:none;border-radius:0;max-width:100%}.bar{display:none}}'
++ '</style></head><body>'
++ '<div class="page">'
++ '<div class="top"><h1>شركة السلاسل لتوصيل الطلبات الاستهلاكية</h1>'
++ '<h2>Al-Salasil Consumer Delivery Services · State of Kuwait</h2>'
++ '<div class="meta"><span>قائمة الأرباح والخسائر · Profit &amp; Loss Statement</span>'
++ '<span>د.ك · KWD</span><span>أساس الاستحقاق · Accrual basis</span>'
++ '<span>صدر في '+dt+'</span></div></div>'
++ '<div class="bar"><label>الشهر · Month</label>'
++ '<select id="msel" onchange="showM(this.value)">'+opts+'</select>'
++ '<button class="b1" onclick="printOne()">طباعة الشهر / PDF</button>'
++ '<button class="b2" onclick="printAll()">طباعة كل الشهور</button>'
++ '<span id="cnt" style="font-size:10.5px;color:#94a3b8"></span></div>'
++ secs
++ '<div class="disc"><b>إفصاح · Disclosure</b><br>'+FIN.disclosure
++ '<div class="ltr">'+FIN.disclosureEn+'</div></div>'
++ '<div class="foot">تقرير مُولّد آلياً من نظام ARK · شركة السلاسل © '+new Date().getFullYear()
++ ' · Generated automatically by ARK</div>'
++ '</div>'
++ '<script>'
++ 'function showM(ym){document.body.classList.remove("all");'
++ 'document.querySelectorAll(".mrep").forEach(function(s){s.classList.toggle("on",s.dataset.ym===ym)});'
++ 'document.getElementById("msel").value=ym;}'
++ 'function printOne(){document.body.classList.remove("all");window.print();}'
++ 'function printAll(){document.body.classList.add("all");window.print();'
++ 'setTimeout(function(){document.body.classList.remove("all");showM(document.getElementById("msel").value);},600);}'
++ 'document.getElementById("cnt").textContent="'+Ps.length+' شهر متاح";'
++ 'showM("'+activeYm+'");'
++ '<\/script></body></html>';
+}
+
+/** يفتح التقرير في نافذة جديدة جاهزة للطباعة */
+function generateAccArabicReport(){
+  try{
+    const list = allDataMonths().map(x => monthlyPL(x.m, x.y)).filter(p => p.hasData);
+    if(!list.length){ toast('لا توجد بيانات لأي شهر','e'); return; }
+    const cur = accYear + '-' + String(accMonth).padStart(2,'0');
+    const active = list.some(p => p.ym === cur) ? cur : list[list.length-1].ym;
+    const w = window.open('', '_blank');
+    if(!w){ toast('المتصفح منع فتح النافذة — اسمح بالنوافذ المنبثقة','e'); return; }
+    w.document.open(); w.document.write(plReportHTML(list, active)); w.document.close();
+    toast('التقرير جاهز — '+list.length+' شهر ✅','s');
+  }catch(err){ console.error('PL report error:', err); toast('فشل التقرير: '+err.message,'e'); }
+}
+
+/** تصدير CSV — قائمة دخل كاملة ثنائية اللغة */
+function exportAccCsv(){
+  const P = monthlyPL(accMonth, accYear);
+  const q = s => '"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const f = v => (v||0).toFixed(3);
+  let csv = '﻿';
+  const L = (ar,en,val,pct)=>{ csv += q(ar)+','+q(en)+','+q(f(val))+','+q(pct||'')+'\n'; };
+
+  csv += q('شركة السلاسل لتوصيل الطلبات الاستهلاكية — Al-Salasil Consumer Delivery Services')+'\n';
+  csv += q('قائمة الأرباح والخسائر — Profit & Loss Statement')+'\n';
+  csv += q(PL_MA[accMonth-1]+' '+accYear+' — '+PL_ME[accMonth-1]+' '+accYear)+'\n';
+  csv += q('بالدينار الكويتي (KWD) — أساس الاستحقاق / Accrual basis')+'\n\n';
+  csv += [q('البند'),q('Item'),q('المبلغ / Amount'),q('% من الإيراد')].join(',')+'\n';
+
+  const pc = v => P.revenue ? (v/P.revenue*100).toFixed(1)+'%' : '';
+  L('الإيرادات','REVENUE',0);
+  P.revLines.forEach(l=>L('  '+l.ar,l.en,l.amount,pc(l.amount)));
+  L('إجمالي الإيرادات','Total Revenue',P.revenue,'100.0%');
+  ['variable','semi','fixed'].forEach(b=>{
+    const ls=P.lines.filter(l=>l.behavior===b).sort((a,c)=>c.amount-a.amount);
+    if(!ls.length) return;
+    L(BEHAVIOR_META[b].ar,BEHAVIOR_META[b].en.toUpperCase(),0);
+    ls.forEach(l=>L('  '+l.ar,l.en,-l.amount,pc(l.amount)));
+    L('إجمالي '+BEHAVIOR_META[b].ar,'Total '+BEHAVIOR_META[b].en,-(b==='variable'?P.variable:b==='semi'?P.semi:P.fixed),pc(b==='variable'?P.variable:b==='semi'?P.semi:P.fixed));
+    if(b==='variable') L('هامش المساهمة','Contribution Margin',P.contribution,pc(P.contribution));
+  });
+  L('EBITDA','EBITDA',P.ebitda,pc(P.ebitda));
+  L('  الإهلاك','Depreciation',-P.dep,pc(P.dep));
+  L('EBIT — الربح التشغيلي','EBIT / Operating Profit',P.ebit,pc(P.ebit));
+  L('  تكلفة التمويل','Finance Cost',-P.loan.interest,'');
+  L('صافي الربح','NET PROFIT',P.net,pc(P.net));
+  csv += '\n'+q('المطابقة النقدية — Cash Reconciliation')+'\n';
+  L('صافي الربح','Net Profit',P.net);
+  L('يُضاف: الإهلاك','Add back: Depreciation',P.dep);
+  L('يُخصم: سداد أصل القرض','Less: Loan Principal Repayment',-P.loan.principal);
+  L('صافي التدفق النقدي','Net Operating Cash Flow',P.cashFlow);
+  csv += '\n'+q('المؤشرات — Indicators')+'\n';
+  L('نقطة التعادل','Break-even Revenue',P.breakEven);
+  L('القسط المدفوع','Instalment Paid',P.loan.installment);
+  csv += q('عدد السائقين')+','+q('Drivers')+','+q(P.driverCount)+',\n';
+  csv += q('عدد الإداريين')+','+q('Admin Staff')+','+q(P.adminCount)+',\n';
+  csv += '\n'+q('إفصاح / Disclosure')+'\n'+q(FIN.disclosure)+'\n'+q(FIN.disclosureEn)+'\n';
+
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='AlSalasil_PnL_'+P.ym+'.csv'; a.click(); URL.revokeObjectURL(a.href);
+  toast('تم تصدير قائمة الدخل ✅','s');
+}
+
+
 function renderAccounting(){
   const el = document.getElementById('acc-content');
   if(!el) return;
@@ -7587,7 +9009,8 @@ function renderAccounting(){
   const salaryCost    = _monthlySalaryCost(accMonth, accYear);       // سائقون فقط — مقسّط بالأيام
   const adminCost     = _monthlyAdminSalaryCost(accMonth, accYear);  // طقم الإدارة — بند منفصل
   const salBrk        = _monthlySalaryBreakdown(accMonth, accYear);
-  const netProfit     = totalIncome - totalExpense - salaryCost - adminCost;
+  const PL            = monthlyPL(accMonth, accYear);                // محرك قائمة الدخل — المصدر الوحيد
+  const netProfit     = PL.net;                                      // بعد الإهلاك وتكلفة التمويل
 
   let mOpts = '', yOpts = '';
   for(let i=0;i<12;i++) mOpts+='<option value="'+(i+1)+'" '+((i+1)===accMonth?'selected':'')+'>'+months[i]+'</option>';
@@ -7601,9 +9024,10 @@ function renderAccounting(){
       '<select onchange="setAccMonth(this.value)" style="padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-weight:700">'+mOpts+'</select>'+
       '<select onchange="setAccYear(this.value)" style="padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-weight:700">'+yOpts+'</select>'+
       '<button class="tbtn" onclick="exportAccCsv()" style="color:var(--green)"><i class="ti ti-file-spreadsheet"></i> CSV</button>'+
+      '<button class="tbtn" onclick="exportPLWorkbook()" style="color:#1c5878;border-color:rgba(28,88,120,.45)"><i class="ti ti-report-money"></i> قائمة الدخل — Excel (5 أوراق)</button>'+
       '<button class="tbtn" onclick="loadApril2025Manual()" style="color:#a78bfa" title="تحميل بيانات أبريل 2025"><i class="ti ti-database-import"></i> بيانات أبريل</button>'+
       '<button class="tbtn" onclick="generateAccPdfReport()" style="color:#dc2626;border-color:rgba(220,38,38,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير PDF (EN)</button>'+
-      '<button class="tbtn" onclick="generateAccArabicReport()" style="color:#059669;border-color:rgba(5,150,105,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير عربي</button>'+
+      '<button class="tbtn" onclick="generateAccArabicReport()" style="color:#059669;border-color:rgba(5,150,105,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير كل الشهور (عربي/EN)</button>'+
       '<button class="tbtn" onclick="generatePptxReport()" style="color:#f59e0b"><i class="ti ti-presentation"></i> تقرير PowerPoint</button>'+
     '</div>'+
   '</div>';
@@ -7614,6 +9038,8 @@ function renderAccounting(){
   h += '<div class="kpi err"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-arrow-up-circle"></i></div></div><div class="kpi-val">'+totalExpense.toFixed(3)+'</div><div class="kpi-lbl">إجمالي المصروفات</div></div>';
   h += '<div class="kpi warn"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-users"></i></div></div><div class="kpi-val">'+salaryCost.toFixed(3)+'</div><div class="kpi-lbl">رواتب السائقين ('+salBrk.drivers.length+' سائق)</div></div>';
   h += '<div class="kpi warn"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-briefcase"></i></div></div><div class="kpi-val">'+adminCost.toFixed(3)+'</div><div class="kpi-lbl">رواتب الإدارة ('+salBrk.adminCount+' موظف)</div></div>';
+  h += '<div class="kpi"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-car"></i></div></div><div class="kpi-val">'+PL.dep.toFixed(3)+'</div><div class="kpi-lbl">إهلاك الأسطول</div></div>';
+  h += '<div class="kpi"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-credit-card"></i></div></div><div class="kpi-val">'+PL.loan.installment.toFixed(3)+'</div><div class="kpi-lbl">قسط الساير (نقدي — ليس مصروفاً)</div></div>';
   const profitClass = netProfit >= 0 ? 'ok' : 'err';
   const profitColor = netProfit >= 0 ? 'var(--green)' : 'var(--red)';
   h += '<div class="kpi '+profitClass+'"><div class="kpi-top"><div class="kpi-ic"><i class="ti ti-coin"></i></div></div><div class="kpi-val" style="color:'+profitColor+'">'+netProfit.toFixed(3)+'</div><div class="kpi-lbl">صافي الربح</div></div>';
@@ -7709,10 +9135,12 @@ function renderAccounting(){
 
   // Expense breakdown by category + Monthly trend
   // 1) Category breakdown
+  // التوزيع يقرأ من محرك قائمة الدخل — النسبة على إجمالي التكاليف الفعلي وليس على مقام ناقص
   const catTotals = {};
-  monthExpenses.forEach(e => {
-    catTotals[e.category] = (catTotals[e.category]||0) + (parseFloat(e.amount)||0);
-  });
+  PL.lines.forEach(l => { catTotals[l.key] = (catTotals[l.key]||0) + l.amount; });
+  if(PL.dep > 0)            catTotals['_dep']  = PL.dep;
+  if(PL.loan.interest > 0)  catTotals['_int']  = PL.loan.interest;
+  const catGrand   = Object.values(catTotals).reduce((s,v)=>s+v,0);
   const catEntries = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
 
   h += '<div class="dash-row" style="margin-top:14px">';
@@ -7722,10 +9150,12 @@ function renderAccounting(){
   for(let i=5;i>=0;i--){
     const d = new Date(accYear, accMonth-1-i, 1);
     const m = d.getMonth()+1, y = d.getFullYear();
-    const inc = INCOMES.filter(x=>_matchMonth(x.date,m,y)).reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-    const expA = EXPENSES.filter(x=>_matchMonth(x.date,m,y)).reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-    const salA = _monthlySalaryCost(m,y);
-    trendMonths.push({label: months[m-1].slice(0,3), profit: inc-expA-salA, inc, exp:expA, sal:salA});
+    // الاتجاه يقرأ من محرك قائمة الدخل — يشمل رواتب الإدارة والإهلاك والفوائد بلا ازدواج
+    const _p  = monthlyPL(m, y);
+    const inc = _p.revenue;
+    const expA = _p.opex - _p.driverSal - _p.adminSal + _p.dep + _p.loan.interest;
+    const salA = _p.driverSal + _p.adminSal;
+    trendMonths.push({label: months[m-1].slice(0,3), profit: _p.net, inc, exp:expA, sal:salA});
   }
   const allVals = trendMonths.flatMap(x=>[x.inc, x.exp, x.sal]);
   const maxV = Math.max.apply(null, allVals.concat([1]));
@@ -7757,9 +9187,15 @@ function renderAccounting(){
   if(catEntries.length===0){
     h += '<div class="dash-empty"><i class="ti ti-chart-pie-off"></i><p>لا توجد مصروفات لعرضها</p></div>';
   } else {
+    const EXTRA_CATS = {
+      driverSalaries:{name:'رواتب السائقين', icon:'👥', color:'#fbbf24'},
+      adminSalaries: {name:'رواتب الإدارة',  icon:'💼', color:'#eab308'},
+      _dep:          {name:'إهلاك الأسطول',  icon:'🚗', color:'#8b5cf6'},
+      _int:          {name:'تكلفة التمويل',  icon:'🏦', color:'#64748b'}
+    };
     catEntries.forEach(([cat,amt])=>{
-      const c = EXP_CATS[cat] || EXP_CATS.other;
-      const pct = totalExpense ? (amt/totalExpense*100) : 0;
+      const c = EXTRA_CATS[cat] || EXP_CATS[cat] || EXP_CATS.other;
+      const pct = catGrand ? (amt/catGrand*100) : 0;
       h += '<div style="margin-bottom:11px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:4px">'+
           '<span style="font-weight:700">'+c.icon+' '+c.name+'</span>'+
@@ -7775,45 +9211,12 @@ function renderAccounting(){
 
   h += '</div>'; // /dash-row
 
+  h += plPanelHTML(PL);   // قائمة الأرباح والخسائر — عربي/إنجليزي
+
   el.innerHTML = h;
 }
 
-function exportAccCsv(){
-  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-  const monthIncomes  = INCOMES.filter(x=>_matchMonth(x.date, accMonth, accYear));
-  const monthExpenses = EXPENSES.filter(x=>_matchMonth(x.date, accMonth, accYear));
-  let csv = '\uFEFF';
-  csv += '"التقرير المالي - '+months[accMonth-1]+' '+accYear+'"\n\n';
-  csv += '"== الإيرادات =="\n';
-  csv += '"التاريخ","المبلغ","المصدر","السائق","ملاحظات"\n';
-  monthIncomes.forEach(i=>{
-    const src = (PARTNERS.find(p=>p.id===i.source)||{}).name || i.source;
-    const drv = i.driverId ? (DRV.find(d=>d.id===i.driverId)||{}).name : '';
-    csv += '"'+i.date+'","'+(i.amount||0).toFixed(3)+'","'+src+'","'+(drv||'')+'","'+(i.note||'')+'"\n';
-  });
-  csv += '\n"== المصروفات =="\n';
-  csv += '"التاريخ","المبلغ","البند","السائق","ملاحظات"\n';
-  monthExpenses.forEach(e=>{
-    const c = (EXP_CATS[e.category]||{}).name || e.category;
-    const drv = e.driverId ? (DRV.find(d=>d.id===e.driverId)||{}).name : '';
-    csv += '"'+e.date+'","'+(e.amount||0).toFixed(3)+'","'+c+'","'+(drv||'')+'","'+(e.note||'')+'"\n';
-  });
-  const totalI = monthIncomes.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-  const totalE = monthExpenses.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-  const salCost = _monthlySalaryCost(accMonth, accYear);
-  csv += '\n"== الملخص =="\n';
-  csv += '"إجمالي الإيرادات","'+totalI.toFixed(3)+'"\n';
-  csv += '"إجمالي المصروفات","'+totalE.toFixed(3)+'"\n';
-  csv += '"تكلفة الرواتب","'+salCost.toFixed(3)+'"\n';
-  csv += '"صافي الربح","'+(totalI-totalE-salCost).toFixed(3)+'"\n';
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'محاسبة_'+months[accMonth-1]+'_'+accYear+'.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('تم تصدير التقرير ✅','s');
-}
+// (exportAccCsv اتنقلت للنسخة الجديدة داخل ARK-PL-REPORT)
 
 
 // ============================================================
@@ -7907,11 +9310,12 @@ function generatePptxReport(){
   const monthIncomes  = INCOMES.filter(x=>_matchMonth(x.date, accMonth, accYear));
   const monthExpensesAll = EXPENSES.filter(x=>_matchMonth(x.date, accMonth, accYear));
   const monthExpensesNonSal = monthExpensesAll.filter(x=>x.category!=='salaries');
-  const totalIncome   = monthIncomes.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  const _PL = monthlyPL(accMonth, accYear);   // المحرك الموحّد
+  const totalIncome   = _PL.revenue;
   const totalExpenseNonSal = monthExpensesNonSal.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
-  const salaryCost    = _monthlySalaryCost(accMonth, accYear);
-  const totalExpense  = totalExpenseNonSal + salaryCost;
-  const netProfit     = totalIncome - totalExpense;
+  const salaryCost    = _PL.driverSal;
+  const totalExpense  = _PL.opex + _PL.dep + _PL.loan.interest;
+  const netProfit     = _PL.net;
   const margin        = totalIncome ? (netProfit/totalIncome*100) : 0;
 
   if(totalIncome === 0 && totalExpense === 0){
@@ -7932,6 +9336,8 @@ function generatePptxReport(){
     expByCat[e.category] = (expByCat[e.category]||0) + (parseFloat(e.amount)||0);
   });
   if(salaryCost > 0) expByCat['salaries'] = salaryCost;
+  if(_PL.adminSal > 0) expByCat['admin'] = (expByCat['admin']||0) + _PL.adminSal;
+  if(_PL.dep > 0) expByCat['depreciation'] = _PL.dep;
   const expEntries = Object.entries(expByCat).map(([k,v])=>{
     const c = EXP_CATS[k] || EXP_CATS.other;
     return {key:k, name:c.name, icon:c.icon, color:c.color.replace('#',''), amount:v, pct: totalExpense?v/totalExpense*100:0};
@@ -8511,23 +9917,17 @@ function openAppDetails(id){
 
 <!-- SCHEDULE MODAL -->
 <div class="ov" id="schedModal" onclick="if(event.target===this)closeModal('schedModal')">
-  <div class="modal" style="max-width:980px;max-height:92vh">
+  <div class="modal" style="max-width:1320px;max-height:94vh">
     <div class="sch-nav">
-      <h3><i class="ti ti-calendar-week" style="color:#a78bfa"></i> جدول المواعيد والإجازات</h3>
+      <h3><i class="ti ti-calendar-week" style="color:#a78bfa"></i> جدول الدوامات والإجازات</h3>
       <button class="btn btn-cancel" onclick="prevWeek()"><i class="ti ti-chevron-right"></i></button>
       <span id="sch-week-label" style="font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap"></span>
       <button class="btn btn-cancel" onclick="nextWeek()"><i class="ti ti-chevron-left"></i></button>
       <button class="btn btn-cancel" onclick="goToday()" style="font-size:11px">اليوم</button>
     </div>
     <div class="sch-fbar" id="sch-fbar"></div>
-    <div class="sch-legend">
-      <div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>يعمل</div>
-      <div class="leg-item"><div class="leg-dot" style="background:#3b82f6"></div>صباحي</div>
-      <div class="leg-item"><div class="leg-dot" style="background:#a855f7"></div>مسائي</div>
-      <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>إجازة</div>
-      <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div>عطلة رسمية</div>
-    </div>
-    <div style="overflow-x:auto"><div id="sch-table" style="min-width:700px"></div></div>
+    <div id="sch-kpis"></div>
+    <div id="sch-table"></div>
     <div class="broadcast-panel">
       <div style="font-size:12px;font-weight:700;color:#25d366;margin-bottom:8px;display:flex;align-items:center;gap:6px"><i class="ti ti-brand-whatsapp"></i> إرسال الجدول</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -8767,21 +10167,35 @@ function repFinancials(){
     salaryCost      = _monthlySalaryCost(repMonth, repYear) || 0;
     adminSalaryCost = _monthlyAdminSalaryCost(repMonth, repYear) || 0;
   }
-  const totalExpense = totalExpNonSal + salaryCost + adminSalaryCost;
-  const netProfit = totalIncome - totalExpense;
-  const margin = totalIncome ? (netProfit/totalIncome*100) : 0;
+  // الإهلاك وتكلفة التمويل — يُحتسبان لكل شهر داخل المدى
+  let depCost = 0, intCost = 0;
+  if(repMode==='year'){
+    for(let m=1; m<=12; m++){ depCost += _monthlyDepreciation(m, repYear); intCost += _loanForMonth(m, repYear).interest; }
+  } else {
+    depCost = _monthlyDepreciation(repMonth, repYear);
+    intCost = _loanForMonth(repMonth, repYear).interest;
+  }
+  const ebitda       = totalIncome - (totalExpNonSal + salaryCost + adminSalaryCost);
+  const totalExpense = totalExpNonSal + salaryCost + adminSalaryCost + depCost + intCost;
+  const netProfit    = totalIncome - totalExpense;
+  const margin       = totalIncome ? (netProfit/totalIncome*100) : 0;
 
   // Expenses by category (incl. salaries)
   const expByCat = {};
   expNonSal.forEach(e => { expByCat[e.category] = (expByCat[e.category]||0) + (parseFloat(e.amount)||0); });
   if(salaryCost>0) expByCat['salaries'] = salaryCost;
-  if(adminSalaryCost>0) expByCat['admin'] = (expByCat['admin']||0) + adminSalaryCost;
+  if(adminSalaryCost>0) expByCat['adminSalaries'] = adminSalaryCost;
+  if(depCost>0) expByCat['depreciation'] = depCost;
+  if(intCost>0) expByCat['finance'] = intCost;
   const expEntries = Object.entries(expByCat).map(([k,v])=>{
-    const c = (typeof EXP_CATS !== 'undefined' && EXP_CATS[k]) ? EXP_CATS[k] : {name:k, icon:'•', color:'#888'};
+    const _EXTRA = {adminSalaries:{name:'رواتب الإدارة',icon:'💼',color:'#eab308'},
+                    depreciation:{name:'إهلاك الأسطول',icon:'🚗',color:'#8b5cf6'},
+                    finance:{name:'تكلفة التمويل',icon:'🏦',color:'#64748b'}};
+    const c = _EXTRA[k] || ((typeof EXP_CATS !== 'undefined' && EXP_CATS[k]) ? EXP_CATS[k] : {name:k, icon:'•', color:'#888'});
     return { key:k, name:c.name, icon:c.icon, color:c.color, amount:v, pct: totalExpense?v/totalExpense*100:0 };
   }).sort((a,b)=>b.amount-a.amount);
 
-  return { totalIncome, totalExpense, totalExpNonSal, salaryCost, adminSalaryCost, netProfit, margin, expEntries, incomes:inc, expenses:exp, bounds:b };
+  return { totalIncome, totalExpense, totalExpNonSal, salaryCost, adminSalaryCost, depCost, intCost, ebitda, netProfit, margin, expEntries, incomes:inc, expenses:exp, bounds:b };
 }
 
 /** Partner mix analysis */
@@ -11119,116 +12533,7 @@ async function doExport(fmt){
 }
 
 // تقرير المحاسبة العربي — Arabic Accounting Report
-function generateAccArabicReport(){
-  try {
-    var expenses = JSON.parse(localStorage.getItem('sl_exp')||'[]');
-    var incomes  = JSON.parse(localStorage.getItem('sl_inc')||'[]');
-    var drivers  = JSON.parse(localStorage.getItem('sl_drv')||'[]');
-    var monthEl  = document.getElementById('acc-month');
-    var month    = monthEl ? monthEl.value : new Date().toISOString().slice(0,7);
-
-    function inMonth(dateStr){ return (dateStr||'').startsWith(month); }
-    var monthExp = expenses.filter(function(e){ return inMonth(e.date); });
-    var monthInc = incomes.filter(function(i){ return inMonth(i.date); });
-
-    var totalIncome = monthInc.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0);
-    var totalExpense = monthExp.reduce(function(s,x){ return s + (Number(x.amount)||0); }, 0);
-    var salaryCost = drivers.reduce(function(s,d){ return s + (Number(d.salary)||0); }, 0);
-    var netProfit = totalIncome - totalExpense - salaryCost;
-    var margin = totalIncome > 0 ? (netProfit / totalIncome * 100) : 0;
-    var profitColor = netProfit >= 0 ? '#059669' : '#dc2626';
-
-    var byCategory = {};
-    monthExp.forEach(function(e){
-      var cat = e.category || 'أخرى';
-      byCategory[cat] = (byCategory[cat] || 0) + (Number(e.amount) || 0);
-    });
-
-    var bySource = {};
-    monthInc.forEach(function(i){
-      var src = i.partner || i.source || 'غير محدد';
-      bySource[src] = (bySource[src] || 0) + (Number(i.amount) || 0);
-    });
-
-    function fmt(n){ return (Number(n)||0).toLocaleString('en-US', {minimumFractionDigits:3, maximumFractionDigits:3}); }
-    var today = new Date().toLocaleDateString('ar-KW');
-
-    var w = window.open('', '_blank');
-    if(!w){ if(typeof toast==='function') toast('اسمح بفتح النوافذ المنبثقة','e'); return; }
-
-    var expRows = Object.entries(byCategory).sort(function(a,b){return b[1]-a[1];}).map(function(e){
-      var pct = totalExpense > 0 ? (e[1]/totalExpense*100).toFixed(1) : '0.0';
-      return '<tr><td>'+e[0]+'</td><td>'+fmt(e[1])+'</td><td>'+pct+'%</td></tr>';
-    }).join('');
-
-    var incRows = Object.entries(bySource).sort(function(a,b){return b[1]-a[1];}).map(function(i){
-      var pct = totalIncome > 0 ? (i[1]/totalIncome*100).toFixed(1) : '0.0';
-      return '<tr><td>'+i[0]+'</td><td>'+fmt(i[1])+'</td><td>'+pct+'%</td></tr>';
-    }).join('');
-
-    var html = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير المحاسبة</title>';
-    html += '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">';
-    html += '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Cairo",Arial,sans-serif;background:#f8fafc;padding:30px;color:#0f172a}';
-    html += '.wrap{max-width:900px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;box-shadow:0 8px 24px rgba(0,0,0,0.08);border-top:6px solid #c29449}';
-    html += 'h1{color:#0f3a52;font-size:28px;font-weight:900;margin-bottom:6px;text-align:center}';
-    html += '.company{text-align:center;color:#64748b;margin-bottom:8px;font-weight:700}';
-    html += '.date-info{text-align:center;background:#fdf6e9;padding:12px;border-radius:10px;margin-bottom:24px;font-weight:800;color:#0f3a52}';
-    html += '.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}';
-    html += '.kpi{background:#f8fafc;padding:16px;border-radius:12px;border-right:4px solid var(--c);text-align:center}';
-    html += '.kpi-label{font-size:11px;color:#64748b;font-weight:800;margin-bottom:6px}';
-    html += '.kpi-value{font-size:20px;font-weight:900;color:var(--c)}';
-    html += 'h2{color:#0f3a52;font-size:18px;font-weight:900;margin:20px 0 12px;padding-bottom:8px;border-bottom:3px solid #c29449}';
-    html += 'table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}';
-    html += 'th{background:#0f3a52;color:#fff;padding:11px 12px;text-align:right;font-weight:800}';
-    html += 'td{padding:10px 12px;border-bottom:1px solid #e2e8f0;font-weight:600}';
-    html += 'tr:nth-child(even) td{background:#f8fafc}';
-    html += '.summary-table{background:#fdf6e9;padding:20px;border-radius:12px;margin-top:20px}';
-    html += '.summary-table th{background:#c29449}';
-    html += '.footer{margin-top:30px;text-align:center;padding-top:20px;border-top:2px solid #e2e8f0;color:#64748b;font-size:12px}';
-    html += '.print-btn{position:fixed;top:20px;left:20px;padding:12px 20px;background:#c29449;color:#fff;border:none;border-radius:8px;font-family:"Cairo";font-weight:800;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(194,148,73,0.4)}';
-    html += '@media print{.print-btn{display:none}body{background:#fff;padding:0}.wrap{box-shadow:none;padding:20px}}';
-    html += '</style></head><body>';
-    html += '<button class="print-btn" onclick="window.print()">🖨️ طباعة / PDF</button>';
-    html += '<div class="wrap"><h1>📊 تقرير المحاسبة الشامل</h1>';
-    html += '<div class="company">شركة السلاسل لتوصيل الطلبات الاستهلاكية</div>';
-    html += '<div class="date-info">📅 الشهر: '+month+' &nbsp;|&nbsp; تاريخ الإصدار: '+today+'</div>';
-    html += '<div class="summary-grid">';
-    html += '<div class="kpi" style="--c:#059669"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value">'+fmt(totalIncome)+'</div></div>';
-    html += '<div class="kpi" style="--c:#dc2626"><div class="kpi-label">إجمالي المصروفات</div><div class="kpi-value">'+fmt(totalExpense)+'</div></div>';
-    html += '<div class="kpi" style="--c:#f59e0b"><div class="kpi-label">تكلفة الرواتب</div><div class="kpi-value">'+fmt(salaryCost)+'</div></div>';
-    html += '<div class="kpi" style="--c:'+profitColor+'"><div class="kpi-label">صافي الربح</div><div class="kpi-value">'+fmt(netProfit)+'</div></div>';
-    html += '</div>';
-    html += '<h2>💰 الإيرادات حسب المصدر</h2>';
-    html += '<table><thead><tr><th>المصدر / الشريك</th><th>المبلغ (د.ك)</th><th>النسبة</th></tr></thead><tbody>';
-    html += (incRows || '<tr><td colspan="3" style="text-align:center;color:#94a3b8">لا توجد إيرادات مسجلة</td></tr>');
-    html += '</tbody></table>';
-    html += '<h2>💸 المصروفات حسب الفئة</h2>';
-    html += '<table><thead><tr><th>الفئة</th><th>المبلغ (د.ك)</th><th>النسبة</th></tr></thead><tbody>';
-    html += (expRows || '<tr><td colspan="3" style="text-align:center;color:#94a3b8">لا توجد مصروفات مسجلة</td></tr>');
-    html += '</tbody></table>';
-    html += '<div class="summary-table"><h2 style="margin-top:0;border-bottom-color:#c29449">📋 الملخص المالي النهائي</h2><table>';
-    html += '<tr><td>إجمالي الإيرادات</td><td style="color:#059669;font-weight:900">'+fmt(totalIncome)+' د.ك</td></tr>';
-    html += '<tr><td>إجمالي المصروفات</td><td style="color:#dc2626;font-weight:900">('+fmt(totalExpense)+') د.ك</td></tr>';
-    html += '<tr><td>تكلفة الرواتب</td><td style="color:#f59e0b;font-weight:900">('+fmt(salaryCost)+') د.ك</td></tr>';
-    html += '<tr style="background:#fff"><td style="font-weight:900;font-size:16px">صافي الربح</td><td style="color:'+profitColor+';font-weight:900;font-size:18px">'+fmt(netProfit)+' د.ك</td></tr>';
-    html += '<tr><td>هامش الربح</td><td style="color:'+profitColor+';font-weight:900">'+margin.toFixed(2)+'%</td></tr>';
-    html += '<tr><td>عدد بنود المصاريف</td><td>'+monthExp.length+' بند</td></tr>';
-    html += '<tr><td>عدد بنود الإيرادات</td><td>'+monthInc.length+' بند</td></tr>';
-    html += '<tr><td>عدد السائقين</td><td>'+drivers.length+' سائق</td></tr>';
-    html += '</table></div>';
-    html += '<div class="footer">📊 تقرير مُولّد من نظام ARK · شركة السلاسل © '+new Date().getFullYear()+'</div>';
-    html += '</div></body></html>';
-
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    if(typeof toast==='function') toast('التقرير جاهز','s');
-  } catch(err) {
-    console.error('Arabic report error:', err);
-    if(typeof toast==='function') toast('فشل: '+err.message,'e');
-    else alert('فشل: '+err.message);
-  }
-}
+// (generateAccArabicReport اتنقلت للنسخة الجديدة داخل ARK-PL-REPORT)
 
 // تقرير كروت البنزين — Fuel Cards Report
 function openFuelCardsReport(){
@@ -12379,6 +13684,264 @@ if(typeof _esc !== 'function'){
   window._esc = s => String(s==null?'':s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   وحدة العهدة — ARK
+   بتسحب حركات العهدة من Supabase وتدخّل المصروفات في EXPENSES
+   المعرّف ثابت (CUST_<uuid>) علشان الإدخال ما يتكررش أبداً مهما زامنت
+   ═══════════════════════════════════════════════════════════════════ */
+let CUSTODY_TXNS = [];
+let custodyLoading = false;
+let custodyLastSync = null;
+
+const CUSTODY_SRC_AR = {bank:'حساب فرعي / بنك', transfer:'تحويل بنكي', cash:'كاش', other:'أخرى'};
+
+function _cKd(n){ return (Math.round((Number(n)||0)*1000)/1000).toFixed(3).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function _cEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function _cDate(s){ if(!s) return '—'; const p=String(s).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+
+/* ─── سحب الحركات من Supabase ─── */
+async function fetchCustody(){
+  if(!window.ARK_SB){ return {ok:false, err:'مفيش اتصال بالسيرفر'}; }
+  try{
+    const { data, error } = await window.ARK_SB
+      .from('custody_txn')
+      .select('*')
+      .order('txn_date', {ascending:false})
+      .order('created_at', {ascending:false})
+      .limit(3000);
+    if(error) throw error;
+    CUSTODY_TXNS = data || [];
+    custodyLastSync = new Date();
+    return {ok:true};
+  }catch(e){
+    return {ok:false, err:(e.message||String(e))};
+  }
+}
+
+/* ─── المزامنة مع المصروفات ───
+   • كل صرف غير ملغي ⟵ مصروف في EXPENSES بمعرّف CUST_<uuid>
+   • الحركة الملغية ⟵ يتشال مصروفها
+   • المعرّف ثابت ⟹ إعادة المزامنة ما بتضاعفش أي رقم */
+function syncCustodyToExpenses(){
+  if(typeof EXPENSES === 'undefined') return {added:0, removed:0, updated:0};
+
+  const byId = {};
+  EXPENSES.forEach(e => { if(String(e.id).indexOf('CUST_')===0) byId[e.id]=e; });
+
+  const seen = {};
+  let added=0, updated=0;
+
+  CUSTODY_TXNS.forEach(t => {
+    if(t.kind !== 'spend' || t.voided) return;
+    const id = 'CUST_' + t.id;
+    seen[id] = true;
+    const row = {
+      id: id,
+      date: t.txn_date,
+      amount: Number(t.amount)||0,
+      category: t.category || 'other',
+      driverId: t.driver_id || '',
+      note: '[عهدة ' + (t.holder_name || '—') + '] ' + (t.note || ''),
+      _custody: true
+    };
+    const cur = byId[id];
+    if(!cur){
+      EXPENSES.push(row);
+      added++;
+    }else if(cur.amount!==row.amount || cur.date!==row.date || cur.category!==row.category || cur.note!==row.note){
+      Object.assign(cur, row);
+      updated++;
+    }
+  });
+
+  // شيل مصروفات حركات اتلغت أو اتمسحت
+  const before = EXPENSES.length;
+  EXPENSES = EXPENSES.filter(e => String(e.id).indexOf('CUST_')!==0 || seen[e.id]);
+  const removed = before - EXPENSES.length;
+
+  if(added||updated||removed){ saveExp(); }
+  return {added, updated, removed};
+}
+
+/* ─── التبويب ─── */
+async function renderCustody(){
+  const el = document.getElementById('custody-content');
+  if(!el) return;
+  if(custodyLoading) return;
+  custodyLoading = true;
+
+  if(!CUSTODY_TXNS.length){
+    el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--mut)">'
+      + '<i class="ti ti-loader-2" style="font-size:38px;opacity:.4"></i>'
+      + '<p style="margin-top:10px">جاري تحميل حركات العهدة…</p></div>';
+  }
+
+  const r = await fetchCustody();
+  custodyLoading = false;
+
+  if(!r.ok){
+    el.innerHTML = '<div class="card" style="padding:22px;text-align:center">'
+      + '<i class="ti ti-plug-connected-x" style="font-size:36px;color:#ef4444"></i>'
+      + '<h3 style="margin:10px 0 6px">مقدرتش أسحب بيانات العهدة</h3>'
+      + '<p style="color:var(--mut);font-size:13px;line-height:1.8">' + _cEsc(r.err) + '</p>'
+      + '<p style="color:var(--mut);font-size:12px;margin-top:10px">لو الجدول لسه ماتعملش، شغّل ملف <b>العهدة_setup.sql</b> في Supabase.</p>'
+      + '<button class="btn" style="margin-top:14px" onclick="renderCustody()">إعادة المحاولة</button></div>';
+    return;
+  }
+
+  const sync = syncCustodyToExpenses();
+  drawCustody(sync);
+}
+
+function drawCustody(sync){
+  const el = document.getElementById('custody-content');
+  if(!el) return;
+
+  const live = CUSTODY_TXNS.filter(t=>!t.voided);
+
+  // أرصدة أصحاب العهد
+  const holders = {};
+  live.forEach(t=>{
+    const k = t.holder_id;
+    if(!holders[k]) holders[k] = {name:t.holder_name||'—', inn:0, out:0, ret:0, last:t.txn_date};
+    const a = Number(t.amount)||0;
+    if(t.kind==='receive') holders[k].inn+=a;
+    else if(t.kind==='spend') holders[k].out+=a;
+    else holders[k].ret+=a;
+    if(t.txn_date > holders[k].last) holders[k].last = t.txn_date;
+  });
+
+  const hk = Object.keys(holders);
+  const totBal = hk.reduce((s,k)=> s + (holders[k].inn - holders[k].out - holders[k].ret), 0);
+  const totOut = hk.reduce((s,k)=> s + holders[k].out, 0);
+  const totIn  = hk.reduce((s,k)=> s + holders[k].inn, 0);
+
+  // فلتر الشهر
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const sel = document.getElementById('custMonth');
+  const curVal = sel ? sel.value : '';
+  let mOpts = '<option value="">كل الشهور</option>';
+  const now = new Date();
+  for(let i=0;i<18;i++){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const v = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    mOpts += '<option value="'+v+'"'+(v===curVal?' selected':'')+'>'+months[d.getMonth()]+' '+d.getFullYear()+'</option>';
+  }
+
+  const ym = curVal;
+  const shown = (ym ? CUSTODY_TXNS.filter(t=>String(t.txn_date).startsWith(ym)) : CUSTODY_TXNS).slice(0, 400);
+
+  const syncNote = sync && (sync.added||sync.updated||sync.removed)
+    ? '<div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;border-radius:11px;padding:10px 13px;font-size:12.5px;margin-bottom:14px">'
+      + '<i class="ti ti-check"></i> اتزامنت مع المحاسبة: '
+      + (sync.added?('أُضيف '+sync.added+' مصروف · '):'')
+      + (sync.updated?('حُدّث '+sync.updated+' · '):'')
+      + (sync.removed?('حُذف '+sync.removed+' ملغي'):'')
+      + '</div>'
+    : '';
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">'
+      + '<h2 style="font-size:20px;font-weight:800;flex:1;display:flex;align-items:center;gap:9px">'
+      + '<i class="ti ti-wallet" style="color:#0d9488"></i> العهد النقدية</h2>'
+      + '<select id="custMonth" onchange="drawCustody()" style="padding:9px 12px;border:1px solid var(--line,#e2e8f0);border-radius:10px;background:var(--card,#fff);font:600 13px Cairo,sans-serif">'+mOpts+'</select>'
+      + '<button class="btn" onclick="renderCustody()" style="padding:9px 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#1c5878,#0d9488);color:#fff;font:700 13px Cairo,sans-serif;cursor:pointer"><i class="ti ti-refresh"></i> تحديث ومزامنة</button>'
+      + '<button class="btn" onclick="window.open(\'custody.html\',\'_blank\')" style="padding:9px 14px;border-radius:10px;border:1px solid var(--line,#e2e8f0);background:var(--card,#fff);font:700 13px Cairo,sans-serif;cursor:pointer"><i class="ti ti-device-mobile"></i> تطبيق العهدة</button>'
+    + '</div>'
+
+    + syncNote
+
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px">'
+      + _cKpi('الرصيد القائم في العهد', _cKd(totBal)+' د.ك', 'ti-wallet', '#0d9488')
+      + _cKpi('إجمالي المستلم', _cKd(totIn)+' د.ك', 'ti-arrow-down-left', '#1c5878')
+      + _cKpi('إجمالي المنصرف', _cKd(totOut)+' د.ك', 'ti-arrow-up-right', '#b91c1c')
+      + _cKpi('عدد أصحاب العهد', String(hk.length), 'ti-users', '#c29449')
+    + '</div>'
+
+    + '<div class="card" style="background:var(--card,#fff);border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 2px 12px rgba(15,23,42,.06)">'
+      + '<h3 style="font-size:15px;font-weight:700;margin-bottom:14px"><i class="ti ti-user-dollar"></i> أرصدة أصحاب العهد</h3>'
+      + (hk.length
+        ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+          + '<thead><tr style="text-align:start;color:var(--mut,#64748b);font-size:12px">'
+          + '<th style="text-align:start;padding:8px 6px">صاحب العهدة</th>'
+          + '<th style="text-align:start;padding:8px 6px">مستلم</th>'
+          + '<th style="text-align:start;padding:8px 6px">منصرف</th>'
+          + '<th style="text-align:start;padding:8px 6px">مردود</th>'
+          + '<th style="text-align:start;padding:8px 6px">الرصيد القائم</th>'
+          + '<th style="text-align:start;padding:8px 6px">آخر حركة</th></tr></thead><tbody>'
+          + hk.sort((a,b)=>(holders[b].inn-holders[b].out-holders[b].ret)-(holders[a].inn-holders[a].out-holders[a].ret))
+              .map(k=>{
+                const h=holders[k], bal=h.inn-h.out-h.ret;
+                return '<tr style="border-top:1px solid var(--line,#e2e8f0)">'
+                  + '<td style="padding:10px 6px;font-weight:700">'+_cEsc(h.name)+'</td>'
+                  + '<td style="padding:10px 6px;color:#059669">'+_cKd(h.inn)+'</td>'
+                  + '<td style="padding:10px 6px;color:#b91c1c">'+_cKd(h.out)+'</td>'
+                  + '<td style="padding:10px 6px;color:#d97706">'+_cKd(h.ret)+'</td>'
+                  + '<td style="padding:10px 6px;font-weight:800">'+_cKd(bal)+' د.ك</td>'
+                  + '<td style="padding:10px 6px;color:var(--mut,#64748b)">'+_cDate(h.last)+'</td></tr>';
+              }).join('')
+          + '</tbody></table></div>'
+        : '<p style="color:var(--mut,#64748b);font-size:13px;text-align:center;padding:24px">مفيش عهد مسجّلة لسه.</p>')
+    + '</div>'
+
+    + '<div class="card" style="background:var(--card,#fff);border-radius:16px;padding:18px;box-shadow:0 2px 12px rgba(15,23,42,.06)">'
+      + '<h3 style="font-size:15px;font-weight:700;margin-bottom:6px"><i class="ti ti-list-details"></i> كشف حركة العهد</h3>'
+      + '<p style="font-size:12px;color:var(--mut,#64748b);margin-bottom:14px">كل عملية صرف بتتسجل أوتوماتيك في مصروفات المحاسبة بنفس البند — من غير إدخال تاني.</p>'
+      + (shown.length
+        ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">'
+          + '<thead><tr style="color:var(--mut,#64748b);font-size:11.5px">'
+          + ['التاريخ','صاحب العهدة','النوع','المبلغ','البند','السائق','البيان','الرصيد بعد']
+              .map(h=>'<th style="text-align:start;padding:8px 6px;white-space:nowrap">'+h+'</th>').join('')
+          + '</tr></thead><tbody>'
+          + shown.map(t=>{
+              const isIn=t.kind==='receive';
+              const cat = (typeof EXP_CATS!=='undefined' && EXP_CATS[t.category]) ? EXP_CATS[t.category].name : (t.category||'');
+              const kindTxt = isIn ? '⬇️ استلام' : (t.kind==='spend' ? '⬆️ صرف' : '↩️ رد');
+              const drv = t.driver_id ? _cEsc(t.driver_id) : '—';
+              const extra = isIn ? (CUSTODY_SRC_AR[t.source]||t.source||'') + (t.ref_no?' · '+_cEsc(t.ref_no):'') : '';
+              return '<tr style="border-top:1px solid var(--line,#e2e8f0)'+(t.voided?';opacity:.42;text-decoration:line-through':'')+'">'
+                + '<td style="padding:9px 6px;white-space:nowrap">'+_cDate(t.txn_date)+'</td>'
+                + '<td style="padding:9px 6px;white-space:nowrap">'+_cEsc(t.holder_name||'—')+'</td>'
+                + '<td style="padding:9px 6px;white-space:nowrap">'+kindTxt+(t.voided?' <span style="color:#b91c1c">(ملغاة)</span>':'')+'</td>'
+                + '<td style="padding:9px 6px;font-weight:700;white-space:nowrap;color:'+(isIn?'#059669':'#b91c1c')+'">'+(isIn?'+':'−')+_cKd(t.amount)+'</td>'
+                + '<td style="padding:9px 6px;white-space:nowrap">'+(t.kind==='spend'?_cEsc(cat):'—')+'</td>'
+                + '<td style="padding:9px 6px;white-space:nowrap">'+drv+'</td>'
+                + '<td style="padding:9px 6px;max-width:280px">'+_cEsc(t.note||'')+(extra?' <span style="color:var(--mut,#64748b)">· '+extra+'</span>':'')+'</td>'
+                + '<td style="padding:9px 6px;white-space:nowrap;color:var(--mut,#64748b)">'+_cKd(t.balance_after)+'</td></tr>';
+            }).join('')
+          + '</tbody></table></div>'
+          + (CUSTODY_TXNS.length>400 ? '<p style="font-size:11.5px;color:var(--mut,#64748b);margin-top:10px">معروض أول 400 حركة — استخدم فلتر الشهر لتضييق النتائج.</p>' : '')
+        : '<p style="color:var(--mut,#64748b);font-size:13px;text-align:center;padding:24px">مفيش حركات في الفترة دي.</p>')
+    + '</div>';
+}
+
+function _cKpi(label, val, icon, color){
+  return '<div style="background:var(--card,#fff);border-radius:15px;padding:15px;box-shadow:0 2px 10px rgba(15,23,42,.06);border-inline-start:4px solid '+color+'">'
+    + '<div style="display:flex;align-items:center;gap:7px;color:var(--mut,#64748b);font-size:12px;margin-bottom:7px">'
+    + '<i class="ti '+icon+'" style="color:'+color+';font-size:16px"></i> '+label+'</div>'
+    + '<div style="font-size:21px;font-weight:800;letter-spacing:-.4px">'+val+'</div></div>';
+}
+
+/* ─── مزامنة صامتة عند فتح النظام ───
+   علشان قائمة الدخل والتقارير تبقى صح حتى لو ما فتحتش تبويب العهدة */
+window.addEventListener('ark-auth-ready', function(){
+  setTimeout(async function(){
+    const r = await fetchCustody();
+    if(!r.ok) return;
+    const s = syncCustodyToExpenses();
+    if(s.added || s.updated || s.removed){
+      if(typeof toast === 'function'){
+        toast('العهدة: اتزامن '+(s.added+s.updated)+' مصروف مع المحاسبة','s');
+      }
+      if(typeof currentView !== 'undefined' && currentView === 'acc' && typeof renderAccounting === 'function'){
+        renderAccounting();
+      }
+    }
+  }, 2500);
+});
+
 </script>
 </body>
 </html>
