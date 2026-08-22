@@ -14148,7 +14148,8 @@ function mmCopy(){
     });
 }
 
-function mmMissing(){
+async function mmMissing(){
+  await pullDriverEmails(true);           // اتأكد إن القايمة محدّثة قبل ما تعرضها
   const miss = DRV.filter(d => !(d.email||'').trim() && !(typeof isAdminStaff==='function' && isAdminStaff(d)));
   if(!miss.length){ toast('كل السائقين مسجّلين إيميلاتهم ✅','s'); return; }
   const byP = {};
@@ -14165,10 +14166,63 @@ function mmMissing(){
       + (d.sim ? '<span class="mono" style="font-size:11px;color:var(--muted)">'+_esc(d.sim)+'</span>' : '')
       + '</div>').join('');
   });
-  h += '<div class="modal-actions" style="margin-top:16px"><button class="btn btn-cancel" onclick="document.getElementById(\'mmMissModal\').remove()">إغلاق</button></div>'
+  h += '<div class="modal-actions" style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">'
+     + '<button class="btn btn-cancel" onclick="document.getElementById(\'mmMissModal\').remove()">إغلاق</button>'
+     + '<button class="btn btn-save" onclick="document.getElementById(\'mmMissModal\').remove();pullDriverEmails(false)"><i class="ti ti-refresh"></i> تحديث من التطبيق</button></div>'
      + '</div></div>';
   document.body.insertAdjacentHTML('beforeend', h);
 }
+
+
+
+/* ══════════════════════════════════════════════════════════════
+   سحب إيميلات السائقين من السحابة إلى ARK
+   السائق بيسجّل من التطبيق ← Supabase. ARK بيقرا محلياً،
+   فلازم نجيبها ونحدّث النسخة المحلية.
+   القاعدة: ما نمسحش إيميل محلي بقيمة فاضية من السحابة أبداً.
+   ══════════════════════════════════════════════════════════════ */
+async function pullDriverEmails(silent){
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/drivers?select=id,email,email_consent_at&limit=2000',
+      { headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY } });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const rows = await r.json();
+
+    let added = 0, changed = 0;
+    rows.forEach(x => {
+      const cloudEmail = (x.email || '').trim();
+      if(!cloudEmail) return;                       // فاضي في السحابة — ما نلمسش المحلي
+      const d = DRV.find(v => v.id === x.id);
+      if(!d) return;
+      const localEmail = (d.email || '').trim();
+      if(localEmail === cloudEmail) return;
+      if(!localEmail) added++; else changed++;
+      d.email = cloudEmail;
+      if(x.email_consent_at) d.email_consent_at = x.email_consent_at;
+    });
+
+    if(added || changed){
+      save();
+      if(typeof renderList === 'function') renderList();
+      if(typeof selId !== 'undefined' && selId && typeof renderDetail === 'function' && !editing) renderDetail();
+    }
+    if(!silent){
+      toast(added || changed
+        ? ('اتحدّث ' + (added+changed) + ' إيميل' + (added ? ' (' + added + ' جديد)' : ''))
+        : 'مفيش إيميلات جديدة', added || changed ? 's' : 'e');
+    }
+    return {added, changed, total: rows.filter(x => (x.email||'').trim()).length};
+  }catch(e){
+    console.error('[emails] pull failed', e);
+    if(!silent) toast('مقدرتش أجيب الإيميلات: ' + (e.message||''), 'e');
+    return null;
+  }
+}
+
+/* سحب تلقائي عند فتح النظام */
+window.addEventListener('ark-auth-ready', function(){
+  setTimeout(function(){ pullDriverEmails(true); }, 3500);
+});
 
 </script>
 
@@ -14196,6 +14250,7 @@ function mmMissing(){
 
     <div class="modal-actions" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
       <button class="btn btn-cancel" onclick="closeModal('mailModal')">إغلاق</button>
+      <button class="btn btn-cancel" onclick="pullDriverEmails(false)"><i class="ti ti-refresh"></i> تحديث الإيميلات</button>
       <button class="btn btn-cancel" onclick="mmMissing()"><i class="ti ti-user-off"></i> مين مالوش إيميل</button>
       <button class="btn btn-cancel" onclick="mmCopy()"><i class="ti ti-copy"></i> نسخ النص</button>
       <button class="btn btn-save" onclick="mmOpen()" style="background:linear-gradient(135deg,#1c5878,#0d9488)"><i class="ti ti-external-link"></i> فتح في الإيميل</button>
