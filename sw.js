@@ -3,7 +3,7 @@
    يخزّن ملفات التطبيق للعمل بدون إنترنت ولتثبيته كتطبيق
    + يدعم إشعارات الموبايل الفعلية (Web Notifications)
    =========================================================== */
-const CACHE = 'alsalasil-driver-v6';
+const CACHE = 'alsalasil-driver-v7';
 
 // ملفات هيكل التطبيق (App Shell)
 const SHELL = [
@@ -60,7 +60,25 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ملفات التطبيق المحلية: الكاش أولاً ثم الشبكة، مع التحديث في الخلفية
+  // ⚡ صفحات HTML: الشبكة أولاً (عشان التحديثات توصل فوراً) ثم الكاش لو مفيش نت
+  const isHTML = req.mode === 'navigate'
+              || (req.headers.get('accept') || '').includes('text/html')
+              || url.pathname.endsWith('.html')
+              || url.pathname === '/' || url.pathname.endsWith('/');
+  if (isHTML) {
+    e.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // باقي ملفات التطبيق (صور/أيقونات): الكاش أولاً ثم الشبكة
   e.respondWith(
     caches.match(req).then(hit => {
       const net = fetch(req).then(res => {
