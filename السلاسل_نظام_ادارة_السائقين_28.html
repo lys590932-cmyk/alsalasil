@@ -1697,6 +1697,101 @@ body{
 .rail #nav-vio.on i{ background:linear-gradient(135deg,#fca5a5,#b91c1c) !important; color:#fff !important }
 .rail #nav-livemap.on i{ background:linear-gradient(135deg,#c4b5fd,#7c3aed) !important; color:#fff !important }
 .rail #nav-acc.on i, .rail #nav-apps.on i{ background:linear-gradient(135deg,#fcd34d,#d97706) !important; color:#3b1d00 !important }
+
+/* ===== لوحة التقييمات — ARK ===== */
+.rt-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:12px 14px;background:var(--s1);
+  border:1px solid var(--br);border-radius:14px;margin-bottom:12px;box-shadow:var(--shadow-xs)}
+.rt-fld{display:flex;flex-direction:column;gap:4px}
+.rt-fld>span{font-size:10px;font-weight:800;color:var(--muted2);letter-spacing:.3px}
+.rt-fld select,.rt-fld input{padding:7px 9px;background:var(--s2);border:1px solid var(--br);border-radius:9px;
+  color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;outline:none}
+.rt-fld select:focus,.rt-fld input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(28,88,120,.10)}
+.rt-spacer{flex:1 1 auto}
+.rt-btn{padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);
+  font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s}
+.rt-btn:hover{border-color:var(--accent);color:var(--accent)}
+.rt-btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.rt-btn.pri:hover{opacity:.9;color:#fff}
+
+.rt-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin-bottom:12px}
+.rt-kpi{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:11px 13px;box-shadow:var(--shadow-xs)}
+.rt-kpi-t{font-size:10.5px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.rt-kpi-t i{font-size:14px}
+.rt-kpi-v{font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1.15;direction:ltr;unicode-bidi:isolate;text-align:start}
+.rt-kpi-s{font-size:10px;color:var(--muted2);margin-top:2px;font-weight:700}
+
+.rt-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.rt-card{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow-xs)}
+.rt-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:11px}
+.rt-card-h b{font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;gap:6px}
+.rt-card-h b i{color:var(--accent);font-size:15px}
+.rt-hint{font-size:10px;color:var(--muted2);margin-inline-start:auto;font-weight:700}
+
+.rt-dist-r{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.rt-dist-l{font-size:12px;color:#d97706;letter-spacing:1px;direction:ltr;unicode-bidi:isolate;width:64px;flex-shrink:0}
+.rt-dist-t{flex:1;height:9px;border-radius:5px;background:var(--s3);overflow:hidden}
+.rt-dist-f{height:100%;border-radius:5px;transition:width .4s ease;min-width:2px}
+.rt-dist-v{width:26px;text-align:center;font-size:12px;font-weight:900;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+
+.rt-top-r{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rt-top-n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:900;
+  background:var(--s3);color:var(--muted);flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.rt-top-n.m1{background:linear-gradient(135deg,#fbbf24,#d97706);color:#fff}
+.rt-top-n.m2{background:linear-gradient(135deg,#cbd5e1,#94a3b8);color:#fff}
+.rt-top-n.m3{background:linear-gradient(135deg,#d97706,#92400e);color:#fff}
+.rt-top-nm{width:126px;flex-shrink:0;font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;unicode-bidi:plaintext}
+.rt-top-t{flex:1;height:9px;border-radius:5px;background:var(--s3);overflow:hidden}
+.rt-top-f{height:100%;border-radius:5px;background:linear-gradient(90deg,#0d9488,#1c5878);min-width:2px}
+.rt-top-v{width:38px;text-align:center;font-size:11.5px;font-weight:900;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+
+.rt-scroll{overflow-x:auto}
+.rt-tbl{width:100%;border-collapse:collapse;min-width:940px}
+.rt-tbl th{font-size:10.5px;font-weight:800;color:var(--muted2);padding:8px 7px;text-align:start;
+  border-bottom:1.5px solid var(--br);white-space:nowrap;position:sticky;top:0;background:var(--s1);z-index:1}
+.rt-tbl th.c{text-align:center}
+.rt-tbl td{padding:8px 7px;border-bottom:1px solid var(--br);font-size:12px;vertical-align:middle}
+.rt-tbl td.c{text-align:center}
+.rt-tbl tbody tr:hover{background:var(--s2)}
+.rt-tbl tbody tr.bad{background:rgba(185,28,28,.045)}
+.rt-tbl tbody tr.bad:hover{background:rgba(185,28,28,.075)}
+.rt-tbl .mono{font-family:'JetBrains Mono',monospace;font-weight:700;direction:ltr;unicode-bidi:isolate}
+.rt-nm{display:block;font-size:12px;font-weight:800;unicode-bidi:plaintext;line-height:1.3}
+.rt-id{display:block;font-size:9px;color:var(--muted2);font-style:normal;font-family:'JetBrains Mono',monospace;direction:ltr;unicode-bidi:isolate}
+.rt-sub{font-size:9.5px;color:var(--muted2);font-weight:700}
+.rt-pchip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;white-space:nowrap}
+.rt-score{font-size:14px;font-weight:900;font-family:'JetBrains Mono',monospace;direction:ltr;unicode-bidi:isolate}
+.rt-st{font-size:11px;color:#d97706;letter-spacing:.5px;direction:ltr;unicode-bidi:isolate}
+.rt-bdg span{font-size:13px;margin:0 1px;cursor:default}
+.rt-mini{width:26px;height:26px;border-radius:8px;border:1px solid var(--br);background:var(--s2);cursor:pointer;
+  font-size:13px;padding:0;filter:grayscale(1);opacity:.45;transition:.15s;line-height:1}
+.rt-mini:hover{opacity:.85;border-color:var(--accent)}
+.rt-mini.on{filter:none;opacity:1;border-color:#d97706;background:rgba(217,119,6,.12)}
+
+.rt-empty{text-align:center;padding:48px 20px;color:var(--muted);background:var(--s1);border:1px solid var(--br);border-radius:14px}
+.rt-empty i{font-size:36px;opacity:.3;display:block;margin-bottom:10px}
+.rt-empty p{font-size:12.5px;line-height:1.9}
+.rt-note{font-size:10.5px;color:var(--muted);line-height:1.9;background:var(--s2);border:1px dashed var(--br);
+  border-radius:12px;padding:11px 13px;margin-top:12px}
+.rt-note i{color:var(--accent);font-size:14px;vertical-align:-2px}
+
+/* نافذة الأهداف */
+.rt-ov{position:fixed;inset:0;background:rgba(15,23,41,.5);z-index:9400;display:none;align-items:center;justify-content:center;padding:20px}
+.rt-modal{background:var(--s1);border-radius:18px;max-width:620px;width:100%;max-height:88vh;overflow-y:auto;
+  padding:20px;box-shadow:var(--shadow-lg)}
+.rt-modal h2{font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rt-modal h2 i{color:var(--accent)}
+.rt-modal-p{font-size:11.5px;color:var(--muted);line-height:1.8;margin-bottom:14px}
+.rt-tg-r{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:10px;background:var(--s2);
+  border:1px solid var(--br);border-radius:12px;margin-bottom:8px}
+.rt-tg-n{flex:1 1 130px;font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:7px}
+.rt-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rt-tg-r label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:800;color:var(--muted2)}
+.rt-tg-r input{width:84px;padding:7px;text-align:center;background:var(--s1);border:1px solid var(--br);
+  border-radius:9px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:var(--text);outline:none}
+.rt-tg-r input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(28,88,120,.10)}
+.rt-modal-a{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
 </style>
 <!-- ══════════════════════════════════════════════════════════════════
      حارس الجلسة — لازم يفضل أول حاجة في الصفحة
@@ -1876,6 +1971,7 @@ body::after{
     <div class="rail-sec">المال والتحليل</div>
     <button class="nav-tab" id="nav-acc" data-tip="المحاسبة" onclick="setMainView('acc')"><i class="ti ti-cash-banknote"></i> <span data-i18n="nav_accounting">المحاسبة</span></button>
     <button class="nav-tab" id="nav-custody" data-tip="العهدة" onclick="setMainView('custody')"><i class="ti ti-wallet"></i> <span>العهدة</span></button>
+    <button class="nav-tab" id="nav-rating" data-tip="التقييمات" onclick="setMainView('rating')"><i class="ti ti-award"></i> <span>التقييمات</span></button>
     <button class="nav-tab" id="nav-reports" data-tip="تقارير الشركة" onclick="setMainView('reports')"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
     <button class="nav-tab" id="nav-vio" data-tip="المخالفات" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> <span data-i18n="nav_violations">المخالفات</span></button>
     <button class="nav-tab" id="nav-apps" data-tip="طلبات التقديم" onclick="setMainView('apps')"><i class="ti ti-user-plus"></i> <span data-i18n="nav_applications">طلبات التقديم</span></button>
@@ -2023,6 +2119,18 @@ body::after{
 <!-- DAILY REPORTS VIEW -->
 <div id="view-dreports" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
   <div id="dreports-content"></div>
+</div>
+
+<div id="view-rating" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="rating-content"></div>
+</div>
+
+<!-- نافذة ضبط الأهداف -->
+<div class="rt-ov" id="rtTargetsOv" onclick="if(event.target===this)rtCloseTargets()">
+  <div class="rt-modal">
+    <h2><i class="ti ti-target"></i> أهداف الأداء لكل شريك</h2>
+    <div id="rtTargetsBody"></div>
+  </div>
 </div>
 
 <!-- INCOME MODAL -->
@@ -4537,8 +4645,10 @@ function setMainView(view) {
   if(ordEl) ordEl.style.display = view==='orders' ? 'block' : 'none';
   const drepEl = document.getElementById('view-dreports');
   if(drepEl) drepEl.style.display = view==='dreports' ? 'block' : 'none';
+  const rtEl = document.getElementById('view-rating');
+  if(rtEl) rtEl.style.display = view==='rating' ? 'block' : 'none';
   // Update nav tabs
-  ['drivers','dash','att','vio','clockin','acc','custody','livemap','apps','reports','orders','dreports'].forEach(v => {
+  ['drivers','dash','att','vio','clockin','acc','custody','livemap','apps','reports','orders','dreports','rating'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if(el) el.classList.toggle('on', v===view);
   });
@@ -4554,6 +4664,7 @@ function setMainView(view) {
   if(view==='custody') renderCustody();
   if(view==='orders')  renderOrdersAdmin();
   if(view==='dreports') renderDailyReports();
+  if(view==='rating')   renderRating();
   if(view!=='clockin') clearInterval(clockinAutoRefresh);
   if(view!=='livemap') stopLiveMapRefresh();
 }
@@ -14222,6 +14333,414 @@ async function pullDriverEmails(silent){
 /* سحب تلقائي عند فتح النظام */
 window.addEventListener('ark-auth-ready', function(){
   setTimeout(function(){ pullDriverEmails(true); }, 3500);
+});
+
+
+/* ===================== RATING PANEL ===================== */
+/* =========================================================
+   لوحة التقييمات — ARK
+   ========================================================= */
+let RT_CFG    = {};     // partner -> config
+let RT_ROWS   = [];     // driver_month_orders لشهر مختار
+let RT_AWARDS = [];     // أوسمة الشهر
+let RT_PERIOD = (function(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
+let RT_FILT   = 'all';
+let RT_SORT   = 'score';
+let RT_LOADING= false;
+
+const RT_DEF = { daily_target:12, excellent_target:16, monthly_days_target:26, w_output:50, w_commit:30, w_discipline:20 };
+
+function rtHeaders(){
+  const h = { apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json' };
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        const v = JSON.parse(localStorage.getItem(k)||'{}');
+        if(v && v.access_token){ h.Authorization = 'Bearer '+v.access_token; break; }
+      }
+    }
+  }catch(e){}
+  return h;
+}
+async function rtGet(path){
+  const r = await fetch(SUPA_URL+'/rest/v1/'+path, { headers: rtHeaders() });
+  if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,140));
+  return r.json();
+}
+
+function rtCfgFor(partner){
+  const p = String(partner||'').toLowerCase();
+  const c = RT_CFG[p] || RT_CFG['_default'] || {};
+  const out = Object.assign({}, RT_DEF, c);
+  out.daily_target        = parseInt(out.daily_target)||12;
+  out.excellent_target    = parseInt(out.excellent_target) || Math.ceil(out.daily_target*1.5);
+  out.monthly_days_target = parseInt(out.monthly_days_target)||26;
+  return out;
+}
+
+/* عدد أيام الشهر المختار وكم يوم عدّى منه */
+function rtMonthSpan(){
+  const [Y,M] = RT_PERIOD.split('-').map(Number);
+  const dim = new Date(Y, M, 0).getDate();
+  const now = new Date();
+  const elapsed = (now.getFullYear()===Y && now.getMonth()+1===M) ? Math.min(dim, now.getDate()) : dim;
+  return { Y, M, dim, elapsed };
+}
+
+/* نفس معادلة التطبيق بالحرف — لو غيّرت هنا غيّر هناك */
+function rtScore(row, cfg, dedCount, span){
+  const logged = Number(row.days_logged)||0;
+  const avg    = Number(row.avg_orders)||0;
+  const outS = Math.min(cfg.w_output, (cfg.daily_target ? avg/cfg.daily_target : 0)*cfg.w_output);
+  const expected = Math.max(1, Math.round(cfg.monthly_days_target*span.elapsed/span.dim));
+  const comS = Math.min(cfg.w_commit, (logged/expected)*cfg.w_commit);
+  const repRatio = Math.min(1, logged/Math.max(1,span.elapsed));
+  const dedPart  = dedCount===0 ? 1 : Math.max(0, 1-dedCount*0.34);
+  const disS = cfg.w_discipline*0.6*repRatio + cfg.w_discipline*0.4*dedPart;
+  let s = Math.round((outS+comS+disS)*10)/10;
+  if(s>100) s=100;
+  return { score:s, stars: s>=90?5:s>=75?4:s>=60?3:s>=45?2:1, outS, comS, disS, expected };
+}
+
+function rtStars(n){ let s=''; for(let i=1;i<=5;i++) s += (i<=n?'★':'☆'); return s; }
+function rtColor(s){ return s>=90?'#10b981':s>=75?'#84cc16':s>=60?'#f59e0b':s>=45?'#f97316':'#ef4444'; }
+
+/* خصومات السائق في الشهر المختار — من بيانات ARK المحلية */
+function rtDedCount(driverId){
+  const [Y,M] = RT_PERIOD.split('-').map(Number);
+  let list = null;
+  // مصدر الخصومات في ARK: SALARIES[driverId].deductions
+  try{ if(typeof SALARIES!=='undefined' && SALARIES[driverId]) list = SALARIES[driverId].deductions; }catch(e){}
+  if(!Array.isArray(list)){
+    const d = (typeof DRV!=='undefined') ? DRV.find(x => x.id === driverId) : null;
+    if(d && Array.isArray(d.deductions)) list = d.deductions;
+  }
+  if(!Array.isArray(list)) return 0;
+  return list.filter(x => {
+    const dt = String(x.date||'');
+    if(dt.slice(0,7) === RT_PERIOD) return true;
+    return Number(x.month)===M && Number(x.year)===Y;
+  }).length;
+}
+
+/* ---------- التحميل ---------- */
+async function rtLoad(){
+  RT_LOADING = true;
+  try{
+    const [cfg, rows, awards] = await Promise.all([
+      rtGet('rating_config?select=*').catch(()=>[]),
+      rtGet('driver_month_orders?period=eq.'+RT_PERIOD+'&select=*&order=total_orders.desc&limit=500').catch(()=>[]),
+      rtGet('driver_awards?period=eq.'+RT_PERIOD+'&select=*&limit=500').catch(()=>[])
+    ]);
+    RT_CFG = {};
+    (cfg||[]).forEach(c => { if(c && c.partner) RT_CFG[String(c.partner).toLowerCase()] = c; });
+    RT_ROWS   = rows   || [];
+    RT_AWARDS = awards || [];
+  }catch(e){
+    console.warn('[rating] load', e);
+    toast('تعذّر تحميل بيانات التقييم — شغّل ملف SQL الأول','e');
+  }
+  RT_LOADING = false;
+}
+
+async function renderRating(){
+  const el = document.getElementById('rating-content');
+  if(!el) return;
+  if(!RT_ROWS.length && !Object.keys(RT_CFG).length){
+    el.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--muted)">'+
+      '<i class="ti ti-loader-2" style="font-size:34px;opacity:.4;display:block;margin-bottom:10px"></i>جاري التحميل…</div>';
+    await rtLoad();
+  }
+  rtPaint();
+}
+
+async function rtRefresh(){
+  const el = document.getElementById('rating-content');
+  if(el) el.style.opacity = '.5';
+  await rtLoad();
+  if(el) el.style.opacity = '1';
+  rtPaint();
+  toast('تم التحديث');
+}
+function rtSetPeriod(v){ if(!v) return; RT_PERIOD = v; rtRefresh(); }
+function rtSetFilt(v){ RT_FILT = v; rtPaint(); }
+function rtSetSort(v){ RT_SORT = v; rtPaint(); }
+
+/* ---------- الحساب لكل السائقين ---------- */
+function rtComputeAll(){
+  const span = rtMonthSpan();
+  const byId = {}; DRV.forEach(d => byId[d.id] = d);
+  return RT_ROWS.map(r => {
+    const d = byId[r.driver_id];
+    const partner = (r.partner || (d && d.partner) || '').toLowerCase();
+    const cfg = rtCfgFor(partner);
+    const ded = rtDedCount(r.driver_id);
+    const sc  = rtScore(r, cfg, ded, span);
+    return Object.assign({}, r, {
+      partner, cfg, ded, span,
+      name: (d && d.name) || r.driver_name || r.driver_id,
+      score: sc.score, stars: sc.stars, expected: sc.expected,
+      outS: sc.outS, comS: sc.comS, disS: sc.disS,
+      pctTarget: cfg.daily_target ? Math.round((Number(r.avg_orders)||0)/cfg.daily_target*100) : 0,
+      badges: RT_AWARDS.filter(a => a.driver_id === r.driver_id).map(a => a.code)
+    });
+  });
+}
+
+/* ---------- الرسم ---------- */
+function rtPaint(){
+  const el = document.getElementById('rating-content');
+  if(!el) return;
+  let list = rtComputeAll();
+  if(RT_FILT !== 'all') list = list.filter(x => x.partner === RT_FILT);
+
+  const sorters = {
+    score:  (a,b) => b.score - a.score,
+    orders: (a,b) => (b.total_orders||0) - (a.total_orders||0),
+    avg:    (a,b) => (b.avg_orders||0) - (a.avg_orders||0),
+    days:   (a,b) => (b.days_logged||0) - (a.days_logged||0),
+    worst:  (a,b) => a.score - b.score
+  };
+  list.sort(sorters[RT_SORT] || sorters.score);
+
+  const span = rtMonthSpan();
+  const n = list.length;
+  const avgScore = n ? Math.round(list.reduce((s,x)=>s+x.score,0)/n*10)/10 : 0;
+  const totOrders = list.reduce((s,x)=>s+(Number(x.total_orders)||0),0);
+  const onTarget = list.filter(x => x.pctTarget >= 100).length;
+  const weak = list.filter(x => x.score < 60).length;
+
+  let h = '';
+
+  /* شريط الأدوات */
+  h += '<div class="rt-bar">'+
+    '<div class="rt-fld"><span>الشهر</span><input type="month" value="'+RT_PERIOD+'" onchange="rtSetPeriod(this.value)"></div>'+
+    '<div class="rt-fld"><span>الشريك</span><select onchange="rtSetFilt(this.value)">'+
+      '<option value="all"'+(RT_FILT==='all'?' selected':'')+'>الكل</option>'+
+      PARTNERS.map(p => '<option value="'+p.id+'"'+(RT_FILT===p.id?' selected':'')+'>'+p.name+'</option>').join('')+
+    '</select></div>'+
+    '<div class="rt-fld"><span>الترتيب</span><select onchange="rtSetSort(this.value)">'+
+      '<option value="score"'+(RT_SORT==='score'?' selected':'')+'>الأعلى تقييماً</option>'+
+      '<option value="worst"'+(RT_SORT==='worst'?' selected':'')+'>الأضعف أولاً</option>'+
+      '<option value="orders"'+(RT_SORT==='orders'?' selected':'')+'>إجمالي الأوردرات</option>'+
+      '<option value="avg"'+(RT_SORT==='avg'?' selected':'')+'>المتوسط اليومي</option>'+
+      '<option value="days"'+(RT_SORT==='days'?' selected':'')+'>أيام العمل</option>'+
+    '</select></div>'+
+    '<div class="rt-spacer"></div>'+
+    '<button class="rt-btn" onclick="rtOpenTargets()"><i class="ti ti-target"></i> ضبط الأهداف</button>'+
+    '<button class="rt-btn" onclick="rtCopyReport()"><i class="ti ti-brand-whatsapp"></i> نسخ ملخص</button>'+
+    '<button class="rt-btn" onclick="rtRefresh()"><i class="ti ti-refresh"></i> تحديث</button>'+
+  '</div>';
+
+  /* مؤشرات */
+  h += '<div class="rt-kpis">'+
+    rtKpi('ti-users','سائق في التقييم', n, span.elapsed+' يوم من '+span.dim, '#3b82f6')+
+    rtKpi('ti-star','متوسط التقييم', avgScore, rtStars(avgScore>=90?5:avgScore>=75?4:avgScore>=60?3:avgScore>=45?2:1), rtColor(avgScore))+
+    rtKpi('ti-package','إجمالي الأوردرات', totOrders.toLocaleString('en'), 'الشهر ده', '#10b981')+
+    rtKpi('ti-target-arrow','حقّقوا الهدف', onTarget+' / '+n, n?Math.round(onTarget/n*100)+'%':'—', onTarget>=n/2?'#10b981':'#f59e0b')+
+    rtKpi('ti-alert-triangle','تحت 60 نقطة', weak, weak?'محتاجين متابعة':'مفيش', weak?'#ef4444':'#10b981')+
+  '</div>';
+
+  if(!n){
+    h += '<div class="rt-empty"><i class="ti ti-chart-bar-off"></i><p>مفيش تقارير يومية في الشهر ده.<br>'+
+         'التقييم بيتبني على التقارير اللي السائقين بيبعتوها من تطبيق FLY.</p></div>';
+    el.innerHTML = h; return;
+  }
+
+  /* توزيع النجوم + أعلى ١٠ */
+  h += '<div class="rt-two">';
+
+  // توزيع
+  const dist = [0,0,0,0,0];
+  list.forEach(x => dist[x.stars-1]++);
+  const maxD = Math.max.apply(null, dist) || 1;
+  h += '<div class="rt-card"><div class="rt-card-h"><b><i class="ti ti-chart-histogram"></i> توزيع التقييمات</b></div>'+
+    '<div class="rt-dist">';
+  for(let s=5;s>=1;s--){
+    const v = dist[s-1];
+    const col = rtColor(s===5?95:s===4?80:s===3?65:s===2?50:30);
+    h += '<div class="rt-dist-r">'+
+      '<span class="rt-dist-l">'+rtStars(s)+'</span>'+
+      '<div class="rt-dist-t"><div class="rt-dist-f" style="width:'+(v/maxD*100)+'%;background:'+col+'"></div></div>'+
+      '<b class="rt-dist-v">'+v+'</b></div>';
+  }
+  h += '</div></div>';
+
+  // أعلى ١٠ بالأوردرات
+  const top = list.slice().sort((a,b)=>(b.total_orders||0)-(a.total_orders||0)).slice(0,10);
+  const maxO = Math.max.apply(null, top.map(x=>Number(x.total_orders)||0)) || 1;
+  h += '<div class="rt-card"><div class="rt-card-h"><b><i class="ti ti-trophy"></i> أعلى ١٠ بالأوردرات</b></div>'+
+    '<div class="rt-top">';
+  top.forEach((x,i) => {
+    h += '<div class="rt-top-r">'+
+      '<span class="rt-top-n'+(i<3?' m'+(i+1):'')+'">'+(i+1)+'</span>'+
+      '<span class="rt-top-nm" title="'+(x.name||'')+'">'+(x.name||'')+'</span>'+
+      '<div class="rt-top-t"><div class="rt-top-f" style="width:'+((Number(x.total_orders)||0)/maxO*100)+'%"></div></div>'+
+      '<b class="rt-top-v">'+(x.total_orders||0)+'</b></div>';
+  });
+  h += '</div></div></div>';
+
+  /* الجدول */
+  h += '<div class="rt-card" style="margin-top:12px"><div class="rt-card-h"><b><i class="ti ti-list-numbers"></i> التفاصيل</b>'+
+    '<span class="rt-hint">النقاط = إنتاج ٥٠ + التزام ٣٠ + انضباط ٢٠</span></div>'+
+    '<div class="rt-scroll"><table class="rt-tbl"><thead><tr>'+
+    '<th style="width:34px">#</th><th>السائق</th><th>الشريك</th><th class="c">أيام</th><th class="c">أوردرات</th>'+
+    '<th class="c">المتوسط</th><th class="c">من الهدف</th><th class="c">خصومات</th><th class="c">النقاط</th>'+
+    '<th class="c">التقييم</th><th class="c">أوسمة</th><th class="c"></th></tr></thead><tbody>';
+
+  list.forEach((x,i) => {
+    const isStar = x.badges.indexOf('star') >= 0;
+    h += '<tr'+(x.score<60?' class="bad"':'')+'>'+
+      '<td class="mono">'+(i+1)+'</td>'+
+      '<td><b class="rt-nm">'+(x.name||'')+'</b><i class="rt-id">'+x.driver_id+'</i></td>'+
+      '<td><span class="rt-pchip" style="background:'+rtPartnerColor(x.partner)+'1f;color:'+rtPartnerColor(x.partner)+'">'+rtPartnerName(x.partner)+'</span></td>'+
+      '<td class="c mono">'+(x.days_logged||0)+' <span class="rt-sub">/'+x.expected+'</span></td>'+
+      '<td class="c mono">'+(x.total_orders||0)+'</td>'+
+      '<td class="c mono">'+(Number(x.avg_orders)||0).toFixed(1)+'</td>'+
+      '<td class="c mono" style="color:'+(x.pctTarget>=100?'#10b981':x.pctTarget>=80?'#f59e0b':'#ef4444')+'">'+x.pctTarget+'%'+
+        '<span class="rt-sub"> ('+x.cfg.daily_target+')</span></td>'+
+      '<td class="c mono" style="color:'+(x.ded?'#ef4444':'var(--muted)')+'">'+x.ded+'</td>'+
+      '<td class="c"><b class="rt-score" style="color:'+rtColor(x.score)+'">'+x.score.toFixed(1)+'</b></td>'+
+      '<td class="c"><span class="rt-st">'+rtStars(x.stars)+'</span></td>'+
+      '<td class="c rt-bdg">'+(x.badges.length ? x.badges.map(rtBadgeIcon).join('') : '<span class="rt-sub">—</span>')+'</td>'+
+      '<td class="c"><button class="rt-mini'+(isStar?' on':'')+'" onclick="rtToggleStar(\''+x.driver_id+'\')" title="'+(isStar?'سحب وسام نجم الشهر':'منح وسام نجم الشهر')+'">🏆</button></td>'+
+    '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+
+  h += '<div class="rt-note"><i class="ti ti-info-circle"></i> '+
+    'الأرقام دي من التقارير اليومية اللي السائق بيبعتها من تطبيق FLY — مش من فواتير المنصّة. '+
+    'اليوم اللي من غير تقرير بيتحسب صفر في محور الالتزام، فلو سائق شغّال وما بيبعتش تقرير هيبان أضعف من حقيقته. '+
+    'الخصومات بتتقرا من بيانات ARK المحلية.</div>';
+
+  el.innerHTML = h;
+}
+
+function rtKpi(icon, label, val, sub, color){
+  return '<div class="rt-kpi"><div class="rt-kpi-t"><i class="ti '+icon+'" style="color:'+color+'"></i> '+label+'</div>'+
+    '<div class="rt-kpi-v" style="color:'+color+'">'+val+'</div><div class="rt-kpi-s">'+sub+'</div></div>';
+}
+function rtPartnerName(p){ const x = PARTNERS.find(v => v.id === p); return x ? x.name : (p || '—'); }
+function rtPartnerColor(p){ const x = PARTNERS.find(v => v.id === p); return x ? x.color : '#94a3b8'; }
+function rtBadgeIcon(code){
+  const m = { streak3:'🔥', streak7:'💪', sniper:'🎯', rocket:'🚀', punctual:'⏰', clean:'🛡️', star:'🏆' };
+  const t = { streak3:'٣ أيام متتالية فوق الهدف', streak7:'٧ أيام متتالية', sniper:'١٥ يوم فوق الهدف',
+              rocket:'يوم ممتاز', punctual:'١٤ تقرير متتالي', clean:'بلا خصومات', star:'نجم الشهر' };
+  return '<span title="'+(t[code]||code)+'">'+(m[code]||'🏅')+'</span>';
+}
+
+/* ---------- منح / سحب نجم الشهر ---------- */
+async function rtToggleStar(driverId){
+  if(typeof requirePerm==='function' && !requirePerm('edit','rating')) return;
+  const has = RT_AWARDS.find(a => a.driver_id===driverId && a.code==='star');
+  const row = rtComputeAll().find(x => x.driver_id===driverId);
+  try{
+    if(has){
+      const r = await fetch(SUPA_URL+'/rest/v1/driver_awards?id=eq.'+has.id, { method:'DELETE', headers: rtHeaders() });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      RT_AWARDS = RT_AWARDS.filter(a => a.id !== has.id);
+      toast('تم سحب وسام نجم الشهر');
+    }else{
+      const body = [{ driver_id:driverId, driver_name:(row&&row.name)||'', partner:(row&&row.partner)||null,
+        period:RT_PERIOD, code:'star', title_ar:'نجم الشهر', title_en:'Star of month',
+        score:(row&&row.score)||null, stars:(row&&row.stars)||null, granted_by:'admin', seen:false }];
+      const r = await fetch(SUPA_URL+'/rest/v1/driver_awards?on_conflict=driver_id,period,code', {
+        method:'POST', headers: Object.assign({ Prefer:'resolution=merge-duplicates,return=representation' }, rtHeaders()),
+        body: JSON.stringify(body) });
+      if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,120));
+      const saved = await r.json();
+      RT_AWARDS = RT_AWARDS.filter(a => !(a.driver_id===driverId && a.code==='star')).concat(saved);
+      toast('🏆 اتمنح وسام نجم الشهر — هيشوفه في التطبيق');
+    }
+    rtPaint();
+  }catch(e){ console.error(e); toast('فشل الحفظ: '+e.message,'e'); }
+}
+
+/* ---------- ضبط الأهداف ---------- */
+function rtOpenTargets(){
+  const ov = document.getElementById('rtTargetsOv'); if(!ov) return;
+  const body = document.getElementById('rtTargetsBody');
+  const rows = PARTNERS.concat([{ id:'_default', name:'الافتراضي (أي شريك تاني)', color:'#94a3b8' }]);
+  let h = '<p class="rt-modal-p">الهدف اليومي هو عدد الأوردرات اللي لو السائق وصلها التطبيق بيشكره ويحسبها يوم ناجح. '+
+    'اليوم الممتاز هو الرقم اللي بيدّي وسام الصاروخ 🚀.</p><div class="rt-tg">';
+  rows.forEach(p => {
+    const c = rtCfgFor(p.id);
+    h += '<div class="rt-tg-r">'+
+      '<div class="rt-tg-n"><span class="rt-dot" style="background:'+p.color+'"></span>'+p.name+'</div>'+
+      '<label>هدف يومي<input type="number" min="1" max="99" id="tg_'+p.id+'_d" value="'+c.daily_target+'"></label>'+
+      '<label>يوم ممتاز<input type="number" min="1" max="99" id="tg_'+p.id+'_e" value="'+c.excellent_target+'"></label>'+
+      '<label>أيام العمل/شهر<input type="number" min="1" max="31" id="tg_'+p.id+'_m" value="'+c.monthly_days_target+'"></label>'+
+    '</div>';
+  });
+  h += '</div><div class="rt-modal-a">'+
+    '<button class="rt-btn" onclick="rtCloseTargets()">إلغاء</button>'+
+    '<button class="rt-btn pri" onclick="rtSaveTargets()"><i class="ti ti-device-floppy"></i> حفظ</button></div>';
+  body.innerHTML = h;
+  ov.style.display = 'flex';
+}
+function rtCloseTargets(){ const ov=document.getElementById('rtTargetsOv'); if(ov) ov.style.display='none'; }
+
+async function rtSaveTargets(){
+  if(typeof requirePerm==='function' && !requirePerm('edit','rating')) return;
+  const rows = PARTNERS.map(p => ({id:p.id, name:p.name})).concat([{id:'_default', name:'الافتراضي'}]);
+  const payload = [];
+  for(const p of rows){
+    const d = parseInt((document.getElementById('tg_'+p.id+'_d')||{}).value);
+    const e = parseInt((document.getElementById('tg_'+p.id+'_e')||{}).value);
+    const m = parseInt((document.getElementById('tg_'+p.id+'_m')||{}).value);
+    if(!d || d<1){ toast('الهدف اليومي لـ'+p.name+' لازم يكون رقم أكبر من صفر','e'); return; }
+    if(!m || m<1 || m>31){ toast('أيام العمل لـ'+p.name+' لازم بين ١ و٣١','e'); return; }
+    if(e && e < d){ toast('اليوم الممتاز لـ'+p.name+' لازم يكون أكبر من الهدف اليومي','e'); return; }
+    payload.push({ partner:p.id, label_ar:p.name, daily_target:d,
+      excellent_target: e || Math.ceil(d*1.5), monthly_days_target:m,
+      w_output:50, w_commit:30, w_discipline:20, active:true, updated_at:new Date().toISOString() });
+  }
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/rating_config?on_conflict=partner', {
+      method:'POST',
+      headers: Object.assign({ Prefer:'resolution=merge-duplicates,return=representation' }, rtHeaders()),
+      body: JSON.stringify(payload) });
+    if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,140));
+    const saved = await r.json();
+    (saved||[]).forEach(c => { RT_CFG[String(c.partner).toLowerCase()] = c; });
+    rtCloseTargets();
+    rtPaint();
+    toast('اتحفظت الأهداف — التطبيق هياخدها أول ما السائق يفتحه');
+  }catch(e){ console.error(e); toast('فشل الحفظ: '+e.message,'e'); }
+}
+
+/* ---------- ملخص واتساب ---------- */
+function rtCopyReport(){
+  let list = rtComputeAll();
+  if(RT_FILT !== 'all') list = list.filter(x => x.partner === RT_FILT);
+  if(!list.length){ toast('مفيش بيانات','e'); return; }
+  list.sort((a,b)=>b.score-a.score);
+  const [Y,M] = RT_PERIOD.split('-');
+  const MN = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][Number(M)-1];
+  const scope = RT_FILT==='all' ? 'كل الشركاء' : rtPartnerName(RT_FILT);
+  let m = '📊 *تقييم السائقين — '+MN+' '+Y+'*\n_'+scope+'_\n\n';
+  m += '🥇 *الأعلى:*\n';
+  list.slice(0,5).forEach((x,i) => {
+    m += (i+1)+'. '+x.name+' — '+x.total_orders+' أوردر • متوسط '+(Number(x.avg_orders)||0).toFixed(1)+' • '+x.score.toFixed(0)+'/100\n';
+  });
+  const weak = list.filter(x=>x.score<60).slice(-5).reverse();
+  if(weak.length){
+    m += '\n⚠️ *محتاجين متابعة:*\n';
+    weak.forEach(x => { m += '• '+x.name+' — '+x.days_logged+' يوم عمل • متوسط '+(Number(x.avg_orders)||0).toFixed(1)+' • '+x.score.toFixed(0)+'/100\n'; });
+  }
+  const n = list.length, on = list.filter(x=>x.pctTarget>=100).length;
+  m += '\n📈 '+on+' من '+n+' سائق حقّقوا الهدف اليومي.';
+  try{
+    navigator.clipboard.writeText(m);
+    toast('اتنسخ الملخص — الزقه في الجروب');
+  }catch(e){
+    window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(m), '_blank');
+  }
+}
+
+window.addEventListener('ark-auth-ready', function(){
+  setTimeout(function(){ if(typeof rtLoad==='function') rtLoad(); }, 4200);
 });
 
 </script>

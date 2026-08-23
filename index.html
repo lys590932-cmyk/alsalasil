@@ -355,6 +355,123 @@ body::after{
 }
 @media (max-width:760px){ body::after{ background-size:min(62vw,300px) auto; opacity:.04 } }
 @media print{ body::after{ display:none !important } }
+
+/* ===== نظام التقييم والتحفيز — FLY (dark theme) ===== */
+.rate-card{position:relative;overflow:hidden;border-radius:var(--r2,16px);padding:14px;margin-bottom:14px;cursor:pointer;
+  background:linear-gradient(135deg,#12283a 0%,#1b4763 55%,#236b8e 100%);color:#fff;
+  box-shadow:0 8px 22px rgba(0,0,0,.45);border:1px solid rgba(96,165,250,.22);width:100%;font-family:inherit;
+  text-align:inherit;display:block}
+.rate-card:active{transform:scale(.985)}
+.rate-card::after{content:'';position:absolute;top:-42px;inset-inline-end:-32px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.05)}
+.rate-top{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+.rate-badge-ring{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;
+  background:conic-gradient(var(--rr,#fbbf24) var(--rp,0deg),rgba(255,255,255,.14) 0)}
+.rate-badge-in{width:42px;height:42px;border-radius:50%;background:#12283a;display:grid;place-items:center;
+  font-weight:900;font-size:15px;color:#fff;font-family:'JetBrains Mono',monospace}
+.rate-ttl{flex:1;min-width:0}
+.rate-ttl b{display:block;font-size:14px;font-weight:900;line-height:1.3;color:#fff}
+.rate-ttl>span{display:block;font-size:11px;color:rgba(255,255,255,.72);margin-top:1px}
+.rate-stars{font-size:13px;letter-spacing:1px;white-space:nowrap;direction:ltr;unicode-bidi:isolate;color:#fbbf24;display:block}
+.rate-goal{margin-top:12px;position:relative;z-index:1}
+.rate-goal-l{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;margin-bottom:5px;color:rgba(255,255,255,.9)}
+.rate-goal-l em{font-style:normal;direction:ltr;unicode-bidi:isolate;font-family:'JetBrains Mono',monospace;font-weight:900}
+.rate-track{height:8px;border-radius:6px;background:rgba(255,255,255,.15);overflow:hidden}
+.rate-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#fbbf24,#34d399);transition:width .5s ease}
+.rate-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;position:relative;z-index:1}
+.rate-chip{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.13);color:#fff;
+  display:inline-flex;align-items:center;gap:3px}
+.rate-chip.hot{background:rgba(251,191,36,.24);color:#fde68a}
+
+/* ===== الورقة الكاملة ===== */
+.rs-ov{position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:9200;display:none;align-items:flex-end;justify-content:center}
+.rs-sheet{background:var(--bg,#0d1117);width:100%;max-width:520px;border-radius:20px 20px 0 0;max-height:94vh;
+  overflow-y:auto;animation:slideUpSheet .3s ease;border-top:1px solid var(--br,#30363d)}
+.rs-hd{position:sticky;top:0;z-index:2;background:linear-gradient(135deg,#12283a,#1b4763);color:#fff;padding:16px 18px 18px;border-radius:20px 20px 0 0}
+.rs-hd-t{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.rs-hd-t h3{font-size:17px;font-weight:900;display:flex;align-items:center;gap:7px;margin:0;color:#fff}
+.rs-x{background:rgba(255,255,255,.14);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:grid;place-items:center;font-family:inherit}
+.rs-score{display:flex;align-items:center;gap:14px}
+.rs-ring{width:82px;height:82px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  background:conic-gradient(var(--rr,#fbbf24) var(--rp,0deg),rgba(255,255,255,.14) 0)}
+.rs-ring-in{width:66px;height:66px;border-radius:50%;background:#12283a;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.rs-ring-in b{font-size:23px;font-weight:900;color:#fff;font-family:'JetBrains Mono',monospace}
+.rs-ring-in span{font-size:9px;color:rgba(255,255,255,.7);margin-top:3px}
+.rs-score-r{flex:1;min-width:0}
+.rs-score-r>b{display:block;font-size:16px;font-weight:900;color:#fff}
+.rs-score-r .rate-stars{font-size:17px;margin:3px 0 4px}
+.rs-score-r>span{display:block;font-size:11.5px;color:rgba(255,255,255,.8);line-height:1.5}
+.rs-body{padding:14px 14px 26px}
+.rs-sec{font-size:12.5px;font-weight:900;color:var(--text,#e6edf3);margin:18px 0 8px;display:flex;align-items:center;gap:6px}
+.rs-sec:first-child{margin-top:2px}
+.rs-sec i{color:var(--blue2,#60a5fa);font-size:15px}
+
+.rs-axis{background:var(--s1,#161b22);border:1px solid var(--br,#30363d);border-radius:var(--r,12px);padding:11px 12px;margin-bottom:8px}
+.rs-axis-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:7px}
+.rs-axis-h b{font-size:12.5px;font-weight:900;color:var(--text,#e6edf3)}
+.rs-axis-h em{font-style:normal;font-size:12px;font-weight:900;font-family:'JetBrains Mono',monospace;direction:ltr;unicode-bidi:isolate}
+.rs-axis-t{height:7px;border-radius:5px;background:var(--s3,#2d333b);overflow:hidden}
+.rs-axis-f{height:100%;border-radius:5px;transition:width .5s ease}
+.rs-axis-s{font-size:10.5px;color:var(--muted,#8b949e);margin-top:6px;line-height:1.6}
+.rs-axis-s em{font-style:normal;direction:ltr;unicode-bidi:isolate;font-weight:800;color:var(--text,#e6edf3);font-family:'JetBrains Mono',monospace}
+
+.rs-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--s1,#161b22);
+  border:1px solid var(--br,#30363d);border-radius:var(--r,12px);padding:10px}
+.rs-cd{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;background:var(--s2,#21262d);color:var(--muted2,#7d8590);line-height:1.15}
+.rs-cd b{font-size:11px;font-weight:900;font-family:'JetBrains Mono',monospace}
+.rs-cd.hit{background:rgba(16,185,129,.20);color:#34d399}
+.rs-cd.exc{background:rgba(16,185,129,.42);color:#d1fae5}
+.rs-cd.miss{background:rgba(245,158,11,.18);color:#fbbf24}
+.rs-cd.none{background:var(--s2,#21262d);color:#4b535e}
+.rs-cd.fut{background:transparent;color:#343b45;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+.rs-lg{display:flex;flex-wrap:wrap;gap:10px;font-size:10px;color:var(--muted,#8b949e);margin-top:8px;font-weight:700}
+.rs-lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-inline-end:4px;vertical-align:middle}
+
+.rs-bg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.rs-bg{background:var(--s1,#161b22);border:1px solid var(--br,#30363d);border-radius:var(--r,12px);
+  padding:11px 6px;text-align:center;opacity:.4;filter:grayscale(1)}
+.rs-bg.on{opacity:1;filter:none;border-color:rgba(251,191,36,.5);background:linear-gradient(160deg,rgba(251,191,36,.10),var(--s1,#161b22))}
+.rs-bg-e{font-size:25px;line-height:1.1}
+.rs-bg-n{font-size:10px;font-weight:900;margin-top:5px;line-height:1.3;color:var(--text,#e6edf3)}
+.rs-bg-d{font-size:9px;color:var(--muted2,#7d8590);margin-top:3px;line-height:1.35}
+
+.rs-lb{background:var(--s1,#161b22);border:1px solid var(--br,#30363d);border-radius:var(--r,12px);overflow:hidden}
+.rs-lb-r{display:flex;align-items:center;gap:9px;padding:9px 11px;border-bottom:1px solid var(--br,#30363d)}
+.rs-lb-r:last-child{border-bottom:none}
+.rs-lb-r.me{background:rgba(59,130,246,.13)}
+.rs-lb-n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;
+  background:var(--s3,#2d333b);color:var(--muted,#8b949e);flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.rs-lb-r.g1 .rs-lb-n{background:linear-gradient(135deg,#fbbf24,#d97706);color:#1a1205}
+.rs-lb-r.g2 .rs-lb-n{background:linear-gradient(135deg,#cbd5e1,#94a3b8);color:#1a1f27}
+.rs-lb-r.g3 .rs-lb-n{background:linear-gradient(135deg,#d97706,#92400e);color:#fff}
+.rs-lb-nm{flex:1;min-width:0;font-size:12px;font-weight:800;color:var(--text,#e6edf3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;unicode-bidi:plaintext}
+.rs-lb-v{font-size:12.5px;font-weight:900;color:var(--text,#e6edf3);font-family:'JetBrains Mono',monospace;direction:ltr;unicode-bidi:isolate}
+.rs-lb-v span{font-size:9.5px;color:var(--muted,#8b949e);font-weight:700}
+.rs-note{font-size:10.5px;color:var(--muted,#8b949e);line-height:1.8;background:var(--s1,#161b22);
+  border:1px dashed var(--br,#30363d);border-radius:var(--r,12px);padding:11px 13px;margin-top:16px}
+.rs-note b{color:var(--text,#e6edf3)}
+
+/* ===== الاحتفال ===== */
+.cel-ov{position:fixed;inset:0;background:rgba(3,7,12,.9);z-index:9600;display:none;align-items:center;justify-content:center;padding:24px}
+.cel-box{background:var(--s1,#161b22);border:1px solid var(--br,#30363d);border-radius:22px;padding:26px 22px 20px;
+  max-width:340px;width:100%;text-align:center;box-shadow:0 22px 60px rgba(0,0,0,.65);
+  animation:celPop .45s cubic-bezier(.2,1.4,.4,1);position:relative;z-index:2}
+@keyframes celPop{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
+.cel-e{font-size:60px;line-height:1;animation:celBob 1.5s ease-in-out infinite}
+@keyframes celBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-9px) rotate(4deg)}}
+.cel-t{font-size:19px;font-weight:900;color:var(--text,#e6edf3);margin-top:12px;line-height:1.4}
+.cel-s{font-size:13px;color:var(--muted,#8b949e);margin-top:9px;line-height:1.8}
+.cel-s em{font-style:normal;font-weight:900;color:var(--amber2,#fbbf24);direction:ltr;unicode-bidi:isolate;font-family:'JetBrains Mono',monospace}
+.cel-pill{display:inline-flex;align-items:center;gap:5px;margin-top:13px;padding:6px 13px;border-radius:20px;
+  background:rgba(59,130,246,.14);color:var(--blue2,#60a5fa);font-size:11.5px;font-weight:900}
+.cel-pill em{font-style:normal;direction:ltr;unicode-bidi:isolate;font-family:'JetBrains Mono',monospace}
+.cel-b{margin-top:17px;width:100%;padding:13px;border:none;border-radius:13px;font-family:inherit;font-size:14px;font-weight:900;
+  color:#fff;background:linear-gradient(135deg,#1b4763,#2a7fa6);cursor:pointer}
+.cel-b.sec{background:var(--s2,#21262d);color:var(--muted,#8b949e);margin-top:8px;padding:10px;font-size:12.5px;border:1px solid var(--br,#30363d)}
+.cel-cf{position:absolute;top:-12px;width:9px;height:15px;opacity:0;animation:celFall linear forwards;z-index:1;border-radius:2px}
+@keyframes celFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(102vh) rotate(760deg)}}
+
 </style>
 </head>
 <body>
@@ -1146,6 +1263,7 @@ function enterApp(fromCache){
   switchTab('home');
   if(!fromCache) refreshAll();
   maybeEmailGate();
+  setTimeout(function(){ try{ fetchRating(true).then(function(){ if(currentTab==='home') renderHome(); }); }catch(e){} }, 2200);
   setTimeout(function(){ if(isCurrentlyIn()) startLiveTracking(); }, 1500);
 }
 
@@ -2016,6 +2134,8 @@ function renderHome(){
       '<div class="lic-banner-d">'+t('lic_days_remaining',lic.days)+'</div>'+
     '</div></div>';
   }
+
+  try{ html += rateCardHTML(); }catch(e){ console.warn('rate card', e); }
 
   html+='<div class="qgrid">'+
     '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
@@ -3030,6 +3150,7 @@ async function submitDailyReport(){
     });
     if(!res.ok){ throw new Error('HTTP '+res.status); }
     toast(t('rep_success'));
+    try{ rateAfterReport(orders, reportDate); }catch(e){ console.warn('rate report', e); }
     renderReport();
   } catch(e){
     console.error(e);
@@ -4590,8 +4711,8 @@ renderHome = function(){
 /* ═══════════════════════════════════════════════════════════════════
    🏷️ رقم الإصدار — للتأكد من وصول التحديث
    ═══════════════════════════════════════════════════════════════════ */
-var FLY_VERSION = '6.0';
-var FLY_BUILD   = '2026-07-25';
+var FLY_VERSION = '6.2';
+var FLY_BUILD   = '2026-08-23';
 
 /* شارة الإصدار في أسفل شاشة "بياناتي" */
 var _origRenderProfile2 = renderProfile;
@@ -4660,6 +4781,479 @@ setTimeout(function(){
   }
 }, 2000);
 
+
+/* ===================== RATING ===================== */
+/* =========================================================
+   نظام التقييم والتحفيز — Driver Rating & Recognition
+   ========================================================= */
+var SK_RATE_CFG = 'fly_rate_cfg_v1';
+var RATE_CFG   = null;   // { keeta:{...}, homy:{...}, _default:{...} }
+var RATE_MONTH = [];     // تقارير الشهر الحالي للسائق
+var RATE_TEAM  = [];     // تجميع الشهر لكل سائقي نفس الشريك
+var MY_AWARDS  = [];     // الأوسمة اللي اتمنحت
+var RATE_READY = false;
+var _celQueue  = [];
+
+var RATE_DEFAULTS = {
+  keeta:    { daily_target:15, excellent_target:20, monthly_days_target:26, w_output:50, w_commit:30, w_discipline:20, label_ar:'كيتا',      label_en:'Keeta'   },
+  homy:     { daily_target:10, excellent_target:14, monthly_days_target:26, w_output:50, w_commit:30, w_discipline:20, label_ar:'هومي',      label_en:'Homi'    },
+  caboria:  { daily_target:12, excellent_target:16, monthly_days_target:26, w_output:50, w_commit:30, w_discipline:20, label_ar:'كابوريا',   label_en:'Caboria' },
+  _default: { daily_target:12, excellent_target:16, monthly_days_target:26, w_output:50, w_commit:30, w_discipline:20, label_ar:'الافتراضي', label_en:'Default' }
+};
+
+var RATE_BADGES = [
+  { code:'streak3',  emoji:'🔥', ar:'ثلاثة على التوالي', en:'On fire',      dAr:'٣ أيام متتالية فوق الهدف', dEn:'3 days in a row above target' },
+  { code:'streak7',  emoji:'💪', ar:'أسبوع حديد',        en:'Iron week',    dAr:'٧ أيام متتالية فوق الهدف', dEn:'7 days in a row above target' },
+  { code:'sniper',   emoji:'🎯', ar:'القنّاص',            en:'Sniper',       dAr:'١٥ يوم فوق الهدف',         dEn:'15 days above target'         },
+  { code:'rocket',   emoji:'🚀', ar:'الصاروخ',            en:'Rocket',       dAr:'يوم ممتاز',                dEn:'An outstanding day'           },
+  { code:'punctual', emoji:'⏰', ar:'منضبط',              en:'Punctual',     dAr:'١٤ تقرير متتالي',          dEn:'14 reports in a row'          },
+  { code:'clean',    emoji:'🛡️', ar:'صحيفة نظيفة',       en:'Clean sheet',  dAr:'شهر بلا خصومات',           dEn:'A month with no deductions'   },
+  { code:'star',     emoji:'🏆', ar:'نجم الشهر',          en:'Star of month',dAr:'الأول على فريقك',          dEn:'First in your team'           }
+];
+
+function rateT(ar, en){ return (typeof LANG!=='undefined' && LANG==='en') ? en : ar; }
+function _rPeriod(d){ d = d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function _rMonthStart(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01'; }
+function _rDaysInMonth(){ var d=new Date(); return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
+
+function rateCfg(){
+  var src = RATE_CFG || RATE_DEFAULTS;
+  var p = (DRIVER && DRIVER.partner) ? String(DRIVER.partner).toLowerCase() : '';
+  var c = src[p] || src._default || RATE_DEFAULTS._default;
+  var out = {};
+  for(var k in RATE_DEFAULTS._default) out[k] = RATE_DEFAULTS._default[k];
+  for(var k2 in c) if(c[k2]!==null && c[k2]!==undefined && c[k2]!=='') out[k2]=c[k2];
+  out.daily_target = parseInt(out.daily_target)||12;
+  out.excellent_target = parseInt(out.excellent_target) || Math.ceil(out.daily_target*1.5);
+  out.monthly_days_target = parseInt(out.monthly_days_target)||26;
+  return out;
+}
+
+/* ---------- جلب البيانات ---------- */
+async function fetchRating(silent){
+  if(!DRIVER) return;
+  var id = encodeURIComponent(DRIVER.id);
+  var per = _rPeriod();
+  var partner = (DRIVER.partner||'').toLowerCase();
+
+  // 1) الإعدادات — من الكاش أولاً علشان الشاشة ما تستناش
+  try{
+    var cached = localStorage.getItem(SK_RATE_CFG);
+    if(cached && !RATE_CFG) RATE_CFG = JSON.parse(cached);
+  }catch(e){}
+
+  var jobs = [
+    sb('rating_config?select=*').then(function(rows){
+      if(!rows || !rows.length) return;
+      var m = {};
+      rows.forEach(function(r){ if(r && r.partner) m[String(r.partner).toLowerCase()] = r; });
+      RATE_CFG = m;
+      try{ localStorage.setItem(SK_RATE_CFG, JSON.stringify(m)); }catch(e){}
+    }).catch(function(){}),
+
+    sb('daily_reports?driver_id=eq.'+id+'&report_date=gte.'+_rMonthStart()+
+       '&select=report_date,orders_count,duty_hours&order=report_date.asc&limit=40')
+      .then(function(r){ if(r) RATE_MONTH = r; }).catch(function(){}),
+
+    sb('driver_awards?driver_id=eq.'+id+'&select=*&order=created_at.desc&limit=60')
+      .then(function(r){ if(r) MY_AWARDS = r; }).catch(function(){})
+  ];
+
+  if(partner){
+    jobs.push(
+      sb('driver_month_orders?period=eq.'+per+'&partner=eq.'+encodeURIComponent(partner)+
+         '&select=driver_id,driver_name,total_orders,days_logged,avg_orders&order=total_orders.desc&limit=120')
+        .then(function(r){ if(r) RATE_TEAM = r; }).catch(function(){ RATE_TEAM = []; })
+    );
+  }
+
+  await Promise.all(jobs);
+  RATE_READY = true;
+  if(!silent && currentTab==='home') renderHome();
+  checkAwards();
+}
+
+/* ---------- الحساب ---------- */
+function computeRating(){
+  var cfg = rateCfg();
+  var today = new Date();
+  var dim   = _rDaysInMonth();
+  var elapsed = Math.min(dim, today.getDate());
+
+  var rows = (RATE_MONTH||[]).slice().sort(function(a,b){
+    return String(a.report_date).localeCompare(String(b.report_date));
+  });
+  var loggedDays = rows.length;
+  var totalOrders = rows.reduce(function(s,r){ return s + (parseInt(r.orders_count)||0); }, 0);
+  var avg = loggedDays ? (totalOrders/loggedDays) : 0;
+  var hitDays = rows.filter(function(r){ return (parseInt(r.orders_count)||0) >= cfg.daily_target; }).length;
+  var excDays = rows.filter(function(r){ return (parseInt(r.orders_count)||0) >= cfg.excellent_target; }).length;
+  var bestDay = rows.reduce(function(m,r){ return Math.max(m, parseInt(r.orders_count)||0); }, 0);
+
+  // ── محور 1: الإنتاج ──
+  var outRatio = cfg.daily_target ? (avg/cfg.daily_target) : 0;
+  var outScore = Math.min(cfg.w_output, outRatio*cfg.w_output);
+
+  // ── محور 2: الالتزام (أيام العمل مقابل المتوقع لحد النهارده) ──
+  var expected = Math.max(1, Math.round(cfg.monthly_days_target * elapsed / dim));
+  var comRatio = loggedDays/expected;
+  var comScore = Math.min(cfg.w_commit, comRatio*cfg.w_commit);
+
+  // ── محور 3: الانضباط (انتظام التقارير ٦٠٪ + خلوّ من الخصومات ٤٠٪) ──
+  var repRatio = Math.min(1, loggedDays/Math.max(1, elapsed));
+  var m = today.getMonth()+1, y = today.getFullYear();
+  var dedList = (typeof deductionsOf === 'function') ? deductionsOf(m, y) : [];
+  var dedCount = dedList.length;
+  var dedPart  = dedCount===0 ? 1 : Math.max(0, 1 - dedCount*0.34);
+  var disScore = cfg.w_discipline*0.6*repRatio + cfg.w_discipline*0.4*dedPart;
+
+  var score = Math.round((outScore + comScore + disScore)*10)/10;
+  if(score>100) score = 100;
+  var stars = score>=90?5 : score>=75?4 : score>=60?3 : score>=45?2 : 1;
+
+  // ── أطول سلسلة أيام متتالية فوق الهدف (بالتاريخ) ──
+  var streak = 0, curStreak = 0, prev = null, liveStreak = 0;
+  rows.forEach(function(r){
+    var hit = (parseInt(r.orders_count)||0) >= cfg.daily_target;
+    var d = new Date(r.report_date+'T00:00:00');
+    var consecutive = prev && ((d - prev)/86400000) === 1;
+    if(hit) curStreak = consecutive ? curStreak+1 : 1;
+    else curStreak = 0;
+    if(curStreak > streak) streak = curStreak;
+    liveStreak = curStreak;
+    prev = d;
+  });
+
+  // ── أطول سلسلة تقارير متتالية (بغض النظر عن العدد) ──
+  var repStreak = 0, curRep = 0; prev = null;
+  rows.forEach(function(r){
+    var d = new Date(r.report_date+'T00:00:00');
+    curRep = (prev && ((d - prev)/86400000) === 1) ? curRep+1 : 1;
+    if(curRep > repStreak) repStreak = curRep;
+    prev = d;
+  });
+
+  // ── الترتيب داخل الفريق ──
+  var rank = 0, teamCount = (RATE_TEAM||[]).length;
+  if(teamCount){
+    var sorted = RATE_TEAM.slice().sort(function(a,b){ return (b.total_orders||0)-(a.total_orders||0); });
+    for(var i=0;i<sorted.length;i++){ if(sorted[i].driver_id===DRIVER.id){ rank = i+1; break; } }
+  }
+
+  // ── الأوسمة المستحقة ──
+  var earned = {};
+  if(streak>=3)     earned.streak3  = true;
+  if(streak>=7)     earned.streak7  = true;
+  if(hitDays>=15)   earned.sniper   = true;
+  if(excDays>=1)    earned.rocket   = true;
+  if(repStreak>=14) earned.punctual = true;
+  if(elapsed>=20 && dedCount===0) earned.clean = true;
+  if(rank===1 && teamCount>=3 && loggedDays>=5) earned.star = true;
+
+  var todayRow = rows.filter(function(r){ return r.report_date === _todayLocal(); })[0];
+
+  return {
+    cfg:cfg, score:score, stars:stars,
+    loggedDays:loggedDays, expected:expected, elapsed:elapsed, daysInMonth:dim,
+    totalOrders:totalOrders, avg:avg, hitDays:hitDays, excDays:excDays, bestDay:bestDay,
+    streak:streak, liveStreak:liveStreak, repStreak:repStreak,
+    dedCount:dedCount, rank:rank, teamCount:teamCount,
+    rows:rows, earned:earned, todayOrders: todayRow ? (parseInt(todayRow.orders_count)||0) : null,
+    axes:[
+      { key:'output', ar:'الإنتاج', en:'Output', got:Math.round(outScore*10)/10, max:cfg.w_output, color:'#1c5878',
+        subAr:'متوسطك <em>'+avg.toFixed(1)+'</em> أوردر في اليوم — الهدف <em>'+cfg.daily_target+'</em>',
+        subEn:'You average <em>'+avg.toFixed(1)+'</em> orders/day — target <em>'+cfg.daily_target+'</em>' },
+      { key:'commit', ar:'الالتزام', en:'Commitment', got:Math.round(comScore*10)/10, max:cfg.w_commit, color:'#0f766e',
+        subAr:'اشتغلت <em>'+loggedDays+'</em> يوم من <em>'+expected+'</em> متوقعين لحد النهارده',
+        subEn:'You worked <em>'+loggedDays+'</em> of <em>'+expected+'</em> expected days so far' },
+      { key:'discipline', ar:'الانضباط', en:'Discipline', got:Math.round(disScore*10)/10, max:cfg.w_discipline, color:'#b45309',
+        subAr:'أرسلت التقرير <em>'+loggedDays+'</em> يوم من <em>'+elapsed+'</em> — والخصومات <em>'+dedCount+'</em>',
+        subEn:'Reported on <em>'+loggedDays+'</em> of <em>'+elapsed+'</em> days — deductions <em>'+dedCount+'</em>' }
+    ]
+  };
+}
+
+function rateStarsHTML(n){
+  var s='';
+  for(var i=1;i<=5;i++) s += (i<=n ? '★' : '☆');
+  return '<span class="rate-stars">'+s+'</span>';
+}
+function rateColor(score){
+  return score>=90 ? '#22c55e' : score>=75 ? '#84cc16' : score>=60 ? '#facc15' : score>=45 ? '#f59e0b' : '#ef4444';
+}
+function rateLabel(stars){
+  var ar = ['','يحتاج مجهود','مقبول','جيد','ممتاز','نجم'];
+  var en = ['','Needs work','Fair','Good','Excellent','Star'];
+  return rateT(ar[stars], en[stars]);
+}
+
+/* ---------- كارت الشاشة الرئيسية ---------- */
+function rateCardHTML(){
+  if(!DRIVER) return '';
+  var r = computeRating();
+  var deg = Math.round(r.score/100*360);
+  var col = rateColor(r.score);
+
+  var h = '<button class="rate-card" onclick="openRateSheet()" style="--rr:'+col+';--rp:'+deg+'deg">';
+  h += '<div class="rate-top">'+
+    '<div class="rate-badge-ring"><div class="rate-badge-in">'+Math.round(r.score)+'</div></div>'+
+    '<div class="rate-ttl"><b>'+rateT('تقييمك هذا الشهر','Your rating this month')+'</b>'+
+      rateStarsHTML(r.stars)+
+      '<span>'+rateLabel(r.stars)+(r.rank ? ' • '+rateT('ترتيبك '+r.rank+' من '+r.teamCount, 'Rank '+r.rank+' of '+r.teamCount) : '')+'</span>'+
+    '</div>'+
+    '<i class="ti ti-chevron-'+(LANG==='en'?'right':'left')+'" style="font-size:19px;opacity:.6"></i>'+
+  '</div>';
+
+  // شريط هدف النهارده
+  var tg = r.cfg.daily_target;
+  var td = r.todayOrders;
+  var pct = td===null ? 0 : Math.min(100, Math.round(td/tg*100));
+  h += '<div class="rate-goal">'+
+    '<div class="rate-goal-l"><span>'+rateT('هدف اليوم','Today\'s goal')+'</span>'+
+      '<span><em>'+(td===null?0:td)+'</em> / <em>'+tg+'</em> '+rateT('أوردر','orders')+'</span></div>'+
+    '<div class="rate-track"><div class="rate-fill" style="width:'+pct+'%"></div></div>'+
+  '</div>';
+
+  h += '<div class="rate-chips">';
+  if(r.liveStreak>=2) h += '<span class="rate-chip hot">🔥 '+rateT(r.liveStreak+' أيام متتالية', r.liveStreak+'-day streak')+'</span>';
+  h += '<span class="rate-chip">📦 '+rateT(r.totalOrders+' أوردر','' +r.totalOrders+' orders')+'</span>';
+  h += '<span class="rate-chip">✅ '+rateT(r.hitDays+' يوم فوق الهدف', r.hitDays+' days on target')+'</span>';
+  var badgeCount = Object.keys(r.earned).length;
+  if(badgeCount) h += '<span class="rate-chip">🏅 '+rateT(badgeCount+' وسام', badgeCount+' badges')+'</span>';
+  h += '</div></button>';
+  return h;
+}
+
+/* ---------- الورقة الكاملة ---------- */
+function openRateSheet(){
+  renderRateSheet();
+  var ov = $('rateOv'); if(!ov) return;
+  ov.style.display='flex';
+  document.body.style.overflow='hidden';
+  if(!RATE_READY) fetchRating(true).then(function(){ renderRateSheet(); });
+}
+function closeRateSheet(){
+  var ov = $('rateOv'); if(ov) ov.style.display='none';
+  document.body.style.overflow='';
+}
+
+function renderRateSheet(){
+  var el = $('rateBody'); if(!el || !DRIVER) return;
+  var r = computeRating();
+  var col = rateColor(r.score);
+  var deg = Math.round(r.score/100*360);
+  var MN = (typeof MONTHS!=='undefined' && MONTHS[LANG]) ? MONTHS[LANG][new Date().getMonth()] : '';
+
+  var h = '';
+  // رأس
+  h += '<div class="rs-hd"><div class="rs-hd-t">'+
+    '<h3><i class="ti ti-award"></i> '+rateT('تقييمي','My rating')+'</h3>'+
+    '<button class="rs-x" onclick="closeRateSheet()">✕</button></div>'+
+    '<div class="rs-score">'+
+      '<div class="rs-ring" style="--rr:'+col+';--rp:'+deg+'deg"><div class="rs-ring-in">'+
+        '<b>'+Math.round(r.score)+'</b><span>'+rateT('من 100','of 100')+'</span></div></div>'+
+      '<div class="rs-score-r"><b>'+rateLabel(r.stars)+'</b>'+rateStarsHTML(r.stars)+
+        '<span>'+MN+' • '+rateT(r.cfg['label_'+LANG]||r.cfg.label_ar||'', r.cfg.label_en||'')+
+        (r.rank ? ' • '+rateT('الترتيب '+r.rank+' من '+r.teamCount,'Rank '+r.rank+' of '+r.teamCount) : '')+'</span>'+
+      '</div></div></div>';
+
+  h += '<div class="rs-body">';
+
+  // المحاور
+  h += '<div class="rs-sec"><i class="ti ti-chart-bar"></i> '+rateT('من أين جاءت نقاطك','Where your points come from')+'</div>';
+  r.axes.forEach(function(a){
+    var p = a.max ? Math.round(a.got/a.max*100) : 0;
+    h += '<div class="rs-axis"><div class="rs-axis-h"><b>'+rateT(a.ar,a.en)+'</b>'+
+      '<em style="color:'+a.color+'">'+a.got+' / '+a.max+'</em></div>'+
+      '<div class="rs-axis-t"><div class="rs-axis-f" style="width:'+Math.min(100,p)+'%;background:'+a.color+'"></div></div>'+
+      '<div class="rs-axis-s">'+rateT(a.subAr,a.subEn)+'</div></div>';
+  });
+
+  // تقويم الشهر
+  h += '<div class="rs-sec"><i class="ti ti-calendar-stats"></i> '+rateT('أيام الشهر','Your month')+'</div>';
+  var byDate = {};
+  r.rows.forEach(function(x){ byDate[x.report_date] = parseInt(x.orders_count)||0; });
+  var now = new Date(), Y = now.getFullYear(), M = now.getMonth();
+  h += '<div class="rs-cal">';
+  for(var d=1; d<=r.daysInMonth; d++){
+    var ds = Y+'-'+String(M+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var v = byDate[ds];
+    var cls, lbl;
+    if(d > r.elapsed){ cls='fut'; lbl=''; }
+    else if(v===undefined){ cls='none'; lbl='—'; }
+    else if(v >= r.cfg.excellent_target){ cls='exc'; lbl=v; }
+    else if(v >= r.cfg.daily_target){ cls='hit'; lbl=v; }
+    else { cls='miss'; lbl=v; }
+    h += '<div class="rs-cd '+cls+'"><b>'+lbl+'</b>'+d+'</div>';
+  }
+  h += '</div>';
+  h += '<div class="rs-lg">'+
+    '<span><i style="background:rgba(16,185,129,.42)"></i>'+rateT('يوم ممتاز','Outstanding')+'</span>'+
+    '<span><i style="background:rgba(16,185,129,.20)"></i>'+rateT('حقّقت الهدف','Target met')+'</span>'+
+    '<span><i style="background:rgba(245,158,11,.18)"></i>'+rateT('تحت الهدف','Below target')+'</span>'+
+    '<span><i style="background:var(--s2,#21262d);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)"></i>'+rateT('بدون تقرير','No report')+'</span></div>';
+
+  // الأوسمة
+  h += '<div class="rs-sec"><i class="ti ti-medal"></i> '+rateT('أوسمتك','Your badges')+'</div>';
+  h += '<div class="rs-bg-grid">';
+  RATE_BADGES.forEach(function(b){
+    var on = !!r.earned[b.code];
+    h += '<div class="rs-bg'+(on?' on':'')+'"><div class="rs-bg-e">'+b.emoji+'</div>'+
+      '<div class="rs-bg-n">'+rateT(b.ar,b.en)+'</div>'+
+      '<div class="rs-bg-d">'+rateT(b.dAr,b.dEn)+'</div></div>';
+  });
+  h += '</div>';
+
+  // الترتيب
+  if((RATE_TEAM||[]).length>1){
+    h += '<div class="rs-sec"><i class="ti ti-trophy"></i> '+rateT('ترتيب الفريق هذا الشهر','Team standings this month')+'</div>';
+    var sorted = RATE_TEAM.slice().sort(function(a,b){ return (b.total_orders||0)-(a.total_orders||0); });
+    var myIdx = -1;
+    sorted.forEach(function(x,i){ if(x.driver_id===DRIVER.id) myIdx=i; });
+    var show = sorted.slice(0,5);
+    if(myIdx>=5) show = show.concat([sorted[myIdx]]);
+    h += '<div class="rs-lb">';
+    show.forEach(function(x){
+      var i = sorted.indexOf(x);
+      var me = x.driver_id===DRIVER.id;
+      h += '<div class="rs-lb-r'+(me?' me':'')+(i<3?(' g'+(i+1)):'')+'">'+
+        '<div class="rs-lb-n">'+(i+1)+'</div>'+
+        '<div class="rs-lb-nm">'+(me ? rateT('أنت','You') : (x.driver_name||'—'))+'</div>'+
+        '<div class="rs-lb-v">'+(x.total_orders||0)+' <span>'+rateT('أوردر','ord')+'</span></div></div>';
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="rs-note">'+rateT(
+    'التقييم بيتحدّث تلقائياً من تقاريرك اليومية. أهم حاجة تقدر تعملها دلوقتي: <b>ابعت تقريرك كل يوم</b> — اليوم اللي من غير تقرير بيتحسب صفر في محور الالتزام.',
+    'Your rating updates automatically from your daily reports. The single most useful thing you can do: <b>submit your report every day</b> — a day with no report counts as zero for commitment.')+'</div>';
+
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+/* ---------- الاحتفال ---------- */
+function celebrate(o){
+  var ov = $('celOv'); if(!ov) return;
+  $('celEmoji').textContent = o.emoji||'🎉';
+  $('celTitle').textContent = o.title||'';
+  $('celSub').innerHTML = o.sub||'';
+  var pill = $('celPill');
+  if(o.pill){ pill.innerHTML = o.pill; pill.style.display='inline-flex'; } else pill.style.display='none';
+  $('celBtn').textContent = o.btn || rateT('تمام','Got it');
+  var s = $('celSecond');
+  if(o.showRating){ s.style.display='block'; } else s.style.display='none';
+  ov.style.display='flex';
+  celConfetti();
+}
+function closeCelebrate(){
+  var ov = $('celOv'); if(ov) ov.style.display='none';
+  if(_celQueue.length){ var n=_celQueue.shift(); setTimeout(function(){ celebrate(n); }, 260); }
+}
+function celToRating(){ closeCelebrate(); setTimeout(openRateSheet, 200); }
+
+function celConfetti(){
+  var ov = $('celOv'); if(!ov) return;
+  var old = ov.querySelectorAll('.cel-cf');
+  for(var i=0;i<old.length;i++) old[i].remove();
+  var cols = ['#facc15','#22c55e','#3b82f6','#ef4444','#a855f7','#f97316'];
+  for(var j=0;j<34;j++){
+    var c = document.createElement('div');
+    c.className = 'cel-cf';
+    c.style.insetInlineStart = (Math.random()*100)+'%';
+    c.style.background = cols[j%cols.length];
+    c.style.animationDuration = (1.9+Math.random()*1.5)+'s';
+    c.style.animationDelay = (Math.random()*0.7)+'s';
+    ov.appendChild(c);
+  }
+}
+
+/* ---------- منح الأوسمة وحفظها ---------- */
+async function checkAwards(){
+  if(!DRIVER) return;
+  var r = computeRating();
+  var per = _rPeriod();
+  var have = {};
+  (MY_AWARDS||[]).forEach(function(a){ if(a.period===per) have[a.code]=a; });
+
+  var fresh = [];
+  RATE_BADGES.forEach(function(b){
+    if(b.code==='star') return;           // نجم الشهر بيتمنح من ARK
+    if(r.earned[b.code] && !have[b.code]) fresh.push(b);
+  });
+  if(!fresh.length) return;
+
+  var payload = fresh.map(function(b){
+    return { driver_id:DRIVER.id, driver_name:DRIVER.name, partner:DRIVER.partner||null,
+      period:per, code:b.code, title_ar:b.ar, title_en:b.en,
+      score:r.score, stars:r.stars, rank_in_team:r.rank||null, granted_by:'system', seen:true };
+  });
+  try{
+    await sb('driver_awards?on_conflict=driver_id,period,code', {
+      method:'POST', body:JSON.stringify(payload),
+      headers:{ 'Prefer':'resolution=ignore-duplicates,return=minimal' }
+    });
+    payload.forEach(function(p){ MY_AWARDS.unshift(p); });
+  }catch(e){ console.warn('awards', e); }
+
+  // احتفال بأقوى وسام جديد فقط — مش ٥ نوافذ ورا بعض
+  var order = ['star','sniper','streak7','punctual','clean','streak3','rocket'];
+  fresh.sort(function(a,b){ return order.indexOf(a.code)-order.indexOf(b.code); });
+  var top = fresh[0];
+  celebrate({
+    emoji: top.emoji,
+    title: rateT('وسام جديد: '+top.ar, 'New badge: '+top.en),
+    sub: rateT(top.dAr+'.<br>استمر على كده يا '+ (DRIVER.name||'').split(' ')[0]+' 👏',
+               top.dEn+'.<br>Keep it up, '+ (DRIVER.name||'').split(' ')[0]+' 👏'),
+    pill: '⭐ '+rateT('تقييمك الآن <em>'+Math.round(r.score)+'</em> من 100','Your rating is now <em>'+Math.round(r.score)+'</em>/100'),
+    showRating: true
+  });
+}
+
+/* ---------- ردّ فعل فوري بعد إرسال التقرير ---------- */
+function rateAfterReport(orders, reportDate){
+  var cfg = rateCfg();
+  // حدّث النسخة المحلية فوراً علشان الأرقام تبان صح من غير انتظار
+  var found = false;
+  RATE_MONTH = RATE_MONTH||[];
+  RATE_MONTH.forEach(function(r){ if(r.report_date===reportDate){ r.orders_count=orders; found=true; } });
+  if(!found) RATE_MONTH.push({ report_date:reportDate, orders_count:orders });
+
+  var r = computeRating();
+  var name = (DRIVER && DRIVER.name || '').split(' ')[0];
+  var o;
+
+  if(orders >= cfg.excellent_target){
+    o = { emoji:'🚀', title: rateT('يوم أسطوري يا '+name+'!', 'Legendary day, '+name+'!'),
+      sub: rateT('<em>'+orders+'</em> أوردر النهارده — ده فوق الممتاز (<em>'+cfg.excellent_target+'</em>). شكراً على المجهود ده فعلاً.',
+                 '<em>'+orders+'</em> orders today — above outstanding (<em>'+cfg.excellent_target+'</em>). Real thanks for this effort.') };
+  } else if(orders >= cfg.daily_target){
+    var over = orders - cfg.daily_target;
+    o = { emoji:'🎉', title: rateT('حقّقت الهدف يا '+name+'!', 'Target hit, '+name+'!'),
+      sub: rateT('<em>'+orders+'</em> أوردر — الهدف <em>'+cfg.daily_target+'</em>'+(over>0?('، يعني زيادة <em>'+over+'</em>'):'')+'. شكراً لك 🙏',
+                 '<em>'+orders+'</em> orders — target <em>'+cfg.daily_target+'</em>'+(over>0?(', that\'s <em>'+over+'</em> over'):'')+'. Thank you 🙏') };
+  } else if(orders >= Math.ceil(cfg.daily_target*0.8)){
+    o = { emoji:'💪', title: rateT('قربت جداً!', 'So close!'),
+      sub: rateT('<em>'+orders+'</em> أوردر — فاضلك <em>'+(cfg.daily_target-orders)+'</em> بس للهدف. بكرة تعدّيه.',
+                 '<em>'+orders+'</em> orders — just <em>'+(cfg.daily_target-orders)+'</em> short. Tomorrow you pass it.') };
+  } else {
+    o = { emoji:'📋', title: rateT('تم تسجيل تقريرك', 'Report submitted'),
+      sub: rateT('<em>'+orders+'</em> أوردر — الهدف <em>'+cfg.daily_target+'</em>. أهم حاجة إنك بتبعت التقرير كل يوم، وده بيحسب في تقييمك.',
+                 '<em>'+orders+'</em> orders — target <em>'+cfg.daily_target+'</em>. What matters most is reporting every day — it counts toward your rating.') };
+  }
+
+  if(r.liveStreak>=2 && orders>=cfg.daily_target){
+    o.pill = '🔥 '+rateT('<em>'+r.liveStreak+'</em> أيام متتالية فوق الهدف','<em>'+r.liveStreak+'</em> days in a row on target');
+  } else {
+    o.pill = '⭐ '+rateT('تقييم الشهر <em>'+Math.round(r.score)+'</em> من 100','Month rating <em>'+Math.round(r.score)+'</em>/100');
+  }
+  o.showRating = true;
+  celebrate(o);
+
+  // اسحب من السيرفر بهدوء وامنح الأوسمة المستحقة
+  setTimeout(function(){ fetchRating(true); }, 1800);
+}
+
 </script>
 
 <!-- ══ شاشة تسجيل البريد الإلكتروني ══ -->
@@ -4679,6 +5273,24 @@ setTimeout(function(){
     <button class="emg-btn emg-save" id="emgSave" onclick="emSave()"><i class="ti ti-check"></i> <span id="emgSaveTxt">—</span></button>
     <button class="emg-btn emg-skip hide" id="emgSkip" onclick="emSkip()">—</button>
     <div class="emg-note" id="emgNote">—</div>
+  </div>
+</div>
+
+
+<!-- ============ ورقة التقييم ============ -->
+<div class="rs-ov" id="rateOv" onclick="if(event.target===this)closeRateSheet()">
+  <div class="rs-sheet"><div id="rateBody"></div></div>
+</div>
+
+<!-- ============ شاشة الاحتفال ============ -->
+<div class="cel-ov" id="celOv" onclick="if(event.target===this)closeCelebrate()">
+  <div class="cel-box">
+    <div class="cel-e" id="celEmoji">🎉</div>
+    <div class="cel-t" id="celTitle">—</div>
+    <div class="cel-s" id="celSub">—</div>
+    <div class="cel-pill" id="celPill" style="display:none">—</div>
+    <button class="cel-b" id="celBtn" onclick="closeCelebrate()">تمام</button>
+    <button class="cel-b sec" id="celSecond" onclick="celToRating()">شوف تقييمي كامل</button>
   </div>
 </div>
 
