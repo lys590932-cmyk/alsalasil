@@ -472,6 +472,31 @@ body::after{
 .cel-cf{position:absolute;top:-12px;width:9px;height:15px;opacity:0;animation:celFall linear forwards;z-index:1;border-radius:2px}
 @keyframes celFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(102vh) rotate(760deg)}}
 
+
+/* ===== كارت التحفيز عند تسجيل الحضور ===== */
+.motiv-card{position:fixed;inset-inline:12px;bottom:82px;z-index:9500;display:flex;align-items:flex-start;gap:12px;
+  padding:15px 15px 15px 13px;border-radius:18px;
+  background:linear-gradient(135deg,#0d3b2e 0%,#125c46 55%,#16785a 100%);
+  border:1px solid rgba(52,211,153,.32);box-shadow:0 16px 42px rgba(0,0,0,.55);
+  opacity:0;transform:translateY(22px) scale(.97);
+  transition:opacity .38s cubic-bezier(.2,.9,.3,1),transform .38s cubic-bezier(.2,.9,.3,1)}
+.motiv-card.on{opacity:1;transform:none}
+.motiv-card.out{background:linear-gradient(135deg,#12283a 0%,#1b4763 55%,#236b8e 100%);
+  border-color:rgba(96,165,250,.30)}
+.motiv-e{font-size:30px;line-height:1.1;flex-shrink:0;margin-top:1px;
+  animation:motivBob 2.4s ease-in-out infinite}
+@keyframes motivBob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-4px) rotate(3deg)}}
+.motiv-b{flex:1;min-width:0}
+.motiv-h{font-size:12px;font-weight:900;color:rgba(255,255,255,.72);letter-spacing:.2px;margin-bottom:3px}
+.motiv-h b{unicode-bidi:plaintext;font-weight:900;color:rgba(255,255,255,.9)}
+.motiv-t b{unicode-bidi:plaintext}
+.motiv-t{font-size:14.5px;font-weight:800;color:#fff;line-height:1.65}
+.motiv-x{flex-shrink:0;width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(255,255,255,.13);color:rgba(255,255,255,.8);font-size:13px;font-family:inherit;
+  display:grid;place-items:center;padding:0;line-height:1}
+.motiv-x:hover{background:rgba(255,255,255,.22)}
+@media(max-width:360px){ .motiv-t{font-size:13.5px} .motiv-e{font-size:26px} }
+
 </style>
 </head>
 <body>
@@ -1264,6 +1289,7 @@ function enterApp(fromCache){
   if(!fromCache) refreshAll();
   maybeEmailGate();
   setTimeout(function(){ try{ fetchRating(true).then(function(){ if(currentTab==='home') renderHome(); }); }catch(e){} }, 2200);
+  setTimeout(function(){ try{ fetchMotivation(); }catch(e){} }, 3400);
   setTimeout(function(){ if(isCurrentlyIn()) startLiveTracking(); }, 1500);
 }
 
@@ -2346,6 +2372,7 @@ function submitClock(action,lat,lng){
     computeNotifs();
     renderCurrentTab();
     toast(action==='clock_in'?t('clock_in_ok'):t('clock_out_ok'),'ok');
+    try{ showMotivation(action); }catch(e){ console.warn('motiv', e); }
   }).catch(function(err){
     console.error(err);
     toast(t('clock_fail'),'err');
@@ -4711,8 +4738,8 @@ renderHome = function(){
 /* ═══════════════════════════════════════════════════════════════════
    🏷️ رقم الإصدار — للتأكد من وصول التحديث
    ═══════════════════════════════════════════════════════════════════ */
-var FLY_VERSION = '6.2';
-var FLY_BUILD   = '2026-08-23';
+var FLY_VERSION = '6.3';
+var FLY_BUILD   = '2026-08-24';
 
 /* شارة الإصدار في أسفل شاشة "بياناتي" */
 var _origRenderProfile2 = renderProfile;
@@ -5254,6 +5281,276 @@ function rateAfterReport(orders, reportDate){
   setTimeout(function(){ fetchRating(true); }, 1800);
 }
 
+
+/* ===================== MOTIVATION ===================== */
+/* =========================================================
+   رسائل التحفيز عند تسجيل الحضور — Motivation on clock-in
+   ========================================================= */
+var SK_MOTIV_SEEN = 'fly_motiv_seen_v1';
+var SK_MOTIV_POOL = 'fly_motiv_pool_v1';
+var MOTIV_CLOUD   = null;   // رسائل إضافية من ARK
+var _motivTimer   = null;
+
+/* الفئات:
+   in_morning / in_noon / in_evening / in_night  — حسب وقت التسجيل
+   in_any        — تصلح في أي وقت
+   in_friday     — الخميس والجمعة (أيام الذروة)
+   in_month1     — أول ٣ أيام في الشهر
+   in_back       — رجع بعد غياب ٣ أيام أو أكتر
+   in_streak     — عنده سلسلة أيام فوق الهدف
+   out_any       — عند تسجيل الانصراف                                  */
+
+var MOTIV_AR = [
+  // ── الصباح ──
+  ['in_morning','يومك يبدأ وإحنا معاك ☀️ خلّيه يوم كويس.'],
+  ['in_morning','ربنا يفتحها عليك ويرزقك من حيث لا تحتسب 🤲'],
+  ['in_morning','بدايتك بدري دي مش صدفة — دي عادة الناس الجادة 💪'],
+  ['in_morning','خد نفسك، اشرب مية، وابدأ على مهلك — الطريق طويل.'],
+  ['in_morning','أول واحد في الشارع بياخد أحسن نصيب 🚗'],
+  // ── الظهر ──
+  ['in_noon','الجو حر النهارده — خلّي معاك مية باردة 💧'],
+  ['in_noon','بالتوفيق النهارده. أي حاجة تحتاجها إحنا على بُعد رسالة 📩'],
+  ['in_noon','شغل النهار مش سهل، وإحنا عارفين ده ومقدّرينه.'],
+  // ── المساء ──
+  ['in_evening','شفت المسا فيه بركة 🌇 بالتوفيق.'],
+  ['in_evening','بدأت شفتك. ركّز على الطريق والباقي يمشي لوحده.'],
+  ['in_evening','عدّي اليوم ده بسلام وارجع لأهلك بالسلامة 🙏'],
+  // ── بالليل ──
+  ['in_night','شفت الليل مش سهلة — وإحنا عارفين قيمة اللي بيشتغلها 🌙'],
+  ['in_night','خلّي بالك من نفسك بالليل. السرعة مش مستعجلة على حد.'],
+  ['in_night','ربنا يعينك ويسهّل عليك. إحنا مقدّرين سهرك 🌙'],
+  // ── أي وقت ──
+  ['in_any','إحنا بنعتمد عليك 🤝'],
+  ['in_any','إنت جزء من عيلة السلاسل — ومكانك محسوب.'],
+  ['in_any','شكراً إنك موجود النهارده. وجودك بيفرق فعلاً.'],
+  ['in_any','كل أوردر بتوصله بيبني سمعة الشركة — وسمعتك إنت كمان.'],
+  ['in_any','اشتغل براحتك ومن غير مخاطرة. سلامتك أهم من أي أوردر.'],
+  ['in_any','لو واجهت أي مشكلة النهارده، كلّمنا فوراً — مش لوحدك.'],
+  ['in_any','الشغل الكويس مش بيضيع. إحنا شايفين مجهودك.'],
+  ['in_any','بالتوفيق — وربنا يبارك في رزقك 🤲'],
+  ['in_any','فاكرين إن وراك بيت بيستناك. ارجع بالسلامة قبل أي حاجة.'],
+  ['in_any','خلّي هدفك النهارده تعدّي نفسك، مش تعدّي حد تاني.'],
+  ['in_any','السائق الكويس بيتعرف من التزامه مش من سرعته. وإنت هنا.'],
+  ['in_any','يوم جديد وفرصة جديدة. خلّيه يوم تفتخر بيه 🌟'],
+  ['in_any','إحنا فخورين إن حد زيّك شغّال معانا.'],
+  // ── الخميس والجمعة ──
+  ['in_friday','النهارده من أزحم الأيام — يعني أكتر يوم ممكن تكسب فيه 🔥'],
+  ['in_friday','يوم ذروة. ركّز وخد وقتك في السواقة، والأوردرات مش هتقف.'],
+  // ── أول الشهر ──
+  ['in_month1','شهر جديد وعدّاد جديد. بداية نضيفة ✨'],
+  ['in_month1','أول أيام الشهر هي اللي بتحدّد شكله. ابدأ صح.'],
+  // ── رجوع بعد غياب ──
+  ['in_back','وحشتنا 🤍 نوّرت من تاني.'],
+  ['in_back','الحمد لله على السلامة. خد يومك على مهلك ورجّع نَفَسك.'],
+  ['in_back','رجعت وده اللي يهمنا. ابدأ من النهارده ومتبصّش ورا.'],
+  // ── عنده سلسلة ──
+  ['in_streak','ماشي على {streak} أيام فوق الهدف 🔥 كمّل يا وحش.'],
+  ['in_streak','سلسلتك لسه شغّالة — {streak} أيام. متكسرهاش النهارده 💪'],
+  // ── الانصراف ──
+  ['out_any','شكراً على مجهود النهارده 🙏 ارجع بالسلامة.'],
+  ['out_any','خلص الشفت. ارتاح كويس — بكرة يوم جديد.'],
+  ['out_any','يوم كمان خلّصته بشرف. تصبح على خير 🌙'],
+  ['out_any','شكراً لك. كل يوم بتشتغله بيتحسب وبيتشاف.'],
+  ['out_any','روّح لأهلك بالسلامة، وخد راحتك — تستاهلها.']
+];
+
+var MOTIV_EN = [
+  ['in_morning','Your day starts and we are with you ☀️ Make it a good one.'],
+  ['in_morning','May it be an easy and generous day for you 🤲'],
+  ['in_morning','Starting early is not luck — it is a habit. Respect 💪'],
+  ['in_morning','Take a breath, drink some water, ease into it — it is a long road.'],
+  ['in_morning','First one on the road gets the best of it 🚗'],
+  ['in_noon','It is hot out there — keep water with you 💧'],
+  ['in_noon','Good luck today. Anything you need, we are one message away 📩'],
+  ['in_noon','Daytime work is not easy. We know it, and we value it.'],
+  ['in_evening','Wishing you a smooth, easy shift 🌇'],
+  ['in_evening','Your shift has started. Focus on the road, the rest follows.'],
+  ['in_evening','Get through today safely and get home well 🙏'],
+  ['in_night','Night shifts are hard — and we know what it takes 🌙'],
+  ['in_night','Look after yourself tonight. No delivery is worth rushing for.'],
+  ['in_night','May it be a light night for you. We appreciate you being up 🌙'],
+  ['in_any','We are counting on you 🤝'],
+  ['in_any','You are part of the Al-Salasil family — your place here matters.'],
+  ['in_any','Thank you for being here today. It genuinely makes a difference.'],
+  ['in_any','Every order you deliver builds the company name — and yours.'],
+  ['in_any','Work at your own pace and take no risks. Your safety comes first.'],
+  ['in_any','If anything goes wrong today, message us straight away — you are not alone.'],
+  ['in_any','Good work does not go unnoticed. We see the effort.'],
+  ['in_any','Good luck today — may it be a generous one 🤲'],
+  ['in_any','Someone at home is waiting for you. Get back safe, before anything else.'],
+  ['in_any','Aim to beat yesterday, not anybody else.'],
+  ['in_any','A good driver is known by showing up, not by speed. And you showed up.'],
+  ['in_any','New day, new chance. Make it one you are proud of 🌟'],
+  ['in_any','We are proud to have someone like you on the team.'],
+  ['in_friday','Today is one of the busiest — which means one of the best to earn 🔥'],
+  ['in_friday','Peak day. Stay focused, drive calm, the orders will keep coming.'],
+  ['in_month1','New month, fresh counter. Clean start ✨'],
+  ['in_month1','The first days set the tone for the whole month. Start right.'],
+  ['in_back','We missed you 🤍 Good to have you back.'],
+  ['in_back','Glad you are back safe. Take today steady and find your rhythm.'],
+  ['in_back','You came back, and that is what counts. Start from today.'],
+  ['in_streak','{streak} days in a row above target 🔥 Keep it going.'],
+  ['in_streak','Your streak is alive — {streak} days. Do not break it today 💪'],
+  ['out_any','Thank you for today 🙏 Get home safe.'],
+  ['out_any','Shift done. Rest well — tomorrow is a new one.'],
+  ['out_any','Another day finished with honour. Good night 🌙'],
+  ['out_any','Thank you. Every day you work is counted and seen.'],
+  ['out_any','Head home safe and take your rest — you have earned it.']
+];
+
+function motivT(ar, en){ return (typeof LANG!=='undefined' && LANG==='en') ? en : ar; }
+
+/* ---------- سياق اللحظة ---------- */
+function motivContext(action){
+  var now  = new Date();
+  var h    = now.getHours();
+  var dow  = now.getDay();            // 0 الأحد … 4 الخميس، 5 الجمعة
+  var name = ((DRIVER && DRIVER.name) || '').trim().split(/\s+/)[0] || '';
+  var tags = [];
+
+  if(action === 'clock_out'){
+    return { tags:['out_any'], name:name, streak:0 };
+  }
+
+  if(h >= 5  && h < 11) tags.push('in_morning');
+  else if(h >= 11 && h < 17) tags.push('in_noon');
+  else if(h >= 17 && h < 22) tags.push('in_evening');
+  else tags.push('in_night');
+
+  if(dow === 4 || dow === 5) tags.push('in_friday');
+  if(now.getDate() <= 3)     tags.push('in_month1');
+
+  // رجع بعد غياب؟ آخر تسجيل دخول قبل النهارده بـ٣ أيام أو أكتر
+  var lastIn = (CLOCKINS||[]).filter(function(c){ return c.action==='clock_in'; })[1];
+  if(lastIn){
+    var gap = (now - new Date(lastIn.created_at)) / 86400000;
+    if(gap >= 3) tags.push('in_back');
+  }
+
+  // سلسلة أيام فوق الهدف — من محرّك التقييم لو موجود
+  var streak = 0;
+  try{
+    if(typeof computeRating === 'function'){
+      var r = computeRating();
+      if(r && r.liveStreak >= 3) { streak = r.liveStreak; tags.push('in_streak'); }
+    }
+  }catch(e){}
+
+  tags.push('in_any');
+  return { tags:tags, name:name, streak:streak };
+}
+
+/* ---------- اختيار رسالة من غير تكرار ---------- */
+function motivSeen(){
+  try{ var v = JSON.parse(localStorage.getItem(SK_MOTIV_SEEN)||'[]'); return Array.isArray(v)?v:[]; }
+  catch(e){ return []; }
+}
+function motivRemember(txt){
+  var s = motivSeen(); s.unshift(txt); s = s.slice(0, 8);
+  try{ localStorage.setItem(SK_MOTIV_SEEN, JSON.stringify(s)); }catch(e){}
+}
+
+function motivPool(){
+  var base = (typeof LANG!=='undefined' && LANG==='en') ? MOTIV_EN : MOTIV_AR;
+  var list = base.map(function(x){ return { cat:x[0], text:x[1] }; });
+  var cloud = MOTIV_CLOUD;
+  if(!cloud){
+    try{ var c = localStorage.getItem(SK_MOTIV_POOL); if(c) cloud = JSON.parse(c); }catch(e){}
+  }
+  if(cloud && cloud.length){
+    var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'ar';
+    cloud.forEach(function(m){
+      if(!m || m.active === false) return;
+      if((m.lang||'ar') !== lang) return;
+      if(!m.text) return;
+      if(m.replaces_builtin) list = [];      // احتياطي لو حبيت تلغي المدمجة
+      list.push({ cat: m.category || 'in_any', text: m.text });
+    });
+  }
+  return list;
+}
+
+function motivPick(ctx){
+  var pool = motivPool();
+  var elig = pool.filter(function(m){ return ctx.tags.indexOf(m.cat) >= 0; });
+  if(!elig.length) elig = pool.filter(function(m){ return m.cat === (ctx.tags[0]||'in_any'); });
+  if(!elig.length) return null;
+
+  // رجّح الرسائل المرتبطة بالسياق على العامة
+  var special = elig.filter(function(m){ return m.cat !== 'in_any'; });
+  var weighted = special.length ? special.concat(special).concat(elig) : elig;
+
+  var seen = motivSeen();
+  var fresh = weighted.filter(function(m){ return seen.indexOf(m.text) < 0; });
+  var from = fresh.length ? fresh : weighted;
+  return from[Math.floor(Math.random() * from.length)];
+}
+
+function motivFill(txt, ctx){
+  return String(txt)
+    .replace(/\{name\}/g, ctx.name || motivT('يا صاحبي','friend'))
+    .replace(/\{streak\}/g, ctx.streak || 3);
+}
+
+/* ---------- العرض ---------- */
+function showMotivation(action){
+  try{
+    var ctx = motivContext(action);
+    var m   = motivPick(ctx);
+    if(!m) return;
+    var text = motivFill(m.text, ctx);
+    motivRemember(m.text);
+
+    var isIn = action !== 'clock_out';
+    var h    = new Date().getHours();
+    var head = isIn
+      ? (h>=5&&h<11  ? motivT('صباح الخير','Good morning')
+        : h>=11&&h<17? motivT('نهارك سعيد','Have a good day')
+        : h>=17&&h<22? motivT('مساء الخير','Good evening')
+        :              motivT('مساك الله بالخير','Good evening'))
+      : motivT('انتهى الشفت','Shift ended');
+    var emoji = isIn
+      ? (h>=5&&h<11 ? '☀️' : h>=11&&h<17 ? '🚗' : h>=17&&h<22 ? '🌇' : '🌙')
+      : '🙏';
+
+    var el = $('motivCard');
+    if(!el) return;
+    el.className = 'motiv-card' + (isIn ? '' : ' out');
+    el.innerHTML =
+      '<div class="motiv-e">'+emoji+'</div>'+
+      '<div class="motiv-b">'+
+        '<div class="motiv-h">'+head+(ctx.name ? (LANG==='en' ? ', ' : ' يا ')+'<b>'+ctx.name+'</b>' : '')+'</div>'+
+        '<div class="motiv-t">'+text+'</div>'+
+      '</div>'+
+      '<button class="motiv-x" onclick="hideMotivation()" aria-label="close">✕</button>';
+
+    // نظّف أي مؤقّت قديم علشان ما يقفلش الجديد بدري
+    if(_motivTimer){ clearTimeout(_motivTimer); _motivTimer = null; }
+    el.classList.remove('hide');
+    void el.offsetWidth;
+    el.classList.add('on');
+    _motivTimer = setTimeout(hideMotivation, isIn ? 8000 : 6500);
+  }catch(e){ console.warn('motiv', e); }
+}
+
+function hideMotivation(){
+  var el = $('motivCard'); if(!el) return;
+  if(_motivTimer){ clearTimeout(_motivTimer); _motivTimer = null; }
+  el.classList.remove('on');
+  setTimeout(function(){ el.classList.add('hide'); }, 380);
+}
+
+/* ---------- رسائل إضافية من ARK ---------- */
+async function fetchMotivation(){
+  try{
+    var rows = await sb('motivation_messages?select=lang,category,text,active&active=eq.true&limit=400');
+    if(rows && rows.length){
+      MOTIV_CLOUD = rows;
+      try{ localStorage.setItem(SK_MOTIV_POOL, JSON.stringify(rows)); }catch(e){}
+    }
+  }catch(e){ /* الرسائل المدمجة كافية */ }
+}
+
 </script>
 
 <!-- ══ شاشة تسجيل البريد الإلكتروني ══ -->
@@ -5293,6 +5590,10 @@ function rateAfterReport(orders, reportDate){
     <button class="cel-b sec" id="celSecond" onclick="celToRating()">شوف تقييمي كامل</button>
   </div>
 </div>
+
+
+<!-- كارت التحفيز عند تسجيل الحضور -->
+<div id="motivCard" class="motiv-card hide"></div>
 
 </body>
 </html>
