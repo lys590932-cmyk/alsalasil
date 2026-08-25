@@ -1792,6 +1792,46 @@ body{
 .rt-tg-r input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(28,88,120,.10)}
 .rt-modal-a{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 
+
+/* ===== محرّر رسائل التحفيز — ARK ===== */
+.mm-tabs{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.mm-tab{padding:7px 16px;border-radius:20px;border:1.5px solid var(--br);background:var(--s1);
+  font-family:'Cairo',sans-serif;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;transition:.15s}
+.mm-tab:hover{border-color:var(--accent)}
+.mm-tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mm-count{margin-inline-start:auto;font-size:11px;color:var(--muted2);font-weight:700}
+
+.mm-add{display:flex;flex-wrap:wrap;gap:8px;padding:11px;background:var(--s2);border:1px solid var(--br);
+  border-radius:13px;margin-bottom:14px}
+.mm-add select{flex:0 0 190px;padding:9px;background:var(--s1);border:1px solid var(--br);border-radius:9px;
+  font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:var(--text);outline:none}
+.mm-add input{flex:1 1 260px;min-width:0;padding:9px 11px;background:var(--s1);border:1px solid var(--br);
+  border-radius:9px;font-family:'Cairo',sans-serif;font-size:12.5px;color:var(--text);outline:none}
+.mm-add input:focus,.mm-add select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(28,88,120,.10)}
+
+.mm-grp{display:flex;align-items:baseline;gap:8px;margin:14px 0 7px}
+.mm-grp b{font-size:12px;font-weight:900;color:var(--text)}
+.mm-grp span{font-size:10px;color:var(--muted2);font-weight:700}
+.mm-grp::after{content:'';flex:1;height:1px;background:var(--br)}
+
+.mm-row{display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--s1);
+  border:1px solid var(--br);border-radius:11px;margin-bottom:6px}
+.mm-row.off{opacity:.45}
+.mm-row.off .mm-txt{text-decoration:line-through}
+.mm-txt{flex:1;min-width:0;font-size:12.5px;font-weight:700;color:var(--text);line-height:1.65}
+.mm-ic{width:28px;height:28px;flex-shrink:0;border-radius:8px;border:1px solid var(--br);background:var(--s2);
+  cursor:pointer;font-size:12px;padding:0;line-height:1;color:var(--muted)}
+.mm-ic:hover{border-color:var(--accent);color:var(--accent)}
+.mm-ic.del:hover{border-color:var(--red);color:var(--red)}
+
+.mm-empty{text-align:center;padding:34px 18px;color:var(--muted);background:var(--s2);
+  border:1px dashed var(--br);border-radius:13px}
+.mm-empty i{font-size:32px;opacity:.3;display:block;margin-bottom:9px}
+.mm-empty p{font-size:12px;line-height:1.9}
+
+.rt-modal-p code{background:var(--s3);padding:1px 6px;border-radius:5px;font-family:'JetBrains Mono',monospace;
+  font-size:11px;font-weight:700;direction:ltr;unicode-bidi:isolate;display:inline-block}
+
 </style>
 <!-- ══════════════════════════════════════════════════════════════════
      حارس الجلسة — لازم يفضل أول حاجة في الصفحة
@@ -2028,6 +2068,7 @@ body::after{
       <button class="tbtn" onclick="openOpsCenter('profit')" id="opsCenterBtn" title="الربحية والتنبيهات والتدقيق"><i class="ti ti-dashboard"></i> <span>مركز التشغيل</span><span id="opsAlertBadge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-right:auto;font-weight:800"></span></button>
       <button class="tbtn" onclick="openScheduleModal()"><i class="ti ti-calendar-week"></i> <span data-i18n="btn_schedule">الجدول</span></button>
       <button class="tbtn" onclick="openSendMsgModal()"><i class="ti ti-message-circle"></i> <span data-i18n="btn_send_msg">إرسال رسالة</span></button>
+      <button class="tbtn" onclick="pushStatus()"><i class="ti ti-bell-check"></i> <span>حالة الإشعارات</span></button>
       <button class="tbtn" onclick="openInboxModal()"><i class="ti ti-inbox"></i> <span data-i18n="btn_inbox">صندوق الوارد</span><span id="inboxBadge" style="display:none;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;margin-right:auto">0</span></button>
 
       <h6>التقارير والكشوف</h6>
@@ -2130,6 +2171,22 @@ body::after{
   <div class="rt-modal">
     <h2><i class="ti ti-target"></i> أهداف الأداء لكل شريك</h2>
     <div id="rtTargetsBody"></div>
+  </div>
+</div>
+
+<!-- نافذة حالة الإشعارات -->
+<div class="rt-ov" id="pushStatusOv" onclick="if(event.target===this)pushCloseStatus()">
+  <div class="rt-modal" style="max-width:780px">
+    <h2><i class="ti ti-bell-check"></i> حالة إشعارات السائقين</h2>
+    <div id="pushStatusBody"></div>
+  </div>
+</div>
+
+<!-- نافذة رسائل التحفيز -->
+<div class="rt-ov" id="mmOv" onclick="if(event.target===this)mmCloseManager()">
+  <div class="rt-modal" style="max-width:720px">
+    <h2><i class="ti ti-message-2-heart"></i> رسائل التحفيز عند تسجيل الحضور</h2>
+    <div id="mmBody"></div>
   </div>
 </div>
 
@@ -2446,6 +2503,7 @@ function onStaffTypeChange(){
     <label style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;cursor:pointer;font-size:12px;color:var(--muted2)"><input type="checkbox" id="msg-wa" style="width:16px;height:16px;accent-color:#25d366"> <i class="ti ti-brand-whatsapp" style="color:#25d366;font-size:16px"></i> إرسال نسخة على واتساب أيضاً</label>
     <div class="macts">
       <button class="btn btn-c" onclick="closeModal('sendMsgModal')">إلغاء</button>
+      <button class="btn btn-c" onclick="pushTest()" title="يبعت إشعار تجريبي للسائق المختار"><i class="ti ti-bell-ringing"></i> اختبار</button>
       <button class="btn btn-s" onclick="sendMessage()"><i class="ti ti-send"></i> إرسال</button>
     </div>
   </div>
@@ -7248,9 +7306,20 @@ async function sendMessage(){
         from_type: 'admin'
       })
     });
-    toast('تم إرسال الرسالة ✅','s');
     closeModal('sendMsgModal');
     if(typeof fetchInbox === 'function') setTimeout(fetchInbox, 800);
+
+    // إشعار يوصل حتى والتطبيق مقفول
+    try{
+      const pr = await sendPush(
+        recipient === 'ALL'
+          ? { all:true,  title: title, body: body || '', url:'./', tag:'msg' }
+          : { driverIds:[recipient], title: title, body: body || '', url:'./', tag:'msg' });
+      toast('تم الإرسال ✅ — ' + pushResultText(pr), pr.devices ? 's' : 'e');
+    }catch(pe){
+      console.warn('[push]', pe);
+      toast('الرسالة اتسجّلت، بس الإشعار ما اتبعتش: ' + pe.message, 'e');
+    }
 
     if(sendWA){
       const recipients = recipient==='ALL' ? DRV : DRV.filter(d => d.id===recipient);
@@ -14529,6 +14598,7 @@ function rtPaint(){
     '</select></div>'+
     '<div class="rt-spacer"></div>'+
     '<button class="rt-btn" onclick="rtOpenTargets()"><i class="ti ti-target"></i> ضبط الأهداف</button>'+
+    '<button class="rt-btn" onclick="mmOpenManager()"><i class="ti ti-message-2-heart"></i> رسائل التحفيز</button>'+
     '<button class="rt-btn" onclick="rtCopyReport()"><i class="ti ti-brand-whatsapp"></i> نسخ ملخص</button>'+
     '<button class="rt-btn" onclick="rtRefresh()"><i class="ti ti-refresh"></i> تحديث</button>'+
   '</div>';
@@ -14742,6 +14812,325 @@ function rtCopyReport(){
 window.addEventListener('ark-auth-ready', function(){
   setTimeout(function(){ if(typeof rtLoad==='function') rtLoad(); }, 4200);
 });
+
+
+/* ===================== MOTIVATION MANAGER ===================== */
+/* =========================================================
+   رسائل التحفيز — محرّر ARK
+   ========================================================= */
+let MM_ROWS = [];
+let MM_LANG = 'ar';
+let MM_BUSY = false;
+
+const MM_CATS = [
+  { id:'in_morning', label:'الصباح',           hint:'٥ ص – ١١ ص' },
+  { id:'in_noon',    label:'الظهر',            hint:'١١ ص – ٥ م' },
+  { id:'in_evening', label:'المساء',           hint:'٥ م – ١٠ م' },
+  { id:'in_night',   label:'الليل',            hint:'١٠ م – ٥ ص' },
+  { id:'in_friday',  label:'الخميس والجمعة',   hint:'أيام الذروة' },
+  { id:'in_month1',  label:'أول الشهر',        hint:'أول ٣ أيام' },
+  { id:'in_back',    label:'رجوع بعد غياب',    hint:'غاب ٣ أيام أو أكتر' },
+  { id:'in_streak',  label:'عنده سلسلة',       hint:'أيام متتالية فوق الهدف' },
+  { id:'in_any',     label:'أي وقت',           hint:'تصلح دايماً' },
+  { id:'out_any',    label:'عند الانصراف',     hint:'آخر الشفت' }
+];
+const MM_CAT_LABEL = id => (MM_CATS.find(c => c.id === id) || {}).label || id;
+
+function mmOpenManager(){
+  const ov = document.getElementById('mmOv'); if(!ov) return;
+  ov.style.display = 'flex';
+  mmRender();
+  mmLoad();
+}
+function mmCloseManager(){ const ov=document.getElementById('mmOv'); if(ov) ov.style.display='none'; }
+function mmSetLang(l){ MM_LANG = l; mmRender(); }
+
+async function mmLoad(){
+  MM_BUSY = true;
+  try{
+    MM_ROWS = await rtGet('motivation_messages?select=*&order=created_at.desc&limit=500');
+  }catch(e){
+    MM_ROWS = [];
+    console.warn('[motiv] load', e);
+    toast('مقدرتش أقرا الرسائل — شغّل ملف SQL الأول','e');
+  }
+  MM_BUSY = false;
+  mmRender();
+}
+
+function mmRender(){
+  const el = document.getElementById('mmBody'); if(!el) return;
+  const mine = MM_ROWS.filter(r => (r.lang||'ar') === MM_LANG);
+
+  let h = '';
+  h += '<p class="rt-modal-p">التطبيق جواه <b>٤١ رسالة جاهزة</b> وشغّال من غير ما تضيف حاجة. '+
+       'اللي تكتبه هنا <b>بيتزوّد عليها</b> — وبيوصل السائقين أول ما يفتحوا التطبيق من غير رفع نسخة جديدة.<br>'+
+       'اكتب <code>{name}</code> فتتبدّل باسم السائق الأول، و<code>{streak}</code> بعدد أيام سلسلته.</p>';
+
+  h += '<div class="mm-tabs">'+
+    '<button class="mm-tab'+(MM_LANG==='ar'?' on':'')+'" onclick="mmSetLang(\'ar\')">عربي</button>'+
+    '<button class="mm-tab'+(MM_LANG==='en'?' on':'')+'" onclick="mmSetLang(\'en\')">English</button>'+
+    '<span class="mm-count">'+mine.length+' رسالة مضافة</span>'+
+  '</div>';
+
+  // إضافة
+  h += '<div class="mm-add">'+
+    '<select id="mmCat">'+ MM_CATS.map(c =>
+      '<option value="'+c.id+'">'+c.label+' — '+c.hint+'</option>').join('') +'</select>'+
+    '<input type="text" id="mmText" maxlength="220" placeholder="'+
+      (MM_LANG==='ar' ? 'اكتب الرسالة… مثلاً: يومك سعيد يا {name}، إحنا بنعتمد عليك'
+                      : 'Write the message… e.g. Have a good day {name}, we count on you')+'">'+
+    '<button class="rt-btn pri" onclick="mmAdd()"><i class="ti ti-plus"></i> إضافة</button>'+
+  '</div>';
+
+  if(MM_BUSY && !MM_ROWS.length){
+    h += '<div class="mm-empty">جاري التحميل…</div>';
+  } else if(!mine.length){
+    h += '<div class="mm-empty"><i class="ti ti-message-2-heart"></i>'+
+         '<p>مفيش رسائل مضافة بلغة '+(MM_LANG==='ar'?'العربية':'الإنجليزية')+' لحد دلوقتي.<br>'+
+         'الرسائل المدمجة في التطبيق شغّالة عادي.</p></div>';
+  } else {
+    // مجمّعة بالفئة
+    const groups = {};
+    mine.forEach(r => { (groups[r.category] = groups[r.category] || []).push(r); });
+    MM_CATS.forEach(c => {
+      const g = groups[c.id]; if(!g) return;
+      h += '<div class="mm-grp"><b>'+c.label+'</b><span>'+c.hint+'</span></div>';
+      g.forEach(r => {
+        h += '<div class="mm-row'+(r.active===false?' off':'')+'">'+
+          '<div class="mm-txt">'+mmEsc(r.text)+'</div>'+
+          '<button class="mm-ic" onclick="mmToggle(\''+r.id+'\')" title="'+
+            (r.active===false?'تشغيل':'إيقاف')+'">'+(r.active===false?'▶':'⏸')+'</button>'+
+          '<button class="mm-ic del" onclick="mmDelete(\''+r.id+'\')" title="حذف">🗑</button>'+
+        '</div>';
+      });
+    });
+  }
+
+  h += '<div class="rt-modal-a">'+
+    '<button class="rt-btn" onclick="mmLoad()"><i class="ti ti-refresh"></i> تحديث</button>'+
+    '<button class="rt-btn" onclick="mmCloseManager()">إغلاق</button></div>';
+
+  el.innerHTML = h;
+}
+
+function mmEsc(t){
+  return String(t||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function mmWho(){
+  // ARK_USER معرّف مرتين في النظام (window + let داخلي) — لازم نقرا الاتنين
+  try{ if(window.ARK_USER && window.ARK_USER.name) return String(window.ARK_USER.name).slice(0,80); }catch(e){}
+  try{ if(typeof ARK_USER !== 'undefined' && ARK_USER && ARK_USER.name) return String(ARK_USER.name).slice(0,80); }catch(e){}
+  return 'ARK';
+}
+
+async function mmAdd(){
+  if(typeof requirePerm==='function' && !requirePerm('edit','rating')) return;
+  const cat  = (document.getElementById('mmCat')||{}).value;
+  const inp  = document.getElementById('mmText');
+  const text = (inp && inp.value || '').trim();
+  if(text.length < 4){ toast('اكتب الرسالة الأول','e'); return; }
+  if(text.length > 220){ toast('الرسالة طويلة — ٢٢٠ حرف كحد أقصى','e'); return; }
+  const dup = MM_ROWS.find(r => (r.lang||'ar')===MM_LANG && String(r.text).trim()===text);
+  if(dup){ toast('الرسالة دي مضافة قبل كده','e'); return; }
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/motivation_messages', {
+      method:'POST',
+      headers: Object.assign({ Prefer:'return=representation' }, rtHeaders()),
+      body: JSON.stringify([{ lang:MM_LANG, category:cat, text:text, active:true,
+        created_by: mmWho() }]) });
+    if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,140));
+    const saved = await r.json();
+    MM_ROWS = (saved||[]).concat(MM_ROWS);
+    if(inp) inp.value = '';
+    mmRender();
+    toast('اتضافت — هتوصل السائقين أول ما يفتحوا التطبيق');
+  }catch(e){ console.error(e); toast('فشل الحفظ: '+e.message,'e'); }
+}
+
+async function mmToggle(id){
+  if(typeof requirePerm==='function' && !requirePerm('edit','rating')) return;
+  const row = MM_ROWS.find(r => r.id === id); if(!row) return;
+  const next = !(row.active !== false);
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/motivation_messages?id=eq.'+id, {
+      method:'PATCH', headers: rtHeaders(), body: JSON.stringify({ active: next }) });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    row.active = next; mmRender();
+    toast(next ? 'اتفعّلت' : 'اتوقفت');
+  }catch(e){ toast('فشل التعديل: '+e.message,'e'); }
+}
+
+async function mmDelete(id){
+  if(typeof requirePerm==='function' && !requirePerm('delete')) return;
+  const row = MM_ROWS.find(r => r.id === id); if(!row) return;
+  if(!confirm('حذف الرسالة دي نهائياً؟\n\n"'+row.text+'"')) return;
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/motivation_messages?id=eq.'+id,
+      { method:'DELETE', headers: rtHeaders() });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    MM_ROWS = MM_ROWS.filter(x => x.id !== id);
+    mmRender();
+    toast('اتحذفت');
+  }catch(e){ toast('فشل الحذف: '+e.message,'e'); }
+}
+
+
+/* ===================== PUSH (ARK) ===================== */
+/* =========================================================
+   إرسال إشعارات Push من ARK
+   ========================================================= */
+var PUSH_FN_URL = SUPA_URL + '/functions/v1/send-push';
+
+/* الدالة محميّة بجلسة الدخول — لازم توكن مستخدم مسجّل، مش مفتاح anon */
+function pushAuthToken(){
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        var v = JSON.parse(localStorage.getItem(k)||'{}');
+        if(v && v.access_token) return v.access_token;
+      }
+    }
+  }catch(e){}
+  return null;
+}
+
+/**
+ * يبعت إشعار لسائق أو أكتر.
+ * opts: { driverIds:[..] | all:true, title, body, url, sticky }
+ * بيرجّع { sent, failed, removed, devices } أو بيرمي خطأ مفهوم.
+ */
+async function sendPush(opts){
+  var token = pushAuthToken();
+  if(!token) throw new Error('مفيش جلسة دخول — سجّل دخولك في ARK الأول');
+
+  var payload = {
+    title: opts.title || 'شركة السلاسل',
+    body:  opts.body  || '',
+    url:   opts.url   || './',
+    sticky: !!opts.sticky,
+    tag:   opts.tag || null
+  };
+  if(opts.all) payload.all = true;
+  else payload.driver_ids = opts.driverIds || [];
+
+  var r;
+  try{
+    r = await fetch(PUSH_FN_URL, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json', 'apikey':SUPA_KEY },
+      body: JSON.stringify(payload)
+    });
+  }catch(e){
+    throw new Error('مقدرتش أوصل لدالة الإرسال — اتأكد إنك رفعتها على Supabase');
+  }
+
+  var out = null;
+  try{ out = await r.json(); }catch(e){}
+  if(!r.ok){
+    if(r.status === 404) throw new Error('دالة send-push مش موجودة على Supabase — لسه ما اترفعتش');
+    if(r.status === 401 || r.status === 403) throw new Error('الدالة رفضت الجلسة — سجّل خروج ودخول تاني');
+    throw new Error((out && out.error) || ('فشل الإرسال — HTTP '+r.status));
+  }
+  return out || {};
+}
+
+/* ---------- نتيجة مفهومة بدل أرقام ---------- */
+function pushResultText(res){
+  if(!res) return 'مفيش رد من الدالة';
+  if(!res.devices) return 'مفيش أجهزة مسجّلة — السائق لازم يفتح التطبيق ويوافق على الإشعارات الأول';
+  var t = 'وصل ' + (res.sent||0) + ' من ' + res.devices + ' جهاز';
+  if(res.failed)  t += ' · فشل ' + res.failed;
+  if(res.removed) t += ' · اتشال ' + res.removed + ' جهاز قديم';
+  return t;
+}
+
+/* ---------- زر اختبار ---------- */
+async function pushTest(){
+  var id = (typeof selId !== 'undefined' && selId) ? selId : null;
+  if(!id){ toast('اختار سائق من القايمة الأول','e'); return; }
+  var d = DRV.find(function(x){ return x.id === id; });
+  toast('بيبعت…');
+  try{
+    var res = await sendPush({
+      driverIds: [id],
+      title: 'اختبار إشعار ✅',
+      body: 'لو وصلتك الرسالة دي والتطبيق مقفول، يبقى النظام شغّال تمام.',
+      tag: 'test-'+Date.now()
+    });
+    if(!res.devices){
+      alert('السائق ' + ((d&&d.name)||id) + ' مالوش أي جهاز مسجّل.\n\n' +
+            'يعني لسه ما فتحش التطبيق بعد التحديث، أو ما وافقش على الإشعارات.\n' +
+            'قوله يفتح التطبيق ← الخدمات ← «تفعيل الإشعارات».');
+    }else{
+      toast('✅ ' + pushResultText(res));
+      if(res.failed) console.warn('[push] errors', res.errors);
+    }
+  }catch(e){
+    console.error(e);
+    alert('فشل الاختبار:\n\n' + e.message);
+  }
+}
+
+/* ---------- شاشة: مين أجهزته مسجّلة ---------- */
+async function pushStatus(){
+  try{
+    var rows = await rtGet('driver_push_status?select=*&order=devices.desc,name.asc&limit=500');
+    var withDev = rows.filter(function(r){ return (r.devices||0) > 0; });
+    var without = rows.filter(function(r){ return !(r.devices||0); });
+    var iosBad  = rows.filter(function(r){ return r.ios_not_installed; });
+
+    var h = '<div class="rt-kpis" style="margin-bottom:14px">'+
+      rtKpi('ti-device-mobile-check','أجهزة مسجّلة', withDev.length, 'من ' + rows.length + ' سائق', '#059669')+
+      rtKpi('ti-bell-off','مالهمش أجهزة', without.length, without.length?'مش هيوصلهم إشعار':'الكل مغطّى', without.length?'#b91c1c':'#059669')+
+      rtKpi('ti-brand-apple','آيفون مش مثبّت', iosBad.length, 'محتاجين يثبّتوه على الشاشة الرئيسية', iosBad.length?'#d97706':'#059669')+
+    '</div>';
+
+    if(without.length){
+      h += '<div class="rt-card"><div class="rt-card-h"><b><i class="ti ti-bell-off"></i> مش هيوصلهم إشعار</b>'+
+        '<span class="rt-hint">لازم يفتحوا التطبيق ويوافقوا على الإشعارات</span></div>'+
+        '<div class="rt-scroll"><table class="rt-tbl" style="min-width:auto"><tbody>';
+      without.forEach(function(r){
+        h += '<tr><td><b class="rt-nm">'+(r.name||r.id)+'</b><i class="rt-id">'+r.id+'</i></td>'+
+             '<td class="c"><span class="rt-pchip" style="background:#b91c1c1f;color:#b91c1c">٠ أجهزة</span></td></tr>';
+      });
+      h += '</tbody></table></div></div>';
+    }
+
+    if(withDev.length){
+      h += '<div class="rt-card" style="margin-top:12px"><div class="rt-card-h"><b><i class="ti ti-device-mobile-check"></i> مسجّلين</b></div>'+
+        '<div class="rt-scroll"><table class="rt-tbl" style="min-width:auto"><thead><tr>'+
+        '<th>السائق</th><th class="c">أجهزة</th><th class="c">آخر إشعار وصل</th></tr></thead><tbody>';
+      withDev.forEach(function(r){
+        var last = r.last_delivered ? new Date(r.last_delivered).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}) : '—';
+        h += '<tr><td><b class="rt-nm">'+(r.name||r.id)+'</b><i class="rt-id">'+r.id+'</i></td>'+
+             '<td class="c mono">'+r.devices+'</td>'+
+             '<td class="c" style="font-size:11px;color:var(--muted)">'+last+'</td></tr>';
+      });
+      h += '</tbody></table></div></div>';
+    }
+
+    h += '<div class="rt-note"><i class="ti ti-info-circle"></i> '+
+      'الجهاز بيتسجّل لوحده أول ما السائق يفتح التطبيق ويوافق على الإشعارات. '+
+      '<b>الآيفون استثناء:</b> ما بيديش إشعارات إلا لو التطبيق متثبّت على الشاشة الرئيسية '+
+      '(زر المشاركة ⬆️ ← إضافة إلى الشاشة الرئيسية) — ده قيد من Apple نفسها مش من النظام.</div>';
+
+    h += '<div class="rt-modal-a">'+
+      '<button class="rt-btn" onclick="pushStatus()"><i class="ti ti-refresh"></i> تحديث</button>'+
+      '<button class="rt-btn" onclick="pushCloseStatus()">إغلاق</button></div>';
+
+    document.getElementById('pushStatusBody').innerHTML = h;
+    document.getElementById('pushStatusOv').style.display = 'flex';
+  }catch(e){
+    toast('مقدرتش أقرا حالة الأجهزة — شغّل ملف SQL الأول','e');
+    console.error(e);
+  }
+}
+function pushCloseStatus(){
+  var ov = document.getElementById('pushStatusOv'); if(ov) ov.style.display = 'none';
+}
 
 </script>
 

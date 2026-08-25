@@ -1268,6 +1268,7 @@ function tryAutoLogin(){
 function logout(){
   if(!confirm(t('logout_confirm'))) return;
   stopLiveTracking();
+  try{ dropPushSubscription(); }catch(e){}
   localStorage.removeItem(SK_SESSION);
   localStorage.removeItem(SK_CACHE);
   DRIVER=null; CLOCKINS=[]; DEDUCTIONS=[]; SCHEDULES=[]; NOTIFS=[];
@@ -1290,6 +1291,12 @@ function enterApp(fromCache){
   maybeEmailGate();
   setTimeout(function(){ try{ fetchRating(true).then(function(){ if(currentTab==='home') renderHome(); }); }catch(e){} }, 2200);
   setTimeout(function(){ try{ fetchMotivation(); }catch(e){} }, 3400);
+  setTimeout(function(){
+    try{ ensurePushSubscription().then(function(r){
+      if(!r.ok && r.why!=='no-permission' && r.why!=='unsupported') console.warn('[push]', r);
+      if(typeof renderCurrentTab==='function' && currentTab==='services') renderCurrentTab();
+    }); }catch(e){}
+  }, 4200);
   setTimeout(function(){ if(isCurrentlyIn()) startLiveTracking(); }, 1500);
 }
 
@@ -1705,6 +1712,14 @@ async function enableNotifs(){
   _updateNotifStatusBar();
   if(ok){
     toast(LANG==='en'?'Notifications enabled ✓':'تم تفعيل الإشعارات ✓');
+    try{
+      var reg = await ensurePushSubscription({ force:true });
+      if(!reg.ok){
+        console.warn('[push] not registered:', reg.why, reg.error||'');
+        toast(LANG==='en' ? 'Enabled, but device registration failed — reopen the app'
+                          : 'اتفعّلت، بس تسجيل الجهاز فشل — اقفل التطبيق وافتحه', 'err');
+      }
+    }catch(e){ console.warn('[push]', e); }
     setTimeout(function(){ testNotif(); }, 600);
   } else {
     toast(LANG==='en'?'Permission denied':'تم رفض الإذن');
@@ -2059,6 +2074,14 @@ setTimeout(function(){
 // Listen for clicks on notifications (from service worker)
 if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'PUSH_RESUBSCRIBE'){
+      try{ ensurePushSubscription({ force:true }); }catch(err){}
+      return;
+    }
+    if(e.data && e.data.type === 'PUSH_RECEIVED'){
+      try{ fetchMessages().then(function(){ _updateBellBadge(); _updateChatBadge(); }); }catch(err){}
+      return;
+    }
     if(e.data && e.data.type === 'OPEN_MESSAGES'){
       // Open the chat sheet (the right place for messages now)
       if(typeof openChat === 'function') openChat();
@@ -4323,7 +4346,10 @@ function notifEnv(){
 /* هل الإشعارات شغالة تماماً؟ */
 function notifsWorking(){
   var e = notifEnv();
-  return e.hasAPI && e.perm === 'granted';
+  if(!(e.hasAPI && e.perm === 'granted')) return false;
+  // الإذن لوحده مش كفاية — لازم الجهاز يكون متسجّل عند السيرفر
+  if(typeof PUSH_STATE !== 'undefined' && !PUSH_STATE.ok) return false;
+  return true;
 }
 
 /* كارت التفعيل — يظهر في الرئيسية لو فيه مشكلة */
@@ -4738,8 +4764,8 @@ renderHome = function(){
 /* ═══════════════════════════════════════════════════════════════════
    🏷️ رقم الإصدار — للتأكد من وصول التحديث
    ═══════════════════════════════════════════════════════════════════ */
-var FLY_VERSION = '6.3';
-var FLY_BUILD   = '2026-08-24';
+var FLY_VERSION = '6.4';
+var FLY_BUILD   = '2026-08-25';
 
 /* شارة الإصدار في أسفل شاشة "بياناتي" */
 var _origRenderProfile2 = renderProfile;
@@ -5549,6 +5575,157 @@ async function fetchMotivation(){
       try{ localStorage.setItem(SK_MOTIV_POOL, JSON.stringify(rows)); }catch(e){}
     }
   }catch(e){ /* الرسائل المدمجة كافية */ }
+}
+
+
+/* ===================== WEB PUSH ===================== */
+/* =========================================================
+   Web Push — إشعارات توصل والتطبيق مقفول
+   ========================================================= */
+var VAPID_PUBLIC   = 'BE7cUweRPvPKFlb0k0YQUc7fWnSMX9xuVN-1LdB0QwGvlzVzsgbpokJNgSiEGdDk6y9qSKomnm2o0YHBjXrqb_E';
+var SK_PUSH_STATE  = 'fly_push_state_v1';
+var PUSH_STATE     = { ok:false, why:'init', endpoint:null };
+var PUSH_REFRESH_MS = 3 * 24 * 60 * 60 * 1000;   // نجدّد التسجيل كل ٣ أيام
+
+function _b64ToU8(b64){
+  var pad = '='.repeat((4 - b64.length % 4) % 4);
+  var s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  var raw = atob(s), out = new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function _u8ToB64(buf){
+  var b = new Uint8Array(buf), s = '';
+  for(var i=0;i<b.length;i++) s += String.fromCharCode(b[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function _pushSaved(){
+  try{ return JSON.parse(localStorage.getItem(SK_PUSH_STATE)||'{}'); }catch(e){ return {}; }
+}
+function _pushSave(o){
+  try{ localStorage.setItem(SK_PUSH_STATE, JSON.stringify(o)); }catch(e){}
+}
+
+function pushPlatform(){
+  var e = notifEnv();
+  return e.isIOS ? 'ios' : (e.isAndroid ? 'android' : 'other');
+}
+
+/* ---------- الاشتراك وتسجيله عند السيرفر ---------- */
+async function ensurePushSubscription(opts){
+  opts = opts || {};
+  if(!DRIVER || !DRIVER.id) return (PUSH_STATE = {ok:false, why:'no-driver'});
+  if(!('serviceWorker' in navigator) || !('PushManager' in window))
+    return (PUSH_STATE = {ok:false, why:'unsupported'});
+  if(Notification.permission !== 'granted')
+    return (PUSH_STATE = {ok:false, why:'no-permission'});
+
+  var reg, sub;
+  try{
+    reg = await navigator.serviceWorker.ready;
+  }catch(e){ return (PUSH_STATE = {ok:false, why:'no-sw'}); }
+
+  try{
+    sub = await reg.pushManager.getSubscription();
+
+    // لو المفتاح اتغيّر أو طلبنا إعادة اشتراك — نلغي القديم الأول
+    if(sub && opts.force){
+      try{ await sub.unsubscribe(); }catch(e){}
+      sub = null;
+    }
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _b64ToU8(VAPID_PUBLIC)
+      });
+    }
+  }catch(e){
+    // InvalidStateError = فيه اشتراك قديم بمفتاح مختلف
+    if(!opts.force && /InvalidState|different applicationServerKey|already/i.test(e.message||'')){
+      return ensurePushSubscription({ force:true });
+    }
+    console.warn('[push] subscribe', e);
+    return (PUSH_STATE = {ok:false, why:'subscribe-failed', error:String(e.message||e)});
+  }
+
+  var json = sub.toJSON ? sub.toJSON() : {};
+  var keys = json.keys || {};
+  var p256 = keys.p256dh || (sub.getKey && _u8ToB64(sub.getKey('p256dh')));
+  var auth = keys.auth   || (sub.getKey && _u8ToB64(sub.getKey('auth')));
+  if(!p256 || !auth) return (PUSH_STATE = {ok:false, why:'no-keys'});
+
+  var saved = _pushSaved();
+  var fresh = saved.endpoint === sub.endpoint
+           && saved.driver === DRIVER.id
+           && (Date.now() - (saved.at||0)) < PUSH_REFRESH_MS;
+  if(fresh && !opts.force){
+    return (PUSH_STATE = {ok:true, why:'cached', endpoint:sub.endpoint});
+  }
+
+  // تسجيل عند السيرفر — عن طريق دالة واحدة، التطبيق مالوش صلاحية على الجدول
+  try{
+    var e2 = notifEnv();
+    await sb('rpc/register_push', {
+      method:'POST',
+      body: JSON.stringify({
+        p_driver_id:   DRIVER.id,
+        p_driver_name: DRIVER.name || null,
+        p_endpoint:    sub.endpoint,
+        p_p256dh:      p256,
+        p_auth:        auth,
+        p_platform:    pushPlatform(),
+        p_standalone:  !!e2.standalone,
+        p_user_agent:  (navigator.userAgent||'').slice(0,400),
+        p_app_version: (typeof FLY_VERSION !== 'undefined') ? FLY_VERSION : null
+      })
+    });
+    _pushSave({ endpoint: sub.endpoint, driver: DRIVER.id, at: Date.now() });
+    return (PUSH_STATE = {ok:true, why:'registered', endpoint:sub.endpoint});
+  }catch(e){
+    console.warn('[push] register', e);
+    return (PUSH_STATE = {ok:false, why:'register-failed', error:String(e.message||e)});
+  }
+}
+
+/* ---------- إلغاء التسجيل عند تسجيل الخروج ---------- */
+async function dropPushSubscription(){
+  try{
+    var saved = _pushSaved();
+    if(saved.endpoint){
+      await sb('rpc/unregister_push', { method:'POST', body: JSON.stringify({ p_endpoint: saved.endpoint }) })
+        .catch(function(){});
+    }
+    if('serviceWorker' in navigator){
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if(sub) await sub.unsubscribe();
+    }
+  }catch(e){}
+  try{ localStorage.removeItem(SK_PUSH_STATE); }catch(e){}
+  PUSH_STATE = {ok:false, why:'logged-out'};
+}
+
+/* ---------- تشخيص للسائق: ليه الإشعارات مش شغّالة ---------- */
+function pushDiagnosis(){
+  var e = notifEnv();
+  var ar = LANG !== 'en';
+  if(!e.hasAPI)
+    return { level:'bad', msg: ar ? 'المتصفح ده مش بيدعم الإشعارات. استخدم Chrome على أندرويد أو Safari على الآيفون.'
+                                  : 'This browser does not support notifications. Use Chrome on Android or Safari on iPhone.' };
+  if(e.isIOS && !e.standalone)
+    return { level:'bad', msg: ar ? 'على الآيفون لازم تثبّت التطبيق على الشاشة الرئيسية الأول: زر المشاركة ⬆️ ← «إضافة إلى الشاشة الرئيسية»، وبعدين افتحه من الأيقونة.'
+                                  : 'On iPhone you must install the app to your Home Screen first: Share ⬆️ → "Add to Home Screen", then open it from the icon.' };
+  if(e.perm === 'denied')
+    return { level:'bad', msg: ar ? 'إنت رفضت الإشعارات قبل كده. فعّلها من إعدادات المتصفح لهذا الموقع.'
+                                  : 'You previously blocked notifications. Enable them from your browser settings for this site.' };
+  if(e.perm !== 'granted')
+    return { level:'warn', msg: ar ? 'اضغط «تفعيل الإشعارات» علشان توصلك رسائل الإدارة.'
+                                   : 'Tap "Enable notifications" so you receive messages from management.' };
+  if(!PUSH_STATE.ok)
+    return { level:'warn', msg: ar ? 'الإذن موجود بس الجهاز لسه ما اتسجّلش. اقفل التطبيق وافتحه تاني.'
+                                   : 'Permission is granted but the device is not registered yet. Close and reopen the app.' };
+  return { level:'ok', msg: ar ? 'الإشعارات شغّالة — هتوصلك حتى والتطبيق مقفول ✅'
+                               : 'Notifications are working — they arrive even when the app is closed ✅' };
 }
 
 </script>

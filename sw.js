@@ -3,7 +3,7 @@
    يخزّن ملفات التطبيق للعمل بدون إنترنت ولتثبيته كتطبيق
    + يدعم إشعارات الموبايل الفعلية (Web Notifications)
    =========================================================== */
-const CACHE = 'alsalasil-driver-v9';
+const CACHE = 'alsalasil-driver-v10';
 
 // ملفات هيكل التطبيق (App Shell)
 const SHELL = [
@@ -130,4 +130,47 @@ self.addEventListener('message', e => {
     lang: 'ar',
     data: d.data || {url:'./'}
   });
+});
+
+/* =========================================================
+   Web Push — ده اللي بيوصل الإشعار والتطبيق مقفول
+   ========================================================= */
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; }
+  catch (err) { d = { body: (e.data && e.data.text()) || '' }; }
+
+  const title = d.title || 'شركة السلاسل';
+  const opts = {
+    body:  d.body || '',
+    icon:  d.icon  || './icon-192.png',
+    badge: './icon-192.png',
+    tag:   d.tag   || 'msg',
+    renotify: true,
+    requireInteraction: !!d.sticky,
+    vibrate: [200, 100, 200],
+    dir:  'rtl',
+    lang: d.lang || 'ar',
+    data: Object.assign({ url: './' }, d.data || {})
+  };
+
+  e.waitUntil((async () => {
+    await self.registration.showNotification(title, opts);
+    // لو التطبيق مفتوح، خلّيه يحدّث الرسائل فوراً
+    const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    cs.forEach(c => c.postMessage({ type: 'PUSH_RECEIVED', payload: d }));
+  })());
+});
+
+/* لو المتصفح جدّد اشتراك الجهاز — نسجّله من تاني من غير ما السائق يعمل حاجة */
+self.addEventListener('pushsubscriptionchange', e => {
+  e.waitUntil((async () => {
+    const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (cs.length) { cs.forEach(c => c.postMessage({ type: 'PUSH_RESUBSCRIBE' })); return; }
+    // التطبيق مقفول — نعلّم علشان يتسجّل أول ما يفتح
+    try {
+      const cache = await caches.open(CACHE);
+      await cache.put('/__push_resubscribe', new Response('1'));
+    } catch (err) {}
+  })());
 });
