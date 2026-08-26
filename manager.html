@@ -183,6 +183,72 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .prof-act.call i{color:var(--green)}
 .prof-act.msg i{color:var(--violet)}
 
+
+/* ===== شاشات المدير الإضافية ===== */
+.mx-rank{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;background:#f1f5f9;color:var(--muted);flex-shrink:0}
+.mx-rank.m1{background:linear-gradient(135deg,#fbbf24,#d97706);color:#fff}
+.mx-rank.m2{background:linear-gradient(135deg,#cbd5e1,#94a3b8);color:#fff}
+.mx-rank.m3{background:linear-gradient(135deg,#d97706,#92400e);color:#fff}
+.mx-st{color:#d97706;letter-spacing:.5px;direction:ltr;unicode-bidi:isolate}
+.mx-score{font-size:17px;font-weight:900;line-height:1.1;direction:ltr;unicode-bidi:isolate}
+.mx-pct{font-size:10px;font-weight:800;color:var(--muted);margin-top:1px}
+.mx-star{width:32px;height:32px;flex-shrink:0;border-radius:10px;border:1px solid var(--line);background:#f8fafc;
+  font-size:15px;cursor:pointer;padding:0;line-height:1;filter:grayscale(1);opacity:.4;transition:.15s;font-family:inherit}
+.mx-star.on{filter:none;opacity:1;border-color:#d97706;background:#fffbeb}
+.mx-star:active{transform:scale(.92)}
+
+.mx-warn{display:flex;align-items:center;gap:8px;background:#fef2f2;border:1px solid #fecaca;color:#8e2235;
+  border-radius:12px;padding:11px 13px;font-size:12.5px;font-weight:700;margin-bottom:12px}
+.mx-warn i{font-size:17px;flex-shrink:0}
+.mx-note{display:flex;align-items:flex-start;gap:8px;background:#f8fafc;border:1px dashed var(--line);
+  border-radius:12px;padding:11px 13px;font-size:11px;color:var(--muted);line-height:1.8;margin-top:12px}
+.mx-note i{font-size:15px;color:var(--teal);flex-shrink:0;margin-top:2px}
+
+.mx-datebar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.mx-nav{width:38px;height:38px;flex-shrink:0;border-radius:11px;border:1px solid var(--line);background:#fff;
+  color:var(--teal);font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.mx-nav.off{opacity:.3;pointer-events:none}
+.mx-date{flex:1;text-align:center;line-height:1.35}
+.mx-date b{display:block;font-size:14px;font-weight:900}
+.mx-date span{display:block;font-size:11px;color:var(--muted);direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+
+.mx-wa{width:36px;height:36px;flex-shrink:0;border-radius:11px;background:#dcfce7;color:#16a34a;
+  display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none}
+
+.mx-quad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.mx-q{background:var(--surf);border:1px solid var(--line);border-radius:13px;padding:11px 4px;text-align:center;
+  border-top:3px solid var(--c)}
+.mx-q b{display:block;font-size:20px;font-weight:900;color:var(--c);line-height:1.1}
+.mx-q span{display:block;font-size:9.5px;color:var(--muted);font-weight:800;margin-top:3px}
+
+#mx-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+#mx-strip:empty{display:none}
+.mx-s{background:var(--surf);border:1px solid var(--line);border-radius:13px;padding:11px 4px;text-align:center;
+  cursor:pointer;font-family:inherit}
+.mx-s:active{background:#f8fafc}
+.mx-s b{display:block;font-size:17px;font-weight:900;line-height:1.15;direction:ltr;unicode-bidi:isolate}
+.mx-s span{display:block;font-size:9.5px;color:var(--muted);font-weight:800;margin-top:3px}
+
+</style>
+
+<!-- ARK-WATERMARK : علامة السلاسل المائية -->
+<style id="ark-watermark-style">
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url('ark-watermark.png');
+  background-repeat:no-repeat;
+  background-position:center center;
+  background-size:min(38vw,420px) auto;
+  opacity:.05;
+  pointer-events:none;
+  user-select:none;
+  z-index:99990;
+}
+@media (max-width:760px){ body::after{ background-size:min(62vw,300px) auto; opacity:.04 } }
+@media print{ body::after{ display:none !important } }
 </style>
 </head>
 <body>
@@ -212,6 +278,7 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
   <div class="content" id="content">
     <!-- HOME TAB -->
     <div class="tab on" id="tab-home">
+    <div id="mx-strip"></div>
       <div class="qa-grid">
         <div class="qa" onclick="openSendMsgSheet()"><div class="ic" style="background:var(--violet)"><i class="ti ti-message"></i></div><div class="l">رسالة</div></div>
         <div class="qa" onclick="openTab('live')"><div class="ic" style="background:var(--green)"><i class="ti ti-map-pin"></i></div><div class="l">الخريطة</div></div>
@@ -288,6 +355,21 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
     <!-- MORE TAB -->
     <div class="tab" id="tab-more">
       <div class="section" style="padding:0">
+        <div class="row" onclick="openRatingSheet()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:#d97706"><i class="ti ti-award"></i></div>
+          <div class="row-info"><div class="row-name">التقييمات</div><div class="row-sub">ترتيب الفريق ومين محتاج متابعة</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openDailySheet()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--teal)"><i class="ti ti-report"></i></div>
+          <div class="row-info"><div class="row-name">التقارير اليومية</div><div class="row-sub">مين بعت ومين لأ وأرقام اليوم</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openAttendSheet()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--green)"><i class="ti ti-clock-check"></i></div>
+          <div class="row-info"><div class="row-name">الحضور اللحظي</div><div class="row-sub">مين داخل ومين متأخر ومين غايب</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
         <div class="row" onclick="openAppsList()" style="padding:14px;cursor:pointer">
           <div class="row-av" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div>
           <div class="row-info"><div class="row-name">طلبات التقديم</div><div class="row-sub">السائقين الجدد</div></div>
@@ -321,7 +403,7 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
       </div>
       <div style="text-align:center;color:var(--muted);font-size:11px;margin-top:20px">
         شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>
-        تطبيق المدير v1.0
+        تطبيق المدير v1.1
       </div>
     </div>
   </div>
@@ -461,6 +543,7 @@ function openTab(t){
   if(t==='drivers') renderDriversList();
   if(t==='msg') renderMsgList();
   if(t==='orders') renderOrders();
+  if(t==='home') { try{ mxHomeStrip(); }catch(e){} }
 }
 
 // ==================== DATA FETCH ====================
@@ -1367,6 +1450,440 @@ applyArkLang();
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw-manager.js').catch(e=>console.warn('SW reg fail',e));
 }
+
+/* ============ MANAGER EXTRA SCREENS ============ */
+/* =========================================================
+   تطبيق المدير — شاشات إضافية مربوطة بنفس بيانات ARK
+   التقييمات · التقارير اليومية · الحضور اللحظي
+   ========================================================= */
+
+let MX_CFG    = {};   // rating_config
+let MX_MONTH  = [];   // driver_month_orders
+let MX_AWARDS = [];   // driver_awards
+let MX_DED    = [];   // deductions هذا الشهر
+let MX_SORT   = 'score';
+let MX_PART   = 'all';
+
+let MD_DATE   = null; // تاريخ التقارير اليومية
+let MD_ROWS   = [];
+
+let MA_SCHED  = [];   // schedules النهارده
+
+const MX_DEF = { daily_target:12, excellent_target:16, monthly_days_target:26, w_output:50, w_commit:30, w_discipline:20 };
+
+function mxEsc(t){ return String(t==null?'':t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function mxPeriod(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function mxToday(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function mxStars(n){ let s=''; for(let i=1;i<=5;i++) s += (i<=n?'★':'☆'); return s; }
+function mxColor(s){ return s>=90?'#10b981':s>=75?'#84cc16':s>=60?'#f59e0b':s>=45?'#f97316':'#8e2235'; }
+function mxPartName(p){ const x=PARTNERS.find(v=>v.id===p||v.name===p); return x?x.name:(p||'—'); }
+
+function mxLoading(title){
+  return `<div class="sheet-head"><h3>${title}</h3>
+    <button class="sheet-x" onclick="closeSheet()">&times;</button></div>
+    <div class="loader"><div class="spin"></div></div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ١ · التقييمات وأداء السائقين
+   ═══════════════════════════════════════════════════════ */
+function mxCfgFor(partner){
+  const p = String(partner||'').toLowerCase();
+  const c = MX_CFG[p] || MX_CFG['_default'] || {};
+  const out = Object.assign({}, MX_DEF, c);
+  out.daily_target        = parseInt(out.daily_target)||12;
+  out.excellent_target    = parseInt(out.excellent_target) || Math.ceil(out.daily_target*1.5);
+  out.monthly_days_target = parseInt(out.monthly_days_target)||26;
+  return out;
+}
+function mxSpan(){
+  const now = new Date();
+  const dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  return { dim, elapsed: Math.min(dim, now.getDate()) };
+}
+/* نفس معادلة ARK والتطبيق بالحرف */
+function mxScore(row, cfg, dedCount, span){
+  const logged = Number(row.days_logged)||0;
+  const avg    = Number(row.avg_orders)||0;
+  const outS = Math.min(cfg.w_output, (cfg.daily_target ? avg/cfg.daily_target : 0)*cfg.w_output);
+  const expected = Math.max(1, Math.round(cfg.monthly_days_target*span.elapsed/span.dim));
+  const comS = Math.min(cfg.w_commit, (logged/expected)*cfg.w_commit);
+  const repRatio = Math.min(1, logged/Math.max(1,span.elapsed));
+  const dedPart  = dedCount===0 ? 1 : Math.max(0, 1-dedCount*0.34);
+  const disS = cfg.w_discipline*0.6*repRatio + cfg.w_discipline*0.4*dedPart;
+  let s = Math.round((outS+comS+disS)*10)/10;
+  if(s>100) s=100;
+  return { score:s, stars: s>=90?5:s>=75?4:s>=60?3:s>=45?2:1, expected };
+}
+
+async function openRatingSheet(){
+  openSheet(mxLoading('<i class="ti ti-award"></i> التقييمات'));
+  const per = mxPeriod();
+  try{
+    const [cfg, rows, awards, ded] = await Promise.all([
+      api('rating_config?select=*').catch(()=>[]),
+      api('driver_month_orders?period=eq.'+per+'&select=*&order=total_orders.desc&limit=500').catch(()=>[]),
+      api('driver_awards?period=eq.'+per+'&select=driver_id,code&limit=500').catch(()=>[]),
+      api('deductions?date=gte.'+per+'-01&select=driver_id,date&limit=1000').catch(()=>[])
+    ]);
+    MX_CFG = {}; (cfg||[]).forEach(c=>{ if(c&&c.partner) MX_CFG[String(c.partner).toLowerCase()]=c; });
+    MX_MONTH  = rows   || [];
+    MX_AWARDS = awards || [];
+    MX_DED    = ded    || [];
+  }catch(e){
+    console.error('rating', e);
+    openSheet(`<div class="sheet-head"><h3>التقييمات</h3><button class="sheet-x" onclick="closeSheet()">&times;</button></div>
+      <div class="empty"><i class="ti ti-cloud-off"></i><p>مقدرتش أقرا بيانات التقييم.<br>اتأكد إن ملف <b>تقييم_السائقين_setup.sql</b> اتشغّل.</p></div>`);
+    return;
+  }
+  renderRatingSheet();
+}
+
+function mxComputeAll(){
+  const span = mxSpan();
+  const byId = {}; (DRV||[]).forEach(d => byId[d.id]=d);
+  const dedBy = {}; MX_DED.forEach(x => { dedBy[x.driver_id] = (dedBy[x.driver_id]||0)+1; });
+  return MX_MONTH.map(r => {
+    const d = byId[r.driver_id];
+    const partner = String(r.partner || (d&&d.partner) || '').toLowerCase();
+    const cfg = mxCfgFor(partner);
+    const ded = dedBy[r.driver_id] || 0;
+    const sc  = mxScore(r, cfg, ded, span);
+    return Object.assign({}, r, {
+      partner, cfg, ded,
+      name: (d&&d.name) || r.driver_name || r.driver_id,
+      score: sc.score, stars: sc.stars, expected: sc.expected,
+      pct: cfg.daily_target ? Math.round((Number(r.avg_orders)||0)/cfg.daily_target*100) : 0,
+      badges: MX_AWARDS.filter(a => a.driver_id===r.driver_id).map(a => a.code)
+    });
+  });
+}
+
+function mxSetSort(v){ MX_SORT=v; renderRatingSheet(); }
+function mxSetPart(v){ MX_PART=v; renderRatingSheet(); }
+
+function renderRatingSheet(){
+  let list = mxComputeAll();
+  if(MX_PART!=='all') list = list.filter(x => x.partner===MX_PART);
+  const sorters = {
+    score:(a,b)=>b.score-a.score,
+    worst:(a,b)=>a.score-b.score,
+    orders:(a,b)=>(b.total_orders||0)-(a.total_orders||0)
+  };
+  list.sort(sorters[MX_SORT]||sorters.score);
+
+  const n = list.length;
+  const avg = n ? Math.round(list.reduce((s,x)=>s+x.score,0)/n*10)/10 : 0;
+  const onT = list.filter(x=>x.pct>=100).length;
+  const weak = list.filter(x=>x.score<60).length;
+  const span = mxSpan();
+
+  let h = `<div class="sheet-head"><h3><i class="ti ti-award"></i> التقييمات</h3>
+    <button class="sheet-x" onclick="closeSheet()">&times;</button></div>`;
+
+  if(!n){
+    h += `<div class="empty"><i class="ti ti-chart-bar-off"></i>
+      <p>مفيش تقارير يومية الشهر ده لحد دلوقتي.</p></div>`;
+    document.getElementById('sheet-box').innerHTML = h; return;
+  }
+
+  h += `<div class="kpi-grid">
+    <div class="kpi-card"><div class="ic" style="background:${mxColor(avg)}"><i class="ti ti-star"></i></div>
+      <div class="v">${avg}</div><div class="l">متوسط التقييم · ${span.elapsed} يوم</div></div>
+    <div class="kpi-card"><div class="ic" style="background:var(--green)"><i class="ti ti-target-arrow"></i></div>
+      <div class="v">${onT}<span style="font-size:14px;color:var(--muted)"> / ${n}</span></div><div class="l">حقّقوا الهدف</div></div>
+  </div>`;
+
+  if(weak){
+    h += `<div class="mx-warn"><i class="ti ti-alert-triangle"></i>
+      <b>${weak}</b> سائق تحت ٦٠ نقطة — محتاجين متابعة</div>`;
+  }
+
+  h += `<div class="chips">
+    <button class="chip ${MX_SORT==='score'?'on':''}" onclick="mxSetSort('score')">الأعلى</button>
+    <button class="chip ${MX_SORT==='worst'?'on':''}" onclick="mxSetSort('worst')">الأضعف أولاً</button>
+    <button class="chip ${MX_SORT==='orders'?'on':''}" onclick="mxSetSort('orders')">الأوردرات</button>
+  </div>
+  <div class="chips">
+    <button class="chip ${MX_PART==='all'?'on':''}" onclick="mxSetPart('all')">الكل</button>
+    ${PARTNERS.map(p=>`<button class="chip ${MX_PART===p.id?'on':''}" onclick="mxSetPart('${p.id}')">${mxEsc(p.name)}</button>`).join('')}
+  </div>`;
+
+  h += '<div class="section" style="padding:0 14px">';
+  list.forEach((x,i) => {
+    const isStar = x.badges.indexOf('star')>=0;
+    h += `<div class="row" style="padding:12px 0">
+      <div class="mx-rank ${i<3?'m'+(i+1):''}">${i+1}</div>
+      <div class="row-info">
+        <div class="row-name">${mxEsc(x.name)} ${isStar?'🏆':''}</div>
+        <div class="row-sub"><span class="mx-st">${mxStars(x.stars)}</span>
+          · ${x.total_orders||0} أوردر · ${x.days_logged||0}/${x.expected} يوم
+          ${x.ded?` · <span style="color:var(--red)">${x.ded} خصم</span>`:''}</div>
+      </div>
+      <div class="row-side">
+        <div class="mx-score" style="color:${mxColor(x.score)}">${x.score.toFixed(0)}</div>
+        <div class="mx-pct" style="color:${x.pct>=100?'var(--green)':x.pct>=80?'var(--amber)':'var(--red)'}">${x.pct}%</div>
+      </div>
+      <button class="mx-star ${isStar?'on':''}" onclick="mxToggleStar('${x.driver_id}',this)" title="نجم الشهر">🏆</button>
+    </div>`;
+  });
+  h += '</div>';
+
+  h += `<div class="mx-note"><i class="ti ti-info-circle"></i>
+    النقاط = إنتاج ٥٠ + التزام ٣٠ + انضباط ٢٠ — نفس معادلة ARK بالظبط.
+    الأرقام من التقارير اليومية اللي السائقين بيبعتوها.</div>`;
+
+  document.getElementById('sheet-box').innerHTML = h;
+}
+
+async function mxToggleStar(driverId, btn){
+  const per = mxPeriod();
+  const has = MX_AWARDS.find(a => a.driver_id===driverId && a.code==='star');
+  const row = mxComputeAll().find(x => x.driver_id===driverId);
+  try{
+    if(has){
+      await api(`driver_awards?driver_id=eq.${encodeURIComponent(driverId)}&period=eq.${per}&code=eq.star`, {method:'DELETE'});
+      MX_AWARDS = MX_AWARDS.filter(a => !(a.driver_id===driverId && a.code==='star'));
+      toast('اتسحب وسام نجم الشهر');
+    }else{
+      await api('driver_awards?on_conflict=driver_id,period,code', {
+        method:'POST',
+        headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body: JSON.stringify([{ driver_id:driverId, driver_name:(row&&row.name)||'', partner:(row&&row.partner)||null,
+          period:per, code:'star', title_ar:'نجم الشهر', title_en:'Star of month',
+          score:(row&&row.score)||null, stars:(row&&row.stars)||null, granted_by:'manager_app', seen:false }])
+      });
+      MX_AWARDS.push({ driver_id:driverId, code:'star' });
+      toast('🏆 اتمنح نجم الشهر — هيشوفه في التطبيق','s');
+    }
+    renderRatingSheet();
+  }catch(e){ console.error(e); toast('فشل الحفظ: '+e.message,'e'); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ٢ · التقارير اليومية
+   ═══════════════════════════════════════════════════════ */
+async function openDailySheet(dateStr){
+  MD_DATE = dateStr || MD_DATE || mxToday();
+  openSheet(mxLoading('<i class="ti ti-report"></i> التقارير اليومية'));
+  try{
+    MD_ROWS = await api('daily_reports?report_date=eq.'+MD_DATE+'&select=*&order=orders_count.desc&limit=500') || [];
+  }catch(e){
+    console.error('daily', e); MD_ROWS = [];
+    toast('مقدرتش أقرا التقارير','e');
+  }
+  renderDailySheet();
+}
+function mdShift(days){
+  const d = new Date(MD_DATE+'T12:00:00');
+  d.setDate(d.getDate()+days);
+  const t = mxToday();
+  const ns = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(ns > t) return;                 // مفيش مستقبل
+  openDailySheet(ns);
+}
+
+function renderDailySheet(){
+  const sent = MD_ROWS.length;
+  const total = (DRV||[]).length;
+  const orders = MD_ROWS.reduce((s,r)=>s+(parseInt(r.orders_count)||0),0);
+  const avg = sent ? (orders/sent) : 0;
+  const sentIds = {}; MD_ROWS.forEach(r => sentIds[r.driver_id]=true);
+  const missing = (DRV||[]).filter(d => !sentIds[d.id]);
+
+  const isToday = MD_DATE === mxToday();
+  const dLabel = isToday ? 'النهارده' : new Date(MD_DATE+'T12:00:00')
+      .toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'});
+
+  let h = `<div class="sheet-head"><h3><i class="ti ti-report"></i> التقارير اليومية</h3>
+    <button class="sheet-x" onclick="closeSheet()">&times;</button></div>`;
+
+  h += `<div class="mx-datebar">
+    <button class="mx-nav" onclick="mdShift(-1)"><i class="ti ti-chevron-right"></i></button>
+    <div class="mx-date"><b>${dLabel}</b><span>${MD_DATE}</span></div>
+    <button class="mx-nav ${isToday?'off':''}" onclick="mdShift(1)"><i class="ti ti-chevron-left"></i></button>
+  </div>`;
+
+  h += `<div class="kpi-grid">
+    <div class="kpi-card"><div class="ic" style="background:${sent>=total*0.8?'var(--green)':'var(--amber)'}"><i class="ti ti-file-check"></i></div>
+      <div class="v">${sent}<span style="font-size:14px;color:var(--muted)"> / ${total}</span></div><div class="l">بعتوا تقرير</div></div>
+    <div class="kpi-card"><div class="ic" style="background:var(--teal)"><i class="ti ti-package"></i></div>
+      <div class="v">${orders}</div><div class="l">إجمالي الأوردرات · متوسط ${avg.toFixed(1)}</div></div>
+  </div>`;
+
+  if(sent){
+    h += `<div class="section"><div class="section-h"><h3><i class="ti ti-check"></i> اللي بعتوا</h3>
+      <span style="font-size:11px;color:var(--muted);font-weight:800">${sent}</span></div>`;
+    MD_ROWS.forEach(r => {
+      const d = (DRV||[]).find(x=>x.id===r.driver_id);
+      const cfg = mxCfgFor(String(r.partner || (d&&d.partner) || '').toLowerCase());
+      const o = parseInt(r.orders_count)||0;
+      const hit = o >= cfg.daily_target;
+      h += `<div class="row">
+        <div class="row-av" style="background:${hit?'var(--green)':'var(--amber)'}">${mxEsc(initials((d&&d.name)||r.driver_name))}</div>
+        <div class="row-info"><div class="row-name">${mxEsc((d&&d.name)||r.driver_name||r.driver_id)}</div>
+          <div class="row-sub">${mxPartName(r.partner)} · هدفه ${cfg.daily_target}
+            ${r.duty_hours?` · ${r.duty_hours} ساعة`:''}</div></div>
+        <div class="row-side"><div class="mx-score" style="color:${hit?'var(--green)':'var(--amber)'}">${o}</div>
+          <div class="mx-pct">أوردر</div></div>
+      </div>`;
+    });
+    h += '</div>';
+  }
+
+  if(missing.length){
+    h += `<div class="section"><div class="section-h"><h3 style="color:var(--red)"><i class="ti ti-alert-triangle"></i> مابعتوش</h3>
+      <span style="font-size:11px;color:var(--red);font-weight:800">${missing.length}</span></div>`;
+    missing.forEach(d => {
+      const ph = (d.sim||'').replace(/[^0-9]/g,'');
+      const wa = ph.length>=7 ? (ph.startsWith('965')?ph:'965'+ph) : '';
+      h += `<div class="row">
+        <div class="row-av" style="background:#cbd5e1">${mxEsc(initials(d.name))}</div>
+        <div class="row-info"><div class="row-name">${mxEsc(d.name||d.id)}</div>
+          <div class="row-sub">${mxPartName(d.partner)} · ${mxEsc(d.id)}</div></div>
+        ${wa?`<a class="mx-wa" href="https://wa.me/${wa}?text=${encodeURIComponent('لو سمحت ابعت تقريرك اليومي عن '+MD_DATE)}" target="_blank"><i class="ti ti-brand-whatsapp"></i></a>`:''}
+      </div>`;
+    });
+    h += '</div>';
+  }
+
+  if(!sent && !missing.length){
+    h += `<div class="empty"><i class="ti ti-file-off"></i><p>مفيش بيانات لليوم ده.</p></div>`;
+  }
+
+  document.getElementById('sheet-box').innerHTML = h;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ٣ · الحضور اللحظي
+   ═══════════════════════════════════════════════════════ */
+async function openAttendSheet(){
+  openSheet(mxLoading('<i class="ti ti-clock-check"></i> الحضور اللحظي'));
+  const today = mxToday();
+  try{
+    await fetchClockin();
+    MA_SCHED = await api('schedules?date=eq.'+today+'&select=*&limit=500').catch(()=>[]) || [];
+  }catch(e){ console.error('attend', e); MA_SCHED = []; }
+  renderAttendSheet();
+}
+
+function maState(){
+  // آخر حركة لكل سائق النهارده
+  const last = {};
+  (CLOCKIN||[]).forEach(c => { if(!last[c.driver_id]) last[c.driver_id] = c; });  // مرتّبة تنازلياً
+  const schedBy = {}; (MA_SCHED||[]).forEach(s => { schedBy[s.driver_id] = s; });
+  const now = new Date();
+
+  const inNow = [], late = [], out = [], absent = [], off = [];
+  (DRV||[]).forEach(d => {
+    const l = last[d.id];
+    const s = schedBy[d.id];
+    const start = s && s.shift_start ? s.shift_start : null;
+    let lateMin = 0;
+    if(start){
+      const [hh,mm] = String(start).split(':').map(Number);
+      const st = new Date(now); st.setHours(hh||0, mm||0, 0, 0);
+      const firstIn = (CLOCKIN||[]).filter(c=>c.driver_id===d.id && c.action==='clock_in').pop();
+      const ref = firstIn ? new Date(firstIn.created_at) : now;
+      lateMin = Math.round((ref - st)/60000);
+    }
+    const rec = { d, last:l, sched:s, lateMin };
+    if(l && l.action==='clock_in'){
+      if(lateMin > 15) late.push(rec); else inNow.push(rec);
+    } else if(l && l.action==='clock_out'){
+      out.push(rec);
+    } else if(s && s.shift_type && /إجازة|off|holiday|راحة/i.test(s.shift_type)){
+      off.push(rec);                     // في إجازة — مش غياب
+    } else {
+      absent.push(rec);                  // مجدول ومسجّلش، أو مش مجدول أصلاً
+    }
+  });
+  return { inNow, late, out, absent, off };
+}
+
+function renderAttendSheet(){
+  const st = maState();
+  const total = (DRV||[]).length;
+
+  let h = `<div class="sheet-head"><h3><i class="ti ti-clock-check"></i> الحضور اللحظي</h3>
+    <button class="sheet-x" onclick="closeSheet()">&times;</button></div>`;
+
+  h += `<div class="mx-quad">
+    <div class="mx-q" style="--c:var(--green)"><b>${st.inNow.length}</b><span>داخل</span></div>
+    <div class="mx-q" style="--c:var(--amber)"><b>${st.late.length}</b><span>متأخر</span></div>
+    <div class="mx-q" style="--c:var(--blue)"><b>${st.out.length}</b><span>خرج</span></div>
+    <div class="mx-q" style="--c:var(--red)"><b>${st.absent.length}</b><span>مافيش تسجيل</span></div>
+  </div>`;
+
+  const block = (title, icon, color, arr, sub) => {
+    if(!arr.length) return '';
+    let s = `<div class="section"><div class="section-h"><h3 style="color:${color}"><i class="ti ${icon}"></i> ${title}</h3>
+      <span style="font-size:11px;color:var(--muted);font-weight:800">${arr.length}</span></div>`;
+    arr.forEach(r => {
+      const t = r.last ? new Date(r.last.created_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '';
+      const loc = r.last && r.last.latitude ? `https://www.google.com/maps?q=${r.last.latitude},${r.last.longitude}` : '';
+      s += `<div class="row">
+        <div class="row-av" style="background:${color}">${mxEsc(initials(r.d.name))}</div>
+        <div class="row-info"><div class="row-name">${mxEsc(r.d.name||r.d.id)}</div>
+          <div class="row-sub">${mxPartName(r.d.partner)}${sub(r,t)}</div></div>
+        ${loc?`<a class="mx-wa" style="background:#eff6ff;color:var(--blue)" href="${loc}" target="_blank"><i class="ti ti-map-pin"></i></a>`:''}
+      </div>`;
+    });
+    return s + '</div>';
+  };
+
+  h += block('متأخرين','ti-alarm','var(--amber)', st.late,
+        (r,t)=> ` · سجّل ${t} · متأخر <b style="color:var(--amber)">${r.lateMin} د</b>`);
+  h += block('داخلين دلوقتي','ti-login-2','var(--green)', st.inNow,
+        (r,t)=> ` · من ${t}`);
+  h += block('مافيش تسجيل النهارده','ti-user-off','var(--red)', st.absent,
+        (r)=> r.sched && r.sched.shift_start ? ` · شفته ${r.sched.shift_start}` : ' · مش مجدول');
+  h += block('خرجوا','ti-logout','var(--blue)', st.out,
+        (r,t)=> ` · خرج ${t}`);
+  h += block('في إجازة النهارده','ti-beach','#94a3b8', st.off,
+        (r)=> r.sched ? ` · ${mxEsc(r.sched.shift_type)}` : '');
+
+  if(!total) h += `<div class="empty"><i class="ti ti-users-off"></i><p>مفيش سائقين.</p></div>`;
+
+  const counted = st.inNow.length+st.late.length+st.out.length+st.absent.length+st.off.length;
+  h += `<div class="mx-note"><i class="ti ti-info-circle"></i>
+    <b>${counted}</b> من <b>${total}</b> سائق محسوبين${st.off.length?` (منهم ${st.off.length} في إجازة)`:''}.
+    «متأخر» = سجّل دخوله بعد بداية شفته بأكتر من ١٥ دقيقة. السائق اللي مش مجدول النهارده
+    بيظهر في «مافيش تسجيل» من غير ما يتحسب تأخير.</div>`;
+
+  document.getElementById('sheet-box').innerHTML = h;
+}
+
+/* ═══════════════════════════════════════════════════════
+   شريط اليوم في الشاشة الرئيسية
+   ═══════════════════════════════════════════════════════ */
+async function mxHomeStrip(){
+  const el = document.getElementById('mx-strip');
+  if(!el) return;
+  try{
+    const today = mxToday();
+    // لازم الجدول يتحمّل الأول وإلا التأخير هيتحسب صفر والرقم هيخالف شاشة الحضور
+    const [rows, sched] = await Promise.all([
+      api('daily_reports?report_date=eq.'+today+'&select=driver_id,orders_count&limit=500').catch(()=>[]),
+      MA_SCHED.length ? Promise.resolve(MA_SCHED)
+                      : api('schedules?date=eq.'+today+'&select=*&limit=500').catch(()=>[])
+    ]);
+    MA_SCHED = sched || [];
+    const st = maState();
+    const total = (DRV||[]).length;
+    const orders = rows.reduce((s,r)=>s+(parseInt(r.orders_count)||0),0);
+    el.innerHTML = `
+      <button class="mx-s" onclick="openAttendSheet()">
+        <b style="color:var(--green)">${st.inNow.length}</b><span>داخل دلوقتي</span></button>
+      <button class="mx-s" onclick="openAttendSheet()">
+        <b style="color:${st.late.length?'var(--amber)':'var(--muted)'}">${st.late.length}</b><span>متأخر</span></button>
+      <button class="mx-s" onclick="openDailySheet()">
+        <b style="color:${rows.length>=total*0.8?'var(--green)':'var(--red)'}">${rows.length}/${total}</b><span>تقرير اليوم</span></button>
+      <button class="mx-s" onclick="openDailySheet()">
+        <b>${orders}</b><span>أوردر اليوم</span></button>`;
+  }catch(e){ el.innerHTML = ''; }
+}
+
 </script>
 </body>
 </html>

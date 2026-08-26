@@ -1,5 +1,5 @@
 // Service Worker — Al-Salasil Manager App
-const CACHE = 'salasil-mgr-v2';
+const CACHE = 'salasil-mgr-v3';
 const CORE = [
   './manager.html',
   './manager-manifest.json',
