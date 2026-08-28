@@ -2011,6 +2011,7 @@ body::after{
     <div class="rail-sec">المال والتحليل</div>
     <button class="nav-tab" id="nav-acc" data-tip="المحاسبة" onclick="setMainView('acc')"><i class="ti ti-cash-banknote"></i> <span data-i18n="nav_accounting">المحاسبة</span></button>
     <button class="nav-tab" id="nav-custody" data-tip="العهدة" onclick="setMainView('custody')"><i class="ti ti-wallet"></i> <span>العهدة</span></button>
+    <button class="nav-tab" id="nav-payroll" data-tip="الرواتب" onclick="setMainView('payroll')"><i class="ti ti-file-invoice"></i> <span>الرواتب</span></button>
     <button class="nav-tab" id="nav-rating" data-tip="التقييمات" onclick="setMainView('rating')"><i class="ti ti-award"></i> <span>التقييمات</span></button>
     <button class="nav-tab" id="nav-reports" data-tip="تقارير الشركة" onclick="setMainView('reports')"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
     <button class="nav-tab" id="nav-vio" data-tip="المخالفات" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> <span data-i18n="nav_violations">المخالفات</span></button>
@@ -2073,6 +2074,7 @@ body::after{
 
       <h6>التقارير والكشوف</h6>
       <button class="tbtn" onclick="openDriverReportModal()"><i class="ti ti-file-analytics"></i> <span>تقرير السائقين</span></button>
+      <button class="tbtn" onclick="openFuelCardLookup()"><i class="ti ti-search"></i> <span>الكرت ده مع مين؟</span></button>
       <button class="tbtn" onclick="openFuelCardsReport()"><i class="ti ti-gas-station"></i> <span>كروت البنزين</span></button>
       <button class="tbtn" onclick="exportSalaryExcel()"><i class="ti ti-table-export"></i> <span data-i18n="btn_salary_sheet">شيت الرواتب</span></button>
       <button class="tbtn" onclick="exportBankSheet()"><i class="ti ti-building-bank"></i> <span data-i18n="btn_bank_sheet">شيت البنك</span></button>
@@ -2102,7 +2104,7 @@ body::after{
     <div class="sb-search">
       <div class="srch-wrap">
         <i class="ti ti-search"></i>
-        <input class="srch" id="srchBox" placeholder="ابحث بالاسم أو رقم السيارة..." oninput="onSearch()">
+        <input class="srch" id="srchBox" placeholder="ابحث بالاسم أو السيارة أو رقم كرت البنزين..." oninput="onSearch()">
       </div>
     </div>
     <div class="sb-filters" id="filterBar"></div>
@@ -2145,6 +2147,11 @@ body::after{
 <!-- CUSTODY VIEW -->
 <div id="view-custody" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
   <div id="custody-content"></div>
+</div>
+
+<!-- PAYROLL VIEW -->
+<div id="view-payroll" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="payrollBody"></div>
 </div>
 
 <!-- COMPANY REPORTS VIEW -->
@@ -3747,7 +3754,7 @@ function getFiltered(){
     else if(filter==='admin') mf = (d.staff_type === 'admin');
     else                      mf = ((d.partner||'') === filter) && (d.staff_type !== 'admin');
     const q  = srchQ;
-    const ms = !q || d.name.toLowerCase().includes(q) || (d.car||'').toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || (d.sim||'').includes(q) || (d.bank_name||'').includes(q) || (d.position||'').includes(q);
+    const ms = !q || d.name.toLowerCase().includes(q) || (d.car||'').toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || (d.sim||'').includes(q) || (d.bank_name||'').includes(q) || (d.position||'').includes(q) || (d.petrol||'').includes(q);
     return mf && ms;
   });
 }
@@ -4699,6 +4706,8 @@ function setMainView(view) {
   if(repEl) repEl.style.display = view==='reports' ? 'block' : 'none';
   const custEl = document.getElementById('view-custody');
   if(custEl) custEl.style.display = view==='custody' ? 'block' : 'none';
+  const payEl = document.getElementById('view-payroll');
+  if(payEl) payEl.style.display = view==='payroll' ? 'block' : 'none';
   const ordEl = document.getElementById('view-orders');
   if(ordEl) ordEl.style.display = view==='orders' ? 'block' : 'none';
   const drepEl = document.getElementById('view-dreports');
@@ -4706,7 +4715,7 @@ function setMainView(view) {
   const rtEl = document.getElementById('view-rating');
   if(rtEl) rtEl.style.display = view==='rating' ? 'block' : 'none';
   // Update nav tabs
-  ['drivers','dash','att','vio','clockin','acc','custody','livemap','apps','reports','orders','dreports','rating'].forEach(v => {
+  ['drivers','dash','att','vio','clockin','acc','custody','payroll','livemap','apps','reports','orders','dreports','rating'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if(el) el.classList.toggle('on', v===view);
   });
@@ -4720,6 +4729,7 @@ function setMainView(view) {
   if(view==='apps')    renderApps();
   if(view==='reports') renderReports();
   if(view==='custody') renderCustody();
+  if(view==='payroll') renderPayroll();
   if(view==='orders')  renderOrdersAdmin();
   if(view==='dreports') renderDailyReports();
   if(view==='rating')   renderRating();
@@ -12719,6 +12729,239 @@ async function doExport(fmt){
 // تقرير المحاسبة العربي — Arabic Accounting Report
 // (generateAccArabicReport اتنقلت للنسخة الجديدة داخل ARK-PL-REPORT)
 
+/* ═══════════════════════════════════════════════════════════════════
+   🔎 بحث كرت البنزين — «الكرت ده مع مين؟»
+   يقبل رقم الكرت كامل أو آخر أرقام منه، أو اسم/كود/سيارة السائق
+   ═══════════════════════════════════════════════════════════════════ */
+let FCL_FUEL = {};        // كاش استهلاك الكرت لكل سائق { SA1001: {...} }
+let FCL_TIMER = null;
+
+function _fclNorm(s){
+  return String(s==null?'':s)
+    .replace(/[٠-٩]/g, c => String.fromCharCode(c.charCodeAt(0)-0x0660+48))
+    .replace(/[۰-۹]/g, c => String.fromCharCode(c.charCodeAt(0)-0x06F0+48))
+    .replace(/[\s\-_.\/]/g,'')
+    .toLowerCase();
+}
+function _fclEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function _fclPartner(pid){
+  const p = (typeof PARTNERS!=='undefined' ? PARTNERS : []).find(x=>x.id===pid);
+  return p ? {name:p.name, color:p.color||'#64748b'} : {name:(pid||'—'), color:'#64748b'};
+}
+
+/* تظليل الجزء المطابق داخل رقم الكرت */
+function _fclHi(card, q){
+  const c = String(card||''), nq = _fclNorm(q);
+  if(!nq) return _fclEsc(c);
+  const i = _fclNorm(c).indexOf(nq);
+  if(i < 0) return _fclEsc(c);
+  return _fclEsc(c.slice(0,i))
+    + '<mark style="background:#fde047;color:#0f172a;padding:0 2px;border-radius:3px;font-weight:900">'+_fclEsc(c.slice(i,i+nq.length))+'</mark>'
+    + _fclEsc(c.slice(i+nq.length));
+}
+
+function openFuelCardLookup(){
+  if(document.getElementById('fclOv')) { document.getElementById('fcl-q').focus(); return; }
+  const drivers = (typeof DRV!=='undefined' && Array.isArray(DRV)) ? DRV : [];
+  const withCard = drivers.filter(d=>d.petrol && String(d.petrol).trim()).length;
+  let h = '';
+  h += '<div class="ov on" id="fclOv" onclick="if(event.target===this)closeFuelCardLookup()">';
+  h += '<div class="modal" style="max-width:620px;max-height:92vh;overflow-y:auto">';
+  h += '<h2 style="display:flex;justify-content:space-between;align-items:center;gap:10px">'
+     +   '<span><i class="ti ti-gas-station" style="color:#f59e0b"></i> الكرت ده مع مين؟</span>'
+     +   '<button onclick="closeFuelCardLookup()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:24px;line-height:1">&times;</button>'
+     + '</h2>';
+  h += '<div style="font-size:11.5px;color:var(--muted);margin:-6px 0 12px">اكتب رقم الكرت كامل أو آخر أرقام منه — أو اسم السائق / كوده / رقم السيارة. ('+withCard+' كرت مسجّل)</div>';
+  h += '<div class="fg full" style="margin-bottom:14px">'
+     +   '<input id="fcl-q" inputmode="numeric" autocomplete="off" placeholder="مثلاً: 4977 أو 7005430001001644977"'
+     +   ' oninput="fclInput()" onkeydown="if(event.key===\'Escape\')closeFuelCardLookup()"'
+     +   ' style="font-family:\'JetBrains Mono\',monospace;font-size:17px;font-weight:800;letter-spacing:1px;padding:13px 14px;text-align:center">'
+     + '</div>';
+  h += '<div id="fcl-res"></div>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+  fclSearch();
+  setTimeout(()=>{ const i=document.getElementById('fcl-q'); if(i) i.focus(); }, 60);
+}
+function closeFuelCardLookup(){ const m=document.getElementById('fclOv'); if(m) m.remove(); }
+
+function fclInput(){ clearTimeout(FCL_TIMER); FCL_TIMER = setTimeout(fclSearch, 120); }
+
+function fclSearch(){
+  const box = document.getElementById('fcl-res'); if(!box) return;
+  const raw = (document.getElementById('fcl-q')||{value:''}).value.trim();
+  const q   = _fclNorm(raw);
+  const drivers = (typeof DRV!=='undefined' && Array.isArray(DRV)) ? DRV : [];
+
+  if(!q){
+    const noCard = drivers.filter(d=>(!d.petrol || !String(d.petrol).trim()) && d.staff_type!=='admin');
+    let h = '<div style="text-align:center;color:var(--muted);padding:26px 10px">'
+          + '<i class="ti ti-search" style="font-size:34px;opacity:.35;display:block;margin-bottom:8px"></i>'
+          + 'ابدأ بكتابة رقم الكرت…</div>';
+    if(noCard.length){
+      h += '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:11px 13px;font-size:12px;color:#fca5a5">'
+         + '<b>⚠️ '+noCard.length+' سائق بدون كرت بنزين مسجّل</b> — استهلاكهم مش قابل للتتبّع.'
+         + '<div style="margin-top:5px;opacity:.85;font-size:11px">'+noCard.slice(0,8).map(d=>_fclEsc(d.name)).join(' · ')+(noCard.length>8?' …':'')+'</div></div>';
+    }
+    box.innerHTML = h; return;
+  }
+
+  // مطابقة: رقم الكرت أولاً، وبعدين باقي الحقول
+  const byCard = drivers.filter(d => d.petrol && _fclNorm(d.petrol).includes(q));
+  const byElse = drivers.filter(d => !byCard.includes(d) && (
+        _fclNorm(d.name).includes(q) || _fclNorm(d.id).includes(q) ||
+        _fclNorm(d.car).includes(q)  || _fclNorm(d.sim).includes(q)));
+  const hits = byCard.concat(byElse);
+
+  if(!hits.length){
+    box.innerHTML = '<div style="background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.35);border-radius:12px;padding:20px;text-align:center">'
+      + '<div style="font-size:30px;margin-bottom:6px">🚫</div>'
+      + '<div style="font-weight:900;color:#fca5a5;margin-bottom:4px">مفيش كرت بالرقم ده</div>'
+      + '<div style="font-size:12px;color:var(--muted)">«'+_fclEsc(raw)+'» مش مربوط بأي سائق في النظام. اتأكد من الرقم أو سجّله في ملف السائق.</div></div>';
+    return;
+  }
+
+  // كشف التكرار: نفس رقم الكرت على أكتر من سائق
+  const cnt = {};
+  drivers.forEach(d=>{ if(d.petrol){ const c=_fclNorm(d.petrol); cnt[c]=(cnt[c]||0)+1; } });
+
+  box.innerHTML = (hits.length>1 ? '<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;font-weight:700">'+hits.length+' نتيجة</div>' : '')
+                + hits.slice(0,12).map(d=>fclCard(d, raw, cnt)).join('');
+  hits.slice(0,12).forEach(d=>fclLoadFuel(d.id));
+}
+
+function fclCard(d, raw, cnt){
+  const P    = _fclPartner(d.partner);
+  const card = d.petrol ? String(d.petrol).trim() : '';
+  const dup  = card && cnt[_fclNorm(card)] > 1;
+  const twin = dup ? (DRV.filter(x=>x.id!==d.id && x.petrol && _fclNorm(x.petrol)===_fclNorm(card)).map(x=>x.name+' ('+x.id+')').join('، ')) : '';
+
+  let h = '<div style="background:var(--s2);border:1px solid var(--br);border-right:4px solid '+P.color+';border-radius:12px;padding:14px;margin-bottom:10px">';
+  // الرأس: الاسم + الشريك
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">';
+  h += '<div><div style="font-size:16px;font-weight:900;line-height:1.3">'+_fclEsc(d.name)+'</div>'
+     + '<div style="font-size:11.5px;color:var(--muted);font-family:\'JetBrains Mono\',monospace;margin-top:2px">'+_fclEsc(d.id)+'</div></div>';
+  h += '<span style="background:'+P.color+';color:#fff;padding:3px 11px;border-radius:8px;font-size:11px;font-weight:800;white-space:nowrap">'+_fclEsc(P.name)+'</span>';
+  h += '</div>';
+
+  // رقم الكرت
+  if(card){
+    h += '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.32);border-radius:9px;padding:9px 12px;margin-bottom:10px">'
+       + '<div style="font-size:10px;color:#fbbf24;font-weight:800;margin-bottom:3px">⛽ رقم كرت البنزين</div>'
+       + '<div style="font-family:\'JetBrains Mono\',monospace;font-size:14.5px;font-weight:900;letter-spacing:.8px;direction:ltr;text-align:left">'+_fclHi(card, raw)+'</div></div>';
+  } else {
+    h += '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.32);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:12px;font-weight:800;color:#fca5a5">🚫 السائق ده مالوش كرت بنزين مسجّل</div>';
+  }
+
+  if(dup){
+    h += '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:11.5px;color:#fca5a5;font-weight:700">'
+       + '🚨 نفس الكرت مربوط كمان بـ: '+_fclEsc(twin)+' — الاستهلاك مش هيكون دقيق لحد ما تفصلهم.</div>';
+  }
+
+  // بيانات سريعة
+  const rows = [
+    ['🚗 السيارة', d.car || '—'],
+    ['📱 التليفون', d.sim || '—'],
+    ['🌍 الجنسية', d.nationality || '—'],
+    ['📄 الرخصة', d.license || '—']
+  ];
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">'
+     + rows.map(r=>'<div style="background:var(--s1);border-radius:8px;padding:7px 10px">'
+        + '<div style="font-size:9.5px;color:var(--muted);font-weight:700;margin-bottom:2px">'+r[0]+'</div>'
+        + '<div style="font-size:12.5px;font-weight:800;font-family:\'JetBrains Mono\',monospace">'+_fclEsc(r[1])+'</div></div>').join('')
+     + '</div>';
+
+  // استهلاك الكرت — يتحمّل لوحده
+  h += '<div id="fclFuel_'+_fclEsc(d.id)+'">'+fclFuelHTML(d.id)+'</div>';
+
+  h += '<div style="display:flex;gap:8px;margin-top:11px">'
+     + '<button class="btn btn-save" style="flex:1" onclick="fclGoDriver(\''+_fclEsc(d.id)+'\')"><i class="ti ti-user-search"></i> فتح ملف السائق</button>'
+     + '<button class="btn btn-cancel" onclick="fclCopy(\''+_fclEsc(card)+'\')" '+(card?'':'disabled style="opacity:.4"')+'><i class="ti ti-copy"></i> نسخ الرقم</button>'
+     + '</div>';
+  h += '</div>';
+  return h;
+}
+
+function fclFuelHTML(id){
+  const f = FCL_FUEL[id];
+  if(!f || f.loading) return '<div style="font-size:11.5px;color:var(--muted);padding:6px 2px"><span class="spin"></span> بيجيب استهلاك الكرت…</div>';
+  if(f.error)  return '<div style="font-size:11.5px;color:var(--muted);padding:6px 2px">تعذّر جلب الاستهلاك (السحابة مش متاحة).</div>';
+  if(!f.any)   return '<div style="font-size:11.5px;color:var(--muted);padding:6px 2px">مفيش تعبئة مسجّلة على الكرت ده في التقارير اليومية.</div>';
+  const kd = v => (Math.round(v*1000)/1000).toFixed(3);
+  let h = '<div style="background:var(--s1);border-radius:9px;padding:10px 12px">';
+  h += '<div style="font-size:10px;color:var(--muted);font-weight:800;margin-bottom:7px">📊 استهلاك الكرت — '+f.monthLabel+'</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">'
+     + '<div><div style="font-size:16px;font-weight:900;color:#f59e0b;font-family:\'JetBrains Mono\',monospace">'+kd(f.monthTotal)+'</div><div style="font-size:9.5px;color:var(--muted);font-weight:700">د.ك الشهر</div></div>'
+     + '<div><div style="font-size:16px;font-weight:900;font-family:\'JetBrains Mono\',monospace">'+f.monthFills+'</div><div style="font-size:9.5px;color:var(--muted);font-weight:700">عدد التعبئات</div></div>'
+     + '<div><div style="font-size:16px;font-weight:900;color:#22c55e;font-family:\'JetBrains Mono\',monospace">'+(f.balance==null?'—':kd(f.balance))+'</div><div style="font-size:9.5px;color:var(--muted);font-weight:700">آخر رصيد</div></div>'
+     + '</div>';
+  if(f.lastDate){
+    h += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--br);font-size:11.5px;color:var(--muted)">'
+       + 'آخر تعبئة: <b style="color:var(--text)">'+_fclEsc(f.lastDate)+'</b> بمبلغ <b style="color:#f59e0b;font-family:\'JetBrains Mono\',monospace">'+kd(f.lastAmt)+' د.ك</b></div>';
+  }
+  if(f.suspect){
+    h += '<div style="margin-top:7px;font-size:11px;color:#fca5a5;font-weight:700">⚠️ '+f.suspect+' تعبئة بقيمة شاذة (فوق '+VALIDATION_LIMITS.fuelDaily.max+' د.ك) — مستبعدة من الإجمالي.</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+async function fclLoadFuel(id){
+  if(FCL_FUEL[id] && !FCL_FUEL[id].loading) { fclPaintFuel(id); return; }
+  FCL_FUEL[id] = { loading:true };
+  fclPaintFuel(id);
+  try{
+    const url = SUPA_URL + '/rest/v1/daily_reports?select=report_date,fuel_amount,card_balance'
+              + '&driver_id=eq.' + encodeURIComponent(id)
+              + '&order=report_date.desc&limit=90';
+    const r = await fetch(url, { headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY } });
+    if(!r.ok) throw new Error('http '+r.status);
+    const rows = await r.json();
+    const now = new Date();
+    const key = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    const cap = (typeof VALIDATION_LIMITS!=='undefined') ? VALIDATION_LIMITS.fuelDaily.max : 15;
+    let monthTotal=0, monthFills=0, suspect=0, lastDate=null, lastAmt=0, balance=null, any=false;
+    rows.forEach(x=>{
+      const amt = parseFloat(x.fuel_amount)||0;
+      if(balance==null){ const bal = parseFloat(x.card_balance); if(!isNaN(bal) && bal > 0) balance = bal; }
+      if(amt<=0) return;
+      any = true;
+      if(!lastDate){ lastDate = x.report_date; lastAmt = amt; }
+      if(String(x.report_date||'').startsWith(key)){
+        if(amt > cap){ suspect++; return; }
+        monthTotal += amt; monthFills++;
+      }
+    });
+    FCL_FUEL[id] = { loading:false, any, monthTotal, monthFills, suspect, lastDate, lastAmt, balance,
+                     monthLabel: now.toLocaleDateString('ar-KW',{month:'long',year:'numeric'}) };
+  }catch(e){
+    console.warn('[fcl] fuel fetch failed', e);
+    FCL_FUEL[id] = { loading:false, error:true };
+  }
+  fclPaintFuel(id);
+}
+function fclPaintFuel(id){
+  const el = document.getElementById('fclFuel_'+id);
+  if(el) el.innerHTML = fclFuelHTML(id);
+}
+
+function fclGoDriver(id){
+  closeFuelCardLookup();
+  try{
+    if(typeof filter!=='undefined') { filter='all'; }
+    if(typeof srchQ!=='undefined')  { srchQ=''; const b=document.getElementById('srchBox'); if(b) b.value=''; }
+    selectDriver(id);
+    const el = document.querySelector('.dc.on'); if(el) el.scrollIntoView({block:'center', behavior:'smooth'});
+  }catch(e){ console.warn(e); }
+}
+
+function fclCopy(txt){
+  if(!txt) return;
+  try{ navigator.clipboard.writeText(txt); if(typeof toast==='function') toast('اتنسخ رقم الكرت','s'); }
+  catch(e){ if(typeof toast==='function') toast('تعذّر النسخ','e'); }
+}
+
 // تقرير كروت البنزين — Fuel Cards Report
 function openFuelCardsReport(){
   try {
@@ -15165,6 +15408,1926 @@ function pushCloseStatus(){
     </div>
   </div>
 </div>
+
+<!-- ══════════ ARK PAYROLL v3 — الواجهة والأنماط ══════════ -->
+<style>
+.pay-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.pay-title{display:flex;align-items:center;gap:11px;flex:1;min-width:220px}
+.pay-title>i{font-size:26px;color:#004e6d;background:rgba(0,78,109,.09);width:44px;height:44px;display:grid;place-items:center;border-radius:13px}
+.pay-title b{display:block;font-size:16px;font-weight:900}
+.pay-title span{display:block;font-size:11px;color:var(--muted);margin-top:1px}
+.pay-period{display:flex;align-items:center;gap:6px}
+.pay-period select{padding:7px 10px;border:1px solid var(--br);border-radius:9px;background:var(--s2);color:var(--text);font-family:inherit;font-size:12.5px;font-weight:700}
+.pay-nav{width:32px;height:32px;border:1px solid var(--br);border-radius:9px;background:var(--s2);color:var(--text);cursor:pointer;display:grid;place-items:center}
+.pay-nav:hover{background:var(--s3)}
+.pay-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;border-bottom:1px solid var(--br);padding-bottom:9px}
+.pay-tab{display:flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+.pay-tab:hover{background:var(--s2);color:var(--text)}
+.pay-tab.on{background:rgba(0,78,109,.1);color:#004e6d;border-color:rgba(0,78,109,.22)}
+.pay-card{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:15px}
+.pay-h3{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:900;margin:0 0 11px}
+.pay-runbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.pay-stepper{display:flex;align-items:center;gap:4px;flex:1;min-width:280px;flex-wrap:wrap}
+.pay-step{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--muted);padding:5px 9px;border-radius:8px;background:var(--s2);white-space:nowrap}
+.pay-step i{font-size:13px}
+.pay-step.done{color:#059669;background:rgba(5,150,105,.1)}
+.pay-step.cur{color:#fff;background:#004e6d;box-shadow:0 2px 8px rgba(0,78,109,.28)}
+.pay-step-line{flex:0 0 12px;height:2px;background:var(--br);border-radius:2px}
+.pay-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11.5px;font-weight:900;border:1px solid}
+.pay-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.pay-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border:1px solid var(--br);border-radius:10px;background:var(--s2);color:var(--text);font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+.pay-btn:hover{background:var(--s3)}
+.pay-btn.sm{padding:6px 11px;font-size:11.5px}
+.pay-btn.primary{background:linear-gradient(135deg,#004e6d,#0d7490);color:#fff;border-color:transparent}
+.pay-btn.go{background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:#fff;border-color:transparent}
+.pay-btn.lock{background:linear-gradient(135deg,#047857,#059669);color:#fff;border-color:transparent}
+.pay-btn.warn{background:linear-gradient(135deg,#b45309,#d97706);color:#fff;border-color:transparent}
+.pay-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin-bottom:14px}
+.pay-kpi{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:12px}
+.pay-kpi-ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:0 0 36px;font-size:17px}
+.pay-kpi-l{font-size:10.5px;color:var(--muted);font-weight:700}
+.pay-kpi-v{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.25}
+.pay-kpi-s{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pay-note{display:flex;gap:10px;align-items:flex-start;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.22);border-radius:12px;padding:11px 13px;font-size:12px;line-height:1.8;margin-bottom:14px}
+.pay-note>i{font-size:17px;flex:0 0 auto;margin-top:1px;color:#0284c7}
+.pay-note.ok{background:rgba(5,150,105,.07);border-color:rgba(5,150,105,.24)}.pay-note.ok>i{color:#059669}
+.pay-note.warn{background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.26)}.pay-note.warn>i{color:#b45309}
+.pay-note.err{background:rgba(220,38,38,.07);border-color:rgba(220,38,38,.26)}.pay-note.err>i{color:#dc2626}
+.pay-note code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;font-size:10.5px}
+.pay-table-wrap{overflow-x:auto}
+.pay-table{width:100%;border-collapse:collapse;font-size:12px}
+.pay-table th{text-align:right;padding:8px 9px;font-size:10.5px;font-weight:900;color:var(--muted);border-bottom:1px solid var(--br);white-space:nowrap}
+.pay-table td{padding:9px;border-bottom:1px solid var(--br);vertical-align:middle}
+.pay-table tbody tr:hover{background:var(--s2)}
+.pay-table tbody tr[onclick]{cursor:pointer}
+.pay-table td.num{text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pay-table td.up{color:#059669;font-weight:700}
+.pay-table td.dn{color:#dc2626;font-weight:700}
+.pay-table td.net{font-weight:900;font-size:13px}
+.pay-table tfoot td{border-top:2px solid var(--br);border-bottom:none;padding-top:11px;background:var(--s2)}
+.pay-table.sm td,.pay-table.sm th{padding:6px 8px;font-size:11.5px}
+.pay-sub{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:1px}
+.pay-flag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:9.5px;font-weight:800;background:var(--s3);color:var(--muted)}
+.pay-flag.red{background:rgba(220,38,38,.12);color:#dc2626}
+.pay-flag.amber{background:rgba(217,119,6,.14);color:#b45309}
+.pay-flag.green{background:rgba(5,150,105,.13);color:#059669}
+.pay-flag.blue{background:rgba(14,165,233,.13);color:#0284c7}
+.pay-icon{width:27px;height:27px;border:1px solid var(--br);border-radius:8px;background:var(--s2);color:var(--muted);cursor:pointer;margin-inline-start:4px}
+.pay-icon:hover{background:var(--s3);color:var(--text)}
+.pay-icon.red:hover{background:rgba(220,38,38,.12);color:#dc2626;border-color:rgba(220,38,38,.3)}
+.pay-grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px}
+.pay-grid4 label,.pay-row label{display:block;font-size:10.5px;font-weight:800;color:var(--muted);margin-bottom:4px}
+.pay-grid4 input,.pay-grid4 select,.pay-row input,.pay-row select{width:100%;padding:8px 10px;border:1px solid var(--br);border-radius:9px;background:var(--s2);color:var(--text);font-family:inherit;font-size:12.5px}
+.pay-row{display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap}
+.pay-hint{font-size:11px;color:var(--muted);line-height:1.8;margin-top:9px;padding-top:9px;border-top:1px dashed var(--br)}
+.pay-bar{height:6px;background:var(--s3);border-radius:4px;overflow:hidden}
+.pay-bar i{display:block;height:100%;background:linear-gradient(90deg,#059669,#10b981);border-radius:4px}
+.pay-slip-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:8px;margin-bottom:14px}
+.pay-slip-meta div{background:var(--s2);border:1px solid var(--br);border-radius:9px;padding:7px 10px}
+.pay-slip-meta span{display:block;font-size:9.5px;color:var(--muted);font-weight:700}
+.pay-slip-meta b{font-size:12.5px}
+.pay-slip-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:720px){.pay-slip-cols{grid-template-columns:1fr}}
+.pay-slip-cols h4{font-size:12px;font-weight:900;margin:0 0 6px}
+.pay-slip-cols h4.up{color:#059669}.pay-slip-cols h4.dn{color:#dc2626}
+.pay-slip-net{margin-top:14px;background:linear-gradient(135deg,#004e6d,#0d7490);color:#fff;border-radius:11px;padding:13px 17px;display:flex;justify-content:space-between;align-items:center}
+.pay-slip-net span{font-size:12.5px;font-weight:800;opacity:.9}
+.pay-slip-net b{font-size:21px;font-variant-numeric:tabular-nums}
+</style>
+
+
+<!-- قسيمة الراتب -->
+<div class="ov" id="paySlipModal" onclick="if(event.target===this)closeModal('paySlipModal')">
+  <div class="modal" style="max-width:780px">
+    <h2><i class="ti ti-file-invoice" style="color:#0d7490"></i> <span id="paySlipTitle">—</span></h2>
+    <div id="paySlipBody"></div>
+    <div class="macts" id="paySlipActions" style="flex-wrap:wrap"></div>
+  </div>
+</div>
+
+<!-- بند جديد -->
+<div class="ov" id="payInpModal" data-m="1" data-y="2026" onclick="if(event.target===this)closeModal('payInpModal')">
+  <div class="modal" style="max-width:520px">
+    <h2><i class="ti ti-plus" style="color:#0d7490"></i> إضافة بند — <span id="payInpPeriod"></span></h2>
+    <div class="pay-grid4">
+      <div style="grid-column:1/-1"><label>الموظف</label><select id="payInpDrv" onchange="payInpPreview()"></select></div>
+      <div style="grid-column:1/-1"><label>البند</label><select id="payInpComp" onchange="payInpPreview()"></select></div>
+      <div><label>الكمية (أيام/ساعات/وحدات)</label><input type="number" step="0.5" id="payInpQty" oninput="payInpPreview()" placeholder="0"></div>
+      <div><label>المبلغ / النسبة</label><input type="number" step="0.001" id="payInpAmt" oninput="payInpPreview()" placeholder="0.000"></div>
+      <div style="grid-column:1/-1"><label>السبب</label><input type="text" id="payInpReason" placeholder="مثال: 6 ساعات إضافية ليلة الجمعة"></div>
+    </div>
+    <div id="payInpCalc" class="pay-hint"></div>
+    <div class="macts">
+      <button class="btn btn-c" onclick="closeModal('payInpModal')">إلغاء</button>
+      <button class="btn btn-s" onclick="paySaveInput()"><i class="ti ti-check"></i> حفظ البند</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK PAYROLL ENGINE v3 — مسيّر الرواتب المجمّد
+   ──────────────────────────────────────────────────────────────────────────
+   المبدأ الحاكم:  راتب شهر مُقفَل لا يتغيّر أبداً.
+
+   قبل هذا المحرك كان راتب أغسطس يُعاد حسابه في كل مرة تُفتح فيها الشاشة،
+   فأي خصم يُضاف في ديسمبر كان يُغيّر أرقام أغسطس بأثر رجعي — والدفاتر
+   تخالف ما دُفع فعلاً. الآن:
+
+     مسودة → احتساب → اعتماد → إقفال → مدفوع
+
+   عند الإقفال تُجمَّد أسطر الشهر كلقطة ثابتة ببصمة، وكل التقارير
+   (قائمة الدخل، كشف البنك، قسيمة الراتب) تقرأ اللقطة لا الحساب الحيّ.
+   أي تصحيح بعد الإقفال يمرّ كـ«قيد تسوية» في الشهر المفتوح التالي.
+
+   التوافق مع القديم: الأشهر التي لا مسيّر لها تُحسب حيّاً بنفس المعادلة
+   القديمة بالضبط (أساسي مقسّط بالأيام − خصومات الشهر)، فالأرقام التاريخية
+   لا تتحرّك سنتيماً واحداً عند التركيب.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const PAY_SK  = { comp:'sl_pay_comp', asg:'sl_pay_asg', inp:'sl_pay_inp',
+                  loan:'sl_pay_loan', run:'sl_pay_run', line:'sl_pay_line', cfg:'sl_pay_cfg' };
+const PAY_TBL = { comp:'payroll_components', asg:'payroll_assignments', inp:'payroll_inputs',
+                  loan:'payroll_loans', run:'payroll_runs', line:'payroll_run_lines' };
+
+let PAY_STORAGE_FAILED = false;
+
+function _payLoad(key, fallback){
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch(e){ console.error('[payroll] read failed', key, e); return fallback; }
+}
+/* الحفظ لا يبتلع الخطأ. فقدان بيانات الرواتب الصامت عند امتلاء الحصة
+   هو أخطر عطل ممكن في هذا النظام — لذلك يصرخ ويوقف الاعتماد. */
+function _paySave(key, val){
+  try{
+    localStorage.setItem(key, JSON.stringify(val));
+    PAY_STORAGE_FAILED = false;
+    return true;
+  }catch(e){
+    PAY_STORAGE_FAILED = true;
+    console.error('[payroll] WRITE FAILED', key, e);
+    try{ toast('⛔ تعذّر حفظ بيانات الرواتب — الذاكرة المحلية ممتلئة. لا تعتمد المسيّر قبل الحل.','e'); }catch(_){}
+    try{ alert('⛔ فشل حفظ بيانات الرواتب محلياً\n\n' + (e.message||e.name) +
+               '\n\nالبيانات في الذاكرة فقط وستُفقد عند إغلاق الصفحة.\n' +
+               'صدّر نسخة احتياطية فوراً من: الرواتب ← السجل ← تصدير نسخة.'); }catch(_){}
+    return false;
+  }
+}
+
+/* ── إعدادات المحرك ──────────────────────────────────────────────────── */
+const PAY_CFG_DEFAULT = {
+  hoursPerDay:   8,        // أساس تحويل اليومية إلى ساعة
+  payDayOfMonth: 1,        // يوم صرف الراتب من الشهر التالي
+  currency:      'د.ك',
+  decimals:      3,
+  autoLoanDeduct:true,     // استقطاع أقساط السلف تلقائياً في كل مسيّر
+  netFloorZero:  true      // صافي الراتب لا ينزل تحت الصفر (الباقي يُرحَّل)
+};
+let PAY_CFG = Object.assign({}, PAY_CFG_DEFAULT, _payLoad(PAY_SK.cfg, {}));
+function payCfgSave(){ _paySave(PAY_SK.cfg, PAY_CFG); }
+
+/* ── 1) كتالوج المكوّنات ────────────────────────────────────────────────
+   المكوّن يعرّف *كيف* يُحسب البند، لا كم يساوي. هذا مصدر المرونة:
+   بدل جديد = صفّ جديد في الكتالوج، بلا لمس أي معادلة.               */
+const PAY_COMP_SEED = [
+  {code:'BASIC',         ar:'الراتب الأساسي', en:'Basic Salary',         kind:'earning',   method:'fixed',    rate:0,    prorate:true,  eos:true,  gl:'salaries', ord:10,  sys:true},
+  {code:'ALW_HOUSING',   ar:'بدل سكن',        en:'Housing Allowance',    kind:'earning',   method:'fixed',    rate:0,    prorate:true,  eos:false, gl:'salaries', ord:20,  sys:false},
+  {code:'ALW_TRANSPORT', ar:'بدل مواصلات',    en:'Transport Allowance',  kind:'earning',   method:'fixed',    rate:0,    prorate:true,  eos:false, gl:'salaries', ord:21,  sys:false},
+  {code:'ALW_PHONE',     ar:'بدل هاتف',       en:'Phone Allowance',      kind:'earning',   method:'fixed',    rate:0,    prorate:true,  eos:false, gl:'salaries', ord:22,  sys:false},
+  {code:'ALW_NATURE',    ar:'بدل طبيعة عمل',  en:'Job Nature Allowance', kind:'earning',   method:'fixed',    rate:0,    prorate:true,  eos:false, gl:'salaries', ord:23,  sys:false},
+  {code:'OT',            ar:'ساعات إضافية',   en:'Overtime',             kind:'earning',   method:'hourly',   rate:1.25, prorate:false, eos:false, gl:'salaries', ord:30,  sys:false},
+  {code:'OT_HOLIDAY',    ar:'إضافي عطلة',     en:'Holiday Overtime',     kind:'earning',   method:'hourly',   rate:1.50, prorate:false, eos:false, gl:'salaries', ord:31,  sys:false},
+  {code:'INCENTIVE',     ar:'حافز أداء',      en:'Performance Incentive',kind:'earning',   method:'per_unit', rate:0,    prorate:false, eos:false, gl:'salaries', ord:40,  sys:false},
+  {code:'BONUS',         ar:'مكافأة',         en:'Bonus',                kind:'earning',   method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:41,  sys:false},
+  {code:'RETRO_ADD',     ar:'تسوية مستحقة',   en:'Retro Earning',        kind:'earning',   method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:90,  sys:true},
+  {code:'ABSENCE',       ar:'خصم غياب/تأخير', en:'Absence Deduction',    kind:'deduction', method:'daily',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:110, sys:true},
+  {code:'VIOLATION',     ar:'خصم مخالفات',    en:'Violation Deduction',  kind:'deduction', method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:120, sys:false},
+  {code:'LOAN',          ar:'قسط سلفة',       en:'Loan Installment',     kind:'deduction', method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:130, sys:true},
+  {code:'ADVANCE',       ar:'سلفة مستعجلة',   en:'Salary Advance',       kind:'deduction', method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:131, sys:false},
+  {code:'CUSTODY_DED',   ar:'خصم عهدة',       en:'Custody Deduction',    kind:'deduction', method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:140, sys:false},
+  {code:'OTHER_DED',     ar:'خصم آخر',        en:'Other Deduction',      kind:'deduction', method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:150, sys:false},
+  {code:'RETRO_DED',     ar:'تسوية مستقطعة',  en:'Retro Deduction',      kind:'deduction', method:'fixed',    rate:0,    prorate:false, eos:false, gl:'salaries', ord:190, sys:true}
+];
+
+let PAY_COMPONENTS = _payLoad(PAY_SK.comp, null);
+if(!PAY_COMPONENTS || !PAY_COMPONENTS.length){
+  PAY_COMPONENTS = PAY_COMP_SEED.map(c => Object.assign({active:true}, c));
+  _paySave(PAY_SK.comp, PAY_COMPONENTS);
+}else{
+  // ترقية: أي مكوّن نظامي جديد يُضاف دون المساس بتعديلات المستخدم
+  let added = false;
+  PAY_COMP_SEED.forEach(s => {
+    if(!PAY_COMPONENTS.some(c => c.code === s.code)){
+      PAY_COMPONENTS.push(Object.assign({active:true}, s)); added = true;
+    }
+  });
+  if(added) _paySave(PAY_SK.comp, PAY_COMPONENTS);
+}
+
+function payComp(code){ return PAY_COMPONENTS.find(c => c.code === code) || null; }
+function payCompsActive(kind){
+  return PAY_COMPONENTS
+    .filter(c => c.active !== false && (!kind || c.kind === kind))
+    .sort((a,b) => (a.ord||100) - (b.ord||100));
+}
+function payCompName(code){ const c = payComp(code); return c ? c.ar : code; }
+
+/* ── 2) التعيينات المتكرّرة بتواريخ سريان ──────────────────────────────── */
+let PAY_ASSIGNMENTS = _payLoad(PAY_SK.asg, []);
+function payAsgSave(){ return _paySave(PAY_SK.asg, PAY_ASSIGNMENTS); }
+
+/** آخر يوم في الشهر بصيغة نصية */
+function _payPeriod(m, y){ return String(y) + '-' + String(m).padStart(2,'0'); }
+function _payPeriodParts(p){ const a = String(p).split('-'); return {y:+a[0], m:+a[1]}; }
+function _payMonthEnd(m, y){ return _ymd(y, m, _daysInMonth(m, y)); }
+function _payMonthStart(m, y){ return _ymd(y, m, 1); }
+
+/**
+ * التعيينات السارية لموظف في شهر معيّن.
+ * السريان يُقاس على الشهر كله: التعيين يسري إن تقاطع مداه مع الشهر.
+ * عند تعدّد تعيينات لنفس المكوّن يفوز الأحدث سرياناً — هذا يجعل
+ * «زيادة الراتب من 1 مارس» سطراً جديداً لا تعديلاً يمحو الماضي.
+ */
+function payAssignmentsFor(driverId, m, y){
+  const mStart = _payMonthStart(m, y), mEnd = _payMonthEnd(m, y);
+  const rows = PAY_ASSIGNMENTS.filter(a =>
+    a.driver_id === driverId &&
+    a.active !== false &&
+    String(a.effective_from||'') <= mEnd &&
+    (!a.effective_to || String(a.effective_to) >= mStart)
+  );
+  const byCode = {};
+  rows.forEach(a => {
+    const cur = byCode[a.component_code];
+    if(!cur || String(a.effective_from) > String(cur.effective_from)) byCode[a.component_code] = a;
+  });
+  return Object.values(byCode);
+}
+
+/**
+ * الأساسي الساري لموظف في شهر — من سجلّ التعيينات، وإلا من التخزين القديم.
+ * الرجوع للقديم متعمَّد: لا يُشترط ترحيل أي شيء ليعمل النظام.
+ */
+function payBaseFor(driverId, m, y){
+  const asg = payAssignmentsFor(driverId, m, y).find(a => a.component_code === 'BASIC');
+  if(asg) return parseFloat(asg.amount) || 0;
+  const sal = getSalData(driverId);
+  return parseFloat(sal && sal.base) || 0;
+}
+
+/* ── 3) مدخلات الفترة ──────────────────────────────────────────────────── */
+let PAY_INPUTS = _payLoad(PAY_SK.inp, []);
+function payInpSave(){ return _paySave(PAY_SK.inp, PAY_INPUTS); }
+
+function payInputsFor(driverId, m, y){
+  const p = _payPeriod(m, y);
+  return PAY_INPUTS.filter(i => i.driver_id === driverId && i.period === p);
+}
+
+/* ── 4) السلف والقروض ─────────────────────────────────────────────────── */
+let PAY_LOANS = _payLoad(PAY_SK.loan, []);
+function payLoanSave(){ return _paySave(PAY_SK.loan, PAY_LOANS); }
+
+/** عدد الأشهر بين فترتين (b − a) */
+function _payMonthsBetween(a, b){
+  const A = _payPeriodParts(a), B = _payPeriodParts(b);
+  return (B.y - A.y) * 12 + (B.m - A.m);
+}
+/** قسط السلفة المستحق على موظف في شهر معيّن (0 إن لا شيء) */
+function payLoanInstallmentFor(driverId, m, y){
+  if(!PAY_CFG.autoLoanDeduct) return {amount:0, loans:[]};
+  const p = _payPeriod(m, y);
+  let total = 0; const hit = [];
+  PAY_LOANS.forEach(l => {
+    if(l.driver_id !== driverId || l.status !== 'active') return;
+    const off = _payMonthsBetween(l.start_period, p);
+    if(off < 0) return;                                  // لم يبدأ الاستقطاع بعد
+    const principal = parseFloat(l.principal)   || 0;
+    const inst      = parseFloat(l.installment) || 0;
+    if(inst <= 0) return;
+    const already = inst * off;                          // المستحق قبل هذا الشهر
+    const remain  = Math.max(0, principal - already);
+    if(remain <= 0) return;                              // سُدّدت
+    const due = Math.min(inst, remain);
+    total += due;
+    hit.push({id:l.id, due:due, remainAfter: remain - due, note:l.note||''});
+  });
+  return {amount: total, loans: hit};
+}
+/**
+ * رصيد السلفة — المسدَّد الحقيقي هو ما استُقطع في مسيّرات مُقفَلة فعلاً،
+ * لا ما يفترضه الجدول. الفرق يظهر عند شهر أُعيد فتحه أو موظف بلغ صافيه صفراً.
+ * الجدول يُستخدم كتقدير فقط للأشهر المفتوحة التي لم تُقفل بعد.
+ */
+function payLoanBalance(loan){
+  const principal = parseFloat(loan.principal)   || 0;
+  const inst      = parseFloat(loan.installment) || 0;
+  const drvLoans  = PAY_LOANS.filter(l => l.driver_id === loan.driver_id && l.status !== 'cancelled');
+  const share     = drvLoans.length > 1 ? null : 1;   // عند تعدّد السلف يتعذّر الفصل من السطر المجمّع
+
+  let locked = 0, lockedMonths = 0;
+  PAY_RUNS.forEach(r => {
+    if(r.status !== 'locked' && r.status !== 'paid') return;
+    if(r.period < loan.start_period) return;
+    const line = payRunLines(r.id).find(l => l.driver_id === loan.driver_id);
+    if(!line) return;
+    const c = (line.components||[]).find(x => x.code === 'LOAN');
+    if(!c) return;
+    lockedMonths++;
+    locked += share === 1 ? c.amount : Math.min(inst, c.amount);
+  });
+
+  /* الأشهر المفتوحة بعد آخر إقفال تُقدَّر بالجدول */
+  const now  = new Date();
+  const cur  = _payPeriod(now.getMonth()+1, now.getFullYear());
+  const due  = Math.max(0, _payMonthsBetween(loan.start_period, cur) + 1);
+  const est  = Math.max(0, due - lockedMonths) * inst;
+
+  const paid = Math.min(principal, locked + est);
+  return {paid: paid, remaining: Math.max(0, principal - paid),
+          lockedPaid: Math.min(principal, locked), estimated: est > 0};
+}
+
+/* ── 5) الخصومات القديمة (sl_sal2) كمصدر مدخلات ─────────────────────────
+   لا تُرحَّل ولا تُنسخ. المحرك يقرأها في مكانها كمكوّن ABSENCE، فتبقى
+   أرقام كل شهر سابق مطابقة تماماً لما كانت عليه قبل التركيب.          */
+function payLegacyDeductions(driverId, m, y){
+  const sal = getSalData(driverId);
+  return (sal.deductions || [])
+    .filter(x => (+x.month) === m && (+x.year) === y)
+    .map(x => ({
+      id: x.id, component_code:'ABSENCE', qty: parseFloat(x.days)||0,
+      amount: parseFloat(x.amount)||0, reason: x.reason||'خصم', ref_date: x.date||'',
+      source: 'legacy'
+    }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   6) محرّك الاحتساب — سطر موظف واحد عن شهر واحد
+   ══════════════════════════════════════════════════════════════════════ */
+
+function _payRound(n){ const d = PAY_CFG.decimals; return Math.round((+n||0) * Math.pow(10,d)) / Math.pow(10,d); }
+
+/** يحوّل مكوّناً + كمية + مبلغ إلى قيمة نقدية حسب طريقة الاحتساب */
+function payEvalComponent(comp, ctx, qty, amount){
+  const method = comp ? comp.method : 'fixed';
+  const rate   = (comp && parseFloat(comp.rate)) || 0;
+  qty    = parseFloat(qty)    || 0;
+  amount = parseFloat(amount) || 0;
+  switch(method){
+    case 'daily':    return ctx.dailyRate * qty;
+    case 'hourly':   return (ctx.dailyRate / (PAY_CFG.hoursPerDay || 8)) * (rate || 1) * qty;
+    case 'percent':  return ctx.base * (amount / 100);
+    case 'per_unit': return (amount || rate) * qty;
+    case 'fixed':
+    default:         return amount;
+  }
+}
+
+/**
+ * احتساب راتب موظف واحد عن شهر — حيّ، من المصادر المفتوحة.
+ * يُستخدم للأشهر التي لا مسيّر مُقفَل لها. بعد الإقفال تُقرأ اللقطة بدله.
+ */
+function payComputeEmployee(d, m, y){
+  const dim   = _daysInMonth(m, y);
+  const days  = employedDaysInMonth(d, m, y);
+  const base  = payBaseFor(d.id, m, y);
+  const isAdm = isAdminStaff(d);
+  const line  = {
+    driver_id: d.id, driver_name: d.name, partner_id: d.partner || '',
+    staff_type: isAdm ? 'admin' : 'driver',
+    iban: d.iban || '', bank_name: (d.bank_name||'').trim() || d.name,
+    base: base, days_worked: days, days_in_month: dim,
+    components: [], gross: 0, total_ded: 0, net: 0,
+    prorated: false, not_started: days <= 0
+  };
+  if(days <= 0) return line;
+
+  const proration = days / dim;
+  line.prorated   = days < dim;
+  const dailyRate = base > 0 ? base / dim : 0;
+  const ctx = {base: base, dailyRate: dailyRate, days: days, dim: dim, proration: proration};
+
+  const push = (code, qty, amt, note, src) => {
+    const c = payComp(code);
+    const v = _payRound(amt);
+    if(!v) return;
+    line.components.push({
+      code: code, name: c ? c.ar : code, kind: c ? c.kind : 'earning',
+      method: c ? c.method : 'fixed', qty: qty || 0, amount: v,
+      note: note || '', source: src || 'manual'
+    });
+  };
+
+  /* أ) الأساسي — مقسّط بأيام العمل الفعلية */
+  push('BASIC', days, base * proration, line.prorated ? (days + ' من ' + dim + ' يوم') : '', 'assignment');
+
+  /* ب) التعيينات المتكرّرة (بدلات...) — تُقسّط إن كان المكوّن يقبل التقسيط */
+  payAssignmentsFor(d.id, m, y).forEach(a => {
+    if(a.component_code === 'BASIC') return;
+    const c = payComp(a.component_code);
+    if(!c || c.active === false) return;
+    let v = payEvalComponent(c, ctx, a.qty || 0, a.amount);
+    if(c.prorate) v *= proration;
+    push(a.component_code, a.qty || 0, v, a.note || '', 'assignment');
+  });
+
+  /* ج) مدخلات الشهر (إضافي، مكافآت، خصومات، تسويات) */
+  payInputsFor(d.id, m, y).forEach(i => {
+    const c = payComp(i.component_code);
+    if(!c) return;
+    const v = i.amount != null && c.method === 'fixed'
+      ? parseFloat(i.amount) || 0
+      : payEvalComponent(c, ctx, i.qty, i.amount);
+    push(i.component_code, i.qty || 0,
+         v,
+         i.reason || '' , i.source || 'manual');
+  });
+
+  /* د) الخصومات القديمة في مكانها — بلا ترحيل وبلا ازدواج */
+  payLegacyDeductions(d.id, m, y).forEach(x => {
+    push('ABSENCE', x.qty, x.amount, x.reason, 'legacy');
+  });
+
+  /* هـ) أقساط السلف — تلقائية */
+  const li = payLoanInstallmentFor(d.id, m, y);
+  if(li.amount > 0){
+    push('LOAN', li.loans.length, li.amount,
+         'قسط ' + li.loans.length + ' سلفة', 'loan');
+  }
+
+  /* و) التجميع */
+  line.components.forEach(c => {
+    if(c.kind === 'earning') line.gross     += c.amount;
+    else                     line.total_ded += c.amount;
+  });
+  line.gross     = _payRound(line.gross);
+  line.total_ded = _payRound(line.total_ded);
+  const net      = line.gross - line.total_ded;
+  line.net       = _payRound(PAY_CFG.netFloorZero ? Math.max(0, net) : net);
+  /* ما تعذّر استقطاعه لأن الصافي بلغ الصفر — يُعرض ليُرحَّل يدوياً */
+  line.uncovered = PAY_CFG.netFloorZero && net < 0 ? _payRound(-net) : 0;
+  return line;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   7) المسيّرات — دورة الحياة والتجميد
+   ══════════════════════════════════════════════════════════════════════ */
+
+let PAY_RUNS  = _payLoad(PAY_SK.run,  []);   // الترويسات
+let PAY_LINES = _payLoad(PAY_SK.line, {});   // { 'RUN-2026-08': [line,...] }
+
+function payRunsSave(){  return _paySave(PAY_SK.run,  PAY_RUNS);  }
+function payLinesSave(){ return _paySave(PAY_SK.line, PAY_LINES); }
+
+const PAY_STATUS = {
+  draft:      {ar:'مسودة',    color:'#94a3b8', icon:'ti-file-pencil'},
+  calculated: {ar:'محتسب',    color:'#0ea5e9', icon:'ti-calculator'},
+  approved:   {ar:'معتمد',    color:'#8b5cf6', icon:'ti-checkbox'},
+  locked:     {ar:'مُقفَل',    color:'#059669', icon:'ti-lock'},
+  paid:       {ar:'مدفوع',    color:'#047857', icon:'ti-cash-banknote'},
+  reopened:   {ar:'أُعيد فتحه',color:'#f59e0b', icon:'ti-lock-open'}
+};
+
+function payRunId(m, y){ return 'RUN-' + _payPeriod(m, y); }
+function payGetRun(m, y){ return PAY_RUNS.find(r => r.id === payRunId(m, y)) || null; }
+function payRunLines(runId){ return PAY_LINES[runId] || []; }
+
+/** الشهر مجمّد؟ — أي لا يجوز أن يتغيّر رقمه مهما عُدِّلت المصادر */
+function payIsFrozen(m, y){
+  const r = payGetRun(m, y);
+  return !!r && (r.status === 'locked' || r.status === 'paid');
+}
+
+/** بصمة الأسطر — أي تعديل خارج المسار يكسرها */
+function payChecksum(lines){
+  const s = lines.map(l => l.driver_id + ':' + l.net.toFixed(3)).sort().join('|');
+  let h = 5381;
+  for(let i = 0; i < s.length; i++){ h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; }
+  return h.toString(16).padStart(8,'0') + '-' + lines.length;
+}
+
+/** كل الموظفين الداخلين في مسيّر الشهر */
+function payEligible(m, y){
+  return DRV.filter(d =>
+    (isAdminStaff(d) || isReportableDriver(d)) && wasEmployedInMonth(d, m, y)
+  );
+}
+
+/**
+ * ★ نقطة الحقيقة الوحيدة ★
+ * كل تقرير ورقم راتب في النظام يجب أن يمرّ من هنا.
+ * شهر مُقفَل → اللقطة المجمّدة.  شهر مفتوح → احتساب حيّ.
+ */
+function payrollSnapshot(m, y){
+  const run = payGetRun(m, y);
+  if(run && (run.status === 'locked' || run.status === 'paid')){
+    const lines = payRunLines(run.id);
+    return {frozen:true, run:run, lines:lines, source:'locked-run'};
+  }
+  if(run && run.status === 'approved'){
+    const lines = payRunLines(run.id);
+    if(lines.length) return {frozen:false, run:run, lines:lines, source:'approved-run'};
+  }
+  const lines = payEligible(m, y).map(d => payComputeEmployee(d, m, y));
+  return {frozen:false, run:run, lines:lines, source:'live'};
+}
+
+/** إجماليات لقطة الشهر مقسّمة سائقين/إدارة */
+function payrollTotals(m, y){
+  const snap = payrollSnapshot(m, y);
+  const t = {gross:0, ded:0, net:0, driversNet:0, adminNet:0,
+             headcount:0, driversCount:0, adminCount:0,
+             frozen:snap.frozen, status:(snap.run && snap.run.status) || 'open', source:snap.source};
+  snap.lines.forEach(l => {
+    if(l.days_worked <= 0 && !l.net) return;
+    t.gross += l.gross; t.ded += l.total_ded; t.net += l.net; t.headcount++;
+    if(l.staff_type === 'admin'){ t.adminNet += l.net; t.adminCount++; }
+    else                        { t.driversNet += l.net; t.driversCount++; }
+  });
+  ['gross','ded','net','driversNet','adminNet'].forEach(k => t[k] = _payRound(t[k]));
+  return t;
+}
+
+/* ── دورة الحياة ─────────────────────────────────────────────────────── */
+
+function _payActor(){
+  try{ return (ARK_USER && (ARK_USER.email || ARK_USER.name)) || ('دور: ' + ARK_ROLE); }
+  catch(e){ return 'غير معروف'; }
+}
+
+/** احتساب المسيّر وتثبيت أسطره كمسودة قابلة للمراجعة */
+function payCalculateRun(m, y, silent){
+  if(!requirePerm('salaries')) return null;
+  if(payIsFrozen(m, y)){ toast('هذا الشهر مُقفَل — لا يُعاد احتسابه','e'); return null; }
+
+  const id    = payRunId(m, y);
+  const lines = payEligible(m, y).map(d => payComputeEmployee(d, m, y))
+                                .filter(l => l.days_worked > 0);
+  let run = PAY_RUNS.find(r => r.id === id);
+  const totals = lines.reduce((a,l) => {
+    a.gross += l.gross; a.ded += l.total_ded; a.net += l.net;
+    if(l.staff_type === 'admin') a.admin += l.net; else a.drivers += l.net;
+    return a;
+  }, {gross:0, ded:0, net:0, drivers:0, admin:0});
+
+  const payload = {
+    id: id, period: _payPeriod(m, y), status: 'calculated',
+    pay_date: _ymd(m === 12 ? y+1 : y, m === 12 ? 1 : m+1, PAY_CFG.payDayOfMonth||1),
+    headcount: lines.length,
+    gross: _payRound(totals.gross), deductions: _payRound(totals.ded), net: _payRound(totals.net),
+    drivers_net: _payRound(totals.drivers), admin_net: _payRound(totals.admin),
+    checksum: payChecksum(lines),
+    calculated_at: new Date().toISOString(), calculated_by: _payActor(),
+    approved_at:null, approved_by:null, locked_at:null, locked_by:null,
+    paid_at:null, paid_by:null, note:(run && run.note) || ''
+  };
+
+  if(run) Object.assign(run, payload); else { run = payload; PAY_RUNS.push(run); }
+  PAY_LINES[id] = lines;
+  payRunsSave(); payLinesSave();
+  audit('calculate','payroll_run', id, null,
+        {period:run.period, headcount:run.headcount, net:run.net, checksum:run.checksum});
+  paySyncRun(run);
+  if(!silent) toast('تم احتساب مسيّر ' + run.period + ' — ' + lines.length + ' موظف، صافي ' + run.net.toFixed(3) + ' د.ك','s');
+  return run;
+}
+
+function payApproveRun(m, y){
+  if(!requirePerm('salaries')) return;
+  const run = payGetRun(m, y);
+  if(!run || run.status === 'draft'){ toast('احتسب المسيّر أولاً','e'); return; }
+  if(run.status === 'locked' || run.status === 'paid'){ toast('المسيّر مُقفَل بالفعل','e'); return; }
+  if(PAY_STORAGE_FAILED){ alert('⛔ لا يمكن الاعتماد: آخر حفظ محلي فشل. عالج مساحة التخزين أولاً.'); return; }
+
+  /* المراجعة قبل الاعتماد — يوقف الاعتماد على أرقام مشكوك فيها */
+  const issues = payValidateRun(m, y);
+  const blockers = issues.filter(i => i.level === 'error');
+  if(blockers.length){
+    alert('⛔ لا يمكن اعتماد المسيّر — ' + blockers.length + ' مشكلة حرجة:\n\n' +
+          blockers.slice(0,10).map(i => '• ' + i.msg).join('\n'));
+    return;
+  }
+  const warns = issues.filter(i => i.level === 'warn');
+  if(warns.length && !confirm('⚠️ ' + warns.length + ' تنبيه على هذا المسيّر:\n\n' +
+      warns.slice(0,8).map(i => '• ' + i.msg).join('\n') + '\n\nالاعتماد رغم ذلك؟')) return;
+
+  const before = run.status;
+  run.status = 'approved';
+  run.approved_at = new Date().toISOString();
+  run.approved_by = _payActor();
+  payRunsSave();
+  audit('approve','payroll_run', run.id, {status:before}, {status:'approved', by:run.approved_by});
+  paySyncRun(run);
+  toast('✅ اعتُمد مسيّر ' + run.period,'s');
+  renderPayroll();
+}
+
+function payLockRun(m, y){
+  if(!requirePerm('salaries')) return;
+  const run = payGetRun(m, y);
+  if(!run){ toast('لا يوجد مسيّر لهذا الشهر','e'); return; }
+  if(run.status !== 'approved'){ toast('يجب اعتماد المسيّر قبل إقفاله','e'); return; }
+  const lines = payRunLines(run.id);
+  if(!lines.length){ toast('لا توجد أسطر للإقفال','e'); return; }
+
+  if(!confirm('🔒 إقفال مسيّر ' + run.period + '\n\n' +
+      '• ' + lines.length + ' موظف\n' +
+      '• صافي ' + run.net.toFixed(3) + ' د.ك\n\n' +
+      'بعد الإقفال لا تتغيّر أرقام هذا الشهر مهما عُدّلت الرواتب أو الخصومات لاحقاً.\n' +
+      'أي تصحيح يمرّ كقيد تسوية في شهر مفتوح.\n\nتأكيد الإقفال؟')) return;
+
+  run.status    = 'locked';
+  run.locked_at = new Date().toISOString();
+  run.locked_by = _payActor();
+  run.checksum  = payChecksum(lines);
+  payRunsSave();
+  audit('lock','payroll_run', run.id, {status:'approved'},
+        {status:'locked', by:run.locked_by, checksum:run.checksum, net:run.net});
+  paySyncRun(run); paySyncLines(run.id);
+  toast('🔒 أُقفل مسيّر ' + run.period + ' — الأرقام مجمّدة الآن','s');
+  renderPayroll();
+}
+
+function payMarkPaid(m, y){
+  if(!requirePerm('salaries')) return;
+  const run = payGetRun(m, y);
+  if(!run || run.status !== 'locked'){ toast('يُسجَّل الدفع بعد الإقفال فقط','e'); return; }
+  if(!confirm('تأكيد صرف رواتب ' + run.period + ' بقيمة ' + run.net.toFixed(3) + ' د.ك؟')) return;
+  run.status  = 'paid';
+  run.paid_at = new Date().toISOString();
+  run.paid_by = _payActor();
+  payRunsSave();
+  audit('pay','payroll_run', run.id, {status:'locked'}, {status:'paid', by:run.paid_by, net:run.net});
+  paySyncRun(run);
+  toast('💰 سُجّل صرف رواتب ' + run.period,'s');
+  renderPayroll();
+}
+
+/**
+ * إعادة الفتح — الباب الوحيد للرجوع عن الإقفال، ولا يُفتح بلا سبب مسجّل.
+ * الرواتب المدفوعة لا تُعاد أبداً؛ التصحيح هناك قيد تسوية لا غير.
+ */
+function payReopenRun(m, y){
+  if(!requirePerm('salaries')) return;
+  if(ARK_ROLE !== 'admin'){ toast('إعادة فتح المسيّر للمدير فقط','e'); return; }
+  const run = payGetRun(m, y);
+  if(!run){ return; }
+  if(run.status === 'paid'){
+    alert('⛔ هذا المسيّر مدفوع.\n\nالرواتب المصروفة لا يجوز تعديلها بأثر رجعي.\n' +
+          'أضف قيد تسوية في شهر مفتوح بدلاً من ذلك.');
+    return;
+  }
+  if(run.status !== 'locked'){ toast('المسيّر ليس مُقفَلاً','e'); return; }
+  const reason = prompt('سبب إعادة فتح مسيّر ' + run.period + ' (يُسجَّل في سجل التدقيق):');
+  if(!reason || !reason.trim()){ toast('إعادة الفتح تتطلّب سبباً','e'); return; }
+  run.status        = 'reopened';
+  run.reopen_reason = reason.trim();
+  run.reopened_at   = new Date().toISOString();
+  run.reopened_by   = _payActor();
+  payRunsSave();
+  audit('reopen','payroll_run', run.id, {status:'locked'},
+        {status:'reopened', reason:run.reopen_reason, by:run.reopened_by});
+  paySyncRun(run);
+  toast('🔓 أُعيد فتح ' + run.period + ' — أعد الاحتساب ثم الاعتماد','e');
+  renderPayroll();
+}
+
+/* ── قيود التسوية الأثرية ───────────────────────────────────────────────
+   التصحيح الصحيح لشهر مُقفَل: لا نلمسه، بل نضيف فرقاً في شهر مفتوح
+   مربوطاً بالشهر الأصلي. الدفاتر تبقى مطابقة لما دُفع في كل شهر.   */
+function payAddRetro(driverId, targetM, targetY, amount, reason){
+  amount = parseFloat(amount) || 0;
+  if(!amount){ toast('أدخل مبلغ التسوية','e'); return null; }
+  const now = new Date();
+  let om = now.getMonth() + 1, oy = now.getFullYear();
+  /* أول شهر غير مُقفَل ابتداءً من الشهر الحالي */
+  let guard = 0;
+  while(payIsFrozen(om, oy) && guard++ < 24){
+    om++; if(om > 12){ om = 1; oy++; }
+  }
+  const inp = {
+    id: 'PI' + Date.now() + Math.random().toString(36).slice(2,5),
+    driver_id: driverId, period: _payPeriod(om, oy),
+    component_code: amount > 0 ? 'RETRO_ADD' : 'RETRO_DED',
+    qty: 0, amount: Math.abs(amount),
+    reason: (reason || 'تسوية') + ' — عن ' + _payPeriod(targetM, targetY),
+    ref_date: fmtDate(new Date()), source: 'retro',
+    retro_period: _payPeriod(targetM, targetY),
+    created_by: _payActor(), created_at: new Date().toISOString()
+  };
+  PAY_INPUTS.push(inp); payInpSave();
+  audit('create','payroll_retro', inp.id, null, inp);
+  paySyncInput(inp);
+  toast('تم تسجيل قيد تسوية ' + Math.abs(amount).toFixed(3) + ' د.ك في ' + inp.period,'s');
+  return inp;
+}
+
+/* ── المراجعة قبل الاعتماد ───────────────────────────────────────────── */
+function payValidateRun(m, y){
+  const out   = [];
+  const lines = payRunLines(payRunId(m, y));
+  const src   = lines.length ? lines : payEligible(m, y).map(d => payComputeEmployee(d, m, y));
+
+  if(PAY_STORAGE_FAILED)
+    out.push({level:'error', msg:'آخر عملية حفظ محلي فشلت — البيانات غير مضمونة'});
+  if(!src.length)
+    out.push({level:'error', msg:'لا يوجد أي موظف في هذا المسيّر'});
+
+  src.forEach(l => {
+    if(l.days_worked <= 0) return;
+    if(l.base <= 0)
+      out.push({level:'error', msg: l.driver_name + ' — لا يوجد راتب أساسي مسجّل'});
+    if(l.net <= 0 && l.gross > 0)
+      out.push({level:'warn',  msg: l.driver_name + ' — صافي الراتب صفر (الخصومات ابتلعت الراتب)'});
+    if(l.uncovered > 0)
+      out.push({level:'warn',  msg: l.driver_name + ' — ' + l.uncovered.toFixed(3) + ' د.ك خصم لم يُغطَّ، يحتاج ترحيلاً'});
+    if(l.gross > 0 && l.total_ded / l.gross > 0.5)
+      out.push({level:'warn',  msg: l.driver_name + ' — الخصومات تتجاوز 50% من الاستحقاق'});
+    if(!l.iban)
+      out.push({level:'warn',  msg: l.driver_name + ' — بلا IBAN، لن يدخل كشف البنك'});
+  });
+
+  /* مقارنة بالشهر السابق — قفزة غير مبرّرة تُوقف الاعتماد للمراجعة */
+  const pm = m === 1 ? 12 : m - 1, py = m === 1 ? y - 1 : y;
+  const prev = payrollTotals(pm, py);
+  const cur  = src.reduce((s,l) => s + l.net, 0);
+  if(prev.net > 0){
+    const diff = (cur - prev.net) / prev.net;
+    if(Math.abs(diff) > 0.25)
+      out.push({level:'warn', msg:'إجمالي الرواتب تغيّر ' + (diff*100).toFixed(1) +
+                '% عن ' + _payPeriod(pm,py) + ' — راجع السبب قبل الاعتماد'});
+  }
+  /* موظفون مؤهّلون سقطوا من المسيّر */
+  const inRun = new Set(src.map(l => l.driver_id));
+  payEligible(m, y).forEach(d => {
+    if(!inRun.has(d.id) && employedDaysInMonth(d, m, y) > 0)
+      out.push({level:'warn', msg: d.name + ' — مؤهّل للشهر لكنه خارج المسيّر'});
+  });
+  return out;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   8) إعادة توجيه الدوال القديمة إلى المحرك
+   ──────────────────────────────────────────────────────────────────────
+   هذه أهم عشرة أسطر في الملف: من هنا فصاعداً لا يوجد في ARK أكثر من
+   معادلة راتب واحدة. قائمة الدخل وكشف البنك وقسيمة الراتب وتطبيق
+   السائق كلها تقرأ نفس الرقم — وهو ما يُنهي فرق الـ77.419 د.ك.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const _legacyDriverSalaryForMonth = driverSalaryForMonth;
+const _legacyMonthlySalaryCost    = _monthlySalaryCost;
+const _legacyMonthlyAdminCost     = _monthlyAdminSalaryCost;
+
+/** نفس التوقيع القديم بالضبط — لكن الرقم يأتي من اللقطة */
+driverSalaryForMonth = function(d, m, y){
+  const dim = _daysInMonth(m, y);
+  if(!d) return {gross:0, prorated:0, deductions:0, net:0, days:0, dim:dim};
+  /* عقد الدالة القديم محفوظ حرفياً: طقم الإدارة وغير المؤهّلين يرجعون أصفاراً.
+     مرتبات الإدارة لها مسارها المنفصل (_monthlyAdminSalaryCost) — والخلط
+     بينهما هو ما كان يُحدث ازدواج الحساب في قائمة الدخل. */
+  if(!isReportableDriver(d)) return _legacyDriverSalaryForMonth(d, m, y);
+  const snap = payrollSnapshot(m, y);
+  const l    = snap.lines.find(x => x.driver_id === d.id);
+  if(!l){
+    /* غير مؤهّل أو خارج الشهر — نحافظ على السلوك القديم حرفياً */
+    return _legacyDriverSalaryForMonth(d, m, y);
+  }
+  const basicRow = (l.components || []).find(c => c.code === 'BASIC');
+  return {
+    gross:      l.base,
+    prorated:   basicRow ? basicRow.amount : _payRound(l.base * (l.days_worked / dim)),
+    deductions: l.total_ded,
+    net:        l.net,
+    days:       l.days_worked,
+    dim:        l.days_in_month || dim,
+    /* حقول جديدة لا تكسر القراء القدامى */
+    grossPay:   l.gross,
+    components: l.components || [],
+    frozen:     snap.frozen
+  };
+};
+
+/** تكلفة رواتب السائقين — بند «مرتبات» اليدوي ما زال له الأولوية */
+_monthlySalaryCost = function(m, y){
+  const manual = EXPENSES
+    .filter(x => x.category === 'salaries' && _matchMonth(x.date, m, y))
+    .reduce((s,x) => s + (parseFloat(x.amount)||0), 0);
+  if(manual > 0) return manual;
+  return payrollTotals(m, y).driversNet;
+};
+
+/** تكلفة رواتب طقم الإدارة */
+_monthlyAdminSalaryCost = function(m, y){
+  return payrollTotals(m, y).adminNet;
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   9) المزامنة السحابية — Supabase هو المرجع، والمحلي مرآة عمل
+   الفشل صامت في الاتجاه السحابي فقط: لا يوقف العمل، لكنه يُعلَّم.
+   ══════════════════════════════════════════════════════════════════════ */
+
+let PAY_SYNC_PENDING = _payLoad('sl_pay_syncq', []);
+function _paySyncQueue(row){
+  PAY_SYNC_PENDING.push(row);
+  if(PAY_SYNC_PENDING.length > 500) PAY_SYNC_PENDING.shift();
+  _paySave('sl_pay_syncq', PAY_SYNC_PENDING);
+}
+function _payHeaders(){
+  return {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+          'Content-Type':'application/json', Prefer:'resolution=merge-duplicates,return=minimal'};
+}
+async function _payUpsert(table, rows, onConflict){
+  if(!rows || !rows.length) return {ok:false};
+  try{
+    const url = SUPA_URL + '/rest/v1/' + table + (onConflict ? '?on_conflict=' + onConflict : '');
+    const r = await fetch(url, {method:'POST', headers:_payHeaders(), body:JSON.stringify(rows)});
+    if(!r.ok){
+      const t = await r.text().catch(()=> '');
+      console.warn('[payroll] sync failed', table, r.status, t);
+      _paySyncQueue({table:table, rows:rows, at:new Date().toISOString(), err:r.status});
+      return {ok:false, status:r.status, body:t};
+    }
+    return {ok:true};
+  }catch(e){
+    console.warn('[payroll] sync error', table, e);
+    _paySyncQueue({table:table, rows:rows, at:new Date().toISOString(), err:String(e)});
+    return {ok:false, error:e};
+  }
+}
+
+function paySyncRun(run){
+  if(!run) return;
+  _payUpsert(PAY_TBL.run, [{
+    id:run.id, period:run.period, status:run.status, pay_date:run.pay_date||null,
+    headcount:run.headcount||0, gross:run.gross||0, deductions:run.deductions||0,
+    net:run.net||0, drivers_net:run.drivers_net||0, admin_net:run.admin_net||0,
+    checksum:run.checksum||null,
+    calculated_at:run.calculated_at||null, calculated_by:run.calculated_by||null,
+    approved_at:run.approved_at||null,     approved_by:run.approved_by||null,
+    locked_at:run.locked_at||null,         locked_by:run.locked_by||null,
+    paid_at:run.paid_at||null,             paid_by:run.paid_by||null,
+    reopen_reason:run.reopen_reason||null, note:run.note||null
+  }], 'id');
+}
+function paySyncLines(runId){
+  const lines = payRunLines(runId);
+  if(!lines.length) return;
+  const rows = lines.map(l => ({
+    id: runId + '-' + l.driver_id, run_id: runId, period: runId.replace('RUN-',''),
+    driver_id:l.driver_id, driver_name:l.driver_name, partner_id:l.partner_id||null,
+    staff_type:l.staff_type||'driver', iban:l.iban||null, bank_name:l.bank_name||null,
+    base:l.base||0, days_worked:l.days_worked||0, days_in_month:l.days_in_month||30,
+    gross:l.gross||0, total_ded:l.total_ded||0, net:l.net||0,
+    components: l.components || []
+  }));
+  /* دفعات من 100 سطر — تفادياً لرفض الطلبات الكبيرة */
+  for(let i = 0; i < rows.length; i += 100)
+    _payUpsert(PAY_TBL.line, rows.slice(i, i+100), 'id');
+}
+function paySyncInput(i){
+  _payUpsert(PAY_TBL.inp, [{
+    id:i.id, driver_id:i.driver_id, period:i.period, component_code:i.component_code,
+    qty:i.qty||0, amount:i.amount||0, reason:i.reason||null, ref_date:i.ref_date||null,
+    source:i.source||'manual', source_ref:i.source_ref||null, retro_period:i.retro_period||null,
+    created_by:i.created_by||null
+  }], 'id');
+}
+function paySyncAssignment(a){
+  _payUpsert(PAY_TBL.asg, [{
+    id:a.id, driver_id:a.driver_id, component_code:a.component_code, amount:a.amount||0,
+    effective_from:a.effective_from, effective_to:a.effective_to||null,
+    note:a.note||null, created_by:a.created_by||null
+  }], 'id');
+}
+function paySyncLoan(l){
+  _payUpsert(PAY_TBL.loan, [{
+    id:l.id, driver_id:l.driver_id, principal:l.principal||0, installment:l.installment||0,
+    start_period:l.start_period, paid:l.paid||0, status:l.status||'active',
+    note:l.note||null, created_by:l.created_by||null
+  }], 'id');
+}
+function paySyncComponents(){
+  _payUpsert(PAY_TBL.comp, PAY_COMPONENTS.map(c => ({
+    code:c.code, name_ar:c.ar, name_en:c.en, kind:c.kind, method:c.method,
+    rate:c.rate||0, prorate:!!c.prorate, eos_eligible:!!c.eos,
+    gl_category:c.gl||'salaries', sort_order:c.ord||100,
+    is_system:!!c.sys, active:c.active !== false
+  })), 'code');
+}
+
+/** إعادة محاولة كل ما فشل رفعه */
+async function payRetrySync(){
+  if(!PAY_SYNC_PENDING.length){ toast('لا يوجد شيء معلّق','s'); return; }
+  const q = PAY_SYNC_PENDING.slice(); PAY_SYNC_PENDING = [];
+  let ok = 0, fail = 0;
+  for(const item of q){
+    const r = await _payUpsert(item.table, item.rows, item.table === PAY_TBL.comp ? 'code' : 'id');
+    if(r.ok) ok++; else fail++;
+  }
+  _paySave('sl_pay_syncq', PAY_SYNC_PENDING);
+  toast('المزامنة: نجح ' + ok + '، فشل ' + fail, fail ? 'e' : 's');
+  renderPayroll();
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK PAYROLL v3 — الواجهة
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const PAY_MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const PAY_MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let PAY_VIEW = { tab:'run', m:(new Date()).getMonth()+1, y:(new Date()).getFullYear(), drv:'' };
+
+function _pk(n){ return (parseFloat(n)||0).toFixed(3); }
+function _payEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function payGoTab(t){ PAY_VIEW.tab = t; renderPayroll(); }
+function payGoPeriod(delta){
+  PAY_VIEW.m += delta;
+  if(PAY_VIEW.m > 12){ PAY_VIEW.m = 1; PAY_VIEW.y++; }
+  if(PAY_VIEW.m < 1) { PAY_VIEW.m = 12; PAY_VIEW.y--; }
+  renderPayroll();
+}
+function paySetPeriod(){
+  PAY_VIEW.m = parseInt(document.getElementById('payMonthSel').value);
+  PAY_VIEW.y = parseInt(document.getElementById('payYearSel').value);
+  renderPayroll();
+}
+
+/* ── الهيكل العام ───────────────────────────────────────────────────── */
+function renderPayroll(){
+  const el = document.getElementById('payrollBody');
+  if(!el) return;
+  if(!canSeeSalaries()){
+    el.innerHTML = '<div class="pay-card" style="text-align:center;padding:48px">' +
+      '<i class="ti ti-lock" style="font-size:38px;color:var(--muted)"></i>' +
+      '<div style="margin-top:12px;font-weight:900">صلاحيتك (' + _payEsc(ARK_ROLE) + ') لا تسمح بعرض الرواتب</div></div>';
+    return;
+  }
+  const tabs = [
+    ['run','مسيّر الشهر','ti-file-invoice'],
+    ['structure','هيكل الرواتب','ti-adjustments-dollar'],
+    ['components','مكوّنات الراتب','ti-puzzle'],
+    ['loans','السلف','ti-credit-card'],
+    ['history','السجل والتدقيق','ti-history']
+  ];
+  el.innerHTML =
+    '<div class="pay-head">' +
+      '<div class="pay-title"><i class="ti ti-wallet"></i><div>' +
+        '<b>مسيّر الرواتب</b>' +
+        '<span>محرّك مجمّد — الشهر المُقفَل لا تتغيّر أرقامه</span>' +
+      '</div></div>' +
+      payPeriodBarHTML() +
+    '</div>' +
+    '<div class="pay-tabs">' +
+      tabs.map(t => '<button class="pay-tab' + (PAY_VIEW.tab===t[0]?' on':'') + '" onclick="payGoTab(\'' + t[0] + '\')">' +
+        '<i class="ti ' + t[2] + '"></i>' + t[1] + '</button>').join('') +
+    '</div>' +
+    '<div id="payTabBody"></div>';
+
+  const body = document.getElementById('payTabBody');
+  if(PAY_VIEW.tab === 'run')        body.innerHTML = payRunHTML();
+  else if(PAY_VIEW.tab === 'structure')  body.innerHTML = payStructureHTML();
+  else if(PAY_VIEW.tab === 'components') body.innerHTML = payComponentsHTML();
+  else if(PAY_VIEW.tab === 'loans')      body.innerHTML = payLoansHTML();
+  else if(PAY_VIEW.tab === 'history')    body.innerHTML = payHistoryHTML();
+}
+
+function payPeriodBarHTML(){
+  const yr = (new Date()).getFullYear();
+  const years = []; for(let i = yr-3; i <= yr+1; i++) years.push(i);
+  return '<div class="pay-period">' +
+    '<button class="pay-nav" onclick="payGoPeriod(-1)" title="الشهر السابق"><i class="ti ti-chevron-right"></i></button>' +
+    '<select id="payMonthSel" onchange="paySetPeriod()">' +
+      PAY_MONTHS_AR.map((n,i) => '<option value="' + (i+1) + '"' + (i+1===PAY_VIEW.m?' selected':'') + '>' + n + '</option>').join('') +
+    '</select>' +
+    '<select id="payYearSel" onchange="paySetPeriod()">' +
+      years.map(y => '<option value="' + y + '"' + (y===PAY_VIEW.y?' selected':'') + '>' + y + '</option>').join('') +
+    '</select>' +
+    '<button class="pay-nav" onclick="payGoPeriod(1)" title="الشهر التالي"><i class="ti ti-chevron-left"></i></button>' +
+  '</div>';
+}
+
+function payStatusChip(status){
+  const s = PAY_STATUS[status] || {ar:'مفتوح', color:'#94a3b8', icon:'ti-lock-open'};
+  return '<span class="pay-chip" style="background:' + s.color + '18;color:' + s.color + ';border-color:' + s.color + '44">' +
+         '<i class="ti ' + s.icon + '"></i>' + s.ar + '</span>';
+}
+
+/* ══════════════ تبويب المسيّر ══════════════ */
+function payRunHTML(){
+  const m = PAY_VIEW.m, y = PAY_VIEW.y;
+  const run   = payGetRun(m, y);
+  const snap  = payrollSnapshot(m, y);
+  const t     = payrollTotals(m, y);
+  const lines = snap.lines.filter(l => l.days_worked > 0);
+  const status = run ? run.status : 'open';
+  const frozen = payIsFrozen(m, y);
+  const issues = frozen ? [] : payValidateRun(m, y);
+
+  /* شريط الحالة والأزرار */
+  const steps = ['draft','calculated','approved','locked','paid'];
+  const curIdx = status === 'reopened' ? 0 : Math.max(0, steps.indexOf(status));
+  const stepper = '<div class="pay-stepper">' + steps.map((s,i) => {
+    const done = run && i <= curIdx && status !== 'open';
+    const st = PAY_STATUS[s];
+    return '<div class="pay-step' + (done?' done':'') + (run && i===curIdx && status!=='open' ?' cur':'') + '">' +
+           '<i class="ti ' + st.icon + '"></i><span>' + st.ar + '</span></div>';
+  }).join('<div class="pay-step-line"></div>') + '</div>';
+
+  let actions = '<div class="pay-actions">';
+  if(!frozen)
+    actions += '<button class="pay-btn primary" onclick="payCalculateRun(' + m + ',' + y + ');renderPayroll()">' +
+               '<i class="ti ti-calculator"></i>' + (run ? 'إعادة الاحتساب' : 'احتساب المسيّر') + '</button>';
+  if(run && (status === 'calculated'))
+    actions += '<button class="pay-btn go" onclick="payApproveRun(' + m + ',' + y + ')"><i class="ti ti-checkbox"></i>اعتماد</button>';
+  if(run && status === 'approved')
+    actions += '<button class="pay-btn lock" onclick="payLockRun(' + m + ',' + y + ')"><i class="ti ti-lock"></i>إقفال وتجميد</button>';
+  if(run && status === 'locked'){
+    actions += '<button class="pay-btn go" onclick="payMarkPaid(' + m + ',' + y + ')"><i class="ti ti-cash-banknote"></i>تسجيل الصرف</button>';
+    actions += '<button class="pay-btn warn" onclick="payReopenRun(' + m + ',' + y + ')"><i class="ti ti-lock-open"></i>إعادة فتح</button>';
+  }
+  if(lines.length){
+    actions += '<button class="pay-btn" onclick="payExportBank(' + m + ',' + y + ')"><i class="ti ti-building-bank"></i>كشف البنك</button>';
+    actions += '<button class="pay-btn" onclick="payExportExcel(' + m + ',' + y + ')"><i class="ti ti-file-spreadsheet"></i>تصدير Excel</button>';
+    actions += '<button class="pay-btn" onclick="payPrintRegister(' + m + ',' + y + ')"><i class="ti ti-printer"></i>طباعة الكشف</button>';
+  }
+  actions += '</div>';
+
+  /* بطاقات المؤشرات */
+  const kpi = '<div class="pay-kpis">' +
+    payKpi('الموظفون', t.headcount, 'سائق ' + t.driversCount + ' · إدارة ' + t.adminCount, 'ti-users', '#0ea5e9') +
+    payKpi('إجمالي الاستحقاق', _pk(t.gross), 'قبل الخصومات', 'ti-arrow-up-right', '#059669') +
+    payKpi('إجمالي الخصومات', _pk(t.ded), t.gross ? ((t.ded/t.gross*100).toFixed(1) + '% من الاستحقاق') : '—', 'ti-arrow-down-left', '#dc2626') +
+    payKpi('صافي المدفوع', _pk(t.net), frozen ? '🔒 مجمّد' : 'حساب حيّ', 'ti-wallet', '#7c3aed') +
+    payKpi('تكلفة السائقين', _pk(t.driversNet), 'تدخل قائمة الدخل', 'ti-steering-wheel', '#0891b2') +
+    payKpi('تكلفة الإدارة', _pk(t.adminNet), 'مصروف إداري', 'ti-briefcase', '#b45309') +
+  '</div>';
+
+  /* لوحة المصدر — يعرف المستخدم من أين جاء الرقم */
+  const srcNote = frozen
+    ? '<div class="pay-note ok"><i class="ti ti-lock"></i><div><b>هذا الشهر مُقفَل.</b> الأرقام المعروضة هي اللقطة المجمّدة وقت الإقفال ' +
+      '(' + _payEsc((run.locked_at||'').slice(0,16).replace('T',' ')) + ' بواسطة ' + _payEsc(run.locked_by||'—') + ') ' +
+      'وبصمتها <code>' + _payEsc(run.checksum||'—') + '</code>. تعديل أي راتب أو خصم اليوم لن يغيّر رقم هذا الشهر. ' +
+      'للتصحيح استخدم قيد تسوية.</div></div>'
+    : '<div class="pay-note"><i class="ti ti-refresh"></i><div><b>حساب حيّ.</b> هذه الأرقام تُعاد قراءتها من الرواتب والخصومات الحالية وقد تتغيّر. ' +
+      'احتسب المسيّر ثم اعتمده ثم أقفله لتثبيتها في الدفاتر.</div></div>';
+
+  /* لوحة المراجعة */
+  let issuesHTML = '';
+  if(issues.length){
+    const errs = issues.filter(i => i.level === 'error'), warns = issues.filter(i => i.level === 'warn');
+    issuesHTML = '<div class="pay-note ' + (errs.length ? 'err' : 'warn') + '">' +
+      '<i class="ti ti-' + (errs.length ? 'alert-octagon' : 'alert-triangle') + '"></i><div>' +
+      '<b>' + (errs.length ? errs.length + ' مشكلة حرجة' : '') + (errs.length && warns.length ? ' و' : '') +
+      (warns.length ? warns.length + ' تنبيه' : '') + ' قبل الاعتماد</b>' +
+      '<ul style="margin:6px 0 0;padding-inline-start:18px;line-height:1.85">' +
+      issues.slice(0,12).map(i => '<li>' + (i.level==='error'?'⛔ ':'⚠️ ') + _payEsc(i.msg) + '</li>').join('') +
+      (issues.length > 12 ? '<li>… و' + (issues.length-12) + ' غيرها</li>' : '') +
+      '</ul></div></div>';
+  }
+
+  /* الجدول */
+  let table;
+  if(!lines.length){
+    table = '<div class="pay-card" style="text-align:center;padding:44px;color:var(--muted)">' +
+            '<i class="ti ti-mood-empty" style="font-size:34px"></i>' +
+            '<div style="margin-top:10px;font-weight:800">لا يوجد موظف على رأس العمل في ' + PAY_MONTHS_AR[m-1] + ' ' + y + '</div></div>';
+  }else{
+    const sorted = lines.slice().sort((a,b) => b.net - a.net);
+    table = '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table">' +
+      '<thead><tr>' +
+        '<th>الموظف</th><th>النوع</th><th>الأساسي</th><th>الأيام</th>' +
+        '<th>الاستحقاق</th><th>الخصومات</th><th>الصافي</th><th></th>' +
+      '</tr></thead><tbody>' +
+      sorted.map(l => {
+        const part = PARTNERS.find(p => p.id === l.partner_id);
+        const flags = [];
+        if(l.days_worked < l.days_in_month) flags.push('<span class="pay-flag">جزئي ' + l.days_worked + '/' + l.days_in_month + '</span>');
+        if(l.uncovered > 0) flags.push('<span class="pay-flag red">غير مغطّى ' + _pk(l.uncovered) + '</span>');
+        if(!l.iban) flags.push('<span class="pay-flag amber">بلا IBAN</span>');
+        return '<tr onclick="payShowSlip(\'' + l.driver_id + '\',' + m + ',' + y + ')">' +
+          '<td><b>' + _payEsc(l.driver_name) + '</b><div class="pay-sub">' + _payEsc(l.driver_id) +
+            (part ? ' · ' + _payEsc(part.name) : '') + '</div>' + (flags.length ? '<div style="margin-top:3px">' + flags.join(' ') + '</div>' : '') + '</td>' +
+          '<td>' + (l.staff_type === 'admin' ? '<span class="pay-flag blue">إدارة</span>' : 'سائق') + '</td>' +
+          '<td class="num">' + _pk(l.base) + '</td>' +
+          '<td class="num">' + l.days_worked + '</td>' +
+          '<td class="num up">' + _pk(l.gross) + '</td>' +
+          '<td class="num dn">' + (l.total_ded ? '−' + _pk(l.total_ded) : '—') + '</td>' +
+          '<td class="num net">' + _pk(l.net) + '</td>' +
+          '<td class="num"><i class="ti ti-chevron-left" style="opacity:.4"></i></td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody><tfoot><tr>' +
+        '<td colspan="4"><b>الإجمالي — ' + lines.length + ' موظف</b></td>' +
+        '<td class="num up"><b>' + _pk(t.gross) + '</b></td>' +
+        '<td class="num dn"><b>−' + _pk(t.ded) + '</b></td>' +
+        '<td class="num net"><b>' + _pk(t.net) + '</b></td><td></td>' +
+      '</tr></tfoot></table></div></div>';
+  }
+
+  return '<div class="pay-runbar">' + stepper + payStatusChip(status) + '</div>' +
+         actions + kpi + srcNote + issuesHTML + table;
+}
+
+function payKpi(label, val, sub, icon, color){
+  return '<div class="pay-kpi"><div class="pay-kpi-ic" style="background:' + color + '15;color:' + color + '"><i class="ti ' + icon + '"></i></div>' +
+    '<div style="min-width:0"><div class="pay-kpi-l">' + label + '</div>' +
+    '<div class="pay-kpi-v">' + val + '</div><div class="pay-kpi-s">' + sub + '</div></div></div>';
+}
+
+/* ══════════════ قسيمة الراتب ══════════════ */
+function payShowSlip(driverId, m, y){
+  const snap = payrollSnapshot(m, y);
+  const l = snap.lines.find(x => x.driver_id === driverId);
+  if(!l) return;
+  const d = DRV.find(x => x.id === driverId);
+  const part = PARTNERS.find(p => p.id === l.partner_id);
+  const earn = (l.components||[]).filter(c => c.kind === 'earning');
+  const ded  = (l.components||[]).filter(c => c.kind === 'deduction');
+
+  const rows = arr => arr.length
+    ? arr.map(c => '<tr><td>' + _payEsc(c.name) + (c.note ? '<div class="pay-sub">' + _payEsc(c.note) + '</div>' : '') + '</td>' +
+        '<td class="num">' + (c.qty ? c.qty : '—') + '</td><td class="num">' + _pk(c.amount) + '</td></tr>').join('')
+    : '<tr><td colspan="3" style="text-align:center;color:var(--muted)">—</td></tr>';
+
+  document.getElementById('paySlipTitle').innerHTML =
+    _payEsc(l.driver_name) + ' <span style="font-weight:600;color:var(--muted);font-size:12px">— ' + PAY_MONTHS_AR[m-1] + ' ' + y + '</span> ' +
+    (snap.frozen ? '<span class="pay-flag green">🔒 مجمّد</span>' : '<span class="pay-flag">حيّ</span>');
+
+  document.getElementById('paySlipBody').innerHTML =
+    '<div class="pay-slip-meta">' +
+      '<div><span>الرقم</span><b>' + _payEsc(l.driver_id) + '</b></div>' +
+      '<div><span>الشريك</span><b>' + _payEsc(part ? part.name : '—') + '</b></div>' +
+      '<div><span>أيام العمل</span><b>' + l.days_worked + ' / ' + l.days_in_month + '</b></div>' +
+      '<div><span>الأساسي الشهري</span><b>' + _pk(l.base) + '</b></div>' +
+      '<div><span>يومية</span><b>' + _pk(l.base / (l.days_in_month||30)) + '</b></div>' +
+      '<div><span>IBAN</span><b style="font-size:10.5px">' + _payEsc(l.iban || '— غير مسجّل —') + '</b></div>' +
+    '</div>' +
+    '<div class="pay-slip-cols">' +
+      '<div><h4 class="up">الاستحقاقات</h4><table class="pay-table sm">' +
+        '<thead><tr><th>البند</th><th>كمية</th><th>المبلغ</th></tr></thead><tbody>' + rows(earn) + '</tbody>' +
+        '<tfoot><tr><td colspan="2"><b>إجمالي الاستحقاق</b></td><td class="num up"><b>' + _pk(l.gross) + '</b></td></tr></tfoot></table></div>' +
+      '<div><h4 class="dn">الخصومات</h4><table class="pay-table sm">' +
+        '<thead><tr><th>البند</th><th>كمية</th><th>المبلغ</th></tr></thead><tbody>' + rows(ded) + '</tbody>' +
+        '<tfoot><tr><td colspan="2"><b>إجمالي الخصومات</b></td><td class="num dn"><b>' + _pk(l.total_ded) + '</b></td></tr></tfoot></table></div>' +
+    '</div>' +
+    '<div class="pay-slip-net"><span>صافي المستحق</span><b>' + _pk(l.net) + ' د.ك</b></div>' +
+    (l.uncovered > 0 ? '<div class="pay-note warn" style="margin-top:10px"><i class="ti ti-alert-triangle"></i><div>' +
+      '<b>' + _pk(l.uncovered) + ' د.ك</b> من الخصومات لم تُغطَّ لأن الصافي بلغ الصفر — رحّلها إلى الشهر التالي يدوياً.</div></div>' : '') +
+    (snap.frozen ? '<div class="pay-note ok" style="margin-top:10px"><i class="ti ti-lock"></i><div>' +
+      'هذه الأرقام مجمّدة ولا تتأثّر بأي تعديل لاحق. لتصحيحها استخدم قيد التسوية أدناه.</div></div>' : '');
+
+  document.getElementById('paySlipActions').innerHTML =
+    '<button class="btn btn-c" onclick="closeModal(\'paySlipModal\')">إغلاق</button>' +
+    '<button class="btn btn-c" onclick="payPrintSlip(\'' + driverId + '\',' + m + ',' + y + ')"><i class="ti ti-printer"></i> طباعة القسيمة</button>' +
+    (snap.frozen
+      ? '<button class="btn btn-s" onclick="payRetroPrompt(\'' + driverId + '\',' + m + ',' + y + ')" style="background:linear-gradient(135deg,#b45309,#d97706)"><i class="ti ti-arrow-back-up"></i> قيد تسوية</button>'
+      : '<button class="btn btn-s" onclick="payQuickInput(\'' + driverId + '\',' + m + ',' + y + ')"><i class="ti ti-plus"></i> إضافة بند</button>');
+
+  document.getElementById('paySlipModal').classList.add('on');
+}
+
+function payRetroPrompt(driverId, m, y){
+  const v = prompt('قيد تسوية عن ' + PAY_MONTHS_AR[m-1] + ' ' + y + '\n\n' +
+                   'أدخل المبلغ — موجب = مستحق للموظف، سالب = مستقطع منه:');
+  if(v === null) return;
+  const amt = parseFloat(v);
+  if(isNaN(amt) || !amt){ toast('مبلغ غير صالح','e'); return; }
+  const reason = prompt('سبب التسوية:') || 'تسوية';
+  payAddRetro(driverId, m, y, amt, reason);
+  closeModal('paySlipModal');
+  renderPayroll();
+}
+
+/* إضافة بند لشهر مفتوح */
+function payQuickInput(driverId, m, y){
+  PAY_VIEW.drv = driverId;
+  closeModal('paySlipModal');
+  const comps = payCompsActive();
+  document.getElementById('payInpDrv').innerHTML =
+    DRV.map(d => '<option value="' + d.id + '"' + (d.id===driverId?' selected':'') + '>' + _payEsc(d.name) + ' — ' + d.id + '</option>').join('');
+  document.getElementById('payInpComp').innerHTML =
+    comps.map(c => '<option value="' + c.code + '">' + (c.kind==='earning'?'➕ ':'➖ ') + _payEsc(c.ar) + '</option>').join('');
+  document.getElementById('payInpPeriod').textContent = PAY_MONTHS_AR[m-1] + ' ' + y;
+  document.getElementById('payInpQty').value = '';
+  document.getElementById('payInpAmt').value = '';
+  document.getElementById('payInpReason').value = '';
+  document.getElementById('payInpModal').dataset.m = m;
+  document.getElementById('payInpModal').dataset.y = y;
+  payInpPreview();
+  document.getElementById('payInpModal').classList.add('on');
+}
+
+function payInpPreview(){
+  const code = document.getElementById('payInpComp').value;
+  const c    = payComp(code);
+  const m    = +document.getElementById('payInpModal').dataset.m;
+  const y    = +document.getElementById('payInpModal').dataset.y;
+  const drv  = document.getElementById('payInpDrv').value;
+  const base = payBaseFor(drv, m, y);
+  const dim  = _daysInMonth(m, y);
+  const ctx  = {base:base, dailyRate: base/dim, days:dim, dim:dim, proration:1};
+  const qty  = parseFloat(document.getElementById('payInpQty').value) || 0;
+  const amt  = parseFloat(document.getElementById('payInpAmt').value) || 0;
+  const v    = payEvalComponent(c, ctx, qty, amt);
+  const hints = {
+    fixed:'المبلغ يُؤخذ كما هو', daily:'يومية × عدد الأيام', hourly:'(يومية ÷ ' + PAY_CFG.hoursPerDay + ') × ' + (c?c.rate:1) + ' × الساعات',
+    percent:'نسبة مئوية من الأساسي', per_unit:'سعر الوحدة × الكمية'
+  };
+  document.getElementById('payInpCalc').innerHTML =
+    '<b>' + (c ? c.ar : '—') + '</b> · ' + (c ? (hints[c.method]||'') : '') +
+    '<br>الأساسي ' + _pk(base) + ' · يومية ' + _pk(base/dim) +
+    '<br><span style="font-size:14px;font-weight:900;color:' + (c && c.kind==='deduction' ? '#dc2626' : '#059669') + '">' +
+    (c && c.kind==='deduction' ? '−' : '+') + _pk(v) + ' د.ك</span>';
+}
+
+function paySaveInput(){
+  if(!requirePerm('salaries')) return;
+  const modal = document.getElementById('payInpModal');
+  const m = +modal.dataset.m, y = +modal.dataset.y;
+  if(payIsFrozen(m, y)){ toast('الشهر مُقفَل — استخدم قيد تسوية','e'); return; }
+  const drv  = document.getElementById('payInpDrv').value;
+  const code = document.getElementById('payInpComp').value;
+  const c    = payComp(code);
+  const qty  = parseFloat(document.getElementById('payInpQty').value) || 0;
+  const amt  = parseFloat(document.getElementById('payInpAmt').value) || 0;
+  const base = payBaseFor(drv, m, y), dim = _daysInMonth(m, y);
+  const v    = payEvalComponent(c, {base:base, dailyRate:base/dim, days:dim, dim:dim, proration:1}, qty, amt);
+  if(!v){ toast('القيمة صفر — راجع الكمية والمبلغ','e'); return; }
+
+  const inp = {
+    id:'PI' + Date.now() + Math.random().toString(36).slice(2,5),
+    driver_id:drv, period:_payPeriod(m,y), component_code:code,
+    qty:qty, amount:_payRound(v),
+    reason:document.getElementById('payInpReason').value.trim(),
+    ref_date:fmtDate(new Date()), source:'manual',
+    created_by:_payActor(), created_at:new Date().toISOString()
+  };
+  PAY_INPUTS.push(inp); payInpSave();
+  audit('create','payroll_input', inp.id, null, inp);
+  paySyncInput(inp);
+  closeModal('payInpModal');
+  toast('أُضيف ' + (c?c.ar:code) + ' بقيمة ' + _pk(v) + ' د.ك','s');
+  renderPayroll();
+}
+
+function payDeleteInput(id){
+  if(!requirePerm('salaries')) return;
+  const i = PAY_INPUTS.find(x => x.id === id); if(!i) return;
+  const p = _payPeriodParts(i.period);
+  if(payIsFrozen(p.m, p.y)){ toast('الشهر مُقفَل — لا يُحذف بند منه','e'); return; }
+  if(!confirm('حذف «' + (i.reason || payCompName(i.component_code)) + '» بقيمة ' + _pk(i.amount) + ' د.ك؟')) return;
+  PAY_INPUTS = PAY_INPUTS.filter(x => x.id !== id); payInpSave();
+  audit('delete','payroll_input', id, i, null);
+  renderPayroll();
+}
+
+/* ══════════════ تبويب هيكل الرواتب ══════════════ */
+function payStructureHTML(){
+  const emps = DRV.filter(d => isAdminStaff(d) || isReportableDriver(d))
+                  .sort((a,b) => (a.name||'').localeCompare(b.name||'','ar'));
+  if(!PAY_VIEW.drv || !emps.some(e => e.id === PAY_VIEW.drv)) PAY_VIEW.drv = emps.length ? emps[0].id : '';
+  const drv = DRV.find(d => d.id === PAY_VIEW.drv);
+
+  const picker = '<div class="pay-card" style="margin-bottom:14px">' +
+    '<div class="pay-row"><label>الموظف</label>' +
+    '<select onchange="PAY_VIEW.drv=this.value;renderPayroll()" style="flex:1">' +
+      emps.map(e => '<option value="' + e.id + '"' + (e.id===PAY_VIEW.drv?' selected':'') + '>' +
+        _payEsc(e.name) + ' — ' + e.id + (isAdminStaff(e)?' (إدارة)':'') + '</option>').join('') +
+    '</select></div></div>';
+
+  if(!drv) return picker + '<div class="pay-card">لا يوجد موظفون.</div>';
+
+  const asg = PAY_ASSIGNMENTS.filter(a => a.driver_id === drv.id)
+    .sort((a,b) => String(b.effective_from).localeCompare(String(a.effective_from)));
+  const legacyBase = parseFloat(getSalData(drv.id).base) || 0;
+  const hasBasicAsg = asg.some(a => a.component_code === 'BASIC');
+
+  const legacyNote = (!hasBasicAsg && legacyBase > 0)
+    ? '<div class="pay-note"><i class="ti ti-info-circle"></i><div><b>الأساسي الحالي ' + _pk(legacyBase) + ' د.ك</b> قادم من التخزين القديم بلا تاريخ سريان. ' +
+      'سجّله كتعيين بتاريخ ليبدأ تاريخ الرواتب — عندها تصبح كل زيادة لاحقة سطراً جديداً بدل أن تمحو الماضي.' +
+      '<div style="margin-top:8px"><button class="pay-btn sm" onclick="payAdoptLegacyBase(\'' + drv.id + '\')">' +
+      '<i class="ti ti-arrow-down-to-arc"></i>تثبيت الأساسي الحالي بتاريخ</button></div></div></div>'
+    : '';
+
+  const form = '<div class="pay-card"><h3 class="pay-h3"><i class="ti ti-plus"></i>تعيين مكوّن متكرّر</h3>' +
+    '<div class="pay-grid4">' +
+      '<div><label>المكوّن</label><select id="payAsgComp">' +
+        payCompsActive().map(c => '<option value="' + c.code + '">' + (c.kind==='earning'?'➕ ':'➖ ') + _payEsc(c.ar) +
+          (c.prorate?' · يُقسّط':'') + '</option>').join('') + '</select></div>' +
+      '<div><label>المبلغ الشهري (د.ك)</label><input type="number" step="0.001" id="payAsgAmt" placeholder="0.000"></div>' +
+      '<div><label>يسري من</label><input type="date" id="payAsgFrom" value="' + _payMonthStart(PAY_VIEW.m, PAY_VIEW.y) + '"></div>' +
+      '<div><label>حتى (اختياري)</label><input type="date" id="payAsgTo"></div>' +
+    '</div>' +
+    '<div class="pay-row" style="margin-top:9px"><input type="text" id="payAsgNote" placeholder="ملاحظة — سبب الزيادة، مرجع القرار…" style="flex:1">' +
+    '<button class="pay-btn primary" onclick="payAddAssignment()"><i class="ti ti-check"></i>حفظ التعيين</button></div>' +
+    '<div class="pay-hint">التعيين لا يُحذف عند التغيير — الزيادة تُسجَّل كسطر جديد بتاريخ سريانه، فيبقى راتب كل شهر ماضٍ كما كان.</div>' +
+  '</div>';
+
+  const list = '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3"><i class="ti ti-timeline"></i>سجلّ التعيينات — ' + _payEsc(drv.name) + '</h3>' +
+    (asg.length
+      ? '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+        '<th>المكوّن</th><th>المبلغ</th><th>من</th><th>حتى</th><th>الحالة</th><th>ملاحظة</th><th></th></tr></thead><tbody>' +
+        asg.map(a => {
+          const c = payComp(a.component_code);
+          const active = String(a.effective_from) <= fmtDate(new Date()) && (!a.effective_to || String(a.effective_to) >= fmtDate(new Date()));
+          return '<tr><td><b>' + _payEsc(c ? c.ar : a.component_code) + '</b></td>' +
+            '<td class="num ' + (c && c.kind==='deduction'?'dn':'up') + '">' + _pk(a.amount) + '</td>' +
+            '<td>' + _payEsc(a.effective_from) + '</td>' +
+            '<td>' + _payEsc(a.effective_to || '— مستمر —') + '</td>' +
+            '<td>' + (active ? '<span class="pay-flag green">سارٍ</span>' : '<span class="pay-flag">منتهٍ</span>') + '</td>' +
+            '<td class="pay-sub">' + _payEsc(a.note || '') + '</td>' +
+            '<td class="num"><button class="pay-icon" onclick="payEndAssignment(\'' + a.id + '\')" title="إنهاء السريان"><i class="ti ti-player-stop"></i></button>' +
+            '<button class="pay-icon red" onclick="payDeleteAssignment(\'' + a.id + '\')" title="حذف"><i class="ti ti-trash"></i></button></td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div style="text-align:center;padding:26px;color:var(--muted)">لا توجد تعيينات — الراتب يُقرأ من التخزين القديم.</div>') +
+  '</div>';
+
+  /* مدخلات الشهر الحالي لهذا الموظف */
+  const inps = payInputsFor(drv.id, PAY_VIEW.m, PAY_VIEW.y);
+  const legacy = payLegacyDeductions(drv.id, PAY_VIEW.m, PAY_VIEW.y);
+  const inpList = '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3"><i class="ti ti-list-details"></i>' +
+    'بنود ' + PAY_MONTHS_AR[PAY_VIEW.m-1] + ' ' + PAY_VIEW.y +
+    ' <button class="pay-btn sm primary" style="margin-inline-start:auto" onclick="payQuickInput(\'' + drv.id + '\',' + PAY_VIEW.m + ',' + PAY_VIEW.y + ')"><i class="ti ti-plus"></i>بند جديد</button></h3>' +
+    ((inps.length || legacy.length)
+      ? '<div class="pay-table-wrap"><table class="pay-table"><thead><tr><th>البند</th><th>كمية</th><th>المبلغ</th><th>السبب</th><th>المصدر</th><th></th></tr></thead><tbody>' +
+        inps.map(i => {
+          const c = payComp(i.component_code);
+          return '<tr><td><b>' + _payEsc(c?c.ar:i.component_code) + '</b></td><td class="num">' + (i.qty||'—') + '</td>' +
+            '<td class="num ' + (c && c.kind==='deduction'?'dn':'up') + '">' + _pk(i.amount) + '</td>' +
+            '<td class="pay-sub">' + _payEsc(i.reason||'') + '</td>' +
+            '<td><span class="pay-flag">' + _payEsc(i.source) + '</span></td>' +
+            '<td class="num"><button class="pay-icon red" onclick="payDeleteInput(\'' + i.id + '\')"><i class="ti ti-trash"></i></button></td></tr>';
+        }).join('') +
+        legacy.map(x => '<tr style="opacity:.85"><td><b>خصم غياب/تأخير</b></td><td class="num">' + (x.qty||'—') + '</td>' +
+          '<td class="num dn">' + _pk(x.amount) + '</td><td class="pay-sub">' + _payEsc(x.reason) + '</td>' +
+          '<td><span class="pay-flag amber">النظام القديم</span></td>' +
+          '<td class="num pay-sub" style="font-size:10px">من شاشة الخصومات</td></tr>').join('') +
+        '</tbody></table></div>'
+      : '<div style="text-align:center;padding:22px;color:var(--muted)">لا بنود هذا الشهر.</div>') +
+  '</div>';
+
+  return picker + legacyNote + form + list + inpList;
+}
+
+function payAdoptLegacyBase(driverId){
+  const base = parseFloat(getSalData(driverId).base) || 0;
+  if(!base){ toast('لا يوجد راتب أساسي','e'); return; }
+  const d = DRV.find(x => x.id === driverId);
+  const def = empStart(d) || _payMonthStart(PAY_VIEW.m, PAY_VIEW.y);
+  const from = prompt('تاريخ سريان الأساسي ' + _pk(base) + ' د.ك (YYYY-MM-DD):', def);
+  if(!from || !/^\d{4}-\d{2}-\d{2}$/.test(from)){ if(from!==null) toast('تاريخ غير صالح','e'); return; }
+  _payCreateAssignment(driverId, 'BASIC', base, from, '', 'تثبيت الأساسي القائم');
+  renderPayroll();
+}
+
+function _payCreateAssignment(driverId, code, amount, from, to, note){
+  const a = {
+    id:'PA' + Date.now() + Math.random().toString(36).slice(2,5),
+    driver_id:driverId, component_code:code, amount:_payRound(amount),
+    effective_from:from, effective_to:to || null, note:note || '',
+    active:true, created_by:_payActor(), created_at:new Date().toISOString()
+  };
+  PAY_ASSIGNMENTS.push(a); payAsgSave();
+  /* الأساسي يبقى مرآةً في التخزين القديم كي لا تنكسر الشاشات الأخرى */
+  if(code === 'BASIC'){
+    const sal = getSalData(driverId);
+    if(!a.effective_to || a.effective_from <= fmtDate(new Date())){ sal.base = a.amount; saveSalaries(); }
+  }
+  audit('create','payroll_assignment', a.id, null, a);
+  paySyncAssignment(a);
+  toast('سُجّل التعيين','s');
+  return a;
+}
+
+function payAddAssignment(){
+  if(!requirePerm('salaries')) return;
+  const code = document.getElementById('payAsgComp').value;
+  const amt  = parseFloat(document.getElementById('payAsgAmt').value);
+  const from = document.getElementById('payAsgFrom').value;
+  const to   = document.getElementById('payAsgTo').value;
+  const note = document.getElementById('payAsgNote').value.trim();
+  if(!amt || amt <= 0){ toast('أدخل مبلغاً صحيحاً','e'); return; }
+  if(!from){ toast('أدخل تاريخ السريان','e'); return; }
+  if(to && to < from){ toast('تاريخ الانتهاء قبل البداية','e'); return; }
+  const p = _payPeriodParts(from.slice(0,7));
+  if(payIsFrozen(p.m, p.y) && !confirm('⚠️ ' + from.slice(0,7) + ' شهر مُقفَل.\n\nالتعيين لن يغيّر رقمه المجمّد — سيسري على الأشهر المفتوحة فقط.\nمتابعة؟')) return;
+  _payCreateAssignment(PAY_VIEW.drv, code, amt, from, to, note);
+  renderPayroll();
+}
+
+function payEndAssignment(id){
+  if(!requirePerm('salaries')) return;
+  const a = PAY_ASSIGNMENTS.find(x => x.id === id); if(!a) return;
+  const to = prompt('تاريخ انتهاء سريان «' + payCompName(a.component_code) + '» (YYYY-MM-DD):', fmtDate(new Date()));
+  if(!to || !/^\d{4}-\d{2}-\d{2}$/.test(to)){ if(to!==null) toast('تاريخ غير صالح','e'); return; }
+  const before = Object.assign({}, a);
+  a.effective_to = to; payAsgSave();
+  audit('update','payroll_assignment', id, before, a);
+  paySyncAssignment(a);
+  renderPayroll();
+}
+
+function payDeleteAssignment(id){
+  if(!requirePerm('salaries')) return;
+  const a = PAY_ASSIGNMENTS.find(x => x.id === id); if(!a) return;
+  if(!confirm('حذف هذا التعيين نهائياً؟\n\nالأفضل عادةً «إنهاء السريان» بتاريخ — الحذف يمحو أثر البند من كل الأشهر المفتوحة.')) return;
+  PAY_ASSIGNMENTS = PAY_ASSIGNMENTS.filter(x => x.id !== id); payAsgSave();
+  audit('delete','payroll_assignment', id, a, null);
+  renderPayroll();
+}
+
+/* ══════════════ تبويب المكوّنات ══════════════ */
+function payComponentsHTML(){
+  const methodAr = {fixed:'مبلغ ثابت', daily:'يومية × أيام', hourly:'ساعة × معامل', percent:'نسبة من الأساسي', per_unit:'سعر × كمية'};
+  const rows = PAY_COMPONENTS.slice().sort((a,b) => (a.ord||100)-(b.ord||100)).map(c =>
+    '<tr' + (c.active===false ? ' style="opacity:.45"' : '') + '>' +
+      '<td><b>' + _payEsc(c.ar) + '</b><div class="pay-sub">' + _payEsc(c.en) + ' · <code>' + _payEsc(c.code) + '</code></div></td>' +
+      '<td>' + (c.kind==='earning' ? '<span class="pay-flag green">استحقاق</span>' : '<span class="pay-flag red">خصم</span>') + '</td>' +
+      '<td>' + _payEsc(methodAr[c.method]||c.method) + (c.rate ? ' <b>×' + c.rate + '</b>' : '') + '</td>' +
+      '<td>' + (c.prorate ? '<i class="ti ti-check" style="color:#059669"></i>' : '—') + '</td>' +
+      '<td>' + (c.sys ? '<span class="pay-flag blue">نظامي</span>' : '—') + '</td>' +
+      '<td class="num">' +
+        '<button class="pay-icon" onclick="payToggleComp(\'' + c.code + '\')" title="' + (c.active===false?'تفعيل':'تعطيل') + '">' +
+        '<i class="ti ti-' + (c.active===false?'eye':'eye-off') + '"></i></button>' +
+        (c.sys ? '' : '<button class="pay-icon red" onclick="payDeleteComp(\'' + c.code + '\')" title="حذف"><i class="ti ti-trash"></i></button>') +
+      '</td></tr>').join('');
+
+  return '<div class="pay-note"><i class="ti ti-bulb"></i><div>' +
+    '<b>هنا مصدر المرونة.</b> المكوّن يعرّف <i>كيف</i> يُحسب البند لا كم يساوي. ' +
+    'بدل جديد أو نوع خصم جديد = صفّ هنا، بلا لمس أي معادلة، ويصبح متاحاً فوراً في التعيينات وبنود الشهر.</div></div>' +
+    '<div class="pay-card"><h3 class="pay-h3"><i class="ti ti-plus"></i>مكوّن جديد</h3>' +
+      '<div class="pay-grid4">' +
+        '<div><label>الاسم العربي</label><input id="payCompAr" placeholder="بدل خطر"></div>' +
+        '<div><label>الاسم الإنجليزي</label><input id="payCompEn" placeholder="Hazard Allowance"></div>' +
+        '<div><label>النوع</label><select id="payCompKind"><option value="earning">استحقاق (يزيد)</option><option value="deduction">خصم (ينقص)</option></select></div>' +
+        '<div><label>طريقة الاحتساب</label><select id="payCompMethod">' +
+          Object.keys(methodAr).map(k => '<option value="' + k + '">' + methodAr[k] + '</option>').join('') + '</select></div>' +
+        '<div><label>المعامل / سعر الوحدة</label><input type="number" step="0.01" id="payCompRate" value="0"></div>' +
+        '<div><label>يُقسّط بأيام العمل؟</label><select id="payCompPro"><option value="0">لا</option><option value="1">نعم</option></select></div>' +
+      '</div>' +
+      '<div style="margin-top:10px"><button class="pay-btn primary" onclick="payAddComp()"><i class="ti ti-check"></i>إضافة المكوّن</button>' +
+      '<button class="pay-btn" style="margin-inline-start:8px" onclick="paySyncComponents();toast(\'رُفع الكتالوج للسحابة\',\'s\')"><i class="ti ti-cloud-upload"></i>رفع الكتالوج</button></div>' +
+    '</div>' +
+    '<div class="pay-card" style="margin-top:14px"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>المكوّن</th><th>النوع</th><th>الاحتساب</th><th>يُقسّط</th><th></th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' +
+    '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3"><i class="ti ti-settings"></i>إعدادات المحرك</h3>' +
+      '<div class="pay-grid4">' +
+        '<div><label>ساعات اليوم</label><input type="number" id="payCfgHours" value="' + PAY_CFG.hoursPerDay + '"></div>' +
+        '<div><label>يوم الصرف من الشهر التالي</label><input type="number" id="payCfgPayDay" value="' + PAY_CFG.payDayOfMonth + '"></div>' +
+        '<div><label>استقطاع أقساط السلف تلقائياً</label><select id="payCfgLoan"><option value="1"' + (PAY_CFG.autoLoanDeduct?' selected':'') + '>نعم</option><option value="0"' + (!PAY_CFG.autoLoanDeduct?' selected':'') + '>لا</option></select></div>' +
+        '<div><label>منع الصافي السالب</label><select id="payCfgFloor"><option value="1"' + (PAY_CFG.netFloorZero?' selected':'') + '>نعم — الباقي يُرحَّل</option><option value="0"' + (!PAY_CFG.netFloorZero?' selected':'') + '>لا</option></select></div>' +
+      '</div>' +
+      '<div style="margin-top:10px"><button class="pay-btn primary" onclick="paySaveCfg()"><i class="ti ti-device-floppy"></i>حفظ الإعدادات</button></div>' +
+      '<div class="pay-hint">يومية الراتب ثابتة في كل ARK = الأساسي ÷ أيام الشهر الفعلية. لا تُغيَّر من هنا لأن تغييرها يخلق معادلتين متنافستين — وهو الخطأ الذي أُصلح.</div>' +
+    '</div>';
+}
+
+function payToggleComp(code){
+  if(!requirePerm('salaries')) return;
+  const c = payComp(code); if(!c) return;
+  c.active = c.active === false;
+  _paySave(PAY_SK.comp, PAY_COMPONENTS);
+  audit('update','payroll_component', code, null, {active:c.active});
+  renderPayroll();
+}
+function payDeleteComp(code){
+  if(!requirePerm('salaries')) return;
+  const used = PAY_ASSIGNMENTS.some(a => a.component_code === code) || PAY_INPUTS.some(i => i.component_code === code);
+  if(used){ toast('المكوّن مستخدم في تعيينات أو بنود — عطّله بدل حذفه','e'); return; }
+  if(!confirm('حذف المكوّن ' + code + '؟')) return;
+  PAY_COMPONENTS = PAY_COMPONENTS.filter(c => c.code !== code);
+  _paySave(PAY_SK.comp, PAY_COMPONENTS);
+  audit('delete','payroll_component', code, null, null);
+  renderPayroll();
+}
+function payAddComp(){
+  if(!requirePerm('salaries')) return;
+  const ar = document.getElementById('payCompAr').value.trim();
+  const en = document.getElementById('payCompEn').value.trim();
+  if(!ar){ toast('أدخل الاسم العربي','e'); return; }
+  const kind = document.getElementById('payCompKind').value;
+  const base = (en || ar).toUpperCase().replace(/[^A-Z0-9]+/g,'_').slice(0,18) || 'COMP';
+  let code = base, n = 1;
+  while(payComp(code)) code = base + '_' + (++n);
+  const c = {
+    code:code, ar:ar, en:en || ar, kind:kind,
+    method:document.getElementById('payCompMethod').value,
+    rate:parseFloat(document.getElementById('payCompRate').value) || 0,
+    prorate:document.getElementById('payCompPro').value === '1',
+    eos:false, gl:'salaries',
+    ord:(kind === 'earning' ? 50 : 160) + PAY_COMPONENTS.length,
+    sys:false, active:true
+  };
+  PAY_COMPONENTS.push(c);
+  _paySave(PAY_SK.comp, PAY_COMPONENTS);
+  audit('create','payroll_component', code, null, c);
+  paySyncComponents();
+  toast('أُضيف المكوّن ' + ar,'s');
+  renderPayroll();
+}
+function paySaveCfg(){
+  PAY_CFG.hoursPerDay    = parseFloat(document.getElementById('payCfgHours').value) || 8;
+  PAY_CFG.payDayOfMonth  = parseInt(document.getElementById('payCfgPayDay').value)  || 1;
+  PAY_CFG.autoLoanDeduct = document.getElementById('payCfgLoan').value  === '1';
+  PAY_CFG.netFloorZero   = document.getElementById('payCfgFloor').value === '1';
+  payCfgSave();
+  audit('update','payroll_config','cfg', null, PAY_CFG);
+  toast('حُفظت الإعدادات','s');
+  renderPayroll();
+}
+
+/* ══════════════ تبويب السلف ══════════════ */
+function payLoansHTML(){
+  const emps = DRV.filter(d => isAdminStaff(d) || isReportableDriver(d));
+  const active = PAY_LOANS.filter(l => l.status === 'active');
+  const totalOut = active.reduce((s,l) => s + payLoanBalance(l).remaining, 0);
+
+  const form = '<div class="pay-card"><h3 class="pay-h3"><i class="ti ti-plus"></i>سلفة جديدة</h3>' +
+    '<div class="pay-grid4">' +
+      '<div><label>الموظف</label><select id="payLoanDrv">' +
+        emps.map(e => '<option value="' + e.id + '">' + _payEsc(e.name) + ' — ' + e.id + '</option>').join('') + '</select></div>' +
+      '<div><label>المبلغ (د.ك)</label><input type="number" step="0.001" id="payLoanPrin" placeholder="0.000" oninput="payLoanPreview()"></div>' +
+      '<div><label>القسط الشهري (د.ك)</label><input type="number" step="0.001" id="payLoanInst" placeholder="0.000" oninput="payLoanPreview()"></div>' +
+      '<div><label>أول شهر استقطاع</label><input type="month" id="payLoanStart" value="' + _payPeriod(PAY_VIEW.m, PAY_VIEW.y) + '"></div>' +
+    '</div>' +
+    '<div class="pay-row" style="margin-top:9px"><input id="payLoanNote" placeholder="ملاحظة — سبب السلفة، مرجع الموافقة…" style="flex:1">' +
+    '<button class="pay-btn primary" onclick="payAddLoan()"><i class="ti ti-check"></i>تسجيل السلفة</button></div>' +
+    '<div id="payLoanPrev" class="pay-hint"></div></div>';
+
+  const rows = PAY_LOANS.slice().reverse().map(l => {
+    const d = DRV.find(x => x.id === l.driver_id);
+    const b = payLoanBalance(l);
+    const pct = l.principal ? Math.min(100, b.paid / l.principal * 100) : 0;
+    return '<tr><td><b>' + _payEsc(d ? d.name : l.driver_id) + '</b><div class="pay-sub">' + _payEsc(l.note||'') + '</div></td>' +
+      '<td class="num">' + _pk(l.principal) + '</td>' +
+      '<td class="num">' + _pk(l.installment) + '</td>' +
+      '<td>' + _payEsc(l.start_period) + '</td>' +
+      '<td style="min-width:120px"><div class="pay-bar"><i style="width:' + pct.toFixed(0) + '%"></i></div>' +
+        '<div class="pay-sub">سُدّد ' + _pk(b.paid) + ' من ' + _pk(l.principal) + '</div></td>' +
+      '<td class="num ' + (b.remaining > 0 ? 'dn' : 'up') + '"><b>' + _pk(b.remaining) + '</b></td>' +
+      '<td>' + (l.status === 'active'
+        ? (b.remaining <= 0 ? '<span class="pay-flag green">مسدَّدة</span>' : '<span class="pay-flag blue">جارية</span>')
+        : '<span class="pay-flag">' + _payEsc(l.status) + '</span>') + '</td>' +
+      '<td class="num">' +
+        (l.status === 'active' ? '<button class="pay-icon" onclick="payLoanStatus(\'' + l.id + '\',\'on_hold\')" title="إيقاف مؤقت"><i class="ti ti-player-pause"></i></button>' +
+        '<button class="pay-icon" onclick="payLoanStatus(\'' + l.id + '\',\'settled\')" title="تسوية"><i class="ti ti-check"></i></button>' : '') +
+        (l.status === 'on_hold' ? '<button class="pay-icon" onclick="payLoanStatus(\'' + l.id + '\',\'active\')" title="استئناف"><i class="ti ti-player-play"></i></button>' : '') +
+        '<button class="pay-icon red" onclick="payLoanStatus(\'' + l.id + '\',\'cancelled\')" title="إلغاء"><i class="ti ti-x"></i></button>' +
+      '</td></tr>';
+  }).join('');
+
+  return '<div class="pay-kpis" style="margin-bottom:14px">' +
+      payKpi('سلف جارية', active.length, 'موظف مدين', 'ti-credit-card', '#0ea5e9') +
+      payKpi('الرصيد القائم', _pk(totalOut), 'مستحق للشركة', 'ti-report-money', '#dc2626') +
+      payKpi('استقطاع هذا الشهر',
+        _pk([...new Set(PAY_LOANS.map(l => l.driver_id))]
+              .reduce((s, id) => s + payLoanInstallmentFor(id, PAY_VIEW.m, PAY_VIEW.y).amount, 0)),
+        PAY_MONTHS_AR[PAY_VIEW.m-1], 'ti-arrow-down-left', '#7c3aed') +
+    '</div>' + form +
+    '<div class="pay-card" style="margin-top:14px">' +
+      (PAY_LOANS.length
+        ? '<div class="pay-table-wrap"><table class="pay-table"><thead><tr><th>الموظف</th><th>المبلغ</th><th>القسط</th><th>يبدأ</th><th>التقدّم</th><th>المتبقّي</th><th>الحالة</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+        : '<div style="text-align:center;padding:26px;color:var(--muted)">لا توجد سلف مسجّلة.</div>') +
+    '</div>';
+}
+
+function payLoanPreview(){
+  const p = parseFloat(document.getElementById('payLoanPrin').value) || 0;
+  const i = parseFloat(document.getElementById('payLoanInst').value) || 0;
+  const el = document.getElementById('payLoanPrev');
+  if(!el) return;
+  if(p > 0 && i > 0){
+    const n = Math.ceil(p / i);
+    el.innerHTML = '<b>' + n + ' قسط</b> — آخر قسط ' + _pk(p - i * (n-1)) +
+      ' د.ك. يُستقطع تلقائياً من كل مسيّر بدءاً من الشهر المحدّد بلا إدخال يدوي.';
+  }else el.textContent = 'أدخل المبلغ والقسط لعرض جدول السداد.';
+}
+function payAddLoan(){
+  if(!requirePerm('salaries')) return;
+  const drv  = document.getElementById('payLoanDrv').value;
+  const prin = parseFloat(document.getElementById('payLoanPrin').value) || 0;
+  const inst = parseFloat(document.getElementById('payLoanInst').value) || 0;
+  const start= document.getElementById('payLoanStart').value;
+  if(prin <= 0){ toast('أدخل مبلغ السلفة','e'); return; }
+  if(inst <= 0){ toast('أدخل القسط الشهري','e'); return; }
+  if(inst > prin){ toast('القسط أكبر من المبلغ','e'); return; }
+  if(!/^\d{4}-\d{2}$/.test(start)){ toast('حدّد شهر بدء الاستقطاع','e'); return; }
+  const l = {
+    id:'PL' + Date.now() + Math.random().toString(36).slice(2,5),
+    driver_id:drv, principal:_payRound(prin), installment:_payRound(inst),
+    start_period:start, paid:0, status:'active',
+    note:document.getElementById('payLoanNote').value.trim(),
+    created_by:_payActor(), created_at:new Date().toISOString()
+  };
+  PAY_LOANS.push(l); payLoanSave();
+  audit('create','payroll_loan', l.id, null, l);
+  paySyncLoan(l);
+  toast('سُجّلت سلفة ' + _pk(prin) + ' د.ك على ' + Math.ceil(prin/inst) + ' قسط','s');
+  renderPayroll();
+}
+function payLoanStatus(id, status){
+  if(!requirePerm('salaries')) return;
+  const l = PAY_LOANS.find(x => x.id === id); if(!l) return;
+  const names = {active:'استئناف', on_hold:'إيقاف', settled:'تسوية وإقفال', cancelled:'إلغاء'};
+  if(!confirm(names[status] + ' هذه السلفة؟')) return;
+  const before = l.status;
+  l.status = status; payLoanSave();
+  audit('update','payroll_loan', id, {status:before}, {status:status});
+  paySyncLoan(l);
+  renderPayroll();
+}
+
+/* ══════════════ تبويب السجل ══════════════ */
+function payHistoryHTML(){
+  const runs = PAY_RUNS.slice().sort((a,b) => b.period.localeCompare(a.period));
+  const rows = runs.map(r => {
+    const p = _payPeriodParts(r.period);
+    return '<tr><td><b>' + PAY_MONTHS_AR[p.m-1] + ' ' + p.y + '</b><div class="pay-sub"><code>' + _payEsc(r.checksum||'—') + '</code></div></td>' +
+      '<td>' + payStatusChip(r.status) + '</td>' +
+      '<td class="num">' + r.headcount + '</td>' +
+      '<td class="num up">' + _pk(r.gross) + '</td>' +
+      '<td class="num dn">' + _pk(r.deductions) + '</td>' +
+      '<td class="num net">' + _pk(r.net) + '</td>' +
+      '<td class="pay-sub" style="font-size:10.5px;line-height:1.7">' +
+        (r.calculated_at ? 'احتُسب ' + r.calculated_at.slice(0,10) + '<br>' : '') +
+        (r.approved_by ? 'اعتمده ' + _payEsc(r.approved_by) + '<br>' : '') +
+        (r.locked_by ? '🔒 ' + _payEsc(r.locked_by) + ' — ' + (r.locked_at||'').slice(0,10) + '<br>' : '') +
+        (r.paid_at ? '💰 صُرف ' + r.paid_at.slice(0,10) : '') +
+        (r.reopen_reason ? '<br>🔓 ' + _payEsc(r.reopen_reason) : '') +
+      '</td>' +
+      '<td class="num"><button class="pay-icon" onclick="PAY_VIEW.m=' + p.m + ';PAY_VIEW.y=' + p.y + ';payGoTab(\'run\')" title="فتح"><i class="ti ti-external-link"></i></button></td></tr>';
+  }).join('');
+
+  const pending = PAY_SYNC_PENDING.length;
+  return '<div class="pay-card"><h3 class="pay-h3"><i class="ti ti-shield-check"></i>سلامة البيانات</h3>' +
+    '<div class="pay-kpis" style="margin:0">' +
+      payKpi('مسيّرات محفوظة', PAY_RUNS.length, PAY_RUNS.filter(r=>r.status==='locked'||r.status==='paid').length + ' مُقفَل', 'ti-files', '#0ea5e9') +
+      payKpi('تعيينات', PAY_ASSIGNMENTS.length, 'سجلّ الرواتب والبدلات', 'ti-adjustments', '#059669') +
+      payKpi('بنود الفترات', PAY_INPUTS.length, 'إضافي وخصومات وتسويات', 'ti-list', '#7c3aed') +
+      payKpi('معلّق للسحابة', pending, pending ? 'يحتاج إعادة رفع' : 'كل شيء مرفوع', 'ti-cloud-' + (pending?'off':'check'), pending ? '#dc2626' : '#059669') +
+    '</div>' +
+    '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="pay-btn primary" onclick="payBackupExport()"><i class="ti ti-download"></i>تصدير نسخة احتياطية</button>' +
+      '<button class="pay-btn" onclick="document.getElementById(\'payRestoreFile\').click()"><i class="ti ti-upload"></i>استعادة نسخة</button>' +
+      '<input type="file" id="payRestoreFile" accept=".json" style="display:none" onchange="payBackupImport(this)">' +
+      (pending ? '<button class="pay-btn warn" onclick="payRetrySync()"><i class="ti ti-refresh"></i>إعادة رفع المعلّق (' + pending + ')</button>' : '') +
+      '<button class="pay-btn" onclick="payPushAll()"><i class="ti ti-cloud-upload"></i>رفع كل شيء للسحابة</button>' +
+    '</div>' +
+    (PAY_STORAGE_FAILED ? '<div class="pay-note err" style="margin-top:12px"><i class="ti ti-alert-octagon"></i><div>' +
+      '<b>آخر حفظ محلي فشل.</b> بيانات الرواتب في الذاكرة فقط. صدّر نسخة احتياطية الآن قبل إغلاق الصفحة.</div></div>' : '') +
+  '</div>' +
+  '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3"><i class="ti ti-history"></i>سجلّ المسيّرات</h3>' +
+    (runs.length
+      ? '<div class="pay-table-wrap"><table class="pay-table"><thead><tr><th>الشهر</th><th>الحالة</th><th>عدد</th><th>الاستحقاق</th><th>الخصومات</th><th>الصافي</th><th>المسار</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+      : '<div style="text-align:center;padding:26px;color:var(--muted)">لم يُحتسب أي مسيّر بعد.</div>') +
+  '</div>';
+}
+
+function payBackupExport(){
+  const blob = {
+    _meta:{app:'ARK Payroll v3', exported:new Date().toISOString(), by:_payActor()},
+    components:PAY_COMPONENTS, assignments:PAY_ASSIGNMENTS, inputs:PAY_INPUTS,
+    loans:PAY_LOANS, runs:PAY_RUNS, lines:PAY_LINES, config:PAY_CFG,
+    legacy_salaries:SALARIES
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(blob, null, 2)], {type:'application/json'}));
+  a.download = 'AlSalasil_Payroll_Backup_' + fmtDate(new Date()) + '.json';
+  a.click();
+  toast('صُدّرت النسخة الاحتياطية','s');
+}
+
+function payBackupImport(input){
+  if(!requirePerm('salaries')) return;
+  const f = input.files && input.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try{
+      const b = JSON.parse(e.target.result);
+      if(!b.components || !b.runs) throw new Error('الملف ليس نسخة رواتب صالحة');
+      const lockedNow = PAY_RUNS.filter(x => x.status==='locked'||x.status==='paid').length;
+      if(!confirm('استعادة نسخة الرواتب؟\n\n' +
+        '• مسيّرات في الملف: ' + b.runs.length + '\n' +
+        '• مسيّرات مُقفَلة حالياً: ' + lockedNow + '\n\n' +
+        'سيُستبدل كل ما هو محلي. تأكيد؟')) return;
+      PAY_COMPONENTS  = b.components  || PAY_COMPONENTS;
+      PAY_ASSIGNMENTS = b.assignments || [];
+      PAY_INPUTS      = b.inputs      || [];
+      PAY_LOANS       = b.loans       || [];
+      PAY_RUNS        = b.runs        || [];
+      PAY_LINES       = b.lines       || {};
+      if(b.config) PAY_CFG = Object.assign({}, PAY_CFG_DEFAULT, b.config);
+      _paySave(PAY_SK.comp, PAY_COMPONENTS); payAsgSave(); payInpSave();
+      payLoanSave(); payRunsSave(); payLinesSave(); payCfgSave();
+      audit('restore','payroll_backup','all', null, {runs:PAY_RUNS.length});
+      toast('استُعيدت نسخة الرواتب','s');
+      renderPayroll();
+    }catch(err){ toast('خطأ في الملف: ' + err.message,'e'); }
+    input.value = '';
+  };
+  r.readAsText(f);
+}
+
+async function payPushAll(){
+  if(!requirePerm('salaries')) return;
+  toast('جارٍ الرفع…','s');
+  paySyncComponents();
+  PAY_ASSIGNMENTS.forEach(paySyncAssignment);
+  PAY_LOANS.forEach(paySyncLoan);
+  PAY_INPUTS.forEach(paySyncInput);
+  PAY_RUNS.forEach(r => { paySyncRun(r); paySyncLines(r.id); });
+  setTimeout(() => { toast('اكتمل الرفع — راجع «معلّق للسحابة»','s'); renderPayroll(); }, 1800);
+}
+
+/* ══════════════ التصدير ══════════════ */
+
+/** كشف البنك — من اللقطة، فيطابق بالضبط ما تسجّله الدفاتر */
+function payExportBank(m, y){
+  if(!requirePerm('salaries')) return;
+  if(typeof XLSX === 'undefined'){ toast('مكتبة Excel غير محمّلة','e'); return; }
+  const snap = payrollSnapshot(m, y);
+  if(!snap.frozen && !confirm('⚠️ مسيّر ' + PAY_MONTHS_AR[m-1] + ' ' + y + ' غير مُقفَل.\n\n' +
+     'الكشف سيُبنى على حساب حيّ قد يتغيّر، فقد لا يطابق ما يُسجَّل في الدفاتر لاحقاً.\n' +
+     'الأفضل: احتسب ← اعتمد ← أقفل، ثم صدّر.\n\nمتابعة رغم ذلك؟')) return;
+
+  const rows = [], skipped = [];
+  let total = 0;
+  snap.lines.filter(l => l.net > 0).forEach(l => {
+    const iban = String(l.iban || '').replace(/\s/g,'').toUpperCase();
+    if(!iban){ skipped.push(l.driver_name); return; }
+    rows.push([l.bank_name || l.driver_name, iban, parseFloat(l.net.toFixed(3))]);
+    total += l.net;
+  });
+  if(!rows.length){ alert('لا يوجد موظف بـ IBAN مسجّل — عدّل بيانات الموظفين أولاً.'); return; }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:35},{wch:34},{wch:14}];
+  ws['!views'] = [{RTL:false}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, 'AlSalasil_Bank_' + PAY_MONTHS_EN[m-1] + y + '.xlsx');
+
+  alert('✅ كشف البنك — ' + PAY_MONTHS_AR[m-1] + ' ' + y + '\n\n' +
+    '• الموظفون: ' + rows.length + '\n' +
+    '• الإجمالي: ' + _pk(total) + ' د.ك\n' +
+    '• المصدر: ' + (snap.frozen ? 'اللقطة المجمّدة 🔒' : 'حساب حيّ ⚠️') + '\n' +
+    (skipped.length ? '\n⚠️ ' + skipped.length + ' بلا IBAN ولم يدخلوا:\n' + skipped.slice(0,10).join('\n') : ''));
+}
+
+/** تصدير Excel مفصّل — ورقة ملخّص + ورقة سطر لكل مكوّن */
+function payExportExcel(m, y){
+  if(!requirePerm('salaries')) return;
+  if(typeof XLSX === 'undefined'){ toast('مكتبة Excel غير محمّلة','e'); return; }
+  const snap = payrollSnapshot(m, y);
+  const t    = payrollTotals(m, y);
+  const per  = PAY_MONTHS_AR[m-1] + ' ' + y;
+
+  /* 1) الملخّص */
+  const s1 = [['كشف رواتب — ' + per],
+    ['المصدر', snap.frozen ? 'لقطة مجمّدة (مُقفَل)' : 'حساب حيّ (غير مُقفَل)'],
+    ['البصمة', (snap.run && snap.run.checksum) || '—'],
+    ['أُقفل بواسطة', (snap.run && snap.run.locked_by) || '—'],
+    ['تاريخ الإقفال', (snap.run && (snap.run.locked_at||'').slice(0,16).replace('T',' ')) || '—'],
+    [],
+    ['الموظف','الرقم','النوع','الشريك','الأساسي','الأيام','أيام الشهر','الاستحقاق','الخصومات','الصافي','IBAN']];
+  snap.lines.filter(l => l.days_worked > 0).forEach(l => {
+    const p = PARTNERS.find(x => x.id === l.partner_id);
+    s1.push([l.driver_name, l.driver_id, l.staff_type === 'admin' ? 'إدارة' : 'سائق',
+             p ? p.name : '—', l.base, l.days_worked, l.days_in_month,
+             l.gross, l.total_ded, l.net, l.iban || '']);
+  });
+  s1.push([], ['الإجمالي','','','','','','', t.gross, t.ded, t.net, '']);
+
+  /* 2) تفصيل المكوّنات — سطر لكل بند، وهو ما يجعل الرقم قابلاً للتتبّع */
+  const s2 = [['الموظف','الرقم','البند','الكود','النوع','طريقة الاحتساب','الكمية','المبلغ','المصدر','ملاحظة']];
+  snap.lines.forEach(l => (l.components||[]).forEach(c =>
+    s2.push([l.driver_name, l.driver_id, c.name, c.code,
+             c.kind === 'earning' ? 'استحقاق' : 'خصم', c.method,
+             c.qty || '', c.amount, c.source || '', c.note || ''])));
+
+  /* 3) تجميع بالمكوّن */
+  const agg = {};
+  snap.lines.forEach(l => (l.components||[]).forEach(c => {
+    if(!agg[c.code]) agg[c.code] = {name:c.name, kind:c.kind, count:0, total:0};
+    agg[c.code].count++; agg[c.code].total += c.amount;
+  }));
+  const s3 = [['الكود','البند','النوع','عدد الموظفين','الإجمالي']];
+  Object.keys(agg).forEach(k => s3.push([k, agg[k].name, agg[k].kind === 'earning' ? 'استحقاق' : 'خصم', agg[k].count, _payRound(agg[k].total)]));
+
+  /* 4) المراجعة */
+  const issues = payValidateRun(m, y);
+  const s4 = [['المستوى','الملاحظة']].concat(issues.map(i => [i.level === 'error' ? 'حرج' : 'تنبيه', i.msg]));
+
+  const wb = XLSX.utils.book_new();
+  const mk = (aoa, name, cols) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = cols; XLSX.utils.book_append_sheet(wb, ws, name); };
+  mk(s1, 'كشف الرواتب', [{wch:26},{wch:10},{wch:9},{wch:16},{wch:11},{wch:8},{wch:10},{wch:12},{wch:12},{wch:12},{wch:32}]);
+  mk(s2, 'تفصيل المكوّنات', [{wch:26},{wch:10},{wch:20},{wch:14},{wch:10},{wch:14},{wch:9},{wch:12},{wch:12},{wch:28}]);
+  mk(s3, 'تجميع بالبند', [{wch:14},{wch:22},{wch:10},{wch:14},{wch:14}]);
+  mk(s4, 'المراجعة', [{wch:10},{wch:80}]);
+  XLSX.writeFile(wb, 'AlSalasil_Payroll_' + _payPeriod(m,y) + '.xlsx');
+  toast('صُدّر كشف رواتب ' + per,'s');
+}
+
+/** طباعة الكشف الكامل */
+function payPrintRegister(m, y){
+  const snap = payrollSnapshot(m, y);
+  const t    = payrollTotals(m, y);
+  const lines = snap.lines.filter(l => l.days_worked > 0).sort((a,b) => b.net - a.net);
+  const per  = PAY_MONTHS_AR[m-1] + ' ' + y;
+  const w = window.open('', '_blank');
+  if(!w){ toast('اسمح بالنوافذ المنبثقة','e'); return; }
+  w.document.write('<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كشف رواتب ' + per + '</title>' +
+    '<style>body{font-family:"Segoe UI",Tahoma,sans-serif;padding:26px;color:#0f172a}' +
+    'h1{font-size:19px;margin:0 0 3px}.sub{color:#64748b;font-size:12px;margin-bottom:16px}' +
+    '.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}' +
+    'table{width:100%;border-collapse:collapse;font-size:11.5px}' +
+    'th,td{border:1px solid #e2e8f0;padding:6px 8px;text-align:right}' +
+    'th{background:#f1f5f9;font-weight:800}td.n{text-align:left;font-variant-numeric:tabular-nums}' +
+    'tfoot td{background:#f8fafc;font-weight:900}' +
+    '.sign{margin-top:34px;display:flex;gap:60px;font-size:12px}' +
+    '.sign div{flex:1;border-top:1px solid #94a3b8;padding-top:6px;text-align:center;color:#475569}' +
+    '@media print{body{padding:10px}}</style></head><body>' +
+    '<h1>شركة السلاسل — كشف رواتب ' + per + '</h1>' +
+    '<div class="sub">' + lines.length + ' موظف · صافي ' + _pk(t.net) + ' د.ك · ' +
+      (snap.frozen
+        ? '<span class="badge" style="background:#d1fae5;color:#065f46">🔒 مُقفَل — بصمة ' + (snap.run.checksum||'') + '</span>'
+        : '<span class="badge" style="background:#fef3c7;color:#92400e">⚠ غير مُقفَل — أرقام قابلة للتغيّر</span>') +
+    '</div>' +
+    '<table><thead><tr><th>#</th><th>الموظف</th><th>الرقم</th><th>الأساسي</th><th>الأيام</th>' +
+    '<th>الاستحقاق</th><th>الخصومات</th><th>الصافي</th><th>التوقيع</th></tr></thead><tbody>' +
+    lines.map((l,i) => '<tr><td class="n">' + (i+1) + '</td><td>' + _payEsc(l.driver_name) + '</td><td class="n">' + _payEsc(l.driver_id) + '</td>' +
+      '<td class="n">' + _pk(l.base) + '</td><td class="n">' + l.days_worked + '</td>' +
+      '<td class="n">' + _pk(l.gross) + '</td><td class="n">' + _pk(l.total_ded) + '</td>' +
+      '<td class="n"><b>' + _pk(l.net) + '</b></td><td style="width:90px"></td></tr>').join('') +
+    '</tbody><tfoot><tr><td colspan="5">الإجمالي</td><td class="n">' + _pk(t.gross) + '</td>' +
+    '<td class="n">' + _pk(t.ded) + '</td><td class="n">' + _pk(t.net) + '</td><td></td></tr></tfoot></table>' +
+    '<div class="sign"><div>أعدّه</div><div>راجعه</div><div>اعتمده</div></div>' +
+    '</body></html>');
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+
+/** قسيمة راتب فردية — عربي/إنجليزي */
+function payPrintSlip(driverId, m, y){
+  const snap = payrollSnapshot(m, y);
+  const l = snap.lines.find(x => x.driver_id === driverId); if(!l) return;
+  const part = PARTNERS.find(p => p.id === l.partner_id);
+  const earn = (l.components||[]).filter(c => c.kind === 'earning');
+  const ded  = (l.components||[]).filter(c => c.kind === 'deduction');
+  const rows = arr => arr.length
+    ? arr.map(c => '<tr><td>' + _payEsc(c.name) + '</td><td class="n">' + (c.qty||'') + '</td><td class="n">' + _pk(c.amount) + '</td></tr>').join('')
+    : '<tr><td colspan="3" style="text-align:center;color:#94a3b8">—</td></tr>';
+  const w = window.open('', '_blank');
+  if(!w){ toast('اسمح بالنوافذ المنبثقة','e'); return; }
+  w.document.write('<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>قسيمة راتب ' + _payEsc(l.driver_name) + '</title>' +
+    '<style>body{font-family:"Segoe UI",Tahoma,sans-serif;padding:30px;color:#0f172a;max-width:760px;margin:auto}' +
+    '.hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #004e6d;padding-bottom:12px;margin-bottom:16px}' +
+    '.hd h1{font-size:18px;margin:0;color:#004e6d}.hd .en{font-size:11px;color:#64748b}' +
+    '.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}' +
+    '.meta div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:7px 10px}' +
+    '.meta span{display:block;font-size:10px;color:#64748b}.meta b{font-size:12.5px}' +
+    '.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}' +
+    'table{width:100%;border-collapse:collapse;font-size:11.5px}' +
+    'th,td{border:1px solid #e2e8f0;padding:5px 8px;text-align:right}th{background:#f1f5f9;font-weight:800}' +
+    'td.n{text-align:left;font-variant-numeric:tabular-nums}' +
+    'h3{font-size:12.5px;margin:0 0 6px}h3.up{color:#059669}h3.dn{color:#dc2626}' +
+    '.net{margin-top:16px;background:#004e6d;color:#fff;border-radius:9px;padding:13px 18px;display:flex;justify-content:space-between;align-items:center}' +
+    '.net b{font-size:21px}.ft{margin-top:22px;font-size:10px;color:#94a3b8;text-align:center;line-height:1.8}' +
+    '@media print{body{padding:12px}}</style></head><body>' +
+    '<div class="hd"><div><h1>قسيمة راتب — ' + PAY_MONTHS_AR[m-1] + ' ' + y + '</h1>' +
+      '<div class="en">Payslip — ' + PAY_MONTHS_EN[m-1] + ' ' + y + ' · Al-Salasil Co.</div></div>' +
+      '<div style="text-align:left;font-size:10.5px;color:#64748b">' +
+      (snap.frozen ? '🔒 نهائي / Final<br>' + _payEsc((snap.run.checksum||'')) : '⚠ مسودة / Draft') + '</div></div>' +
+    '<div class="meta">' +
+      '<div><span>الموظف / Employee</span><b>' + _payEsc(l.driver_name) + '</b></div>' +
+      '<div><span>الرقم / ID</span><b>' + _payEsc(l.driver_id) + '</b></div>' +
+      '<div><span>الشريك / Partner</span><b>' + _payEsc(part ? part.name : '—') + '</b></div>' +
+      '<div><span>أيام العمل / Days</span><b>' + l.days_worked + ' / ' + l.days_in_month + '</b></div>' +
+      '<div><span>الأساسي / Basic</span><b>' + _pk(l.base) + ' KD</b></div>' +
+      '<div><span>IBAN</span><b style="font-size:10px">' + _payEsc(l.iban || '—') + '</b></div>' +
+    '</div>' +
+    '<div class="cols">' +
+      '<div><h3 class="up">الاستحقاقات / Earnings</h3><table><thead><tr><th>البند</th><th>كمية</th><th>المبلغ</th></tr></thead>' +
+      '<tbody>' + rows(earn) + '</tbody><tfoot><tr><th colspan="2">الإجمالي</th><th class="n">' + _pk(l.gross) + '</th></tr></tfoot></table></div>' +
+      '<div><h3 class="dn">الخصومات / Deductions</h3><table><thead><tr><th>البند</th><th>كمية</th><th>المبلغ</th></tr></thead>' +
+      '<tbody>' + rows(ded) + '</tbody><tfoot><tr><th colspan="2">الإجمالي</th><th class="n">' + _pk(l.total_ded) + '</th></tr></tfoot></table></div>' +
+    '</div>' +
+    '<div class="net"><span>صافي المستحق / Net Payable</span><b>' + _pk(l.net) + ' KD</b></div>' +
+    '<div class="ft">هذه القسيمة صادرة آلياً من نظام ARK — شركة السلاسل<br>' +
+    'This payslip is system-generated by ARK — Al-Salasil Co.</div>' +
+    '</body></html>');
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+
+
+/* تشغيل أولي */
+try{ if(document.getElementById('payrollBody')) renderPayroll(); }catch(e){ console.error('[payroll] init', e); }
+</script>
 
 </body>
 </html>
