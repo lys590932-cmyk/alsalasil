@@ -2012,6 +2012,7 @@ body::after{
     <button class="nav-tab" id="nav-acc" data-tip="المحاسبة" onclick="setMainView('acc')"><i class="ti ti-cash-banknote"></i> <span data-i18n="nav_accounting">المحاسبة</span></button>
     <button class="nav-tab" id="nav-custody" data-tip="العهدة" onclick="setMainView('custody')"><i class="ti ti-wallet"></i> <span>العهدة</span></button>
     <button class="nav-tab" id="nav-payroll" data-tip="الرواتب" onclick="setMainView('payroll')"><i class="ti ti-file-invoice"></i> <span>الرواتب</span></button>
+    <button class="nav-tab" id="nav-homicash" data-tip="كاش هومي" onclick="setMainView('homicash')" style="position:relative"><i class="ti ti-cash-banknote"></i> <span>كاش هومي</span><span id="navHomiCashBadge" class="badge-dot" style="display:none">0</span></button>
     <button class="nav-tab" id="nav-rating" data-tip="التقييمات" onclick="setMainView('rating')"><i class="ti ti-award"></i> <span>التقييمات</span></button>
     <button class="nav-tab" id="nav-reports" data-tip="تقارير الشركة" onclick="setMainView('reports')"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
     <button class="nav-tab" id="nav-vio" data-tip="المخالفات" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> <span data-i18n="nav_violations">المخالفات</span></button>
@@ -2152,6 +2153,11 @@ body::after{
 <!-- PAYROLL VIEW -->
 <div id="view-payroll" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
   <div id="payrollBody"></div>
+</div>
+
+<!-- HOMI CASH VIEW -->
+<div id="view-homicash" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="homiCashBody"></div>
 </div>
 
 <!-- COMPANY REPORTS VIEW -->
@@ -3902,6 +3908,28 @@ function renderDetail(){
           <div class="irow"><i class="ti ti-key iico"></i><span class="ilbl">كود الموظف</span><span class="ival">${editing ? `<input id="e_id" class="fin mono" value="${d.id}" style="width:100%;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.4);border-radius:6px;padding:4px 8px;color:var(--text);font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600;outline:none">` : `<span class="mono">${d.id}</span>`}</span></div>
         </div>
       </div>
+
+      <!-- البيانات البنكية — مصدر كشف البنك في مسيّر الرواتب -->
+      <div class="isec">
+        <div class="isec-h"><div class="dot" style="background:#0d9488"></div>البيانات البنكية
+          <span style="margin-right:auto;font-size:9.5px;color:var(--muted);font-weight:700">تُستخدم في كشف البنك</span></div>
+        <div class="irows">
+          <div class="irow"><i class="ti ti-building-bank iico"></i><span class="ilbl">IBAN</span><span class="ival">${
+            editing
+              ? F(d.iban||'','iban')
+              : (d.iban
+                  ? '<span class="ival mono" style="direction:ltr;display:inline-block;font-size:11px">'+_esc(d.iban)+'</span>'
+                  : '<span class="ival bad">غير مسجّل — لن يدخل كشف البنك</span>')
+          }</span></div>
+          <div class="irow"><i class="ti ti-signature iico"></i><span class="ilbl">الاسم بالعربي للبنك</span><span class="ival">${
+            editing
+              ? F(d.bank_name||'','bank_name')
+              : (d.bank_name
+                  ? '<span class="ival">'+_esc(d.bank_name)+'</span>'
+                  : '<span class="ival">'+_esc(d.name)+' <span style="font-size:9.5px;color:var(--muted)">(يُستخدم الاسم الأصلي)</span></span>')
+          }</span></div>
+        </div>
+      </div>
     </div>
 
     <div class="dsec">
@@ -3935,13 +3963,24 @@ function saveDriver(){
   const d = DRV.find(x=>x.id===selId); if(!d) return;
   if(!requirePerm('edit','drivers')) return;
   const _before = JSON.parse(JSON.stringify(d));
-  const _fields = ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate','email'];
+  const _fields = ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate','email','iban','bank_name'];
   // ── تحقق على نسخة مؤقتة قبل تطبيق التعديل ──
   const _cand = Object.assign({}, d);
   _fields.forEach(f=>{ const el=document.getElementById('e_'+f); if(el) _cand[f]=el.value; });
   const _v = validateDriverRecord(_cand, false);
   if(!_v.ok){ alert('لا يمكن الحفظ:\n\n• ' + _v.errors.join('\n• ')); return; }
   if(_v.warnings.length && !confirm('تنبيهات:\n\n• ' + _v.warnings.join('\n• ') + '\n\nهل تريد المتابعة؟')) return;
+  /* الـ IBAN يُطبَّع قبل الحفظ: البنك يرفض المسافات والحروف الصغيرة،
+     وكشف الرواتب يقارن نصّاً — فأي مسافة زائدة تُسقط الموظف من الكشف. */
+  const _ibEl = document.getElementById('e_iban');
+  if(_ibEl){
+    const _ib = _ibEl.value.replace(/[\s-]/g,'').toUpperCase();
+    if(_ib && !/^KW\d{2}[A-Z0-9]{22}$/.test(_ib)){
+      if(!confirm('الـ IBAN المُدخَل لا يطابق صيغة الآيبان الكويتي\n(KW + رقمان + 22 خانة = 30 خانة).\n\n'
+                + 'المُدخَل: ' + _ib + ' (' + _ib.length + ' خانة)\n\nالحفظ رغم ذلك؟')) return;
+    }
+    _ibEl.value = _ib;
+  }
   _fields.forEach(f=>{
     const el=document.getElementById('e_'+f); if(el) d[f]=el.value;
   });
@@ -4708,6 +4747,8 @@ function setMainView(view) {
   if(custEl) custEl.style.display = view==='custody' ? 'block' : 'none';
   const payEl = document.getElementById('view-payroll');
   if(payEl) payEl.style.display = view==='payroll' ? 'block' : 'none';
+  const hcEl = document.getElementById('view-homicash');
+  if(hcEl) hcEl.style.display = view==='homicash' ? 'block' : 'none';
   const ordEl = document.getElementById('view-orders');
   if(ordEl) ordEl.style.display = view==='orders' ? 'block' : 'none';
   const drepEl = document.getElementById('view-dreports');
@@ -4715,7 +4756,7 @@ function setMainView(view) {
   const rtEl = document.getElementById('view-rating');
   if(rtEl) rtEl.style.display = view==='rating' ? 'block' : 'none';
   // Update nav tabs
-  ['drivers','dash','att','vio','clockin','acc','custody','payroll','livemap','apps','reports','orders','dreports','rating'].forEach(v => {
+  ['drivers','dash','att','vio','clockin','acc','custody','payroll','homicash','livemap','apps','reports','orders','dreports','rating'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if(el) el.classList.toggle('on', v===view);
   });
@@ -4730,6 +4771,7 @@ function setMainView(view) {
   if(view==='reports') renderReports();
   if(view==='custody') renderCustody();
   if(view==='payroll') renderPayroll();
+  if(view==='homicash'){ renderHomiCash(); hcaSync(true); hcaStartAuto(); } else { try{ hcaStopAuto(); }catch(e){} }
   if(view==='orders')  renderOrdersAdmin();
   if(view==='dreports') renderDailyReports();
   if(view==='rating')   renderRating();
@@ -16507,7 +16549,8 @@ function payRunHTML(){
         const flags = [];
         if(l.days_worked < l.days_in_month) flags.push('<span class="pay-flag">جزئي ' + l.days_worked + '/' + l.days_in_month + '</span>');
         if(l.uncovered > 0) flags.push('<span class="pay-flag red">غير مغطّى ' + _pk(l.uncovered) + '</span>');
-        if(!l.iban) flags.push('<span class="pay-flag amber">بلا IBAN</span>');
+        if(!l.iban) flags.push('<span class="pay-flag amber" style="cursor:pointer;text-decoration:underline" ' +
+          'onclick="event.stopPropagation();payFixIban(\'' + l.driver_id + '\')" title="افتح ملف الموظف لإضافة الآيبان">بلا IBAN — أضِفه</span>');
         return '<tr onclick="payShowSlip(\'' + l.driver_id + '\',' + m + ',' + y + ')">' +
           '<td><b>' + _payEsc(l.driver_name) + '</b><div class="pay-sub">' + _payEsc(l.driver_id) +
             (part ? ' · ' + _payEsc(part.name) : '') + '</div>' + (flags.length ? '<div style="margin-top:3px">' + flags.join(' ') + '</div>' : '') + '</td>' +
@@ -16530,6 +16573,20 @@ function payRunHTML(){
 
   return '<div class="pay-runbar">' + stepper + payStatusChip(status) + '</div>' +
          actions + kpi + srcNote + issuesHTML + table;
+}
+
+/** ينقل المستخدم إلى ملف الموظف في وضع التعديل لإضافة الآيبان مباشرة */
+function payFixIban(driverId){
+  try{
+    setMainView('drivers');
+    selectDriver(driverId);
+    startEdit();
+    setTimeout(() => {
+      const el = document.getElementById('e_iban');
+      if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.focus(); }
+    }, 260);
+    toast('أضِف الآيبان ثم احفظ — سيدخل كشف البنك فوراً','s');
+  }catch(e){ console.error('[payroll] payFixIban', e); }
 }
 
 function payKpi(label, val, sub, icon, color){
@@ -17327,6 +17384,638 @@ function payPrintSlip(driverId, m, y){
 
 /* تشغيل أولي */
 try{ if(document.getElementById('payrollBody')) renderPayroll(); }catch(e){ console.error('[payroll] init', e); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK — كاش هومي  |  HOMI CASH LEDGER
+   ──────────────────────────────────────────────────────────────────────────
+   الدفتر الكامل لسلسلة العهدة:
+       سائق هومي ──تسليم──▶ مستلم ──توريد مجمّع──▶ الإدارة
+
+   في كل لحظة يجيب هذا التبويب على سؤال واحد بدقّة:
+   كم مبلغاً في جيب كل مستلم الآن، ومن وقّع على كل دينار فيه.
+
+   المصدر الوحيد للحقيقة هو Supabase — لا نسخة محلية ولا حساب موازٍ،
+   لأن الطرف الآخر من السلسلة (تطبيق السائق) يكتب هناك مباشرة.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const HC_TBL = {
+  txn:'homi_cash_txn', st:'homi_cash_settlement', rcv:'homi_cash_receivers',
+  bal:'homi_cash_balances', cfg:'homi_cash_config', ev:'homi_cash_events'
+};
+
+let HCA = {
+  tab:'pending', txns:[], sts:[], rcvs:[], bals:[], cfg:null, events:[],
+  loading:false, err:null, lastSync:0,
+  f:{ from:'', to:'', receiver:'', status:'', q:'' }
+};
+
+/* الجداول محميّة بالدور authenticated — لذلك نستخدم توكن جلسة ARK لا المفتاح العام */
+function hcaHeaders(extra){
+  let token = null;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        const v = JSON.parse(localStorage.getItem(k)||'{}');
+        if(v && v.access_token){ token = v.access_token; break; }
+      }
+    }
+  }catch(e){}
+  const h = { apikey:SUPA_KEY, Authorization:'Bearer '+(token||SUPA_KEY), 'Content-Type':'application/json' };
+  if(extra) Object.assign(h, extra);
+  return h;
+}
+
+async function hcaGet(path){
+  const r = await fetch(SUPA_URL + '/rest/v1/' + path, { headers: hcaHeaders() });
+  if(!r.ok){
+    const t = await r.text().catch(()=> '');
+    throw new Error('HTTP ' + r.status + ' ' + t.slice(0,160));
+  }
+  return r.json();
+}
+async function hcaRpc(fn, args){
+  const r = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, {
+    method:'POST', headers: hcaHeaders(), body: JSON.stringify(args||{})
+  });
+  const txt = await r.text().catch(()=> '');
+  if(!r.ok){
+    let m = txt;
+    try{ const j = JSON.parse(txt); m = j.message || j.hint || txt; }catch(e){}
+    throw new Error(m.split(' / ')[0] || ('HTTP ' + r.status));
+  }
+  try{ return JSON.parse(txt); }catch(e){ return txt; }
+}
+
+function _hk(n){ return (parseFloat(n)||0).toFixed(3); }
+function _he(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function _hdt(s){ return s ? String(s).slice(0,16).replace('T',' ') : '—'; }
+
+/* ── التحميل ─────────────────────────────────────────────────────────── */
+async function hcaSync(silent){
+  HCA.loading = true; HCA.err = null;
+  if(!silent) renderHomiCash();
+  try{
+    const [txns, sts, rcvs, bals, cfg, ev] = await Promise.all([
+      hcaGet(HC_TBL.txn + '?select=*&order=created_at.desc&limit=1500'),
+      hcaGet(HC_TBL.st  + '?select=*&order=created_at.desc&limit=400'),
+      hcaGet(HC_TBL.rcv + '?select=*&order=sort_order'),
+      hcaGet(HC_TBL.bal + '?select=*'),
+      hcaGet(HC_TBL.cfg + '?select=*&id=eq.1'),
+      hcaGet(HC_TBL.ev  + '?select=*&order=created_at.desc&limit=250')
+    ]);
+    HCA.txns = txns||[]; HCA.sts = sts||[]; HCA.rcvs = rcvs||[];
+    HCA.bals = bals||[]; HCA.cfg = (cfg&&cfg[0])||null; HCA.events = ev||[];
+    HCA.lastSync = Date.now();
+  }catch(e){
+    HCA.err = String(e.message||e);
+    console.warn('[homi-cash] sync', e);
+  }
+  HCA.loading = false;
+  renderHomiCash();
+  hcaPaintBadge();
+}
+
+function hcaPendingSettlements(){ return HCA.sts.filter(s => s.status === 'pending'); }
+function hcaPaintBadge(){
+  const n = hcaPendingSettlements().length;
+  const el = document.getElementById('navHomiCashBadge');
+  if(el){ el.style.display = n ? 'inline-flex' : 'none'; el.textContent = n; }
+}
+
+/* ── الهيكل ──────────────────────────────────────────────────────────── */
+function renderHomiCash(){
+  const el = document.getElementById('homiCashBody');
+  if(!el) return;
+
+  if(HCA.err && !HCA.txns.length){
+    el.innerHTML = '<div class="pay-note err"><i class="ti ti-plug-connected-x"></i><div>' +
+      '<b>تعذّر قراءة بيانات كاش هومي.</b><div style="margin-top:4px">' + _he(HCA.err) + '</div>' +
+      '<div style="margin-top:8px;font-size:11.5px;line-height:1.8">' +
+      'الأسباب المعتادة: لم تُشغّل ملف <code>homi_cash_setup.sql</code> على Supabase بعد، أو انتهت جلسة دخولك في ARK.' +
+      '</div><div style="margin-top:9px"><button class="pay-btn" onclick="hcaSync()"><i class="ti ti-refresh"></i>إعادة المحاولة</button></div>' +
+      '</div></div>';
+    return;
+  }
+
+  const tabs = [
+    ['pending','بانتظار اعتمادك','ti-inbox', hcaPendingSettlements().length],
+    ['balances','أرصدة المستلمين','ti-wallet'],
+    ['ledger','دفتر العمليات','ti-list-details'],
+    ['settlements','التوريدات','ti-building-bank'],
+    ['setup','المستلمون والإعدادات','ti-settings'],
+    ['audit','سجل التدقيق','ti-history']
+  ];
+
+  el.innerHTML =
+    '<div class="pay-head">' +
+      '<div class="pay-title"><i class="ti ti-cash-banknote"></i><div>' +
+        '<b>كاش هومي</b>' +
+        '<span>سلسلة عهدة موقّعة من طرفين — سائق ← مستلم ← الإدارة</span>' +
+      '</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        (HCA.lastSync ? '<span class="pay-sub">آخر تحديث ' + new Date(HCA.lastSync).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) + '</span>' : '') +
+        '<button class="pay-btn" onclick="hcaSync()"' + (HCA.loading?' disabled':'') + '>' +
+        '<i class="ti ti-refresh"></i>' + (HCA.loading ? 'جارٍ…' : 'تحديث') + '</button>' +
+      '</div>' +
+    '</div>' +
+    hcaKpisHTML() +
+    '<div class="pay-tabs">' + tabs.map(t =>
+      '<button class="pay-tab' + (HCA.tab===t[0]?' on':'') + '" onclick="hcaGo(\'' + t[0] + '\')">' +
+      '<i class="ti ' + t[2] + '"></i>' + t[1] +
+      (t[3] ? ' <span class="pay-flag red" style="margin-inline-start:3px">' + t[3] + '</span>' : '') +
+      '</button>').join('') + '</div>' +
+    '<div id="hcaTabBody"></div>';
+
+  const body = document.getElementById('hcaTabBody');
+  if(HCA.tab === 'pending')          body.innerHTML = hcaPendingHTML();
+  else if(HCA.tab === 'balances')    body.innerHTML = hcaBalancesHTML();
+  else if(HCA.tab === 'ledger')      body.innerHTML = hcaLedgerHTML();
+  else if(HCA.tab === 'settlements') body.innerHTML = hcaSettlementsHTML();
+  else if(HCA.tab === 'setup')       body.innerHTML = hcaSetupHTML();
+  else if(HCA.tab === 'audit')       body.innerHTML = hcaAuditHTML();
+}
+function hcaGo(t){ HCA.tab = t; renderHomiCash(); }
+
+/* ── المؤشرات ────────────────────────────────────────────────────────── */
+function hcaKpisHTML(){
+  const b = HCA.bals;
+  const sum = k => b.reduce((s,x) => s + (parseFloat(x[k])||0), 0);
+  const pend = hcaPendingSettlements();
+  const pendTotal = pend.reduce((s,x) => s + (parseFloat(x.total)||0), 0);
+  const now = new Date(), mKey = now.toISOString().slice(0,7);
+  const settledMonth = HCA.sts
+    .filter(s => s.status==='confirmed' && String(s.confirmed_at||'').slice(0,7) === mKey)
+    .reduce((s,x) => s + (parseFloat(x.total)||0), 0);
+  const disputes = HCA.txns.filter(t => t.status==='rejected').length;
+
+  return '<div class="pay-kpis">' +
+    payKpi('في يد المستلمين', _hk(sum('held_total')), 'مؤكَّد ولم تستلمه أنت', 'ti-wallet', '#0d9488') +
+    payKpi('بانتظار اعتمادك', _hk(pendTotal), pend.length + ' توريد', 'ti-inbox', pend.length ? '#dc2626' : '#94a3b8') +
+    payKpi('معلّق عند السائقين', _hk(sum('pending_amount')), 'لم يؤكّده المستلم بعد', 'ti-clock', '#f59e0b') +
+    payKpi('وُرِّد هذا الشهر', _hk(settledMonth), 'استلمته الإدارة', 'ti-check', '#059669') +
+    payKpi('خلافات', disputes, disputes ? 'عمليات مرفوضة' : 'لا خلافات', 'ti-alert-triangle', disputes ? '#b45309' : '#94a3b8') +
+  '</div>';
+}
+
+/* ── بانتظار اعتماد المدير ───────────────────────────────────────────── */
+function hcaPendingHTML(){
+  const pend = hcaPendingSettlements();
+  if(!pend.length){
+    return '<div class="pay-note ok"><i class="ti ti-check"></i><div>' +
+      '<b>لا توريدات معلّقة.</b> كل ما ورّده المستلمون مؤكَّد استلامه.</div></div>' +
+      hcaDisputesHTML();
+  }
+  return '<div class="pay-note"><i class="ti ti-info-circle"></i><div>' +
+      'كل توريد هنا دفعة نقدية فعلية في يد المستلم بانتظار تسليمها لك. ' +
+      '<b>لا تؤكّد قبل عدّ المبلغ</b> — التأكيد يُصفّر رصيد المستلم عن هذه الدفعة ولا يُتراجَع عنه.' +
+    '</div></div>' +
+    pend.map(s => {
+      const lines = HCA.txns.filter(t => t.settlement_id === s.id);
+      return '<div class="pay-card" style="margin-bottom:12px;border-color:rgba(220,38,38,.3)">' +
+        '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:11px">' +
+          '<div style="flex:1;min-width:180px">' +
+            '<div style="font-size:19px;font-weight:900">' + _he(s.receiver_name) + '</div>' +
+            '<div class="pay-sub">' + s.txn_count + ' عملية · أُرسل ' + _hdt(s.created_at) + '</div>' +
+          '</div>' +
+          '<div style="text-align:center"><div class="pay-sub">إجمالي الدفعة</div>' +
+            '<div style="font-size:26px;font-weight:900;color:#0d9488;font-variant-numeric:tabular-nums">' + _hk(s.total) + '</div>' +
+            '<div class="pay-sub">د.ك</div></div>' +
+        '</div>' +
+        (s.note ? '<div class="pay-note" style="margin-bottom:10px"><i class="ti ti-note"></i><div>' + _he(s.note) + '</div></div>' : '') +
+        '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+          '<th>السائق</th><th>تاريخ الكاش</th><th>سُلّم في</th><th>أكّده المستلم</th><th>المبلغ</th></tr></thead><tbody>' +
+          lines.map(t => '<tr><td><b>' + _he(t.driver_name) + '</b><div class="pay-sub">' + _he(t.driver_id) + '</div></td>' +
+            '<td>' + _he(t.cash_date) + '</td><td class="pay-sub">' + _hdt(t.created_at) + '</td>' +
+            '<td class="pay-sub">' + _hdt(t.confirmed_at) + '</td>' +
+            '<td class="num up">' + _hk(t.amount) + '</td></tr>').join('') +
+          '</tbody><tfoot><tr><td colspan="4"><b>الإجمالي</b></td><td class="num net"><b>' + _hk(s.total) + '</b></td></tr></tfoot>' +
+        '</table></div>' +
+        '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
+          '<button class="pay-btn lock" onclick="hcaSettleRespond(\'' + s.id + '\',\'confirm\')">' +
+            '<i class="ti ti-check"></i>عددت المبلغ — تأكيد الاستلام</button>' +
+          '<button class="pay-btn warn" onclick="hcaSettleRespond(\'' + s.id + '\',\'reject\')">' +
+            '<i class="ti ti-x"></i>رفض بسبب</button>' +
+          '<button class="pay-btn" onclick="hcaPrintSettlement(\'' + s.id + '\')"><i class="ti ti-printer"></i>إيصال</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') + hcaDisputesHTML();
+}
+
+function hcaDisputesHTML(){
+  const d = HCA.txns.filter(t => t.status === 'rejected').slice(0, 15);
+  if(!d.length) return '';
+  return '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3">' +
+    '<i class="ti ti-alert-triangle" style="color:#b45309"></i>خلافات على مبالغ — تحتاج قراراً بشرياً</h3>' +
+    '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>السائق</th><th>المستلم</th><th>المبلغ</th><th>تاريخ الكاش</th><th>سبب الرفض</th><th>وقت الرفض</th>' +
+    '</tr></thead><tbody>' + d.map(t =>
+      '<tr><td><b>' + _he(t.driver_name) + '</b></td><td>' + _he(t.receiver_name) + '</td>' +
+      '<td class="num dn">' + _hk(t.amount) + '</td><td>' + _he(t.cash_date) + '</td>' +
+      '<td>' + _he(t.reject_reason||'—') + '</td><td class="pay-sub">' + _hdt(t.rejected_at) + '</td></tr>').join('') +
+    '</tbody></table></div>' +
+    '<div class="pay-hint">الرفض لا يحذف شيئاً — يبقى مسجّلاً باسم من رفض وسببه ووقته. ' +
+    'التصحيح يتم بتسليم جديد من السائق بالمبلغ الصحيح.</div></div>';
+}
+
+async function hcaSettleRespond(id, action){
+  const s = HCA.sts.find(x => x.id === id); if(!s) return;
+  let reason = null;
+  if(action === 'confirm'){
+    if(!confirm('تأكيد استلام ' + _hk(s.total) + ' د.ك من ' + s.receiver_name + '؟\n\n' +
+      s.txn_count + ' عملية · لا يمكن التراجع بعد التأكيد.')) return;
+  }else{
+    reason = prompt('سبب رفض التوريد (مطلوب) — مثال: الإجمالي المستلم 180 وليس 200:');
+    if(reason === null) return;
+    if(!reason.trim()){ toast('لا بد من كتابة السبب','e'); return; }
+  }
+  const actor = (typeof ARK_USER !== 'undefined' && ARK_USER) ? (ARK_USER.name || ARK_USER.email) : 'المدير';
+  try{
+    await hcaRpc('homi_cash_settle_respond', {
+      p_settlement_id:id, p_action:action, p_actor:actor, p_reason:reason
+    });
+    try{ audit(action==='confirm'?'settle_confirm':'settle_reject','homi_cash_settlement',id,
+               {status:'pending'}, {status:action==='confirm'?'confirmed':'rejected', total:s.total}); }catch(e){}
+    toast(action==='confirm' ? '✅ تم تأكيد استلام ' + _hk(s.total) + ' د.ك' : 'سُجّل الرفض وأُبلغ المستلم', action==='confirm'?'s':'e');
+    await hcaSync(true);
+  }catch(e){ toast(String(e.message||e),'e'); }
+}
+
+/* ── أرصدة المستلمين ─────────────────────────────────────────────────── */
+function hcaBalancesHTML(){
+  if(!HCA.bals.length){
+    return '<div class="pay-note warn"><i class="ti ti-user-off"></i><div>' +
+      'لا يوجد مستلمون مسجّلون — أضِفهم من تبويب «المستلمون والإعدادات».</div></div>';
+  }
+  return '<div class="pay-note"><i class="ti ti-wallet"></i><div>' +
+      '<b>«في يده الآن»</b> هو ما يجب أن تجده معه لو عددت هذه اللحظة. ينقسم إلى ' +
+      '<b>قابل للتوريد</b> (لم يُعلنه بعد) و<b>أعلنه لك</b> (أرسل توريداً ينتظر تأكيدك) — والرقمان لا يتداخلان.' +
+    '</div></div>' +
+    '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>المستلم</th><th>معلّق</th><th>في يده الآن</th><th>قابل للتوريد</th><th>أعلنه لك</th><th>سلّمه لك</th><th>آخر حركة</th>' +
+    '</tr></thead><tbody>' +
+    HCA.bals.slice().sort((a,b) => parseFloat(b.on_hand||0) - parseFloat(a.on_hand||0)).map(b =>
+      '<tr><td><b>' + _he(b.name_ar) + '</b><div class="pay-sub">' + _he(b.receiver_id) +
+        (b.active === false ? ' · <span class="pay-flag">معطَّل</span>' : '') + '</div></td>' +
+      '<td class="num">' + (parseFloat(b.pending_amount)>0
+          ? '<span style="color:#b45309">' + _hk(b.pending_amount) + '</span><div class="pay-sub">' + b.pending_count + ' عملية</div>'
+          : '—') + '</td>' +
+      '<td class="num net" style="color:#0d9488">' + _hk(b.held_total) + '</td>' +
+      '<td class="num">' + (parseFloat(b.on_hand)>0 ? _hk(b.on_hand) : '—') + '</td>' +
+      '<td class="num">' + (parseFloat(b.in_transit)>0 ? _hk(b.in_transit) : '—') + '</td>' +
+      '<td class="num up">' + _hk(b.settled_total) + '</td>' +
+      '<td class="pay-sub">' + _hdt(b.last_txn_at) + '</td></tr>').join('') +
+    '</tbody><tfoot><tr><td><b>الإجمالي</b></td>' +
+      '<td class="num"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.pending_amount||0),0)) + '</b></td>' +
+      '<td class="num net"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.held_total||0),0)) + '</b></td>' +
+      '<td class="num"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.on_hand||0),0)) + '</b></td>' +
+      '<td class="num"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.in_transit||0),0)) + '</b></td>' +
+      '<td class="num up"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.settled_total||0),0)) + '</b></td>' +
+      '<td></td></tr></tfoot></table></div></div>';
+}
+
+/* ── دفتر العمليات ───────────────────────────────────────────────────── */
+function hcaFiltered(){
+  const f = HCA.f;
+  const q = (f.q||'').trim().toLowerCase();
+  return HCA.txns.filter(t => {
+    if(f.from && String(t.cash_date) < f.from) return false;
+    if(f.to   && String(t.cash_date) > f.to)   return false;
+    if(f.receiver && t.receiver_id !== f.receiver) return false;
+    if(f.status && t.status !== f.status) return false;
+    if(q && !((t.driver_name||'').toLowerCase().includes(q) ||
+              (t.driver_id||'').toLowerCase().includes(q) ||
+              (t.receiver_name||'').toLowerCase().includes(q) ||
+              (t.note||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+function hcaSetF(k, v){ HCA.f[k] = v; renderHomiCash(); }
+
+function hcaStatusFlag(t){
+  if(t.status === 'pending')   return '<span class="pay-flag amber">بانتظار التأكيد</span>';
+  if(t.status === 'rejected')  return '<span class="pay-flag red">مرفوض</span>';
+  if(t.status === 'cancelled') return '<span class="pay-flag">ملغى</span>';
+  const st = HCA.sts.find(s => s.id === t.settlement_id);
+  if(st && st.status === 'confirmed') return '<span class="pay-flag green">وُرِّد للإدارة</span>';
+  if(st && st.status === 'pending')   return '<span class="pay-flag blue">في توريد معلّق</span>';
+  return '<span class="pay-flag green">مؤكَّد — في يد المستلم</span>';
+}
+
+function hcaLedgerHTML(){
+  const rows = hcaFiltered();
+  const tot  = rows.reduce((s,x) => s + (parseFloat(x.amount)||0), 0);
+  const conf = rows.filter(x => x.status==='confirmed').reduce((s,x) => s + (+x.amount||0), 0);
+
+  const filters = '<div class="pay-card" style="margin-bottom:12px"><div class="pay-grid4">' +
+    '<div><label>من تاريخ</label><input type="date" value="' + _he(HCA.f.from) + '" onchange="hcaSetF(\'from\',this.value)"></div>' +
+    '<div><label>إلى تاريخ</label><input type="date" value="' + _he(HCA.f.to) + '" onchange="hcaSetF(\'to\',this.value)"></div>' +
+    '<div><label>المستلم</label><select onchange="hcaSetF(\'receiver\',this.value)"><option value="">الكل</option>' +
+      HCA.rcvs.map(r => '<option value="' + _he(r.driver_id) + '"' + (HCA.f.receiver===r.driver_id?' selected':'') + '>' + _he(r.name_ar) + '</option>').join('') +
+      '</select></div>' +
+    '<div><label>الحالة</label><select onchange="hcaSetF(\'status\',this.value)">' +
+      [['','الكل'],['pending','بانتظار التأكيد'],['confirmed','مؤكَّد'],['rejected','مرفوض'],['cancelled','ملغى']]
+        .map(o => '<option value="' + o[0] + '"' + (HCA.f.status===o[0]?' selected':'') + '>' + o[1] + '</option>').join('') +
+      '</select></div>' +
+    '<div style="grid-column:1/-1"><label>بحث بالاسم أو الكود أو الملاحظة</label>' +
+      '<input type="text" value="' + _he(HCA.f.q) + '" oninput="HCA.f.q=this.value" onchange="renderHomiCash()" placeholder="اكتب ثم اضغط Enter"></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">' +
+      '<button class="pay-btn" onclick="HCA.f={from:\'\',to:\'\',receiver:\'\',status:\'\',q:\'\'};renderHomiCash()">' +
+        '<i class="ti ti-filter-off"></i>مسح الفلاتر</button>' +
+      '<button class="pay-btn primary" onclick="hcaExportExcel()"><i class="ti ti-file-spreadsheet"></i>تصدير Excel</button>' +
+      '<span class="pay-sub" style="margin-inline-start:auto">' + rows.length + ' عملية · إجمالي ' + _hk(tot) +
+      ' د.ك · مؤكَّد ' + _hk(conf) + ' د.ك</span>' +
+    '</div></div>';
+
+  if(!rows.length){
+    return filters + '<div class="pay-card" style="text-align:center;padding:40px;color:var(--muted)">' +
+      '<i class="ti ti-search-off" style="font-size:32px"></i><div style="margin-top:10px;font-weight:800">لا عمليات تطابق الفلتر</div></div>';
+  }
+
+  return filters + '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>السائق</th><th>المستلم</th><th>المبلغ</th><th>تاريخ الكاش</th><th>سُجّل في</th><th>الحالة</th><th>ملاحظة / سبب</th>' +
+    '</tr></thead><tbody>' +
+    rows.slice(0,400).map(t =>
+      '<tr><td><b>' + _he(t.driver_name) + '</b><div class="pay-sub">' + _he(t.driver_id) + '</div></td>' +
+      '<td>' + _he(t.receiver_name) + '</td>' +
+      '<td class="num net">' + _hk(t.amount) + '</td>' +
+      '<td>' + _he(t.cash_date) + '</td>' +
+      '<td class="pay-sub">' + _hdt(t.created_at) + '</td>' +
+      '<td>' + hcaStatusFlag(t) + '</td>' +
+      '<td class="pay-sub">' + _he(t.reject_reason || t.note || '') + '</td></tr>').join('') +
+    '</tbody><tfoot><tr><td colspan="2"><b>الإجمالي</b></td><td class="num net"><b>' + _hk(tot) + '</b></td>' +
+    '<td colspan="4"></td></tr></tfoot></table></div>' +
+    (rows.length > 400 ? '<div class="pay-hint">تُعرض أول 400 عملية — ضيّق الفلتر أو صدّر Excel للكل.</div>' : '') +
+    '</div>';
+}
+
+/* ── التوريدات ───────────────────────────────────────────────────────── */
+function hcaSettlementsHTML(){
+  if(!HCA.sts.length){
+    return '<div class="pay-card" style="text-align:center;padding:40px;color:var(--muted)">' +
+      '<i class="ti ti-building-bank" style="font-size:32px"></i>' +
+      '<div style="margin-top:10px;font-weight:800">لم يُرسل أي توريد بعد</div></div>';
+  }
+  return '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>المستلم</th><th>الإجمالي</th><th>عدد العمليات</th><th>أُرسل</th><th>الحالة</th><th>أكّده</th><th></th>' +
+    '</tr></thead><tbody>' +
+    HCA.sts.map(s => {
+      const flag = s.status==='confirmed' ? '<span class="pay-flag green">مؤكَّد</span>'
+                 : s.status==='rejected'  ? '<span class="pay-flag red">مرفوض</span>'
+                 :                          '<span class="pay-flag amber">بانتظارك</span>';
+      return '<tr><td><b>' + _he(s.receiver_name) + '</b></td>' +
+        '<td class="num net">' + _hk(s.total) + '</td>' +
+        '<td class="num">' + s.txn_count + '</td>' +
+        '<td class="pay-sub">' + _hdt(s.created_at) + '</td>' +
+        '<td>' + flag + (s.status==='rejected' && s.reject_reason
+            ? '<div class="pay-sub">' + _he(s.reject_reason) + '</div>' : '') + '</td>' +
+        '<td class="pay-sub">' + _he(s.confirmed_by||'—') + '<div>' + _hdt(s.confirmed_at) + '</div></td>' +
+        '<td class="num"><button class="pay-icon" onclick="hcaPrintSettlement(\'' + s.id + '\')" title="إيصال"><i class="ti ti-printer"></i></button></td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+}
+
+/* ── المستلمون والإعدادات ───────────────────────────────────────────── */
+function hcaSetupHTML(){
+  const cfg = HCA.cfg || {};
+  const drvOpts = (typeof DRV !== 'undefined' ? DRV : [])
+    .slice().sort((a,b) => (a.name||'').localeCompare(b.name||'','ar'))
+    .map(d => '<option value="' + _he(d.id) + '">' + _he(d.name) + ' — ' + _he(d.id) + '</option>').join('');
+
+  return '<div class="pay-note"><i class="ti ti-users"></i><div>' +
+      '<b>المستلمون قابلون للضبط من هنا.</b> لو ترك أحدهم العمل عطّله بدل حذفه — ' +
+      'التعطيل يمنعه من استقبال تسليمات جديدة ويُبقي كل تاريخه في الدفتر.' +
+    '</div></div>' +
+    '<div class="pay-card"><h3 class="pay-h3"><i class="ti ti-user-plus"></i>إضافة مستلم</h3>' +
+      '<div class="pay-grid4">' +
+        '<div style="grid-column:span 2"><label>الموظف</label><select id="hcaNewDrv">' + drvOpts + '</select></div>' +
+        '<div><label>الاسم بالعربي</label><input id="hcaNewAr" placeholder="محمد عكاشة"></div>' +
+        '<div><label>الاسم بالإنجليزي</label><input id="hcaNewEn" placeholder="Mohamed Okasha"></div>' +
+      '</div>' +
+      '<div style="margin-top:10px"><button class="pay-btn primary" onclick="hcaAddReceiver()">' +
+        '<i class="ti ti-check"></i>إضافة</button></div></div>' +
+
+    '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3"><i class="ti ti-list"></i>المستلمون الحاليون</h3>' +
+      (HCA.rcvs.length
+        ? '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+          '<th>الاسم</th><th>الكود</th><th>الحالة</th><th>في يده الآن</th><th></th></tr></thead><tbody>' +
+          HCA.rcvs.map(r => {
+            const b = HCA.bals.find(x => x.receiver_id === r.driver_id) || {};
+            return '<tr><td><b>' + _he(r.name_ar) + '</b><div class="pay-sub">' + _he(r.name_en) + '</div></td>' +
+              '<td class="pay-sub">' + _he(r.driver_id) + '</td>' +
+              '<td>' + (r.active ? '<span class="pay-flag green">نشط</span>' : '<span class="pay-flag">معطَّل</span>') + '</td>' +
+              '<td class="num net">' + _hk(b.held_total) + '</td>' +
+              '<td class="num"><button class="pay-icon" onclick="hcaToggleReceiver(\'' + r.driver_id + '\',' + (!r.active) + ')" title="' +
+                (r.active?'تعطيل':'تفعيل') + '"><i class="ti ti-' + (r.active?'eye-off':'eye') + '"></i></button></td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div style="text-align:center;padding:24px;color:var(--muted)">لا مستلمين بعد</div>') +
+    '</div>' +
+
+    '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3"><i class="ti ti-settings"></i>إعدادات النظام</h3>' +
+      '<div class="pay-grid4">' +
+        '<div><label>الحد الأقصى للمبلغ الواحد (د.ك)</label>' +
+          '<input type="number" step="0.001" id="hcaCfgMax" value="' + _he(cfg.max_amount||5000) + '"></div>' +
+        '<div><label>أقصى رجوع بالتاريخ (يوم)</label>' +
+          '<input type="number" id="hcaCfgBack" value="' + _he(cfg.backdate_days||7) + '"></div>' +
+        '<div><label>الشريك الذي يظهر له النظام</label>' +
+          '<input id="hcaCfgPartner" value="' + _he(cfg.partner_id||'homy') + '"></div>' +
+        '<div><label>إشعارات Push</label><select id="hcaCfgPush">' +
+          '<option value="1"' + (cfg.push_enabled!==false?' selected':'') + '>مفعّلة</option>' +
+          '<option value="0"' + (cfg.push_enabled===false?' selected':'') + '>موقوفة</option></select></div>' +
+        '<div style="grid-column:1/-1"><label>أكواد من يصلهم إشعار المدير (افصل بفاصلة)</label>' +
+          '<input id="hcaCfgMgr" value="' + _he((cfg.manager_push_ids||[]).join(', ')) + '" placeholder="SA10039, SA10040"></div>' +
+      '</div>' +
+      '<div style="margin-top:10px"><button class="pay-btn primary" onclick="hcaSaveCfg()">' +
+        '<i class="ti ti-device-floppy"></i>حفظ الإعدادات</button></div>' +
+      '<div class="pay-hint">إشعار المدير يصل عبر أكواد موظفين مسجّلة أجهزتها في النظام. ' +
+        'ضع كودك أنت هنا لو تفتح تطبيق فلاي أو «السلاسل مدير» على تليفونك — ' +
+        'وبدون ذلك يظل الإشعار داخل ARK فقط.</div>' +
+    '</div>';
+}
+
+async function hcaAddReceiver(){
+  if(!requirePerm('edit','drivers')) return;
+  const id = document.getElementById('hcaNewDrv').value;
+  const ar = document.getElementById('hcaNewAr').value.trim();
+  const en = document.getElementById('hcaNewEn').value.trim();
+  if(!id){ toast('اختر الموظف','e'); return; }
+  const d = (typeof DRV !== 'undefined' ? DRV : []).find(x => x.id === id);
+  if(!ar && !d){ toast('اكتب الاسم بالعربي','e'); return; }
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/' + HC_TBL.rcv + '?on_conflict=driver_id', {
+      method:'POST',
+      headers: hcaHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify([{
+        driver_id:id, name_ar: ar || (d && d.name) || id, name_en: en || (d && d.name) || id,
+        phone: (d && d.sim) || null, active:true,
+        sort_order: (HCA.rcvs.length + 1) * 10,
+        created_by: (typeof ARK_USER!=='undefined' && ARK_USER) ? (ARK_USER.email||ARK_USER.name) : 'ark'
+      }])
+    });
+    if(!r.ok) throw new Error(await r.text());
+    try{ audit('create','homi_cash_receiver',id,null,{name:ar||id}); }catch(e){}
+    toast('أُضيف المستلم','s');
+    await hcaSync(true);
+  }catch(e){ toast('فشل: ' + String(e.message||e).slice(0,120),'e'); }
+}
+
+async function hcaToggleReceiver(id, active){
+  if(!requirePerm('edit','drivers')) return;
+  const b = HCA.bals.find(x => x.receiver_id === id);
+  if(!active && b && parseFloat(b.held_total||0) > 0 &&
+     !confirm('في يد هذا المستلم ' + _hk(b.held_total) + ' د.ك لم تُورَّد بعد.\n\n' +
+              'التعطيل يمنعه من استقبال تسليمات جديدة لكنه لن يُلغي رصيده — لا بد أن يورّده أولاً.\n\nمتابعة؟')) return;
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/' + HC_TBL.rcv + '?driver_id=eq.' + encodeURIComponent(id), {
+      method:'PATCH', headers: hcaHeaders({Prefer:'return=minimal'}),
+      body: JSON.stringify({active: !!active})
+    });
+    if(!r.ok) throw new Error(await r.text());
+    try{ audit('update','homi_cash_receiver',id,null,{active:!!active}); }catch(e){}
+    await hcaSync(true);
+  }catch(e){ toast('فشل: ' + String(e.message||e).slice(0,120),'e'); }
+}
+
+async function hcaSaveCfg(){
+  if(!requirePerm('edit','drivers')) return;
+  const mgr = document.getElementById('hcaCfgMgr').value
+    .split(/[,،\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
+  const body = {
+    max_amount: parseFloat(document.getElementById('hcaCfgMax').value) || 5000,
+    backdate_days: parseInt(document.getElementById('hcaCfgBack').value) || 7,
+    partner_id: document.getElementById('hcaCfgPartner').value.trim() || 'homy',
+    push_enabled: document.getElementById('hcaCfgPush').value === '1',
+    manager_push_ids: mgr,
+    updated_at: new Date().toISOString()
+  };
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/' + HC_TBL.cfg + '?id=eq.1', {
+      method:'PATCH', headers: hcaHeaders({Prefer:'return=minimal'}), body: JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error(await r.text());
+    try{ audit('update','homi_cash_config','cfg',null,body); }catch(e){}
+    toast('حُفظت الإعدادات','s');
+    await hcaSync(true);
+  }catch(e){ toast('فشل: ' + String(e.message||e).slice(0,120),'e'); }
+}
+
+/* ── سجل التدقيق ────────────────────────────────────────────────────── */
+function hcaAuditHTML(){
+  const actAr = {
+    submit:'سجّل تسليماً', confirm:'أكّد الاستلام', reject:'رفض', cancel:'ألغى',
+    settle:'أرسل توريداً', settle_confirm:'أكّد استلام التوريد', settle_reject:'رفض التوريد'
+  };
+  const roleAr = { driver:'سائق', receiver:'مستلم', manager:'الإدارة' };
+  if(!HCA.events.length){
+    return '<div class="pay-card" style="text-align:center;padding:40px;color:var(--muted)">لا أحداث بعد</div>';
+  }
+  return '<div class="pay-note"><i class="ti ti-lock"></i><div>' +
+      'هذا السجل <b>غير قابل للتعديل أو الحذف</b> — حتى من قاعدة البيانات نفسها. ' +
+      'هو المرجع عند أي خلاف على مبلغ: من قال ماذا ومتى.</div></div>' +
+    '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>الوقت</th><th>من</th><th>الدور</th><th>الإجراء</th><th>المبلغ</th><th>تفاصيل</th>' +
+    '</tr></thead><tbody>' +
+    HCA.events.map(e =>
+      '<tr><td class="pay-sub">' + _hdt(e.created_at) + '</td>' +
+      '<td><b>' + _he(e.actor_name||e.actor_id||'—') + '</b></td>' +
+      '<td>' + _he(roleAr[e.actor_role]||e.actor_role||'—') + '</td>' +
+      '<td>' + _he(actAr[e.action]||e.action) + '</td>' +
+      '<td class="num">' + (e.amount ? _hk(e.amount) : '—') + '</td>' +
+      '<td class="pay-sub">' + _he(e.meta && e.meta.reason ? e.meta.reason : (e.entity_id||'')) + '</td></tr>').join('') +
+    '</tbody></table></div></div>';
+}
+
+/* ── التصدير والطباعة ───────────────────────────────────────────────── */
+function hcaExportExcel(){
+  if(typeof XLSX === 'undefined'){ toast('مكتبة Excel غير محمّلة','e'); return; }
+  const rows = hcaFiltered();
+  const stMap = {}; HCA.sts.forEach(s => stMap[s.id] = s);
+
+  const s1 = [['السائق','كود السائق','المستلم','المبلغ','تاريخ الكاش','سُجّل في','الحالة',
+               'أكّده في','رقم التوريد','حالة التوريد','ملاحظة','سبب الرفض']];
+  rows.forEach(t => {
+    const st = stMap[t.settlement_id];
+    s1.push([t.driver_name, t.driver_id, t.receiver_name, parseFloat(t.amount), t.cash_date,
+             _hdt(t.created_at),
+             {pending:'بانتظار التأكيد',confirmed:'مؤكَّد',rejected:'مرفوض',cancelled:'ملغى'}[t.status]||t.status,
+             _hdt(t.confirmed_at), t.settlement_id||'',
+             st ? ({pending:'بانتظار الإدارة',confirmed:'استلمته الإدارة',rejected:'مرفوض'}[st.status]||st.status) : '',
+             t.note||'', t.reject_reason||'']);
+  });
+  s1.push([], ['الإجمالي','','', rows.reduce((a,x)=>a+(+x.amount||0),0)]);
+
+  const s2 = [['المستلم','الكود','معلّق','في يده الآن','قابل للتوريد','أعلنه للإدارة','سلّمه للإدارة']];
+  HCA.bals.forEach(b => s2.push([b.name_ar, b.receiver_id, +b.pending_amount||0,
+                                 +b.held_total||0, +b.on_hand||0, +b.in_transit||0, +b.settled_total||0]));
+
+  const s3 = [['رقم التوريد','المستلم','الإجمالي','عدد العمليات','أُرسل','الحالة','أكّده','وقت التأكيد','سبب الرفض']];
+  HCA.sts.forEach(s => s3.push([s.id, s.receiver_name, +s.total||0, s.txn_count, _hdt(s.created_at),
+    {pending:'بانتظار الإدارة',confirmed:'مؤكَّد',rejected:'مرفوض'}[s.status]||s.status,
+    s.confirmed_by||'', _hdt(s.confirmed_at), s.reject_reason||'']));
+
+  const wb = XLSX.utils.book_new();
+  const mk = (aoa,name,cols) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=cols; XLSX.utils.book_append_sheet(wb,ws,name); };
+  mk(s1,'دفتر العمليات',[{wch:24},{wch:11},{wch:16},{wch:11},{wch:12},{wch:17},{wch:15},{wch:17},{wch:24},{wch:16},{wch:26},{wch:26}]);
+  mk(s2,'أرصدة المستلمين',[{wch:18},{wch:11},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14}]);
+  mk(s3,'التوريدات',[{wch:24},{wch:18},{wch:12},{wch:12},{wch:17},{wch:16},{wch:20},{wch:17},{wch:26}]);
+  XLSX.writeFile(wb, 'AlSalasil_HomiCash_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  toast('صُدّر دفتر كاش هومي','s');
+}
+
+function hcaPrintSettlement(id){
+  const s = HCA.sts.find(x => x.id === id); if(!s) return;
+  const lines = HCA.txns.filter(t => t.settlement_id === id);
+  const w = window.open('','_blank');
+  if(!w){ toast('اسمح بالنوافذ المنبثقة','e'); return; }
+  w.document.write('<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">' +
+    '<title>إيصال توريد ' + _he(s.receiver_name) + '</title><style>' +
+    'body{font-family:"Segoe UI",Tahoma,sans-serif;padding:28px;color:#0f172a;max-width:700px;margin:auto}' +
+    '.hd{border-bottom:2px solid #0d9488;padding-bottom:12px;margin-bottom:16px}' +
+    '.hd h1{font-size:18px;margin:0;color:#0d9488}.hd .s{font-size:11px;color:#64748b;margin-top:3px}' +
+    '.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}' +
+    '.meta div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px}' +
+    '.meta span{display:block;font-size:10px;color:#64748b}.meta b{font-size:12.5px}' +
+    'table{width:100%;border-collapse:collapse;font-size:11.5px}' +
+    'th,td{border:1px solid #e2e8f0;padding:6px 8px;text-align:right}th{background:#f1f5f9;font-weight:800}' +
+    'td.n{text-align:left;font-variant-numeric:tabular-nums}tfoot td{background:#f8fafc;font-weight:900}' +
+    '.tot{margin-top:16px;background:#0d9488;color:#fff;border-radius:10px;padding:13px 18px;display:flex;justify-content:space-between;align-items:center}' +
+    '.tot b{font-size:22px}.sign{margin-top:34px;display:flex;gap:50px;font-size:12px}' +
+    '.sign div{flex:1;border-top:1px solid #94a3b8;padding-top:6px;text-align:center;color:#475569}' +
+    '@media print{body{padding:10px}}</style></head><body>' +
+    '<div class="hd"><h1>شركة السلاسل — إيصال توريد كاش هومي</h1>' +
+      '<div class="s">Homi Cash Settlement Receipt · ' + _he(s.id) + '</div></div>' +
+    '<div class="meta">' +
+      '<div><span>المورِّد</span><b>' + _he(s.receiver_name) + '</b></div>' +
+      '<div><span>عدد العمليات</span><b>' + s.txn_count + '</b></div>' +
+      '<div><span>تاريخ الإرسال</span><b>' + _hdt(s.created_at) + '</b></div>' +
+      '<div><span>الحالة</span><b>' + ({pending:'بانتظار الإدارة',confirmed:'مؤكَّد',rejected:'مرفوض'}[s.status]||s.status) + '</b></div>' +
+      '<div><span>أكّده</span><b>' + _he(s.confirmed_by||'—') + '</b></div>' +
+      '<div><span>وقت التأكيد</span><b>' + _hdt(s.confirmed_at) + '</b></div>' +
+    '</div>' +
+    '<table><thead><tr><th>#</th><th>السائق</th><th>تاريخ الكاش</th><th>وقت التسليم</th><th>المبلغ</th></tr></thead><tbody>' +
+    lines.map((t,i) => '<tr><td class="n">' + (i+1) + '</td><td>' + _he(t.driver_name) + '</td>' +
+      '<td class="n">' + _he(t.cash_date) + '</td><td class="n">' + _hdt(t.created_at) + '</td>' +
+      '<td class="n">' + _hk(t.amount) + '</td></tr>').join('') +
+    '</tbody><tfoot><tr><td colspan="4">الإجمالي</td><td class="n">' + _hk(s.total) + '</td></tr></tfoot></table>' +
+    '<div class="tot"><span>إجمالي المُورَّد</span><b>' + _hk(s.total) + ' د.ك</b></div>' +
+    '<div class="sign"><div>المورِّد</div><div>المستلم عن الإدارة</div></div>' +
+    '</body></html>');
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+
+/* تحديث دوري خفيف ما دام التبويب مفتوحاً */
+let HCA_TIMER = null;
+function hcaStartAuto(){
+  clearInterval(HCA_TIMER);
+  HCA_TIMER = setInterval(() => {
+    if(typeof currentView !== 'undefined' && currentView === 'homicash') hcaSync(true);
+  }, 45000);
+}
+function hcaStopAuto(){ clearInterval(HCA_TIMER); }
+
+/* شارة التوريدات المعلّقة تُحدَّث عند فتح ARK */
+setTimeout(function(){ try{ hcaSync(true); }catch(e){} }, 3500);
 </script>
 
 </body>
