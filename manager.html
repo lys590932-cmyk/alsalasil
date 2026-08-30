@@ -284,6 +284,7 @@ body::after{
         <div class="qa" onclick="openTab('live')"><div class="ic" style="background:var(--green)"><i class="ti ti-map-pin"></i></div><div class="l">الخريطة</div></div>
         <div class="qa" onclick="openAddVioSheet()"><div class="ic" style="background:var(--red)"><i class="ti ti-alert-triangle"></i></div><div class="l">مخالفة</div></div>
         <div class="qa" onclick="openAppsList()"><div class="ic" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div><div class="l">طلبات<br><span id="qa-apps-count">0</span></div></div>
+        <div class="qa" onclick="openHomiCashSheet()" style="position:relative"><div class="ic" style="background:#0d9488"><i class="ti ti-cash-banknote"></i></div><div class="l">كاش هومي<br><span id="qa-homicash-count"></span></div><span id="qa-homicash-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
       </div>
 
       <div class="kpi-grid" id="kpi-grid">
@@ -1883,6 +1884,253 @@ async function mxHomeStrip(){
         <b>${orders}</b><span>أوردر اليوم</span></button>`;
   }catch(e){ el.innerHTML = ''; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   السلاسل مدير — كاش هومي
+   ───────────────────────────────────────────────────────────────────────
+   الطرف الأخير في سلسلة العهدة: المستلم يورّد، وأنت تعدّ وتؤكّد.
+   التأكيد هنا يُصفّر رصيد المستلم عن تلك الدفعة ولا يُتراجَع عنه.
+
+   الإشعار يصل بطريقتين متكاملتين:
+   • Web Push حقيقي من قاعدة البيانات — يصل والتطبيق مقفول (يحتاج تفعيل مرة واحدة)
+   • فحص دوري كل ٢٥ ثانية ما دام التطبيق مفتوحاً — شبكة أمان لا تحتاج إعداداً
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const HCM_VAPID = 'BE7cUweRPvPKFlb0k0YQUc7fWnSMX9xuVN-1LdB0QwGvlzVzsgbpokJNgSiEGdDk6y9qSKomnm2o0YHBjXrqb_E';
+const HCM_SK_ID = 'mgr_homicash_push_id';
+const HCM_MGR_ID = 'MGR-ARK';   // معرّف الإدارة — كل أجهزة المديرين تحته
+
+let HCM = { pending: [], seen: new Set(), init: false, busy: false };
+
+function _hcmK(n){ return (parseFloat(n)||0).toFixed(3); }
+function _hcmE(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function _hcmT(s){ return s ? String(s).slice(0,16).replace('T',' ') : '—'; }
+
+async function hcmRpc(fn, args){
+  const res = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, {
+    method:'POST',
+    headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json'},
+    body: JSON.stringify(args||{})
+  });
+  const txt = await res.text().catch(()=> '');
+  if(!res.ok){
+    let m = txt;
+    try{ const j = JSON.parse(txt); m = j.message || j.hint || txt; }catch(e){}
+    throw new Error(String(m).split(' / ')[0] || ('HTTP ' + res.status));
+  }
+  try{ return JSON.parse(txt); }catch(e){ return txt; }
+}
+
+/* ── الفحص الدوري ─────────────────────────────────────────────────── */
+async function hcmFetchPending(notify){
+  try{
+    const rows = await hcmRpc('homi_cash_manager_pending', {});
+    HCM.pending = rows || [];
+  }catch(e){
+    // الجداول غير منشأة بعد أو لا شبكة — لا نزعج المستخدم
+    return;
+  }
+  hcmPaintBadge();
+
+  // أول تحميل: نعلّم الموجود كمقروء بلا إشعار
+  if(!HCM.init){
+    HCM.pending.forEach(s => HCM.seen.add(s.id));
+    HCM.init = true;
+    return;
+  }
+  if(!notify) return;
+
+  HCM.pending.forEach(s => {
+    if(HCM.seen.has(s.id)) return;
+    HCM.seen.add(s.id);
+    try{
+      mgrShowNotif({
+        title: '💰 توريد كاش هومي',
+        body: s.receiver_name + ' يورّد ' + _hcmK(s.total) + ' د.ك عن ' + s.txn_count + ' عملية — اضغط للتأكيد',
+        tag: 'homicash-' + s.id,
+        data: { url:'./manager.html' }
+      });
+      if(navigator.vibrate) navigator.vibrate([180,90,180]);
+    }catch(e){}
+  });
+}
+
+function hcmPaintBadge(){
+  const el = document.getElementById('qa-homicash-count');
+  if(el) el.textContent = HCM.pending.length ? '(' + HCM.pending.length + ')' : '';
+  const dot = document.getElementById('qa-homicash-dot');
+  if(dot) dot.style.display = HCM.pending.length ? 'block' : 'none';
+}
+
+/* ── شاشة التوريدات ───────────────────────────────────────────────── */
+async function openHomiCashSheet(){
+  openSheet('<div class="sheet-head"><h3>كاش هومي</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
+    '<div style="padding:26px;text-align:center;color:#8b949e">جارٍ التحميل…</div>');
+  await hcmFetchPending(false);
+  hcmRenderSheet();
+}
+
+function hcmRenderSheet(){
+  const box = document.getElementById('sheet-box');
+  if(!box) return;
+
+  const savedId = (function(){ try{ return localStorage.getItem(HCM_SK_ID)||''; }catch(e){ return ''; } })();
+  const pushRow =
+    '<div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:11px 13px;margin-bottom:14px">' +
+      '<div style="display:flex;align-items:center;gap:9px">' +
+        '<i class="ti ti-bell" style="font-size:17px;color:' + (savedId ? '#10b981' : '#f59e0b') + '"></i>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:12.5px;font-weight:800">' +
+            (savedId ? 'الإشعارات مفعّلة على هذا الجهاز' : 'فعّل الإشعارات على هذا الجهاز') + '</div>' +
+          '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">' +
+            (savedId ? 'يصلك الإشعار حتى والتطبيق مقفول'
+                     : 'ضغطة واحدة — بدونها يصلك الإشعار فقط والتطبيق مفتوح') + '</div>' +
+        '</div>' +
+        '<button onclick="hcmEnablePush()" style="background:' + (savedId ? '#21262d' : '#0d9488') +
+          ';color:#fff;border:none;padding:8px 13px;border-radius:9px;font-family:inherit;font-size:11.5px;font-weight:800;cursor:pointer">' +
+          (savedId ? 'إعادة تفعيل' : 'تفعيل') + '</button>' +
+      '</div>' +
+    '</div>';
+
+  let body;
+  if(!HCM.pending.length){
+    body = '<div class="empty" style="padding:34px 0;text-align:center;color:#8b949e">' +
+      '<i class="ti ti-check" style="font-size:32px;color:#10b981"></i>' +
+      '<p style="margin-top:10px;font-size:12.5px">لا توريدات بانتظارك — كل ما ورّده المستلمون مؤكَّد</p></div>';
+  }else{
+    body = HCM.pending.map(s =>
+      '<div style="background:#161b22;border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:14px;margin-bottom:11px">' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:11px">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:15px;font-weight:900">' + _hcmE(s.receiver_name) + '</div>' +
+            '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">' +
+              s.txn_count + ' عملية · ' + _hcmT(s.created_at) + '</div>' +
+          '</div>' +
+          '<div style="text-align:center">' +
+            '<div style="font-size:24px;font-weight:900;color:#0d9488;font-variant-numeric:tabular-nums">' + _hcmK(s.total) + '</div>' +
+            '<div style="font-size:10px;color:#8b949e">د.ك</div>' +
+          '</div>' +
+        '</div>' +
+        (s.note ? '<div style="font-size:11.5px;color:#8b949e;background:#21262d;border-radius:9px;padding:8px 10px;margin-bottom:10px">' + _hcmE(s.note) + '</div>' : '') +
+        '<div style="display:flex;gap:8px">' +
+          '<button onclick="hcmRespond(\'' + s.id + '\',\'confirm\')" ' +
+            'style="flex:1;background:linear-gradient(135deg,#0d9488,#059669);color:#fff;border:none;padding:12px;border-radius:11px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer">' +
+            '<i class="ti ti-check"></i> عددته — تأكيد</button>' +
+          '<button onclick="hcmRespond(\'' + s.id + '\',\'reject\')" ' +
+            'style="background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.3);padding:12px 15px;border-radius:11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">' +
+            '<i class="ti ti-x"></i> رفض</button>' +
+        '</div>' +
+      '</div>').join('') +
+      '<div style="font-size:11px;color:#8b949e;line-height:1.8;padding:0 4px">' +
+        'التأكيد يُصفّر رصيد المستلم عن هذه الدفعة ولا يمكن التراجع عنه — <b>عدّ المبلغ أولاً</b>. ' +
+        'الرفض يُعيد العمليات إلى رصيده ليورّدها من جديد.' +
+      '</div>';
+  }
+
+  box.innerHTML = '<div class="sheet-head"><h3>كاش هومي' +
+      (HCM.pending.length ? ' (' + HCM.pending.length + ')' : '') + '</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
+    '<div style="padding:0 2px">' + pushRow + body + '</div>';
+}
+
+async function hcmRespond(id, action){
+  if(HCM.busy) return;
+  const s = HCM.pending.find(x => x.id === id); if(!s) return;
+  let reason = null;
+
+  if(action === 'confirm'){
+    if(!confirm('تأكيد استلام ' + _hcmK(s.total) + ' د.ك من ' + s.receiver_name + '؟\n\n' +
+      s.txn_count + ' عملية · لا يمكن التراجع بعد التأكيد.')) return;
+  }else{
+    reason = prompt('سبب الرفض (مطلوب) — مثال: المستلم 180 وليس 200:');
+    if(reason === null) return;
+    if(!reason.trim()){ toast('لا بد من كتابة السبب'); return; }
+  }
+
+  HCM.busy = true;
+  try{
+    await hcmRpc('homi_cash_settle_respond', {
+      p_settlement_id:id, p_action:action, p_actor:'المدير (السلاسل مدير)', p_reason:reason
+    });
+    toast(action === 'confirm'
+      ? '✅ تم تأكيد استلام ' + _hcmK(s.total) + ' د.ك'
+      : 'سُجّل الرفض وأُبلغ المستلم');
+    HCM.pending = HCM.pending.filter(x => x.id !== id);
+    hcmPaintBadge();
+    hcmRenderSheet();
+  }catch(e){
+    toast(String(e.message||e).slice(0,120));
+  }
+  HCM.busy = false;
+}
+
+/* ── تفعيل Web Push الحقيقي ───────────────────────────────────────── */
+function _hcmB64(b64){
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const s = (b64 + pad).replace(/-/g,'+').replace(/\//g,'/');
+  const raw = atob(s.replace(/-/g,'+').replace(/_/g,'/'));
+  const out = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function _hcmU8(buf){
+  const b = new Uint8Array(buf); let s = '';
+  for(let i=0;i<b.length;i++) s += String.fromCharCode(b[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function hcmEnablePush(){
+  /* المدير لا يملك كود موظف، فيُسجَّل جهازه من باب خاص لا يقبل إلا
+     معرّفات تبدأ بـ MGR- — ويُضاف تلقائياً لقائمة من يصلهم الإشعار. */
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    toast('هذا المتصفح لا يدعم الإشعارات والتطبيق مقفول');
+    return;
+  }
+  const ok = await mgrRequestPush();
+  if(!ok){ toast('لا بد من السماح بالإشعارات من إعدادات المتصفح'); return; }
+
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _hcmB64(HCM_VAPID)
+      });
+    }
+    const j = sub.toJSON ? sub.toJSON() : {};
+    const keys = j.keys || {};
+    const p256 = keys.p256dh || (sub.getKey && _hcmU8(sub.getKey('p256dh')));
+    const auth = keys.auth   || (sub.getKey && _hcmU8(sub.getKey('auth')));
+    if(!p256 || !auth){ toast('تعذّر قراءة مفاتيح الجهاز'); return; }
+
+    await hcmRpc('homi_cash_register_manager', {
+      p_manager_id: HCM_MGR_ID,
+      p_endpoint: sub.endpoint,
+      p_p256dh: p256,
+      p_auth: auth,
+      p_platform: /android/i.test(navigator.userAgent) ? 'android'
+                  : (/iphone|ipad/i.test(navigator.userAgent) ? 'ios' : 'other'),
+      p_standalone: window.matchMedia('(display-mode: standalone)').matches,
+      p_user_agent: navigator.userAgent.slice(0,300)
+    });
+
+    try{ localStorage.setItem(HCM_SK_ID, HCM_MGR_ID); }catch(e){}
+    toast('✅ فُعّلت الإشعارات على هذا الجهاز');
+    hcmRenderSheet();
+    alert('تم ✅\n\nالإشعارات مفعّلة على هذا الجهاز، وأُضيف تلقائياً لقائمة إشعارات الإدارة.\n\n' +
+      'مش محتاج أي خطوة تانية — هيوصلك إشعار عند كل تسليم وتوريد حتى والتطبيق مقفول.');
+  }catch(e){
+    console.warn('[homicash push]', e);
+    toast('فشل التفعيل: ' + String(e.message||e).slice(0,90));
+  }
+}
+
+/* ── التشغيل ──────────────────────────────────────────────────────── */
+setTimeout(() => { hcmFetchPending(false); }, 2600);
+setInterval(() => { hcmFetchPending(true); }, 25000);
 
 </script>
 </body>
