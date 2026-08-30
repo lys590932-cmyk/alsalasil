@@ -6241,7 +6241,7 @@ function hcInboxHTML(){
           '</div>'+
           (x.note ? '<div class="hc-item-note">'+hcEsc(x.note)+'</div>' : '')+
           '<div class="hc-actions">'+
-            '<button class="hc-primary sm" onclick="hcRespond(\''+x.id+'\',\'confirm\','+JSON.stringify(hcKD(x.amount))+','+JSON.stringify(x.driver_name||'')+')">'+
+            '<button class="hc-primary sm" onclick="hcRespond(\''+x.id+'\',\'confirm\')">'+
               '<i class="ti ti-check"></i> '+t('hc_approve')+'</button>'+
             '<button class="hc-mini danger" onclick="hcRespond(\''+x.id+'\',\'reject\')">'+
               '<i class="ti ti-x"></i> '+t('hc_reject')+'</button>'+
@@ -6268,7 +6268,13 @@ function hcInboxHTML(){
   return html;
 }
 
-function hcRespond(id, action, amt, drvName){
+/* المبلغ والاسم يُقرآن من البيانات لا من خاصية onclick — تمرير نص فيه
+   علامة تنصيص أو أبوسترof داخل السمة يكسر النداء بصمت، وهو ما كان يمنع
+   زر التأكيد من العمل بينما زر الرفض (بلا نصوص) يعمل. */
+function hcRespond(id, action){
+  var _tx = (HC.inbox || []).filter(function(x){ return x.id === id; })[0] || {};
+  var amt     = hcKD(_tx.amount);
+  var drvName = _tx.driver_name || '';
   if(action === 'confirm'){
     if(!confirm(t('hc_approve_confirm', amt, drvName))) return;
     hcRpc('homi_cash_respond', {p_txn_id:id, p_receiver_id:DRIVER.id, p_action:'confirm', p_reason:null})
