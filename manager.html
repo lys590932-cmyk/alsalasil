@@ -43,6 +43,166 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .pin-pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
 .pin-key{width:72px;height:72px;background:rgba(255,255,255,.15);border:none;border-radius:50%;color:#fff;font-size:28px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .pin-key:active{background:rgba(255,255,255,.35);transform:scale(.95)}
+
+/* ── شاشة الدخول الجديدة ── */
+.login{overflow-y:auto;padding:26px 20px}
+.lg-card{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center}
+.login .lg-sub{color:rgba(255,255,255,.8);font-size:12.5px;margin:0 0 22px}
+.login h1{margin-bottom:4px}
+
+/* البصمة */
+.lg-bio{width:100%;margin-bottom:4px}
+.lg-biobtn{width:100%;background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.3);
+  border-radius:16px;padding:16px;color:#fff;font-family:inherit;font-size:15px;font-weight:800;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:background .15s,transform .08s}
+.lg-biobtn:active{transform:scale(.98);background:rgba(255,255,255,.24)}
+.lg-biobtn i{font-size:26px}
+.lg-or{display:flex;align-items:center;gap:12px;margin:18px 0 14px;color:rgba(255,255,255,.55);font-size:11.5px}
+.lg-or::before,.lg-or::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.22)}
+
+/* النموذج */
+.lg-form{width:100%;display:flex;flex-direction:column}
+.lg-lbl{color:rgba(255,255,255,.82);font-size:11.5px;font-weight:800;margin:0 0 6px 2px}
+.lg-in{width:100%;background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.22);
+  border-radius:13px;padding:14px 15px;color:#fff;font-family:inherit;font-size:15px;
+  margin-bottom:14px;transition:border-color .15s,background .15s}
+.lg-in::placeholder{color:rgba(255,255,255,.45)}
+.lg-in:focus{outline:none;border-color:rgba(255,255,255,.65);background:rgba(255,255,255,.19)}
+.lg-pwrap{position:relative}
+.lg-pwrap .lg-in{padding-inline-start:46px}
+.lg-eye{position:absolute;inset-inline-start:6px;top:6px;width:36px;height:36px;
+  background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;
+  display:grid;place-items:center;font-size:19px}
+.lg-go{width:100%;background:#0d9488;border:none;border-radius:14px;padding:16px;
+  color:#fff;font-family:inherit;font-size:15.5px;font-weight:900;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:9px;margin-top:4px;
+  transition:background .15s,transform .08s}
+.lg-go:active{transform:scale(.98)}
+.lg-go:disabled{opacity:.6;cursor:default}
+.lg-err{color:#fecaca;background:rgba(220,38,38,.22);border:1px solid rgba(248,113,113,.4);
+  border-radius:11px;font-size:12.5px;font-weight:700;line-height:1.6;
+  padding:11px 13px;margin-top:13px;display:none}
+.lg-err.on{display:block}
+.lg-foot{color:rgba(255,255,255,.6);font-size:11px;line-height:1.7;margin-top:24px;
+  text-align:center;display:flex;align-items:flex-start;gap:7px;max-width:320px}
+.lg-foot i{font-size:14px;flex:0 0 auto;margin-top:1px}
+
+/* ══════════════════════════════════════════════════════════════
+   مركز القرارات
+   كل حاجة مستنية قرارك في مكان واحد، مرتّبة بالأهم.
+   ══════════════════════════════════════════════════════════════ */
+#tab-decisions{padding:0}
+
+/* ── الرأس: كام قرار وكام فلوس ── */
+.dc-top{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;
+  padding:18px 16px 20px;position:sticky;top:0;z-index:5}
+.dc-top h2{margin:0 0 3px;font-size:19px;font-weight:900;display:flex;align-items:center;gap:9px}
+.dc-top h2 i{font-size:22px}
+.dc-top .sub{font-size:11.5px;opacity:.82;margin:0}
+.dc-sum{display:flex;gap:9px;margin-top:15px}
+.dc-sum > div{flex:1;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);
+  border-radius:13px;padding:11px 10px;text-align:center}
+.dc-sum b{display:block;font-size:21px;font-weight:900;line-height:1.2;
+  font-variant-numeric:tabular-nums}
+.dc-sum span{display:block;font-size:10px;opacity:.8;font-weight:700;margin-top:2px}
+.dc-sum .hot b{color:#fca5a5}
+
+/* ── فلاتر النوع ── */
+.dc-chips{display:flex;gap:7px;overflow-x:auto;padding:12px 14px;
+  border-bottom:1px solid var(--br,#e5e7eb);background:var(--card,#fff);
+  position:sticky;top:0;z-index:4;-webkit-overflow-scrolling:touch}
+.dc-chips::-webkit-scrollbar{display:none}
+.dc-chip{flex:0 0 auto;border:1px solid var(--br,#e5e7eb);background:var(--bg2,#f6f8fa);
+  color:var(--muted,#57606a);border-radius:20px;padding:7px 13px;font-size:12px;
+  font-weight:800;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:5px;
+  transition:background .15s,color .15s,border-color .15s}
+.dc-chip.on{background:#0d9488;border-color:#0d9488;color:#fff}
+.dc-chip .n{background:rgba(0,0,0,.12);border-radius:20px;padding:1px 6px;font-size:10.5px}
+.dc-chip.on .n{background:rgba(255,255,255,.25)}
+
+/* ── كارت القرار ── */
+.dc-list{padding:13px 14px 90px;display:flex;flex-direction:column;gap:11px}
+.dc-card{background:var(--card,#fff);border:1px solid var(--br,#e5e7eb);
+  border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.dc-card.p1{border-inline-start:4px solid #dc2626}
+.dc-card.p2{border-inline-start:4px solid #f59e0b}
+.dc-card.p3{border-inline-start:4px solid #0ea5e9}
+.dc-card.p4{border-inline-start:4px solid #94a3b8}
+
+.dc-hd{display:flex;align-items:flex-start;gap:11px;padding:13px 14px 0}
+.dc-ic{width:38px;height:38px;border-radius:11px;flex:0 0 38px;display:grid;place-items:center;
+  font-size:19px;color:#fff}
+.dc-ic.spend{background:#0d9488} .dc-ic.settlement{background:#059669}
+.dc-ic.advance{background:#7c3aed} .dc-ic.leave{background:#0ea5e9}
+.dc-ic.application{background:#d97706} .dc-ic.maint{background:#dc2626}
+.dc-hd-tx{flex:1;min-width:0}
+.dc-hd-tx b{display:block;font-size:14px;font-weight:900;line-height:1.4}
+.dc-hd-tx span{display:block;font-size:11.5px;color:var(--muted,#57606a);
+  margin-top:2px;line-height:1.5;word-break:break-word}
+.dc-amt{text-align:center;flex:0 0 auto;padding-inline-start:6px}
+.dc-amt b{display:block;font-size:19px;font-weight:900;color:#0d9488;
+  font-variant-numeric:tabular-nums;line-height:1.2}
+.dc-amt span{display:block;font-size:9.5px;color:var(--muted,#57606a);font-weight:700}
+
+.dc-body{padding:11px 14px 0;font-size:12.5px;line-height:1.75;color:var(--text,#1f2328)}
+.dc-body .q{background:var(--bg2,#f6f8fa);border-radius:11px;padding:10px 12px;
+  border:1px solid var(--br,#e5e7eb)}
+.dc-meta{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0}
+.dc-tag{background:var(--bg2,#f6f8fa);border:1px solid var(--br,#e5e7eb);border-radius:8px;
+  padding:4px 9px;font-size:10.5px;font-weight:700;color:var(--muted,#57606a)}
+.dc-tag b{color:var(--text,#1f2328);font-weight:800}
+.dc-when{font-size:10.5px;color:var(--muted,#57606a);padding:9px 14px 0;font-weight:700}
+.dc-photo{margin:11px 14px 0;border-radius:12px;overflow:hidden;border:1px solid var(--br,#e5e7eb);
+  display:block}
+.dc-photo img{width:100%;max-height:190px;object-fit:cover;display:block}
+
+/* ── مبلغ قابل للتعديل ── */
+.dc-edit{margin:12px 14px 0;background:rgba(13,148,136,.07);
+  border:1px solid rgba(13,148,136,.25);border-radius:12px;padding:11px 12px}
+.dc-edit label{display:block;font-size:10.5px;font-weight:800;
+  color:var(--muted,#57606a);margin-bottom:6px}
+.dc-edit .row{display:flex;align-items:center;gap:8px}
+.dc-edit input{flex:1;min-width:0;border:1px solid var(--br,#e5e7eb);border-radius:10px;
+  padding:11px 12px;font-family:inherit;font-size:16px;font-weight:900;text-align:center;
+  font-variant-numeric:tabular-nums;background:var(--card,#fff);color:var(--text,#1f2328)}
+.dc-edit .kd{font-size:11px;font-weight:800;color:var(--muted,#57606a);flex:0 0 auto}
+.dc-edit .hint{font-size:10.5px;color:var(--muted,#57606a);margin-top:6px;line-height:1.6}
+
+/* ── الأزرار ── */
+.dc-acts{display:flex;gap:8px;padding:13px 14px;margin-top:12px;
+  border-top:1px solid var(--br,#e5e7eb);background:var(--bg2,#f6f8fa)}
+.dc-acts button{flex:1;border-radius:12px;padding:12px;font-family:inherit;font-size:13.5px;
+  font-weight:900;cursor:pointer;border:1px solid transparent;display:flex;
+  align-items:center;justify-content:center;gap:6px;transition:transform .08s,opacity .15s}
+.dc-acts button:active{transform:scale(.97)}
+.dc-acts button:disabled{opacity:.55;cursor:default}
+.dc-ok{background:#0d9488;color:#fff;flex:1.7}
+.dc-no{background:var(--card,#fff);color:#b91c1c;border-color:rgba(185,28,28,.3)}
+
+/* ── فارغ ── */
+.dc-empty{text-align:center;padding:60px 26px;color:var(--muted,#57606a)}
+.dc-empty i{font-size:52px;color:#0d9488;opacity:.45}
+.dc-empty b{display:block;margin-top:14px;font-size:16px;font-weight:900;color:var(--text,#1f2328)}
+.dc-empty p{margin:7px 0 0;font-size:12.5px;line-height:1.8}
+
+.dc-load{text-align:center;padding:46px;color:var(--muted,#57606a);font-size:13px}
+.dc-err{margin:14px;background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.28);
+  border-radius:13px;padding:14px;font-size:12.5px;line-height:1.8;color:#b91c1c}
+.dc-err b{display:block;margin-bottom:4px}
+
+/* شارة التبويب */
+.nav-dot{position:absolute;top:4px;inset-inline-end:14px;min-width:17px;height:17px;
+  border-radius:20px;background:#dc2626;color:#fff;font-size:9.5px;font-weight:900;
+  display:grid;place-items:center;padding:0 4px}
+
+
+/* شريط الهوية أعلى التطبيق */
+.mgr-who{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted,#8b949e)}
+.mgr-who b{color:var(--text,#e6edf3);font-weight:800}
+.mgr-who .role{background:rgba(13,148,136,.15);color:#0d9488;border-radius:20px;
+  padding:2px 9px;font-size:10px;font-weight:800}
+
 .pin-key.back{font-size:22px}
 .pin-err{color:#fca5a5;font-size:13px;margin-top:14px;min-height:16px;font-weight:700}
 
@@ -255,19 +415,55 @@ body::after{
 
 <!-- ============ LOGIN ============ -->
 <div class="login" id="loginScreen">
-  <div class="login-logo"><i class="ti ti-shield-lock"></i></div>
-  <h1>AL-SALASIL ARK</h1>
-  <p style="font-size:13px;opacity:.85;margin:4px 0 0">تطبيق المدير — Manager App</p>
-  <p>أدخل رمز الدخول للمتابعة</p>
-  <div class="pin-dots" id="pinDots"></div>
-  <div class="pin-pad" id="pinPad"></div>
-  <div class="pin-err" id="pinErr"></div>
+  <div class="lg-card">
+    <div class="login-logo"><i class="ti ti-shield-lock"></i></div>
+    <h1>AL-SALASIL ARK</h1>
+    <p class="lg-sub">تطبيق المدير — Manager App</p>
+
+    <!-- الفتح بالبصمة (يظهر بس لو مسجّلة على الجهاز) -->
+    <div id="lgBio" class="lg-bio" style="display:none">
+      <button class="lg-biobtn" id="lgBioBtn" onclick="mgrBioUnlock()">
+        <i class="ti ti-fingerprint"></i>
+        <span>افتح بالبصمة</span>
+      </button>
+      <div class="lg-or"><span>أو سجّل دخول</span></div>
+    </div>
+
+    <!-- الدخول بالإيميل -->
+    <form class="lg-form" id="lgForm" onsubmit="mgrDoLogin(event)">
+      <label class="lg-lbl" for="lgEmail">البريد الإلكتروني</label>
+      <input class="lg-in" id="lgEmail" type="email" inputmode="email"
+             autocomplete="username" placeholder="you@company.com" required>
+
+      <label class="lg-lbl" for="lgPass">كلمة السر</label>
+      <div class="lg-pwrap">
+        <input class="lg-in" id="lgPass" type="password"
+               autocomplete="current-password" placeholder="••••••••" required>
+        <button type="button" class="lg-eye" onclick="mgrTogglePw()" aria-label="إظهار">
+          <i class="ti ti-eye" id="lgEyeIcon"></i>
+        </button>
+      </div>
+
+      <button class="lg-go" id="lgGo" type="submit">
+        <i class="ti ti-login-2"></i> دخول
+      </button>
+      <div class="lg-err" id="lgErr"></div>
+    </form>
+
+    <div class="lg-foot">
+      <i class="ti ti-lock"></i>
+      التحقق بيتم على الخادم — والصلاحيات بتتحدد من حسابك، مش من الجهاز
+    </div>
+  </div>
 </div>
 
 <!-- ============ MAIN APP ============ -->
 <div class="app" id="mainApp" style="display:none">
   <div class="topbar">
-    <h2 id="topbar-title"><i class="ti ti-dashboard"></i> الرئيسية</h2>
+    <div style="min-width:0">
+      <h2 id="topbar-title"><i class="ti ti-dashboard"></i> الرئيسية</h2>
+      <div class="mgr-who" id="mgrWho"></div>
+    </div>
     <div class="topbar-actions">
       <button class="tba-btn" onclick="toggleArkLang()" title="Toggle language" style="font-size:11px;font-weight:900"><span id="mgr-lang-txt">EN</span></button>
       <button class="tba-btn" onclick="manualRefresh()"><i class="ti ti-refresh"></i></button>
@@ -337,6 +533,8 @@ body::after{
       </div>
     </div>
 
+    <div class="tab" id="tab-decisions"></div>
+
     <!-- CONVERSATION VIEW MODAL -->
     <div id="mgrConvOv" onclick="if(event.target===this)closeMgrConv()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8000;align-items:flex-end;justify-content:center">
       <div style="background:#fff;width:100%;max-width:560px;height:92vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:mgrSlideUp .3s ease">
@@ -371,6 +569,17 @@ body::after{
           <div class="row-info"><div class="row-name">الحضور اللحظي</div><div class="row-sub">مين داخل ومين متأخر ومين غايب</div></div>
           <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
         </div>
+        <div class="row" onclick="openTab('live')" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--green)"><i class="ti ti-map-2"></i></div>
+          <div class="row-info"><div class="row-name">الخريطة المباشرة</div><div class="row-sub">مواقع السائقين دلوقتي</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openTab('msg')" style="padding:14px;cursor:pointer;position:relative">
+          <div class="row-av" style="background:var(--blue)"><i class="ti ti-message-circle"></i></div>
+          <div class="row-info"><div class="row-name">الرسائل</div><div class="row-sub">محادثات السائقين والمطاعم</div></div>
+          <span id="moreMsgDot" class="nav-dot" style="display:none;position:static;margin-inline-end:6px">0</span>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
         <div class="row" onclick="openAppsList()" style="padding:14px;cursor:pointer">
           <div class="row-av" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div>
           <div class="row-info"><div class="row-name">طلبات التقديم</div><div class="row-sub">السائقين الجدد</div></div>
@@ -391,9 +600,14 @@ body::after{
           <div class="row-info"><div class="row-name">النظام الكامل (لاب توب)</div><div class="row-sub">للمحاسبة والتقارير الشاملة</div></div>
           <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
         </div>
+        <div class="row" onclick="mgrBioSettings()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:#0ea5e9"><i class="ti ti-fingerprint"></i></div>
+          <div class="row-info"><div class="row-name" id="mgrBioLbl">الفتح بالبصمة</div><div class="row-sub">افتح التطبيق بلمسة بدل كتابة كلمة السر</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
         <div class="row" onclick="changePin()" style="padding:14px;cursor:pointer">
           <div class="row-av" style="background:var(--violet)"><i class="ti ti-key"></i></div>
-          <div class="row-info"><div class="row-name">تغيير رمز الدخول</div><div class="row-sub">احمي وصولك للتطبيق</div></div>
+          <div class="row-info"><div class="row-name">تغيير كلمة السر</div><div class="row-sub">تتغيّر على الخادم لكل أجهزتك</div></div>
           <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
         </div>
         <div class="row" onclick="logout()" style="padding:14px;cursor:pointer">
@@ -428,7 +642,10 @@ body::after{
       <i class="ti ti-package"></i><span>أوردرات</span>
       <span id="ordersBadge" style="display:none;position:absolute;top:4px;right:18px;background:#ef4444;color:#fff;font-size:9px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
     </button>
-    <button class="btab-item" onclick="openTab('live')"><i class="ti ti-map-2"></i><span>الخريطة</span></button>
+    <button class="btab-item" onclick="openTab('decisions')" style="position:relative">
+      <i class="ti ti-gavel"></i><span>القرارات</span>
+      <span id="navDecisionsDot" class="nav-dot" style="display:none">0</span>
+    </button>
     <button class="btab-item" onclick="openTab('drivers')"><i class="ti ti-users"></i><span>السائقين</span></button>
     <button class="btab-item" onclick="openTab('more')"><i class="ti ti-menu-2"></i><span>المزيد</span></button>
   </div>
@@ -463,67 +680,9 @@ let currentTab = 'home';
 let drvFilter = 'all';
 let liveMap = null, liveMarkers = {};
 
-// ==================== AUTH (PIN) ====================
-let pinBuf = '';
-const STORED_PIN = localStorage.getItem('mgr_pin') || '1234'; // default 1234
-
-function buildPinPad(){
-  const pad = document.getElementById('pinPad');
-  const dots = document.getElementById('pinDots');
-  dots.innerHTML = '';
-  for(let i=0;i<4;i++) dots.insertAdjacentHTML('beforeend','<div class="pin-dot"></div>');
-  pad.innerHTML = '';
-  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
-  keys.forEach(k=>{
-    if(k===''){ pad.insertAdjacentHTML('beforeend','<div></div>'); return; }
-    const cls = k==='⌫' ? 'pin-key back' : 'pin-key';
-    pad.insertAdjacentHTML('beforeend',`<button class="${cls}" onclick="pinKey('${k}')">${k}</button>`);
-  });
-}
-function pinKey(k){
-  const err = document.getElementById('pinErr');
-  err.textContent = '';
-  if(k==='⌫'){ pinBuf = pinBuf.slice(0,-1); }
-  else if(pinBuf.length < 4){ pinBuf += k; }
-  renderDots();
-  if(pinBuf.length===4){
-    setTimeout(()=>{
-      if(pinBuf === STORED_PIN){ unlockApp(); }
-      else {
-        err.textContent = 'رمز خاطئ — حاول مرة أخرى';
-        pinBuf = '';
-        renderDots();
-        navigator.vibrate && navigator.vibrate(200);
-      }
-    }, 150);
-  }
-}
-function renderDots(){
-  const dots = document.querySelectorAll('.pin-dot');
-  dots.forEach((d,i)=> d.classList.toggle('on', i<pinBuf.length));
-}
-function unlockApp(){
-  document.getElementById('loginScreen').classList.add('gone');
-  document.getElementById('mainApp').style.display = 'flex';
-  sessionStorage.setItem('mgr_authed','1');
-  bootApp();
-}
-function logout(){
-  sessionStorage.removeItem('mgr_authed');
-  pinBuf = '';
-  renderDots();
-  document.getElementById('loginScreen').classList.remove('gone');
-  document.getElementById('mainApp').style.display = 'none';
-}
-function changePin(){
-  const o = prompt('أدخل رمز الدخول الحالي:');
-  if(o !== STORED_PIN){ alert('رمز خاطئ'); return; }
-  const n = prompt('أدخل رمز جديد (4 أرقام):');
-  if(!n || !/^\d{4}$/.test(n)){ alert('يجب أن يكون 4 أرقام'); return; }
-  localStorage.setItem('mgr_pin', n);
-  alert('تم تغيير الرمز ✅');
-  location.reload();
-}
+// ==================== AUTH ====================
+// منطق الرقم السري القديم اتشال بالكامل — بقى في mgr_auth.js + mgr_login.js
+// (كان: رقم سري مقارَن في المتصفح بقيمة افتراضية مكتوبة في الكود)
 
 // ==================== TABS ====================
 function openTab(t){
@@ -531,19 +690,25 @@ function openTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.getElementById('tab-'+t).classList.add('on');
   document.querySelectorAll('.btab-item').forEach((b,i)=>{
-    const map = ['home','orders','live','drivers','more'];
-    b.classList.toggle('on', map[i]===t);
+    const map = ['home','orders','decisions','drivers','more'];
+    /* الخريطة والرسائل بيتفتحوا من «المزيد» ومش ليهم زرار في الشريط،
+       فبنسيب «المزيد» متعلّم وإحنا جواهم عشان المستخدم يعرف هو فين. */
+    const mark = (t==='live'||t==='msg') ? 'more' : t;
+    b.classList.toggle('on', map[i]===mark);
   });
   const lang = localStorage.getItem('ark_lang') || 'ar';
   const titles = (lang==='en')
-    ? {home:'Home',drivers:'Drivers',live:'Live Map',msg:'Messages',more:'More',orders:'Orders'}
-    : {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد',orders:'الأوردرات'};
-  const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2',orders:'ti-package'};
+    ? {home:'Home',drivers:'Drivers',live:'Live Map',msg:'Messages',more:'More',orders:'Orders',decisions:'Decisions'}
+    : {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد',orders:'الأوردرات',decisions:'مركز القرارات'};
+  const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2',orders:'ti-package',decisions:'ti-gavel'};
   document.getElementById('topbar-title').innerHTML = `<i class="ti ${icons[t]}"></i> ${titles[t]}`;
   if(t==='live') setTimeout(initLiveMap, 100);
   if(t==='drivers') renderDriversList();
   if(t==='msg') renderMsgList();
   if(t==='orders') renderOrders();
+  if(t==='decisions'){ dcRender(); dcLoad(true); try{ SalasilBell.seen(); }catch(e){} }
+  if(t==='more'){ var _b=document.getElementById('mgrBioLbl');
+    if(_b) _b.textContent = (window.MGRAUTH && MGRAUTH.bioEnrolled()) ? 'الفتح بالبصمة — مفعّل ✅' : 'فعّل الفتح بالبصمة'; }
   if(t==='home') { try{ mxHomeStrip(); }catch(e){} }
 }
 
@@ -1200,11 +1365,9 @@ function mgrCheckForNewNotifs(){
 if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('message', (e) => {
     if(e.data && e.data.type === 'OPEN_MESSAGES'){
-      if(typeof switchTab === 'function') switchTab('msg');
-      else if(document.getElementById('tab-msg')){
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-        document.getElementById('tab-msg').classList.add('on');
-      }
+      /* كان بينادي switchTab وهي دالة مش موجودة أصلاً في الملف ده،
+         فالضغط على إشعار رسالة كان بيرمي خطأ ومبيفتحش حاجة. */
+      openTab('msg');
       mgrFetchInbox(false);
     }
   });
@@ -1223,9 +1386,12 @@ if('serviceWorker' in navigator){
 })();
 
 // Poll inbox every 25 seconds
-setInterval(() => { if(typeof SUPA_URL !== 'undefined') mgrFetchInbox(false); }, 25000);
+/* البيانات مبتتجابش قبل الدخول — قبل كده كان التطبيق بيسحب
+   صندوق الرسائل وطابور كاش هومي كل 25 ثانية وشاشة القفل لسه مقفولة. */
+function mgrAuthed(){ return !!(window.MGRAUTH && MGRAUTH.token && sessionStorage.getItem('mgr_authed')==='1'); }
+setInterval(() => { if(mgrAuthed()) mgrFetchInbox(false); }, 25000);
 // Initial fetch
-setTimeout(() => { if(typeof SUPA_URL !== 'undefined') mgrFetchInbox(false); }, 2000);
+setTimeout(() => { if(mgrAuthed()) mgrFetchInbox(false); }, 2000);
 
 function openWebAdmin(){
   alert('النظام الكامل يفتح من اللاب توب أو الكمبيوتر — ملف "السلاسل_نظام_ادارة_السائقين_28.html" داخل مجلد alsalasil.');
@@ -1416,18 +1582,17 @@ async function cancelManagerOrder(id){
 }
 
 // ==================== BOOT ====================
+let MGR_REFRESH_TIMER = null;
 async function bootApp(){
   await refreshAll();
   await fetchOrders();
-  // Auto refresh every 60 seconds
-  setInterval(()=>{ refreshAll(); fetchOrders(); }, 60000);
+  /* مقبض واحد ننضّفه قبل ما نبدأ — قبل كده كل خروج ودخول كان بيضيف
+     حلقة تحديث جديدة فوق القديمة، فبعد خمس مرات بقى في خمس حلقات
+     بتضرب على الخادم كل دقيقة. */
+  clearInterval(MGR_REFRESH_TIMER);
+  MGR_REFRESH_TIMER = setInterval(()=>{ refreshAll(); fetchOrders(); }, 60000);
 }
-
-buildPinPad();
-// Auto-unlock if session is still valid
-if(sessionStorage.getItem('mgr_authed') === '1'){
-  unlockApp();
-}
+/* الإقلاع بقى في mgr_login.js — بيستعيد الجلسة الأول وبعدين يفتح */
 
 // ==================== BILINGUAL (AR/EN) ====================
 function toggleArkLang(){
@@ -2239,8 +2404,8 @@ async function hcmEnablePush(){
 }
 
 /* ── التشغيل ──────────────────────────────────────────────────────── */
-setTimeout(() => { hcmFetchPending(false); }, 2600);
-setInterval(() => { hcmFetchPending(true); }, 25000);
+setTimeout(() => { if(mgrAuthed()) hcmFetchPending(false); }, 2600);
+setInterval(() => { if(mgrAuthed()) hcmFetchPending(true); }, 25000);
 
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2458,6 +2623,823 @@ window.mgrBellPaint = function(){
 };
 document.addEventListener('DOMContentLoaded', function(){ try{ mgrBellPaint(); }catch(e){} });
 })();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   السلاسل مدير — الدخول الحقيقي
+   ──────────────────────────────────────────────────────────────────────────
+   اللي كان قبل كده: رقم سري من أربع خانات، قيمته الافتراضية مكتوبة
+   حرفياً في الكود، والمقارنة بتحصل في المتصفح نفسه.
+   أي حد يفتح «فحص العنصر» ويمسح شاشة القفل بيدخل على طول — التطبيق
+   كان محمّل ورا الشاشة بالكامل. والصلاحيات كانت متخزّنة في الجهاز،
+   فأي حد يقدر يكتب localStorage.ark_role='admin' ويبقى مدير.
+
+   اللي بقى دلوقتي:
+   1) دخول Supabase حقيقي بالإيميل وكلمة السر — التحقق على الخادم.
+   2) الصلاحية تُقرأ من جدول profiles بعد الدخول، مش من الجهاز.
+   3) فتح بالبصمة/الوجه (WebAuthn) بدل إعادة كتابة كلمة السر.
+   4) الجلسة بتتجدّد تلقائياً، وبتقفل بعد مدة خمول.
+
+   ملاحظة صريحة عن حدود البصمة:
+   البصمة هنا بتحرس «تذكرة الدخول» المحفوظة على الجهاز — مش بديل عن
+   كلمة السر. لو حد فتح الموبايل وهو مفتوح ووصل لأدوات المطوّر، يقدر
+   نظرياً يقرا التذكرة. الحماية الحقيقية هي إن الصلاحيات بتتحدد على
+   الخادم: حتى بالتذكرة، مين مش admin مش هيقدر يعمل حاجة مش من حقه.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+var SB_URL = (typeof SUPA_URL !== 'undefined' && SUPA_URL) ? SUPA_URL : window.MGR_SUPA_URL;
+var SB_KEY = (typeof SUPA_KEY !== 'undefined' && SUPA_KEY) ? SUPA_KEY : window.MGR_SUPA_KEY;
+
+var SK = {
+  session: 'mgr_session',      // تذكرة الدخول
+  cred:    'mgr_webauthn_id',  // معرّف مفتاح البصمة
+  last:    'mgr_last_active'   // آخر نشاط — للقفل التلقائي
+};
+var IDLE_MS = 15 * 60 * 1000;  // ربع ساعة خمول ← قفل
+
+var AUTH = window.MGRAUTH = {
+  user: null, role: null, token: null, ready: false
+};
+
+/* ── الصلاحيات: نفس مصفوفة ARK بالحرف عشان مايحصلش اختلاف ── */
+var ROLE_PERMS = {
+  admin:      { view:'*', edit:'*', del:true,  salaries:true,  decide:'*' },
+  accountant: { view:['dash','acc','reports','dreports','drivers','decisions'],
+                edit:['acc'], del:false, salaries:true,
+                decide:['spend','settlement','advance'] },
+  hr:         { view:['dash','drivers','att','apps','vio','decisions'],
+                edit:['drivers','att','apps'], del:false, salaries:true,
+                decide:['leave','application'] },
+  operations: { view:['dash','drivers','att','clockin','livemap','orders','dreports','decisions'],
+                edit:['att','clockin','orders','dreports'], del:false, salaries:false,
+                decide:['maint'] },
+  supervisor: { view:['dash','drivers','att','clockin','livemap'],
+                edit:['att','clockin'], del:false, salaries:false, decide:[] }
+};
+var ROLE_AR = { admin:'مدير النظام', accountant:'محاسب', hr:'موارد بشرية',
+                operations:'عمليات', supervisor:'مشرف' };
+
+function perms(){ return ROLE_PERMS[AUTH.role] || ROLE_PERMS.supervisor; }
+function allow(kind, what){
+  var p = perms(), v = p[kind];
+  if(v === '*' || v === true) return true;
+  if(v === false || v == null) return false;
+  return Array.isArray(v) ? v.indexOf(what) >= 0 : false;
+}
+AUTH.canView   = function(v){ return allow('view', v); };
+AUTH.canEdit   = function(s){ return allow('edit', s); };
+AUTH.canDecide = function(k){ return allow('decide', k); };
+AUTH.roleLabel = function(){ return ROLE_AR[AUTH.role] || AUTH.role || '—'; };
+
+/* التحقق قبل أي إجراء حسّاس. الخادم هو الحكم النهائي، لكن ده بيمنع
+   المستخدم من إضاعة وقته في زرار مش من حقه أصلاً. */
+AUTH.require = function(kind, what){
+  if(allow(kind, what)) return true;
+  try{ mgrToast('صلاحيتك (' + AUTH.roleLabel() + ') لا تسمح بهذا الإجراء','err'); }catch(e){}
+  return false;
+};
+
+/* ══════════════ تخزين الجلسة ══════════════ */
+function saveSession(s){
+  try{ localStorage.setItem(SK.session, JSON.stringify(s)); }catch(e){}
+}
+function loadSession(){
+  try{ return JSON.parse(localStorage.getItem(SK.session) || 'null'); }catch(e){ return null; }
+}
+function clearSession(){
+  try{ localStorage.removeItem(SK.session); sessionStorage.removeItem('mgr_authed'); }catch(e){}
+  AUTH.user = AUTH.role = AUTH.token = null;
+}
+
+/* ══════════════ نداءات Supabase Auth ══════════════ */
+function authFetch(path, body){
+  return fetch(SB_URL + '/auth/v1/' + path, {
+    method: 'POST',
+    headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function(r){
+    return r.json().then(function(j){
+      if(!r.ok) throw new Error(j.error_description || j.msg || j.message ||
+                                (typeof j.error === 'string' ? j.error : '') || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+AUTH.signIn = function(email, password){
+  return authFetch('token?grant_type=password', { email: email, password: password })
+    .then(function(j){
+      var s = {
+        access_token: j.access_token, refresh_token: j.refresh_token,
+        expires_at: Date.now() + ((j.expires_in || 3600) * 1000),
+        user: j.user || null
+      };
+      saveSession(s);
+      AUTH.token = s.access_token; AUTH.user = s.user;
+      return loadRole().then(function(){ return AUTH; });
+    });
+};
+
+AUTH.refresh = function(){
+  var s = loadSession();
+  if(!s || !s.refresh_token) return Promise.reject(new Error('no session'));
+  return authFetch('token?grant_type=refresh_token', { refresh_token: s.refresh_token })
+    .then(function(j){
+      var ns = {
+        access_token: j.access_token, refresh_token: j.refresh_token || s.refresh_token,
+        expires_at: Date.now() + ((j.expires_in || 3600) * 1000),
+        user: j.user || s.user
+      };
+      saveSession(ns);
+      AUTH.token = ns.access_token; AUTH.user = ns.user;
+      return ns;
+    });
+};
+
+/* ── الصلاحية من الخادم، مش من الجهاز ── */
+function loadRole(){
+  var uid = AUTH.user && AUTH.user.id;
+  if(!uid || !AUTH.token){ AUTH.role = null; return Promise.resolve(); }
+  return fetch(SB_URL + '/rest/v1/profiles?select=role,full_name,is_active&id=eq.' + uid,
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + AUTH.token } })
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      var p = rows[0];
+      if(p && p.is_active === false){
+        clearSession();
+        throw new Error('الحساب موقوف — كلّم مدير النظام');
+      }
+      /* مفيش دور من الخادم = أقل صلاحية. مش admin.
+         ده عكس ARK اللي بيرجع admin لما مفيش جلسة — وده الخطر
+         اللي مش عايزينه يتكرّر في تطبيق ماشي في جيبك. */
+      AUTH.role = (p && p.role) || 'supervisor';
+      if(p && p.full_name && AUTH.user) AUTH.user.name = p.full_name;
+    })
+    .catch(function(e){
+      if(String(e.message||'').indexOf('موقوف') >= 0) throw e;
+      AUTH.role = 'supervisor';
+    });
+}
+
+/* ── استعادة الجلسة عند فتح التطبيق ── */
+AUTH.restore = function(){
+  var s = loadSession();
+  if(!s || !s.access_token){ AUTH.ready = true; return Promise.resolve(false); }
+  AUTH.token = s.access_token; AUTH.user = s.user;
+  var p = (s.expires_at && s.expires_at - Date.now() < 120000)
+        ? AUTH.refresh() : Promise.resolve(s);
+  return p.then(loadRole).then(function(){ AUTH.ready = true; return true; })
+          .catch(function(){ clearSession(); AUTH.ready = true; return false; });
+};
+
+AUTH.signOut = function(){
+  var s = loadSession();
+  if(s && s.access_token){
+    fetch(SB_URL + '/auth/v1/logout', { method:'POST',
+      headers:{ apikey:SB_KEY, Authorization:'Bearer ' + s.access_token } }).catch(function(){});
+  }
+  clearSession();
+  try{ localStorage.removeItem(SK.cred); }catch(e){}
+};
+
+/* ── ترويسة موقّعة لكل نداء بيانات ── */
+AUTH.headers = function(extra){
+  var h = { apikey: SB_KEY, 'Content-Type': 'application/json' };
+  h.Authorization = 'Bearer ' + (AUTH.token || SB_KEY);
+  if(extra) Object.keys(extra).forEach(function(k){ h[k] = extra[k]; });
+  return h;
+};
+
+/* ══════════════ البصمة / الوجه — WebAuthn ══════════════ */
+function b64u(buf){
+  var b = ''; var a = new Uint8Array(buf);
+  for(var i=0;i<a.length;i++) b += String.fromCharCode(a[i]);
+  return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function unb64u(s){
+  s = String(s).replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length % 4) s += '=';
+  var raw = atob(s), a = new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++) a[i] = raw.charCodeAt(i);
+  return a.buffer;
+}
+function rnd(n){ var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
+
+AUTH.bioSupported = function(){
+  return !!(window.PublicKeyCredential && navigator.credentials &&
+            location.protocol === 'https:');
+};
+AUTH.bioEnrolled = function(){
+  try{ return !!localStorage.getItem(SK.cred); }catch(e){ return false; }
+};
+
+/* تسجيل البصمة — بعد الدخول بكلمة السر */
+AUTH.bioEnroll = function(){
+  if(!AUTH.bioSupported()) return Promise.reject(new Error('الجهاز أو المتصفح لا يدعم البصمة'));
+  if(!AUTH.user) return Promise.reject(new Error('لازم تسجّل دخول الأول'));
+  var uid = rnd(16);
+  return navigator.credentials.create({ publicKey: {
+    challenge: rnd(32),
+    rp: { name: 'AL-SALASIL ARK' },
+    user: { id: uid,
+            name: AUTH.user.email || 'manager',
+            displayName: (AUTH.user.name || AUTH.user.email || 'المدير') },
+    pubKeyCredParams: [{type:'public-key', alg:-7}, {type:'public-key', alg:-257}],
+    authenticatorSelection: {
+      authenticatorAttachment: 'platform',   /* بصمة الجهاز نفسه، مش مفتاح خارجي */
+      userVerification: 'required',          /* لازم بصمة/وجه/رقم الجهاز — مش مجرد وجود المفتاح */
+      residentKey: 'preferred'
+    },
+    timeout: 60000, attestation: 'none'
+  }}).then(function(cred){
+    if(!cred) throw new Error('لم يتم التسجيل');
+    try{ localStorage.setItem(SK.cred, b64u(cred.rawId)); }catch(e){}
+    return true;
+  });
+};
+
+/* الفتح بالبصمة */
+AUTH.bioUnlock = function(){
+  if(!AUTH.bioEnrolled()) return Promise.reject(new Error('البصمة غير مفعّلة'));
+  var id;
+  try{ id = unb64u(localStorage.getItem(SK.cred)); }
+  catch(e){ return Promise.reject(new Error('بيانات البصمة تالفة')); }
+  return navigator.credentials.get({ publicKey: {
+    challenge: rnd(32),
+    allowCredentials: [{ id: id, type: 'public-key', transports: ['internal'] }],
+    userVerification: 'required',
+    timeout: 60000
+  }}).then(function(a){
+    if(!a) throw new Error('فشل التحقق');
+    return AUTH.restore().then(function(ok){
+      if(!ok) throw new Error('انتهت الجلسة — سجّل دخول بكلمة السر');
+      return true;
+    });
+  });
+};
+AUTH.bioForget = function(){ try{ localStorage.removeItem(SK.cred); }catch(e){} };
+
+/* ══════════════ القفل التلقائي عند الخمول ══════════════ */
+function touch(){ try{ localStorage.setItem(SK.last, String(Date.now())); }catch(e){} }
+AUTH.idleExpired = function(){
+  try{
+    var t = parseInt(localStorage.getItem(SK.last) || '0', 10);
+    return t > 0 && (Date.now() - t) > IDLE_MS;
+  }catch(e){ return false; }
+};
+AUTH.touch = touch;
+['pointerdown','keydown','touchstart'].forEach(function(ev){
+  window.addEventListener(ev, touch, {passive:true, capture:true});
+});
+/* الرجوع للتطبيق بعد غياب طويل ← نقفل */
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden){ touch(); return; }
+  if(AUTH.idleExpired() && typeof window.mgrLock === 'function') window.mgrLock();
+});
+
+/* تجديد التذكرة قبل ما تنتهي بخمس دقايق */
+setInterval(function(){
+  var s = loadSession();
+  if(s && s.expires_at && s.expires_at - Date.now() < 5*60*1000){
+    AUTH.refresh().catch(function(){});
+  }
+}, 60000);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   شاشة الدخول — المنطق
+   بيستبدل دوال الـ PIN القديمة (pinKey / unlockApp / changePin)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+function mgrToast(msg, kind){
+  try{
+    var el = document.getElementById('mgrToast');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'mgrToast';
+      el.style.cssText = 'position:fixed;inset-inline:16px;bottom:78px;z-index:99999;' +
+        'padding:13px 16px;border-radius:13px;font-size:13.5px;font-weight:800;' +
+        'text-align:center;box-shadow:0 12px 34px rgba(0,0,0,.34);opacity:0;' +
+        'transition:opacity .2s,transform .2s;transform:translateY(10px);pointer-events:none';
+      document.body.appendChild(el);
+    }
+    el.style.background = kind === 'err' ? '#b91c1c' : (kind === 'warn' ? '#b45309' : '#0d9488');
+    el.style.color = '#fff';
+    el.textContent = msg;
+    el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+    clearTimeout(el._t);
+    el._t = setTimeout(function(){ el.style.opacity = '0'; el.style.transform = 'translateY(10px)'; }, 3200);
+  }catch(e){ console.warn(msg); }
+}
+
+function mgrLoginErr(msg){
+  var e = document.getElementById('lgErr');
+  if(!e) return;
+  if(!msg){ e.className = 'lg-err'; e.textContent = ''; return; }
+  e.className = 'lg-err on'; e.textContent = msg;
+  try{ navigator.vibrate && navigator.vibrate(180); }catch(x){}
+}
+
+function mgrTogglePw(){
+  var i = document.getElementById('lgPass'), ic = document.getElementById('lgEyeIcon');
+  if(!i) return;
+  var show = i.type === 'password';
+  i.type = show ? 'text' : 'password';
+  if(ic) ic.className = 'ti ' + (show ? 'ti-eye-off' : 'ti-eye');
+}
+
+/* ── الدخول بالإيميل ── */
+function mgrDoLogin(ev){
+  if(ev) ev.preventDefault();
+  var em = (document.getElementById('lgEmail') || {}).value || '';
+  var pw = (document.getElementById('lgPass')  || {}).value || '';
+  em = em.trim();
+  if(!em || !pw){ mgrLoginErr('اكتب البريد وكلمة السر'); return false; }
+
+  var btn = document.getElementById('lgGo');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> جارٍ الدخول…'; }
+  mgrLoginErr('');
+
+  MGRAUTH.signIn(em, pw).then(function(){
+    /* عرض البصمة بعد أول دخول ناجح — الفتح المرة الجاية يبقى بلمسة */
+    if(MGRAUTH.bioSupported() && !MGRAUTH.bioEnrolled()){
+      setTimeout(mgrOfferBio, 700);
+    }
+    mgrUnlock();
+  }).catch(function(e){
+    var m = String(e && e.message || e);
+    if(/Invalid login|invalid_grant|credential/i.test(m)) m = 'البريد أو كلمة السر غير صحيحة';
+    else if(/Email not confirmed/i.test(m))               m = 'الحساب لسه متفعّلش من البريد';
+    else if(/Failed to fetch|NetworkError/i.test(m))      m = 'مفيش اتصال بالإنترنت';
+    mgrLoginErr(m);
+  }).then(function(){
+    if(btn){ btn.disabled = false; btn.innerHTML = '<i class="ti ti-login-2"></i> دخول'; }
+  });
+  return false;
+}
+
+/* ── الفتح بالبصمة ── */
+function mgrBioUnlock(){
+  var b = document.getElementById('lgBioBtn');
+  if(b){ b.disabled = true; }
+  mgrLoginErr('');
+  MGRAUTH.bioUnlock().then(function(){
+    mgrUnlock();
+  }).catch(function(e){
+    var m = String(e && e.message || e);
+    if(/NotAllowed|aborted/i.test(m)) m = 'اتلغى التحقق — جرّب تاني';
+    else if(/انتهت الجلسة/.test(m))   { m = 'انتهت الجلسة — سجّل دخول بكلمة السر'; MGRAUTH.bioForget(); mgrPaintLogin(); }
+    mgrLoginErr(m);
+  }).then(function(){ if(b) b.disabled = false; });
+}
+
+function mgrOfferBio(){
+  if(!confirm('تحب تفتح التطبيق بالبصمة المرة الجاية بدل كتابة كلمة السر؟')) return;
+  MGRAUTH.bioEnroll()
+    .then(function(){ mgrToast('البصمة اتفعّلت ✅'); })
+    .catch(function(e){ mgrToast(String(e.message || e), 'err'); });
+}
+
+/* ── فتح/قفل التطبيق ── */
+function mgrUnlock(){
+  var ls = document.getElementById('loginScreen');
+  var ap = document.getElementById('mainApp');
+  if(ls) ls.classList.add('gone');
+  if(ap) ap.style.display = 'flex';
+  sessionStorage.setItem('mgr_authed','1');
+  MGRAUTH.touch();
+  try{ mgrPaintWho(); }catch(e){}
+  try{ mgrApplyRole(); }catch(e){}
+  var p = (document.getElementById('lgPass') || {});
+  if('value' in p) p.value = '';
+  if(!window.__mgrBooted){ window.__mgrBooted = true; bootApp(); }
+  else { try{ refreshAll(); }catch(e){} }
+}
+
+function mgrLock(){
+  sessionStorage.removeItem('mgr_authed');
+  var ls = document.getElementById('loginScreen');
+  var ap = document.getElementById('mainApp');
+  if(ls) ls.classList.remove('gone');
+  if(ap) ap.style.display = 'none';
+  mgrPaintLogin();
+}
+
+function logout(){
+  if(!confirm('تسجيل الخروج؟ هتحتاج تكتب كلمة السر تاني.')) return;
+  MGRAUTH.signOut();
+  window.__mgrBooted = false;
+  mgrLock();
+}
+
+/* ── رسم شاشة الدخول حسب الحالة ── */
+function mgrPaintLogin(){
+  var bio = document.getElementById('lgBio');
+  if(bio) bio.style.display = (MGRAUTH.bioSupported() && MGRAUTH.bioEnrolled()) ? 'block' : 'none';
+  mgrLoginErr('');
+}
+
+/* ── من أنت ووش صلاحيتك — ظاهر دايماً في الأعلى ── */
+function mgrPaintWho(){
+  var el = document.getElementById('mgrWho');
+  if(!el || !MGRAUTH.user) return;
+  var nm = MGRAUTH.user.name || MGRAUTH.user.email || 'المدير';
+  el.innerHTML = '<b>' + mgrEsc(nm) + '</b>' +
+                 '<span class="role">' + mgrEsc(MGRAUTH.roleLabel()) + '</span>';
+}
+function mgrEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+/* ── إخفاء ما لا يخصّ هذا الدور ── */
+function mgrApplyRole(){
+  document.querySelectorAll('[data-need-view]').forEach(function(el){
+    el.style.display = MGRAUTH.canView(el.getAttribute('data-need-view')) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-need-decide]').forEach(function(el){
+    el.style.display = MGRAUTH.canDecide(el.getAttribute('data-need-decide')) ? '' : 'none';
+  });
+}
+
+/* ── تغيير كلمة السر ── */
+function changePin(){
+  var n = prompt('اكتب كلمة السر الجديدة (٨ حروف على الأقل):');
+  if(!n) return;
+  if(n.length < 8){ alert('كلمة السر لازم تكون ٨ حروف على الأقل'); return; }
+  if(prompt('اكتبها تاني للتأكيد:') !== n){ alert('الكلمتين مش متطابقتين'); return; }
+  fetch((typeof SUPA_URL !== 'undefined' ? SUPA_URL : '') + '/auth/v1/user', {
+    method:'PUT', headers: MGRAUTH.headers(), body: JSON.stringify({ password: n })
+  }).then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.msg||j.error_description||'فشل'); }); })
+    .then(function(){ mgrToast('كلمة السر اتغيّرت ✅'); })
+    .catch(function(e){ mgrToast(String(e.message||e), 'err'); });
+}
+
+/* ── إدارة البصمة من الإعدادات ── */
+function mgrBioSettings(){
+  if(!MGRAUTH.bioSupported()){
+    mgrToast('الجهاز أو المتصفح مش بيدعم البصمة — لازم يكون الموقع على https', 'warn');
+    return;
+  }
+  if(MGRAUTH.bioEnrolled()){
+    if(confirm('تلغي فتح التطبيق بالبصمة؟')){ MGRAUTH.bioForget(); mgrToast('البصمة اتلغت'); }
+  }else{
+    MGRAUTH.bioEnroll().then(function(){ mgrToast('البصمة اتفعّلت ✅'); })
+      .catch(function(e){ mgrToast(String(e.message||e), 'err'); });
+  }
+}
+
+/* ── الإقلاع: نستعيد الجلسة قبل ما نعرض أي حاجة ── */
+(function(){
+  function start(){
+    mgrPaintLogin();
+    MGRAUTH.restore().then(function(ok){
+      if(ok && !MGRAUTH.idleExpired()) mgrUnlock();
+      else mgrPaintLogin();
+    }).catch(function(){ mgrPaintLogin(); });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   مركز القرارات — تطبيق المدير
+   ──────────────────────────────────────────────────────────────────────────
+   الفكرة: بدل ما تدوّر في ستة أماكن مختلفة على اللي مستنّي منك، الشاشة
+   دي بتسأل الخادم سؤال واحد — «إيه اللي مستنّي قراري؟» — وبيرجع كل حاجة
+   بشكل موحّد، مرتّبة بالأهم: الفلوس اللي هتتصرف دلوقتي فوق، والعلم بالشيء
+   تحت.
+
+   وكل قرار بيتنفّذ من مكانه — من غير ما تفتح شاشة تانية.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var DC = {
+  items: [], counts: null, filter: 'all',
+  loading: false, err: null, busy: {}, lastLoad: 0
+};
+
+var DC_KIND = {
+  spend:       { ic:'ti-shopping-cart',    ar:'إذن صرف',   ok:'أذن بالصرف',  no:'رفض' },
+  settlement:  { ic:'ti-cash-banknote',    ar:'توريد كاش', ok:'أكّد الاستلام', no:'رفض' },
+  advance:     { ic:'ti-coins',            ar:'سلفة',      ok:'اعتمد السلفة', no:'رفض' },
+  leave:       { ic:'ti-beach',            ar:'إجازة',     ok:'وافق',        no:'رفض' },
+  application: { ic:'ti-user-plus',        ar:'توظيف',     ok:'اقبل',        no:'ارفض' },
+  maint:       { ic:'ti-tool',             ar:'صيانة',     ok:'تم الإصلاح',  no:'أهمل' }
+};
+
+function dcE(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function dcKD(v){
+  var n = parseFloat(v);
+  return isNaN(n) ? '—' : n.toFixed(3);
+}
+function dcWhen(t){
+  if(!t) return '';
+  var d = new Date(t), diff = (Date.now() - d.getTime()) / 60000;
+  if(diff < 1)  return 'دلوقتي';
+  if(diff < 60) return 'من ' + Math.round(diff) + ' دقيقة';
+  if(diff < 1440) return 'من ' + Math.round(diff/60) + ' ساعة';
+  var days = Math.round(diff/1440);
+  if(days < 30) return 'من ' + days + ' يوم';
+  return d.toLocaleDateString('ar-EG', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+/* بند قاعد كتير = مشكلة. بنبيّنه. */
+function dcStale(t){
+  if(!t) return false;
+  return (Date.now() - new Date(t).getTime()) > 24*3600*1000;
+}
+
+/* ── نداء RPC موقّع بجلسة المستخدم ── */
+function dcRpc(fn, args){
+  var url = (typeof SUPA_URL !== 'undefined' ? SUPA_URL : '') + '/rest/v1/rpc/' + fn;
+  var h = (window.MGRAUTH && MGRAUTH.headers) ? MGRAUTH.headers()
+        : { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type':'application/json' };
+  return fetch(url, { method:'POST', headers:h, body: JSON.stringify(args || {}) })
+    .then(function(r){
+      return r.text().then(function(tx){
+        var j = null; try{ j = tx ? JSON.parse(tx) : null; }catch(e){ j = tx; }
+        if(!r.ok){
+          var m = (j && (j.message || j.hint || j.details)) || ('HTTP ' + r.status);
+          throw new Error(m);
+        }
+        return j;
+      });
+    });
+}
+
+/* ── جلب الطابور ── */
+function dcLoad(silent){
+  if(DC.loading) return Promise.resolve();
+  DC.loading = true;
+  if(!silent) dcRender();
+  return dcRpc('ark_decision_queue', {})
+    .then(function(rows){
+      DC.items = rows || []; DC.err = null; DC.lastLoad = Date.now();
+      return dcRpc('ark_decision_counts', {}).catch(function(){ return null; });
+    })
+    .then(function(c){ DC.counts = c; })
+    .catch(function(e){
+      DC.err = String(e.message || e);
+      if(/does not exist|schema cache|ark_decision_queue/i.test(DC.err))
+        DC.err = '__NOSQL__';
+    })
+    .then(function(){
+      DC.loading = false;
+      dcRender(); dcPaintBadge();
+    });
+}
+
+/* ── الشارة على التبويب ── */
+function dcPaintBadge(){
+  var n = DC.items.length;
+  var el = document.getElementById('navDecisionsDot');
+  if(el){ el.style.display = n ? 'grid' : 'none'; el.textContent = n > 99 ? '99+' : n; }
+}
+
+/* ── الفلاتر ── */
+function dcGo(f){ DC.filter = f; dcRender(); }
+function dcVisible(){
+  return DC.filter === 'all' ? DC.items
+       : DC.items.filter(function(x){ return x.kind === DC.filter; });
+}
+
+/* ══════════════ الرسم ══════════════ */
+function dcRender(){
+  var el = document.getElementById('tab-decisions');
+  if(!el) return;
+
+  var c = DC.counts || {};
+  var head =
+    '<div class="dc-top">' +
+      '<h2><i class="ti ti-gavel"></i>مركز القرارات</h2>' +
+      '<p class="sub">كل حاجة مستنية قرارك — مرتّبة بالأهم</p>' +
+      '<div class="dc-sum">' +
+        '<div><b>' + (DC.items.length || 0) + '</b><span>بانتظارك</span></div>' +
+        '<div class="hot"><b>' + (c.urgent || 0) + '</b><span>فلوس عاجلة</span></div>' +
+        '<div><b>' + dcKD(c.money || 0) + '</b><span>د.ك مستنية إذنك</span></div>' +
+      '</div>' +
+    '</div>';
+
+  if(DC.err === '__NOSQL__'){
+    el.innerHTML = head +
+      '<div class="dc-err"><b>مركز القرارات لسه متركّبش على قاعدة البيانات.</b>' +
+      'شغّل ملف <code>ark_decisions.sql</code> مرة واحدة على Supabase ← SQL Editor، ' +
+      'وبعدها اضغط تحديث. من غيره الشاشة دي مش هتعرف تقرا الطلبات.' +
+      '<div style="margin-top:10px"><button class="dc-chip on" onclick="dcLoad()">' +
+      '<i class="ti ti-refresh"></i> إعادة المحاولة</button></div></div>';
+    return;
+  }
+  if(DC.err){
+    el.innerHTML = head + '<div class="dc-err"><b>تعذّر قراءة الطلبات.</b>' + dcE(DC.err) +
+      '<div style="margin-top:10px"><button class="dc-chip on" onclick="dcLoad()">' +
+      '<i class="ti ti-refresh"></i> إعادة المحاولة</button></div></div>';
+    return;
+  }
+  if(DC.loading && !DC.items.length){
+    el.innerHTML = head + '<div class="dc-load">جارٍ التحميل…</div>';
+    return;
+  }
+
+  /* شرائح الفلترة — بس للأنواع الموجودة فعلاً */
+  var byKind = {};
+  DC.items.forEach(function(x){ byKind[x.kind] = (byKind[x.kind] || 0) + 1; });
+  var chips = '<button class="dc-chip' + (DC.filter==='all'?' on':'') + '" onclick="dcGo(\'all\')">' +
+              'الكل <span class="n">' + DC.items.length + '</span></button>';
+  Object.keys(DC_KIND).forEach(function(k){
+    if(!byKind[k]) return;
+    chips += '<button class="dc-chip' + (DC.filter===k?' on':'') + '" onclick="dcGo(\'' + k + '\')">' +
+             '<i class="ti ' + DC_KIND[k].ic + '"></i>' + DC_KIND[k].ar +
+             ' <span class="n">' + byKind[k] + '</span></button>';
+  });
+
+  var rows = dcVisible();
+  var body = rows.length
+    ? '<div class="dc-list">' + rows.map(dcCard).join('') + '</div>'
+    : '<div class="dc-empty"><i class="ti ti-circle-check"></i>' +
+      '<b>مفيش حاجة مستنية قرارك</b>' +
+      '<p>كل الطلبات اتبتّ فيها.<br>أول ما يجي طلب جديد هيظهر هنا وهيرن الجرس.</p></div>';
+
+  el.innerHTML = head + '<div class="dc-chips">' + chips + '</div>' + body;
+}
+
+function dcCard(x){
+  var k  = DC_KIND[x.kind] || { ic:'ti-help', ar:x.kind, ok:'موافقة', no:'رفض' };
+  var id = x.kind + '_' + x.ref_id;
+  var busy = !!DC.busy[id];
+  var may  = !window.MGRAUTH || MGRAUTH.canDecide(x.kind);
+  var ex   = x.extra || {};
+
+  /* المبلغ */
+  var amt = (x.amount != null)
+    ? '<div class="dc-amt"><b>' + dcKD(x.amount) + '</b><span>د.ك</span></div>' : '';
+
+  /* الغرض / السبب */
+  var detail = x.detail
+    ? '<div class="dc-body"><div class="q">' + dcE(x.detail) + '</div></div>' : '';
+
+  /* تفاصيل حسب النوع */
+  var tags = [];
+  if(x.kind === 'advance' && ex.installments)
+    tags.push(['تقسيط', ex.installments + ' شهر']);
+  if(x.kind === 'leave'){
+    if(ex.from && ex.to) tags.push(['من', String(ex.from) + ' لـ ' + String(ex.to)]);
+    if(ex.days) tags.push(['المدة', ex.days + ' يوم']);
+  }
+  if(x.kind === 'application'){
+    if(ex.phone) tags.push(['تليفون', ex.phone]);
+    if(ex.age)   tags.push(['السن', ex.age]);
+    if(ex.car)   tags.push(['العربية', ex.car]);
+  }
+  if(x.kind === 'maint'){
+    if(ex.plate)    tags.push(['اللوحة', ex.plate]);
+    if(ex.severity) tags.push(['الخطورة', ex.severity]);
+  }
+  if(x.kind === 'spend' && ex.vendor) tags.push(['المحل', ex.vendor]);
+
+  var tagHtml = tags.length
+    ? '<div class="dc-meta">' + tags.map(function(t){
+        return '<span class="dc-tag">' + dcE(t[0]) + ' <b>' + dcE(t[1]) + '</b></span>';
+      }).join('') + '</div>' : '';
+
+  /* صورة العطل + الموقع */
+  var photo = '';
+  if(x.kind === 'maint' && ex.photo)
+    photo = '<a class="dc-photo" href="' + dcE(ex.photo) + '" target="_blank" rel="noopener">' +
+            '<img src="' + dcE(ex.photo) + '" alt="صورة العطل" loading="lazy"></a>';
+  if(x.kind === 'maint' && ex.lat && ex.lng)
+    tagHtml += '<div class="dc-meta"><a class="dc-tag" target="_blank" rel="noopener" ' +
+      'style="text-decoration:none" href="https://www.google.com/maps?q=' +
+      encodeURIComponent(ex.lat + ',' + ex.lng) + '"><i class="ti ti-map-pin"></i> شوف المكان</a></div>';
+
+  /* المبلغ القابل للتعديل — للصرف والسلفة بس */
+  var edit = '';
+  if((x.kind === 'spend' || x.kind === 'advance') && x.amount != null && may){
+    edit =
+      '<div class="dc-edit"><label>المبلغ اللي هتأذن بيه (تقدر تقلّله)</label>' +
+        '<div class="row">' +
+          '<input type="number" step="0.001" min="0" max="' + x.amount + '" ' +
+                 'id="dcAmt_' + dcE(id) + '" value="' + dcKD(x.amount) + '">' +
+          '<span class="kd">د.ك</span>' +
+        '</div>' +
+        '<div class="hint">طلب ' + dcKD(x.amount) + ' — لو أقل من كده غيّر الرقم قبل ما توافق</div>' +
+      '</div>';
+  }
+
+  var stale = dcStale(x.created_at)
+    ? ' · <span style="color:#b45309;font-weight:800">قاعد من زمان</span>' : '';
+
+  var acts = may
+    ? '<div class="dc-acts">' +
+        '<button class="dc-ok" ' + (busy?'disabled':'') +
+          ' onclick="dcDecide(\'' + dcE(x.kind) + '\',\'' + dcE(x.ref_id) + '\',\'approve\')">' +
+          '<i class="ti ti-check"></i>' + (busy ? 'جارٍ…' : k.ok) + '</button>' +
+        '<button class="dc-no" ' + (busy?'disabled':'') +
+          ' onclick="dcDecide(\'' + dcE(x.kind) + '\',\'' + dcE(x.ref_id) + '\',\'reject\')">' +
+          '<i class="ti ti-x"></i>' + k.no + '</button>' +
+      '</div>'
+    : '<div class="dc-acts"><button disabled style="background:var(--bg2,#f6f8fa);' +
+      'color:var(--muted,#57606a);flex:1">صلاحيتك ما تسمحش بالقرار ده</button></div>';
+
+  return '<div class="dc-card p' + (x.priority || 3) + '">' +
+      '<div class="dc-hd">' +
+        '<div class="dc-ic ' + dcE(x.kind) + '"><i class="ti ' + k.ic + '"></i></div>' +
+        '<div class="dc-hd-tx"><b>' + dcE(x.title) + '</b>' +
+          '<span>' + dcE(x.subtitle) + '</span></div>' +
+        amt +
+      '</div>' +
+      detail + tagHtml + photo + edit +
+      '<div class="dc-when">' + dcWhen(x.created_at) + stale + '</div>' +
+      acts +
+    '</div>';
+}
+
+/* ══════════════ تنفيذ القرار ══════════════ */
+function dcDecide(kind, refId, action){
+  if(window.MGRAUTH && !MGRAUTH.require('decide', kind)) return;
+
+  var id = kind + '_' + refId;
+  var item = DC.items.filter(function(x){ return x.kind===kind && String(x.ref_id)===String(refId); })[0];
+  if(!item) return;
+  var k = DC_KIND[kind] || {ar:kind};
+
+  var note = null, amount = null;
+
+  if(action === 'reject'){
+    /* السبب إجباري — الخادم كمان بيرفض من غيره، بس بنسأل هنا
+       عشان مانضيّعش رحلة للخادم ونرجع بخطأ */
+    note = prompt('سبب الرفض (مطلوب) — ' + k.ar + ':\n\nالسبب بيوصل لصاحب الطلب وبيتسجّل في السجل.');
+    if(note === null) return;
+    if(!String(note).trim()){ mgrToast('لازم تكتب سبب الرفض', 'err'); return; }
+  }else{
+    /* المبلغ المعدّل */
+    var inp = document.getElementById('dcAmt_' + id);
+    if(inp){
+      amount = parseFloat(inp.value);
+      if(isNaN(amount) || amount <= 0){ mgrToast('اكتب مبلغ صحيح', 'err'); return; }
+      if(amount > parseFloat(item.amount) + 0.0001){
+        mgrToast('مينفعش أكتر من المطلوب (' + dcKD(item.amount) + ')', 'err'); return;
+      }
+      var less = amount < parseFloat(item.amount) - 0.0001;
+      if(!confirm(k.ok + ' ' + dcKD(amount) + ' د.ك' +
+          (less ? '\n\n(طلب ' + dcKD(item.amount) + ' — إنت بتأذن بأقل)' : '') + '؟')) return;
+      if(less){
+        note = prompt('ليه أقل من المطلوب؟ (اختياري — بس بيفضل يكون مكتوب)') || null;
+      }
+    }else{
+      var what = item.amount != null ? (' ' + dcKD(item.amount) + ' د.ك') : '';
+      if(!confirm(k.ok + what + ' — ' + (item.who_name || '') + '؟')) return;
+    }
+  }
+
+  DC.busy[id] = true; dcRender();
+
+  var actor = (window.MGRAUTH && MGRAUTH.user)
+            ? (MGRAUTH.user.name || MGRAUTH.user.email) : 'الإدارة';
+
+  dcRpc('ark_decide', {
+    p_kind: kind, p_ref_id: String(refId), p_action: action,
+    p_actor: actor, p_note: note, p_amount: amount
+  }).then(function(){
+    mgrToast(action === 'approve' ? 'تم ✅' : 'اترفض');
+    /* نشيله من القايمة فوراً — الإحساس بالسرعة مهم */
+    DC.items = DC.items.filter(function(x){
+      return !(x.kind===kind && String(x.ref_id)===String(refId));
+    });
+    delete DC.busy[id];
+    dcRender(); dcPaintBadge();
+    return dcLoad(true);
+  }).catch(function(e){
+    delete DC.busy[id];
+    var m = String(e.message || e);
+    /* لو حد تاني بتّ فيه قبلنا، منقولش «خطأ» — نقول الحقيقة */
+    if(/لم يعد معلّقاً|Already handled/i.test(m)){
+      mgrToast('حد تاني بتّ في الطلب ده قبلك', 'warn');
+      dcLoad(true);
+    }else{
+      mgrToast(m, 'err');
+      dcRender();
+    }
+  });
+}
+
+/* ── تحديث دوري وهادي ── */
+setInterval(function(){
+  if(typeof mgrAuthed === 'function' && !mgrAuthed()) return;
+  if(document.hidden) return;
+  dcLoad(true);
+}, 30000);
+
+/* ── الجرس: يرن طالما فيه قرار مستنّي ── */
+if(window.SalasilBell){
+  SalasilBell.watch(function(){ return DC.items.length; });
+}
 
 </script>
 </body>
