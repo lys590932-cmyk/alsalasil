@@ -1,5 +1,5 @@
 // Service Worker — Al-Salasil Manager App
-const CACHE = 'salasil-mgr-v4';
+const CACHE = 'salasil-mgr-v3';
 const CORE = [
   './manager.html',
   './manager-manifest.json',
@@ -94,57 +94,4 @@ self.addEventListener('message', e => {
     lang: 'ar',
     data: d.data || {url:'./manager.html'}
   });
-});
-
-/* =========================================================
-   Web Push — ده اللي بيوصل الإشعار والتطبيق مقفول
-   ---------------------------------------------------------
-   ★ كان ناقص تماماً من الملف ده. تطبيق المدير كان بيسجّل
-   اشتراك الإشعارات على الخادم، والخادم كان بيبعت فعلاً،
-   لكن مفيش حد هنا بيستقبل — فالإشعار كان بيضيع أو يظهر
-   كرسالة فاضية من المتصفح. ده السبب الحقيقي اللي خلّى
-   إشعارات المدير مش موصلة وهو مقفول.
-   ========================================================= */
-self.addEventListener('push', e => {
-  let d = {};
-  try { d = e.data ? e.data.json() : {}; }
-  catch (err) { d = { body: (e.data && e.data.text()) || '' }; }
-
-  const title = d.title || 'السلاسل مدير';
-  const opts = {
-    body:  d.body || '',
-    icon:  d.icon  || './icon-192.png',
-    badge: './icon-192.png',
-    tag:   d.tag   || 'mgr',
-    renotify: true,
-    /* الإشعار يفضل على الشاشة لحد ما تفتحه — مش بيختفي لوحده */
-    requireInteraction: d.sticky === false ? false : true,
-    /* silent:false صراحةً = الجهاز يشغّل صوت الإشعار بتاعه.
-       المتصفحات مش بتسمح بصوت مخصّص والتطبيق مقفول، فبنقوّي
-       الاهتزاز بدل الصوت عشان ميعديش عليك. */
-    silent: false,
-    vibrate: [300, 120, 300, 120, 300],
-    dir:  'rtl',
-    lang: d.lang || 'ar',
-    data: Object.assign({ url: './manager.html' }, d.data || {})
-  };
-
-  e.waitUntil((async () => {
-    await self.registration.showNotification(title, opts);
-    /* لو التطبيق مفتوح، نبلّغ الصفحة عشان ترنّ الجرس وتحدّث الأرقام */
-    const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    cs.forEach(c => c.postMessage({ type: 'PUSH_RECEIVED', payload: d }));
-  })());
-});
-
-/* لو المتصفح جدّد اشتراك الجهاز — نسجّله من تاني تلقائياً */
-self.addEventListener('pushsubscriptionchange', e => {
-  e.waitUntil((async () => {
-    const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    if (cs.length) { cs.forEach(c => c.postMessage({ type: 'PUSH_RESUBSCRIBE' })); return; }
-    try {
-      const cache = await caches.open(CACHE);
-      await cache.put('/__push_resubscribe', new Response('1'));
-    } catch (err) {}
-  })());
 });

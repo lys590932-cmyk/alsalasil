@@ -5861,6 +5861,8 @@ Object.assign(I18N.ar, {
   hc_home_card_sub:'سلّم نقدية الطلبات وتابع حالتها',
   hc_tab_send:'تسليم',
   hc_tab_inbox:'بانتظارك',
+  bell_is_on:'الجرس شغّال', bell_is_off:'الجرس مقفول',
+  bell_on_msg:'الجرس اتفتح 🔔', bell_off_msg:'الجرس اتقفل 🔕',
   hc_tab_mine:'عملياتي',
   hc_tab_settle:'التوريد',
   hc_amount:'المبلغ (د.ك)',
@@ -5929,6 +5931,8 @@ Object.assign(I18N.en, {
   hc_home_card_sub:'Hand over order cash and track it',
   hc_tab_send:'Hand over',
   hc_tab_inbox:'Awaiting you',
+  bell_is_on:'Sound on', bell_is_off:'Sound off',
+  bell_on_msg:'Sound on 🔔', bell_off_msg:'Sound off 🔕',
   hc_tab_mine:'My handovers',
   hc_tab_settle:'Settlement',
   hc_amount:'Amount (KD)',
@@ -6103,6 +6107,8 @@ function hcRender(){
     '<div class="hc-head">'+
       '<button class="hc-back" onclick="hcClose()"><i class="ti ti-chevron-'+(LANG==='ar'?'right':'left')+'"></i></button>'+
       '<div class="hc-head-tx"><b>'+t('hc_title')+'</b><span>'+t('hc_sub')+'</span></div>'+
+      '<button class="hc-back" onclick="flyBellToggle()" id="flyBellTop" title="'+t('bell_is_on')+'">'+
+        '<i class="ti '+((window.SalasilBell&&SalasilBell.isMuted())?'ti-bell-off':'ti-bell-ringing')+'"></i></button>'+
       '<button class="hc-back" onclick="hcSync()"><i class="ti ti-refresh"></i></button>'+
     '</div>';
 
@@ -6736,6 +6742,211 @@ function hcRecSave(){
     hcRender();
   });
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   جرس السلاسل — SalasilBell
+   ──────────────────────────────────────────────────────────────────
+   صوت جرس مركّب بـ Web Audio، بدون أي ملف صوت خارجي:
+   يشتغل بدون إنترنت، وبيبدأ في نفس اللحظة (مفيش تحميل).
+
+   ليه مركّب مش ملف MP3؟
+   • الملف بيتأخر أول مرة، وبيفشل لو الكاش مسحوه.
+   • الجرس الحقيقي نغماته «غير توافقية» (inharmonic) — يعني نسب
+     غريبة زي 2.4 و5.33 مش أضعاف صحيحة. دي اللي بتدّي الإحساس
+     إنه جرس مش صفّارة. النسب تحت مأخوذة من طيف جرس حقيقي.
+
+   ملاحظة مهمة عن المتصفحات:
+   المتصفح بيمنع أي صوت قبل ما المستخدم يلمس الشاشة مرة. عشان كده
+   بنفكّ القفل عند أول لمسة (unlock) ونفضل جاهزين بعدها.
+   ══════════════════════════════════════════════════════════════════ */
+(function(global){
+'use strict';
+
+var AC = global.AudioContext || global.webkitAudioContext;
+var ctx = null, unlocked = false, muted = false;
+
+/* المستخدم يقدر يسكّت الجرس من إعدادات التطبيق */
+try{ muted = localStorage.getItem('sl_bell_off') === '1'; }catch(e){}
+
+function ac(){
+  if(!ctx && AC){ try{ ctx = new AC(); }catch(e){ return null; } }
+  return ctx;
+}
+
+/* ── فك القفل: لازم يتنادى جوه حدث لمس/ضغط حقيقي ── */
+function unlock(){
+  var c = ac(); if(!c) return;
+  if(c.state === 'suspended'){ c.resume().catch(function(){}); }
+  if(unlocked) return;
+  /* نغمة صامتة تماماً — بتفتح قناة الصوت من غير ما حد يسمع حاجة */
+  try{
+    var o = c.createOscillator(), g = c.createGain();
+    g.gain.value = 0.0001; o.connect(g); g.connect(c.destination);
+    o.start(); o.stop(c.currentTime + 0.01);
+    unlocked = true;
+  }catch(e){}
+}
+
+/* ── ضربة جرس واحدة ──
+   partial = [نسبة التردد, حجمه, سرعة خفوته] */
+var PARTIALS = [
+  [1.00, 1.00, 1.00],   // الأساس
+  [2.00, 0.55, 1.35],
+  [2.40, 0.42, 1.55],   // النسب دي هي سرّ إحساس «الجرس»
+  [3.00, 0.30, 1.90],
+  [4.50, 0.20, 2.60],
+  [5.33, 0.13, 3.20]
+];
+
+function strike(base, when, vol){
+  var c = ac(); if(!c) return;
+  var t = when;
+  PARTIALS.forEach(function(p){
+    var o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(base * p[0], t);
+    var peak = vol * p[1] * 0.16;
+    /* هجوم سريع جداً (2 ملّي) — ده اللي بيدّي «الطرقة» */
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.002);
+    /* خفوت أُسّي: النغمات العالية بتختفي أسرع، زي الجرس الحقيقي */
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (1.9 / p[2]));
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + (2.0 / p[2]) + 0.05);
+  });
+}
+
+/* ── الجرس: ضربتين زي جرس الباب ── */
+function ring(opts){
+  opts = opts || {};
+  if(muted && !opts.force) return false;
+  var c = ac(); if(!c) return false;
+  if(c.state === 'suspended'){ c.resume().catch(function(){}); }
+  var t = c.currentTime + 0.02;
+  var vol = opts.volume == null ? 1 : opts.volume;
+  strike(880, t, vol);                 // ضربة أولى
+  strike(660, t + 0.28, vol * 0.85);   // ضربة تانية أغمق
+  /* اهتزاز الموبايل مع الصوت */
+  try{ if(navigator.vibrate) navigator.vibrate([120, 80, 120]); }catch(e){}
+  return true;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   التكرار: يفضل يرن كل 30 ثانية طالما فيه حاجة مستنية
+   ──────────────────────────────────────────────────────────────────
+   بنسأل الدالة اللي التطبيق بيدّيهالنا: «فيه كام بند معلّق؟»
+   أول ما ترجع صفر، الجرس بيسكت لوحده — مفيش زر إيقاف محتاج ضغط.
+   ══════════════════════════════════════════════════════════════════ */
+var timer = null, countFn = null, lastRing = 0;
+var EVERY = 30000;
+
+function watch(fn){
+  countFn = fn;
+  if(timer) return;
+  timer = setInterval(tick, 5000);
+}
+function tick(){
+  if(!countFn) return;
+  var n = 0;
+  try{ n = Number(countFn()) || 0; }catch(e){ return; }
+  if(n <= 0){ lastRing = 0; return; }
+  var now = Date.now();
+  /* أول بند معلّق يرن على طول، وبعدها كل 30 ثانية */
+  if(now - lastRing >= EVERY){ lastRing = now; ring(); }
+}
+/* التطبيق بينادي دي أول ما المستخدم يفتح الشاشة المعنية */
+function seen(){ lastRing = Date.now(); }
+function stop(){ if(timer){ clearInterval(timer); timer = null; } countFn = null; lastRing = 0; }
+
+/* ── التسكيت ── */
+function setMuted(v){
+  muted = !!v;
+  try{ localStorage.setItem('sl_bell_off', muted ? '1' : '0'); }catch(e){}
+  return muted;
+}
+function isMuted(){ return muted; }
+
+/* ── فك القفل تلقائياً عند أول تعامل من المستخدم ── */
+['pointerdown','touchstart','keydown','click'].forEach(function(ev){
+  global.addEventListener(ev, unlock, {once:false, passive:true, capture:true});
+});
+/* لما التطبيق يرجع من الخلفية، قناة الصوت بتتعلّق — نفتحها تاني */
+global.addEventListener('visibilitychange', function(){
+  if(!global.document.hidden && ctx && ctx.state === 'suspended'){ ctx.resume().catch(function(){}); }
+});
+
+global.SalasilBell = {
+  unlock: unlock, ring: ring, watch: watch, seen: seen, stop: stop,
+  setMuted: setMuted, isMuted: isMuted,
+  _strike: strike, _partials: PARTIALS
+};
+})(typeof window !== 'undefined' ? window : this);
+
+/* ══════════════════════════════════════════════════════════════════
+   فلاي — ربط الجرس
+   ──────────────────────────────────────────────────────────────────
+   • أي إشعار يوصل والتطبيق مفتوح → جرس
+   • فيه كاش مستنّي تأكيدك أو إذن صرف مستنّي إيصاله → جرس كل 30 ثانية
+   • أول ما تفتح الشاشة المعنية → الجرس يسكت لوحده
+   ══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(typeof SalasilBell === 'undefined') return;
+
+/* ── كام حاجة مستنّية منّي دلوقتي؟ ──
+   الجرس بيسأل الدالة دي كل 5 ثواني. ترجع صفر → يسكت. */
+function flyPending(){
+  var n = 0;
+  try{
+    if(typeof HC !== 'undefined' && HC){
+      /* كاش وصلني ولسه محتاج أأكّد استلامه */
+      if(HC.isReceiver && HC.inbox)
+        n += HC.inbox.filter(function(x){ return x.status === 'pending'; }).length;
+      /* إذن صرف اتوافق عليه ولسه مرفعتش إيصاله */
+      if(HC.spends)
+        n += HC.spends.filter(function(s){ return s.status === 'approved'; }).length;
+    }
+  }catch(e){}
+  return n;
+}
+SalasilBell.watch(flyPending);
+
+/* ── إشعار وصل والتطبيق مفتوح → رنّة فورية ── */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'PUSH_RECEIVED'){
+      SalasilBell.ring();
+      /* الشاشة المفتوحة تتحدّث فوراً من غير ما السائق يعمل حاجة */
+      try{ if(typeof hcBoot === 'function' && typeof HC !== 'undefined' && HC.booted) hcBoot(); }catch(err){}
+    }
+  });
+}
+
+/* ── فتح شاشة كاش هومي = «شُفتها» → الجرس يسكت ── */
+if(typeof window.hcOpen === 'function'){
+  var _hcOpen = window.hcOpen;
+  window.hcOpen = function(){
+    try{ SalasilBell.unlock(); SalasilBell.seen(); }catch(e){}
+    return _hcOpen.apply(this, arguments);
+  };
+}
+
+/* ── زر تسكيت الجرس في الإعدادات ── */
+window.flyBellToggle = function(){
+  var off = SalasilBell.setMuted(!SalasilBell.isMuted());
+  if(!off) SalasilBell.ring({force:true});
+  try{ flyBellPaint(); }catch(e){}
+  try{ toast(off ? t('bell_off_msg') : t('bell_on_msg')); }catch(e){}
+};
+window.flyBellPaint = function(){
+  var el = document.getElementById('flyBellBtn'); if(!el) return;
+  var off = SalasilBell.isMuted();
+  el.className = 'hc-sec' + (off ? '' : ' on');
+  el.innerHTML = '<i class="ti ' + (off ? 'ti-bell-off' : 'ti-bell-ringing') + '"></i> ' +
+                 (off ? t('bell_is_off') : t('bell_is_on'));
+};
+})();
 
 </script>
 

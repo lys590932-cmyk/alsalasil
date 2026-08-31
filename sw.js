@@ -3,7 +3,7 @@
    يخزّن ملفات التطبيق للعمل بدون إنترنت ولتثبيته كتطبيق
    + يدعم إشعارات الموبايل الفعلية (Web Notifications)
    =========================================================== */
-const CACHE = 'alsalasil-driver-v10';
+const CACHE = 'alsalasil-driver-v11';
 
 // ملفات هيكل التطبيق (App Shell)
 const SHELL = [
@@ -124,8 +124,9 @@ self.addEventListener('message', e => {
     badge: './icon-192.png',
     tag: d.tag || 'msg',
     renotify: true,
-    requireInteraction: false,
-    vibrate: [200, 100, 200],
+    requireInteraction: !!d.sticky,
+    silent: false,
+    vibrate: [300, 120, 300, 120, 300],
     dir: 'rtl',
     lang: 'ar',
     data: d.data || {url:'./'}
@@ -147,8 +148,14 @@ self.addEventListener('push', e => {
     badge: './icon-192.png',
     tag:   d.tag   || 'msg',
     renotify: true,
-    requireInteraction: !!d.sticky,
-    vibrate: [200, 100, 200],
+    /* الإشعار يفضل على الشاشة لحد ما السائق يفتحه — مش بيختفي لوحده.
+       اللي بيبعت يقدر يلغي ده بإرسال sticky:false */
+    requireInteraction: d.sticky === false ? false : true,
+    /* silent:false صراحةً = الجهاز يشغّل صوت الإشعار بتاعه.
+       المتصفحات مش بتسمح بصوت مخصّص والتطبيق مقفول (الخاصية
+       دي اتشالت من المعيار سنة 2018)، فبنقوّي الاهتزاز بدلها. */
+    silent: false,
+    vibrate: [300, 120, 300, 120, 300],
     dir:  'rtl',
     lang: d.lang || 'ar',
     data: Object.assign({ url: './' }, d.data || {})

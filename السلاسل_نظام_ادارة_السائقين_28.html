@@ -17971,7 +17971,8 @@ function renderHomiCash(){
   else if(HCA.tab === 'ledger')      body.innerHTML = hcaLedgerHTML();
   else if(HCA.tab === 'settlements') body.innerHTML = hcaSettlementsHTML();
   else if(HCA.tab === 'spend')       body.innerHTML = hcaSpendHTML();
-  else if(HCA.tab === 'setup')       body.innerHTML = hcaSetupHTML();
+  else if(HCA.tab === 'setup'){      body.innerHTML = hcaSetupHTML();
+                                    try{ arkBellPaint(); }catch(e){} }
   else if(HCA.tab === 'audit')       body.innerHTML = hcaAuditHTML();
 }
 function hcaGo(t){ HCA.tab = t; renderHomiCash(); }
@@ -18067,6 +18068,21 @@ function hcaSetupHTML(){
       '<b>المستلمون قابلون للضبط من هنا.</b> لو ترك أحدهم العمل عطّله بدل حذفه — ' +
       'التعطيل يمنعه من استقبال تسليمات جديدة ويُبقي كل تاريخه في الدفتر.' +
     '</div></div>' +
+    /* ── الجرس وإشعارات سطح المكتب ── */
+    '<div class="pay-card"><h3 class="pay-h3"><i class="ti ti-bell-ringing"></i>الجرس والإشعارات</h3>' +
+      '<div class="pay-hint" style="padding:0 15px 12px;line-height:1.9">' +
+        'ARK بيشتغل في تبويب متصفح، فالإشعار بيوصلك طالما التبويب مفتوح — حتى لو مصغّر أو انت في تبويب تاني. ' +
+        'الجرس بيرن أول ما يجي طلب صرف أو توريد، وبيفضل يرن كل 30 ثانية لحد ما تفتح كاش هومي. ' +
+        'لو قفلت المتصفح خالص، الإشعار بيوصلك على «السلاسل مدير» على الموبايل.' +
+      '</div>' +
+      '<div style="padding:0 15px 15px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">' +
+        '<button class="pay-btn" onclick="arkAskNotify()">' +
+          '<i class="ti ti-bell-plus"></i>فعّل إشعارات سطح المكتب</button>' +
+        '<button class="pay-btn" id="arkBellBtn" onclick="arkBellToggle()">' +
+          '<i class="ti ti-bell-ringing"></i>الجرس</button>' +
+        '<span class="pay-sub">حالة الإذن: <b id="arkNotifState">—</b></span>' +
+      '</div>' +
+    '</div>' +
     '<div class="pay-card"><h3 class="pay-h3"><i class="ti ti-user-plus"></i>إضافة مستلم</h3>' +
       '<div class="pay-grid4">' +
         '<div style="grid-column:span 2"><label>الموظف</label><select id="hcaNewDrv">' + drvOpts + '</select></div>' +
@@ -18500,6 +18516,308 @@ function hcaSpendPostAll(){
   toast('المحاسبة: أُضيف ' + added + (updated ? ' · حُدِّث ' + updated : ''),'s');
   setTimeout(() => hcaSync(true), 900);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   جرس السلاسل — SalasilBell
+   ──────────────────────────────────────────────────────────────────
+   صوت جرس مركّب بـ Web Audio، بدون أي ملف صوت خارجي:
+   يشتغل بدون إنترنت، وبيبدأ في نفس اللحظة (مفيش تحميل).
+
+   ليه مركّب مش ملف MP3؟
+   • الملف بيتأخر أول مرة، وبيفشل لو الكاش مسحوه.
+   • الجرس الحقيقي نغماته «غير توافقية» (inharmonic) — يعني نسب
+     غريبة زي 2.4 و5.33 مش أضعاف صحيحة. دي اللي بتدّي الإحساس
+     إنه جرس مش صفّارة. النسب تحت مأخوذة من طيف جرس حقيقي.
+
+   ملاحظة مهمة عن المتصفحات:
+   المتصفح بيمنع أي صوت قبل ما المستخدم يلمس الشاشة مرة. عشان كده
+   بنفكّ القفل عند أول لمسة (unlock) ونفضل جاهزين بعدها.
+   ══════════════════════════════════════════════════════════════════ */
+(function(global){
+'use strict';
+
+var AC = global.AudioContext || global.webkitAudioContext;
+var ctx = null, unlocked = false, muted = false;
+
+/* المستخدم يقدر يسكّت الجرس من إعدادات التطبيق */
+try{ muted = localStorage.getItem('sl_bell_off') === '1'; }catch(e){}
+
+function ac(){
+  if(!ctx && AC){ try{ ctx = new AC(); }catch(e){ return null; } }
+  return ctx;
+}
+
+/* ── فك القفل: لازم يتنادى جوه حدث لمس/ضغط حقيقي ── */
+function unlock(){
+  var c = ac(); if(!c) return;
+  if(c.state === 'suspended'){ c.resume().catch(function(){}); }
+  if(unlocked) return;
+  /* نغمة صامتة تماماً — بتفتح قناة الصوت من غير ما حد يسمع حاجة */
+  try{
+    var o = c.createOscillator(), g = c.createGain();
+    g.gain.value = 0.0001; o.connect(g); g.connect(c.destination);
+    o.start(); o.stop(c.currentTime + 0.01);
+    unlocked = true;
+  }catch(e){}
+}
+
+/* ── ضربة جرس واحدة ──
+   partial = [نسبة التردد, حجمه, سرعة خفوته] */
+var PARTIALS = [
+  [1.00, 1.00, 1.00],   // الأساس
+  [2.00, 0.55, 1.35],
+  [2.40, 0.42, 1.55],   // النسب دي هي سرّ إحساس «الجرس»
+  [3.00, 0.30, 1.90],
+  [4.50, 0.20, 2.60],
+  [5.33, 0.13, 3.20]
+];
+
+function strike(base, when, vol){
+  var c = ac(); if(!c) return;
+  var t = when;
+  PARTIALS.forEach(function(p){
+    var o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(base * p[0], t);
+    var peak = vol * p[1] * 0.16;
+    /* هجوم سريع جداً (2 ملّي) — ده اللي بيدّي «الطرقة» */
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.002);
+    /* خفوت أُسّي: النغمات العالية بتختفي أسرع، زي الجرس الحقيقي */
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (1.9 / p[2]));
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + (2.0 / p[2]) + 0.05);
+  });
+}
+
+/* ── الجرس: ضربتين زي جرس الباب ── */
+function ring(opts){
+  opts = opts || {};
+  if(muted && !opts.force) return false;
+  var c = ac(); if(!c) return false;
+  if(c.state === 'suspended'){ c.resume().catch(function(){}); }
+  var t = c.currentTime + 0.02;
+  var vol = opts.volume == null ? 1 : opts.volume;
+  strike(880, t, vol);                 // ضربة أولى
+  strike(660, t + 0.28, vol * 0.85);   // ضربة تانية أغمق
+  /* اهتزاز الموبايل مع الصوت */
+  try{ if(navigator.vibrate) navigator.vibrate([120, 80, 120]); }catch(e){}
+  return true;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   التكرار: يفضل يرن كل 30 ثانية طالما فيه حاجة مستنية
+   ──────────────────────────────────────────────────────────────────
+   بنسأل الدالة اللي التطبيق بيدّيهالنا: «فيه كام بند معلّق؟»
+   أول ما ترجع صفر، الجرس بيسكت لوحده — مفيش زر إيقاف محتاج ضغط.
+   ══════════════════════════════════════════════════════════════════ */
+var timer = null, countFn = null, lastRing = 0;
+var EVERY = 30000;
+
+function watch(fn){
+  countFn = fn;
+  if(timer) return;
+  timer = setInterval(tick, 5000);
+}
+function tick(){
+  if(!countFn) return;
+  var n = 0;
+  try{ n = Number(countFn()) || 0; }catch(e){ return; }
+  if(n <= 0){ lastRing = 0; return; }
+  var now = Date.now();
+  /* أول بند معلّق يرن على طول، وبعدها كل 30 ثانية */
+  if(now - lastRing >= EVERY){ lastRing = now; ring(); }
+}
+/* التطبيق بينادي دي أول ما المستخدم يفتح الشاشة المعنية */
+function seen(){ lastRing = Date.now(); }
+function stop(){ if(timer){ clearInterval(timer); timer = null; } countFn = null; lastRing = 0; }
+
+/* ── التسكيت ── */
+function setMuted(v){
+  muted = !!v;
+  try{ localStorage.setItem('sl_bell_off', muted ? '1' : '0'); }catch(e){}
+  return muted;
+}
+function isMuted(){ return muted; }
+
+/* ── فك القفل تلقائياً عند أول تعامل من المستخدم ── */
+['pointerdown','touchstart','keydown','click'].forEach(function(ev){
+  global.addEventListener(ev, unlock, {once:false, passive:true, capture:true});
+});
+/* لما التطبيق يرجع من الخلفية، قناة الصوت بتتعلّق — نفتحها تاني */
+global.addEventListener('visibilitychange', function(){
+  if(!global.document.hidden && ctx && ctx.state === 'suspended'){ ctx.resume().catch(function(){}); }
+});
+
+global.SalasilBell = {
+  unlock: unlock, ring: ring, watch: watch, seen: seen, stop: stop,
+  setMuted: setMuted, isMuted: isMuted,
+  _strike: strike, _partials: PARTIALS
+};
+})(typeof window !== 'undefined' ? window : this);
+
+/* ══════════════════════════════════════════════════════════════════
+   ARK — الجرس وإشعارات سطح المكتب
+   ──────────────────────────────────────────────────────────────────
+   ARK بيشتغل في تبويب متصفح على الكمبيوتر، ومفيهوش Service Worker،
+   يعني مفيش Web Push. فبنعمل حاجتين:
+
+   1) استطلاع في الخلفية كل 45 ثانية — حتى وانت في شاشة تانية خالص.
+      قبل كده كان بيحدّث كاش هومي بس لو انت واقف على تبويبه، يعني
+      طلب صرف ممكن يقعد ساعة من غير ما تعرف.
+
+   2) أول ما يظهر طلب جديد: إشعار ويندوز + جرس، والجرس يفضل يرن
+      كل 30 ثانية لحد ما تفتح تبويب كاش هومي.
+
+   ملاحظة: الإشعار ده بيشتغل طالما تبويب ARK مفتوح في المتصفح
+   (حتى لو مصغّر أو في تبويب تاني). لو قفلت المتصفح خالص، الإشعار
+   بيوصلك على تطبيق «السلاسل مدير» على الموبايل.
+   ══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(typeof SalasilBell === 'undefined') return;
+
+var SEEN_KEY = 'ark_hc_seen_ids';
+var seen = {};
+try{ seen = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; }catch(e){ seen = {}; }
+function remember(id){
+  seen[id] = Date.now();
+  /* ننضّف اللي أقدم من أسبوع عشان المفتاح ميكبرش */
+  var cut = Date.now() - 7*24*3600*1000;
+  Object.keys(seen).forEach(function(k){ if(seen[k] < cut) delete seen[k]; });
+  try{ localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); }catch(e){}
+}
+
+/* ── كام قرار مستنّيني؟ ── */
+function arkPending(){
+  var n = 0;
+  try{
+    if(typeof hcaPendingSettlements === 'function') n += hcaPendingSettlements().length;
+    if(typeof hcaSpendPending === 'function')       n += hcaSpendPending().length;
+  }catch(e){}
+  return n;
+}
+SalasilBell.watch(arkPending);
+
+/* ── إشعار سطح المكتب ── */
+function arkNotify(title, body, tag){
+  try{
+    if(!('Notification' in window) || Notification.permission !== 'granted') return;
+    var n = new Notification(title, {
+      body: body, tag: tag, icon: 'icon-192.png', badge: 'icon-192.png',
+      dir: 'rtl', lang: 'ar', requireInteraction: true, silent: false
+    });
+    n.onclick = function(){
+      try{ window.focus(); if(typeof setMainView === 'function') setMainView('homicash'); }catch(e){}
+      n.close();
+    };
+  }catch(e){}
+}
+
+/* ── طلب الإذن بالإشعارات (لازم يكون جوه ضغطة من المستخدم) ── */
+window.arkAskNotify = function(){
+  if(!('Notification' in window)){
+    try{ toast('المتصفح ده مش بيدعم إشعارات سطح المكتب','e'); }catch(e){}
+    return;
+  }
+  SalasilBell.unlock();
+  if(Notification.permission === 'granted'){
+    arkNotify('إشعارات ARK شغّالة ✅','هيوصلك إشعار وجرس أول ما يجي طلب صرف أو توريد.','ark-test');
+    SalasilBell.ring({force:true});
+    return;
+  }
+  Notification.requestPermission().then(function(p){
+    if(p === 'granted'){
+      arkNotify('إشعارات ARK شغّالة ✅','هيوصلك إشعار وجرس أول ما يجي طلب صرف أو توريد.','ark-test');
+      SalasilBell.ring({force:true});
+    }else{
+      try{ toast('الإشعارات مرفوضة من المتصفح — فعّلها من القفل جنب العنوان','e'); }catch(e){}
+    }
+    try{ arkBellPaint(); }catch(e){}
+  }).catch(function(){});
+};
+
+/* ── نكشف الجديد بعد كل مزامنة ── */
+function arkScanNew(){
+  var fresh = 0;
+  try{
+    (typeof hcaSpendPending === 'function' ? hcaSpendPending() : []).forEach(function(s){
+      if(seen['sp'+s.id]) return;
+      remember('sp'+s.id); fresh++;
+      arkNotify('🛒 طلب إذن صرف',
+        (s.receiver_name||'') + ' يطلب ' + (s.amount_requested||'') + ' د.ك — ' + (s.purpose||''),
+        'ark-spend-' + s.id);
+    });
+    (typeof hcaPendingSettlements === 'function' ? hcaPendingSettlements() : []).forEach(function(s){
+      if(seen['st'+s.id]) return;
+      remember('st'+s.id); fresh++;
+      arkNotify('💰 توريد بانتظار تأكيدك',
+        (s.receiver_name||'') + ' ورّد ' + (s.total||'') + ' د.ك',
+        'ark-settle-' + s.id);
+    });
+  }catch(e){}
+  if(fresh) SalasilBell.ring();
+}
+
+/* ── أي مزامنة من أي مصدر → نكشف الجديد بعدها ──
+   بنلفّ hcaSync نفسها بدل ما نعتمد على المؤقّت لوحده، عشان زرار
+   «تحديث» اليدوي والمزامنة التلقائية وأي نداء تاني كلهم يكشفوا
+   الجديد. لو اعتمدنا على المؤقّت بس، طلب يوصل بعد ضغطة تحديث
+   مباشرة كان ممكن يقعد 45 ثانية من غير جرس. */
+if(typeof window.hcaSync === 'function'){
+  var _sync = window.hcaSync;
+  window.hcaSync = function(){
+    return Promise.resolve(_sync.apply(this, arguments))
+      .then(function(r){ try{ arkScanNew(); }catch(e){} return r; })
+      .catch(function(e){ try{ arkScanNew(); }catch(_){} throw e; });
+  };
+}
+
+/* ── الاستطلاع في الخلفية: شغّال في كل الشاشات مش بس كاش هومي ── */
+var ARK_BG = null;
+function arkBgStart(){
+  clearInterval(ARK_BG);
+  ARK_BG = setInterval(function(){
+    if(document.hidden) return;                 /* التبويب مش ظاهر — نستنى */
+    try{ if(typeof hcaSync === 'function') hcaSync(true); }catch(e){}
+  }, 45000);
+}
+setTimeout(function(){ arkBgStart(); try{ arkScanNew(); }catch(e){} }, 6000);
+
+/* ── فتح تبويب كاش هومي = «شُفتها» ── */
+if(typeof window.setMainView === 'function'){
+  var _smv = window.setMainView;
+  window.setMainView = function(v){
+    if(v === 'homicash'){ try{ SalasilBell.unlock(); SalasilBell.seen(); }catch(e){} }
+    return _smv.apply(this, arguments);
+  };
+}
+
+/* ── زر التحكم في الجرس والإشعارات (في تبويب الإعدادات بكاش هومي) ── */
+window.arkBellToggle = function(){
+  var off = SalasilBell.setMuted(!SalasilBell.isMuted());
+  if(!off) SalasilBell.ring({force:true});
+  arkBellPaint();
+};
+window.arkBellPaint = function(){
+  var b = document.getElementById('arkBellBtn');
+  if(b){
+    var off = SalasilBell.isMuted();
+    b.innerHTML = '<i class="ti ' + (off ? 'ti-bell-off' : 'ti-bell-ringing') + '"></i>' +
+                  (off ? 'الجرس مقفول — اضغط للتشغيل' : 'الجرس شغّال — اضغط للإيقاف');
+    b.className = 'pay-btn' + (off ? '' : ' lock');
+  }
+  var s = document.getElementById('arkNotifState');
+  if(s){
+    var p = ('Notification' in window) ? Notification.permission : 'unsupported';
+    s.textContent = p === 'granted' ? 'مسموح ✅'
+                  : p === 'denied'  ? 'مرفوضة من المتصفح — فعّلها من القفل 🔒 جنب العنوان'
+                  : 'لسه متفعّلتش';
+    s.style.color = p === 'granted' ? '#059669' : '#b45309';
+  }
+};
+})();
 
 </script>
 
