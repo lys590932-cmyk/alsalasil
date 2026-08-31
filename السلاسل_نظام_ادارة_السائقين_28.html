@@ -3521,6 +3521,7 @@ async function renderOpsCenter(){
   });
   h += '</div><div id="opsTabBody" style="max-height:66vh;overflow:auto"><div style="padding:40px;text-align:center;color:var(--muted)"><i class="ti ti-loader-2"></i> جارٍ التحميل…</div></div>';
   el.innerHTML = h;
+  try{ finPaint(); }catch(e){}
   applyRoleToUI();
 
   const body = document.getElementById('opsTabBody');
@@ -9402,6 +9403,8 @@ function renderAccounting(){
       '<button class="tbtn" onclick="generateAccPdfReport()" style="color:#dc2626;border-color:rgba(220,38,38,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير PDF (EN)</button>'+
       '<button class="tbtn" onclick="generateAccArabicReport()" style="color:#059669;border-color:rgba(5,150,105,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير كل الشهور (عربي/EN)</button>'+
       '<button class="tbtn" onclick="generatePptxReport()" style="color:#f59e0b"><i class="ti ti-presentation"></i> تقرير PowerPoint</button>'+
+      '<button class="tbtn" onclick="ARKFIN.pushNow()" style="color:#0d9488;border-color:rgba(13,148,136,.4)" title="ارفع الدخل والمصروفات للسحابة عشان يشوفهم تطبيق المدير"><i class="ti ti-cloud-upload"></i> ارفع للسحابة</button>'+
+      '<span id="finSyncState" style="font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:5px"></span>'+
     '</div>'+
   '</div>';
 
@@ -18817,6 +18820,153 @@ window.arkBellPaint = function(){
     s.style.color = p === 'granted' ? '#059669' : '#b45309';
   }
 };
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK — رفع المحاسبة للسحابة
+   ──────────────────────────────────────────────────────────────────────────
+   الدخل والمصروفات كانوا متخزّنين في متصفح اللاب بس. يعني تطبيق المدير
+   مش شايفهم، ولو المتصفح اتمسح المحاسبة كلها تروح.
+
+   الملف ده بيرفعهم بعد كل حفظ (بتأخير بسيط عشان ميضربش على الخادم مع
+   كل ضغطة)، وبينزّل القيود اللي اتكتبت من الموبايل.
+
+   المعرّف هو المفتاح: كل قيد له id ثابت، فالرفع المتكرر بيحدّث نفس
+   الصف ومبيضاعفش أي رقم — نفس الفكرة اللي في العهدة وكاش هومي.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+var FIN = window.ARKFIN = { last: null, busy: false, err: null, pulled: 0 };
+
+function rpc(fn, args){
+  var tok = null;
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        var v = JSON.parse(localStorage.getItem(k) || '{}');
+        if(v && v.access_token){ tok = v.access_token; break; }
+      }
+    }
+  }catch(e){}
+  return fetch(SUPA_URL + '/rest/v1/rpc/' + fn, {
+    method:'POST',
+    headers:{ apikey:SUPA_KEY, Authorization:'Bearer ' + (tok || SUPA_KEY),
+              'Content-Type':'application/json' },
+    body: JSON.stringify(args || {})
+  }).then(function(r){
+    return r.text().then(function(t){
+      var j = null; try{ j = t ? JSON.parse(t) : null; }catch(e){ j = t; }
+      if(!r.ok) throw new Error((j && (j.message || j.hint)) || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+/* ── الرفع ── */
+function push(silent){
+  if(FIN.busy) return Promise.resolve();
+  if(typeof INCOMES === 'undefined' || typeof EXPENSES === 'undefined')
+    return Promise.resolve();
+  FIN.busy = true;
+
+  /* بنبعت اللي مصدره ARK بس — قيود الموبايل (MOB_) بتفضل في السحابة
+     ومش بنبعتها تاني عشان مانحوّلهاش لقيود ARK فتتمسح بعد كده */
+  var inc = INCOMES.filter(function(x){ return String(x.id).indexOf('MOB_') !== 0; });
+  var exp = EXPENSES.filter(function(x){ return String(x.id).indexOf('MOB_') !== 0; });
+
+  return rpc('ark_finance_push', { p_incomes: inc, p_expenses: exp, p_prune: true })
+    .then(function(r){
+      FIN.last = new Date(); FIN.err = null;
+      if(!silent && typeof toast === 'function')
+        toast('المحاسبة اترفعت — ' + (r && r.incomes || 0) + ' دخل · ' +
+              (r && r.expenses || 0) + ' مصروف','s');
+      try{ finPaint(); }catch(e){}
+      return r;
+    })
+    .catch(function(e){
+      FIN.err = String(e.message || e);
+      if(/does not exist|schema cache|ark_finance_push/i.test(FIN.err))
+        FIN.err = 'ملف ark_finance.sql لسه متشغّلش على Supabase';
+      if(!silent && typeof toast === 'function') toast('تعذّر رفع المحاسبة: ' + FIN.err,'e');
+      try{ finPaint(); }catch(x){}
+    })
+    .then(function(r){ FIN.busy = false; return r; });
+}
+
+/* ── تنزيل قيود الموبايل ── */
+function pull(){
+  var m = (new Date()).getMonth() + 1, y = (new Date()).getFullYear();
+  /* بنجيب الشهر ده والشهر اللي فات — كفاية للقيود اللي اتكتبت بره */
+  var pm = m === 1 ? 12 : m - 1, py = m === 1 ? y - 1 : y;
+  return Promise.all([
+    rpc('ark_finance_entries', {p_month:m,  p_year:y,  p_kind:null}),
+    rpc('ark_finance_entries', {p_month:pm, p_year:py, p_kind:null})
+  ]).then(function(res){
+    var rows = (res[0] || []).concat(res[1] || []);
+    var added = 0;
+    rows.forEach(function(r){
+      if(String(r.id).indexOf('MOB_') !== 0) return;   /* بتاعنا أصلاً */
+      var arr  = r.kind === 'income' ? INCOMES : EXPENSES;
+      if(arr.some(function(x){ return String(x.id) === String(r.id); })) return;
+      var row = { id:r.id, date:String(r.entry_date).slice(0,10),
+                  amount:Number(r.amount) || 0, driverId:r.driver_id || '',
+                  note:(r.note || '') + ' [من الموبايل]' };
+      if(r.kind === 'income') row.source = r.bucket || 'other';
+      else                    row.category = r.bucket || 'other';
+      arr.push(row); added++;
+    });
+    if(added){
+      try{ saveInc(); saveExp(); }catch(e){}
+      FIN.pulled = added;
+      if(typeof toast === 'function') toast('نزل ' + added + ' قيد اتكتبوا من الموبايل','s');
+      try{ if(typeof currentView !== 'undefined' && currentView === 'acc') renderAccounting(); }catch(e){}
+    }
+    return added;
+  }).catch(function(){ return 0; });
+}
+
+/* ── رفع مؤجّل: بنستنى شوية بعد آخر تعديل بدل ما نضرب على الخادم
+      مع كل ضغطة حفظ ── */
+var t = null;
+FIN.schedule = function(){
+  clearTimeout(t);
+  t = setTimeout(function(){ push(true); }, 4000);
+};
+FIN.pushNow = function(){ return push(false); };
+FIN.pull    = pull;
+
+/* نلفّ دوال الحفظ الأصلية — أي تعديل في المحاسبة بيتبعه رفع تلقائي */
+['saveInc','saveExp'].forEach(function(fn){
+  if(typeof window[fn] !== 'function') return;
+  var orig = window[fn];
+  window[fn] = function(){
+    var r = orig.apply(this, arguments);
+    try{ FIN.schedule(); }catch(e){}
+    return r;
+  };
+});
+
+/* ── حالة المزامنة في شاشة المحاسبة ── */
+window.finPaint = function(){
+  var el = document.getElementById('finSyncState');
+  if(!el) return;
+  if(FIN.err){
+    el.innerHTML = '<i class="ti ti-cloud-off" style="color:#b91c1c"></i> ' +
+                   '<span style="color:#b91c1c">' + FIN.err + '</span>';
+  }else if(FIN.last){
+    el.innerHTML = '<i class="ti ti-cloud-check" style="color:#059669"></i> ' +
+      'اترفع للسحابة ' + FIN.last.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+  }else{
+    el.innerHTML = '<i class="ti ti-cloud" style="color:var(--muted)"></i> لسه مترفعش';
+  }
+};
+
+/* أول رفع بعد ما ARK يخلص تحميل، وبعدها كل عشر دقايق */
+setTimeout(function(){ push(true).then(pull); }, 9000);
+setInterval(function(){ if(!document.hidden) push(true); }, 600000);
 })();
 
 </script>
