@@ -404,6 +404,46 @@ button,input,select{font-family:'Cairo',sans-serif}
 .hc-empty i{font-size:34px;opacity:.55}
 .hc-empty p{font-size:12.5px;margin:9px 0 0;line-height:1.7}
 
+
+.hc-sp-avail{display:flex;align-items:center;justify-content:space-between;background:rgba(13,148,136,.1);border:1px solid rgba(13,148,136,.28);border-radius:12px;padding:10px 13px;margin-bottom:13px}
+.hc-sp-avail span{font-size:11.5px;font-weight:800;color:var(--muted)}
+.hc-sp-avail b{font-size:19px;font-weight:900;color:#14b8a6;font-variant-numeric:tabular-nums}
+.hc-sp-avail b small{font-size:10px;opacity:.75}
+.hc-sp-diff{margin-top:7px;font-size:11.5px;color:var(--muted);background:var(--s2);border-radius:9px;padding:7px 10px;line-height:1.7}
+.hc-sp-diff b{color:var(--text)}
+.hc-photo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;border:2px dashed var(--br);border-radius:14px;background:var(--s2);color:var(--muted);cursor:pointer;overflow:hidden;position:relative}
+.hc-photo i{font-size:30px}
+.hc-photo span{font-size:12px;font-weight:700}
+.hc-photo.has{border-style:solid;border-color:#0d9488;padding:0}
+.hc-photo img{width:100%;max-height:250px;object-fit:contain;display:block}
+
+/* ── ورقة إثبات الصرف: تتبع أسلوب أوراق فلاي السفلية، وفوق شريط التنقل ── */
+.hcr-ov{position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:9300;
+  display:none;align-items:flex-end;justify-content:center}
+.hcr-ov.on{display:flex}
+.hcr-sheet{background:var(--bg,#0d1117);width:100%;max-width:520px;
+  border-radius:20px 20px 0 0;max-height:92vh;display:flex;flex-direction:column;
+  border-top:1px solid var(--br,#30363d);animation:hcrUp .28s cubic-bezier(.2,.9,.3,1);
+  padding-bottom:env(safe-area-inset-bottom)}
+@keyframes hcrUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.hcr-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:15px 17px;border-bottom:1px solid var(--br);flex:0 0 auto}
+.hcr-hd h3{margin:0;font-size:15.5px;font-weight:900;display:flex;align-items:center;gap:8px}
+.hcr-hd h3 i{color:#14b8a6;font-size:19px}
+.hcr-x{width:31px;height:31px;border-radius:50%;background:var(--s1);border:1px solid var(--br);
+  color:var(--text);font-size:15px;cursor:pointer;display:grid;place-items:center;
+  font-family:inherit;flex:0 0 auto}
+.hcr-body{padding:15px 17px;overflow-y:auto;flex:1 1 auto;-webkit-overflow-scrolling:touch}
+.hcr-acts{display:flex;gap:9px;padding:13px 17px;border-top:1px solid var(--br);
+  background:var(--bg);flex:0 0 auto}
+.hcr-acts button{flex:1;border-radius:var(--r,12px);padding:13px;font-size:14px;font-weight:800;
+  cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid var(--br)}
+.hcr-cancel{background:var(--s1);color:var(--text)}
+.hcr-save{background:#0d9488;border-color:#0d9488;color:#fff;flex:1.6}
+.hcr-save:disabled{opacity:.6;cursor:default}
+
+
 </style>
 
 <!-- ARK-WATERMARK : علامة السلاسل المائية -->
@@ -5997,6 +6037,7 @@ function hcSync(silent){
     jobs.push(hcRpc('homi_cash_inbox', {p_receiver_id: DRIVER.id, p_limit: 200}).then(function(r){ HC.inbox = r||[]; }));
     jobs.push(hcRpc('homi_cash_my_balance', {p_receiver_id: DRIVER.id}).then(function(r){ HC.balance = r||null; }));
     jobs.push(hcRpc('homi_cash_my_settlements', {p_receiver_id: DRIVER.id, p_limit: 30}).then(function(r){ HC.settlements = r||[]; }));
+    jobs.push(hcRpc('homi_cash_my_spends', {p_receiver_id: DRIVER.id, p_limit: 60}).then(function(r){ HC.spends = r||[]; }));
   }
   return Promise.all(jobs).then(function(){
     HC.loading = false; HC.lastSync = Date.now();
@@ -6055,6 +6096,7 @@ function hcRender(){
   if(HC.isReceiver)    tabs.push(['inbox', t('hc_tab_inbox'), 'ti-inbox', hcPendingCount()]);
   if(hcIsHomiDriver()) tabs.push(['mine',  t('hc_tab_mine'),  'ti-list']);
   if(HC.isReceiver)    tabs.push(['settle',t('hc_tab_settle'),'ti-building-bank']);
+  if(HC.isReceiver)    tabs.push(['spend', t('hc_tab_spend'), 'ti-shopping-cart', hcSpendOpen()]);
   if(tabs.length && !tabs.some(function(x){ return x[0]===HC.tab; })) HC.tab = tabs[0][0];
 
   var html =
@@ -6076,6 +6118,7 @@ function hcRender(){
   else if(HC.tab === 'inbox')  html += hcInboxHTML();
   else if(HC.tab === 'mine')   html += hcMineHTML();
   else if(HC.tab === 'settle') html += hcSettleHTML();
+  else if(HC.tab === 'spend')  html += hcSpendHTML();
 
   el.innerHTML = html;
 
@@ -6402,6 +6445,298 @@ function hcSettleSend(){
   }).then(function(){ hcRender(); });
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FLY — إذن الصرف من كاش هومي
+   المستلم يمسك كاشاً ليس ملكه. لا يخرج منه دينار قبل إذن الإدارة.
+       طلب ──▶ إذن بمبلغ محدَّد ──▶ شراء ──▶ إيصال بالمبلغ الفعلي
+   الرصيد لا ينقص إلا عند رفع الإيصال، والفرق يعود تلقائياً.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+Object.assign(I18N.ar, {
+  hc_tab_spend:'الصرف',
+  hc_sp_title:'طلب إذن صرف',
+  hc_sp_hint:'الكاش اللي معاك مش ملكك — أي صرف منه لازم إذن من الإدارة الأول. اطلب، واستنى الموافقة، وبعد الشراء ارفع الإيصال.',
+  hc_sp_amount:'المبلغ المطلوب (د.ك)',
+  hc_sp_cat:'نوع المصروف',
+  hc_sp_purpose:'الغرض — لماذا؟',
+  hc_sp_purpose_ph:'مثال: زيت وفلتر للسيارة 23/72401',
+  hc_sp_vendor:'المحل (اختياري)',
+  hc_sp_send:'إرسال الطلب للإدارة',
+  hc_sp_avail:'المتاح في يدك للصرف',
+  hc_sp_err_amount:'أدخل مبلغاً صحيحاً',
+  hc_sp_err_purpose:'اكتب سبب الصرف',
+  hc_sp_confirm:function(a){ return 'إرسال طلب إذن بصرف '+a+' د.ك؟\n\nهيوصل للإدارة إشعار فوراً.'; },
+  hc_sp_sent:'أُرسل الطلب — بانتظار موافقة الإدارة',
+  hc_sp_none:'لا طلبات صرف',
+  hc_sp_st_pending:'بانتظار موافقة الإدارة',
+  hc_sp_st_approved:'مأذون — ارفع الإيصال',
+  hc_sp_st_rejected:'مرفوض',
+  hc_sp_st_spent:'تم الصرف',
+  hc_sp_st_cancelled:'ملغى',
+  hc_sp_requested:'المطلوب',
+  hc_sp_approved:'المأذون به',
+  hc_sp_spent:'المصروف',
+  hc_sp_returned:'راجع لرصيدك',
+  hc_sp_do:'أدخل الإيصال',
+  hc_sp_cancel:'إلغاء الطلب',
+  hc_sp_cancel_q:'إلغاء هذا الطلب؟',
+  hc_sp_rec_title:'إثبات الصرف',
+  hc_sp_rec_amount:'المبلغ اللي صرفته فعلاً (د.ك)',
+  hc_sp_rec_max:function(a){ return 'الحد الأقصى '+a+' د.ك'; },
+  hc_sp_rec_photo:'صورة الإيصال',
+  hc_sp_rec_pick:'اختر صورة الفاتورة',
+  hc_sp_rec_note:'ملاحظة (اختياري)',
+  hc_sp_rec_save:'حفظ وإنهاء',
+  hc_sp_rec_need_photo:'لازم ترفع صورة الإيصال',
+  hc_sp_rec_over:'المبلغ أكبر من المأذون به',
+  hc_sp_uploading:'جاري رفع الصورة…',
+  hc_sp_done:function(r){ return r>0 ? ('تم الصرف — رجع '+r+' د.ك لرصيدك') : 'تم تسجيل الصرف'; },
+  hc_sp_view:'عرض الإيصال',
+  cat_fuel:'وقود', cat_maintenance:'صيانة وقطع غيار', cat_residency:'إقامات ورخص',
+  cat_admin:'مصاريف إدارية', cat_other:'أخرى'
+});
+Object.assign(I18N.en, {
+  hc_tab_spend:'Spending',
+  hc_sp_title:'Spend authorisation request',
+  hc_sp_hint:'The cash you hold is not yours — any spending needs management approval first. Request, wait for approval, then upload the receipt after buying.',
+  hc_sp_amount:'Amount requested (KD)',
+  hc_sp_cat:'Expense type',
+  hc_sp_purpose:'Purpose — what for?',
+  hc_sp_purpose_ph:'e.g. oil and filter for car 23/72401',
+  hc_sp_vendor:'Vendor (optional)',
+  hc_sp_send:'Send request to management',
+  hc_sp_avail:'Available to spend',
+  hc_sp_err_amount:'Enter a valid amount',
+  hc_sp_err_purpose:'Enter the purpose',
+  hc_sp_confirm:function(a){ return 'Request authorisation to spend '+a+' KD?\n\nManagement is notified immediately.'; },
+  hc_sp_sent:'Request sent — awaiting approval',
+  hc_sp_none:'No spend requests',
+  hc_sp_st_pending:'Awaiting approval',
+  hc_sp_st_approved:'Approved — upload receipt',
+  hc_sp_st_rejected:'Rejected',
+  hc_sp_st_spent:'Spent',
+  hc_sp_st_cancelled:'Cancelled',
+  hc_sp_requested:'Requested',
+  hc_sp_approved:'Approved',
+  hc_sp_spent:'Spent',
+  hc_sp_returned:'Back to your balance',
+  hc_sp_do:'Enter receipt',
+  hc_sp_cancel:'Cancel request',
+  hc_sp_cancel_q:'Cancel this request?',
+  hc_sp_rec_title:'Record the spend',
+  hc_sp_rec_amount:'Amount actually spent (KD)',
+  hc_sp_rec_max:function(a){ return 'Maximum '+a+' KD'; },
+  hc_sp_rec_photo:'Receipt photo',
+  hc_sp_rec_pick:'Choose the invoice photo',
+  hc_sp_rec_note:'Note (optional)',
+  hc_sp_rec_save:'Save and finish',
+  hc_sp_rec_need_photo:'A receipt photo is required',
+  hc_sp_rec_over:'Amount exceeds what was approved',
+  hc_sp_uploading:'Uploading photo…',
+  hc_sp_done:function(r){ return r>0 ? ('Spent — '+r+' KD returned to your balance') : 'Spend recorded'; },
+  hc_sp_view:'View receipt',
+  cat_fuel:'Fuel', cat_maintenance:'Maintenance & parts', cat_residency:'Residency & licences',
+  cat_admin:'Admin expenses', cat_other:'Other'
+});
+
+var HC_CATS = ['fuel','maintenance','residency','admin','other'];
+HC.spends = [];
+HC.recTarget = null;
+HC.recPhoto  = null;
+
+function hcSpendSync(){
+  if(!HC.isReceiver || !DRIVER) return Promise.resolve();
+  return hcRpc('homi_cash_my_spends', {p_receiver_id: DRIVER.id, p_limit: 60})
+    .then(function(r){ HC.spends = r || []; })
+    .catch(function(e){ console.warn('[homi-spend] sync', e); });
+}
+function hcSpendOpen(){ return HC.spends.filter(function(s){ return s.status === 'approved'; }).length; }
+
+/* ── تبويب الصرف ── */
+function hcSpendHTML(){
+  var b = HC.balance || {};
+  var avail = parseFloat(b.on_hand || 0);
+
+  var form = '<div class="hc-card">' +
+    '<div class="hc-sec" style="margin:0 0 6px">' + t('hc_sp_title') + '</div>' +
+    '<p class="hc-hint">' + t('hc_sp_hint') + '</p>' +
+    '<div class="hc-sp-avail"><span>' + t('hc_sp_avail') + '</span><b>' + hcKD(avail) + ' <small>KD</small></b></div>' +
+    '<div class="hc-f"><label>' + t('hc_sp_amount') + '</label>' +
+      '<input id="hcSpAmount" type="number" inputmode="decimal" step="0.001" min="0" placeholder="0.000" class="hc-amount-in"></div>' +
+    '<div class="hc-f"><label>' + t('hc_sp_cat') + '</label><select id="hcSpCat">' +
+      HC_CATS.map(function(c){ return '<option value="' + c + '">' + t('cat_' + c) + '</option>'; }).join('') +
+      '</select></div>' +
+    '<div class="hc-f"><label>' + t('hc_sp_purpose') + '</label>' +
+      '<input id="hcSpPurpose" type="text" placeholder="' + t('hc_sp_purpose_ph') + '"></div>' +
+    '<div class="hc-f"><label>' + t('hc_sp_vendor') + '</label>' +
+      '<input id="hcSpVendor" type="text"></div>' +
+    '<button class="hc-primary" id="hcSpBtn" onclick="hcSpendSubmit()"' + (avail > 0 ? '' : ' disabled') + '>' +
+      '<i class="ti ti-send"></i> ' + t('hc_sp_send') + '</button>' +
+  '</div>';
+
+  if(!HC.spends.length){
+    return form + '<div class="hc-empty"><i class="ti ti-receipt-off"></i><p>' + t('hc_sp_none') + '</p></div>';
+  }
+  return form + '<div class="hc-list">' + HC.spends.map(hcSpendItem).join('') + '</div>';
+}
+
+function hcSpendItem(s){
+  var map = {
+    pending:  ['hc_sp_st_pending',  '#f59e0b', 'ti-clock'],
+    approved: ['hc_sp_st_approved', '#0ea5e9', 'ti-checkbox'],
+    rejected: ['hc_sp_st_rejected', '#dc2626', 'ti-x'],
+    spent:    ['hc_sp_st_spent',    '#059669', 'ti-receipt'],
+    cancelled:['hc_sp_st_cancelled','#94a3b8', 'ti-ban']
+  };
+  var c = map[s.status] || map.pending;
+  var main = s.status === 'spent' ? s.amount_spent
+           : (s.status === 'approved' ? s.amount_approved : s.amount_requested);
+  var returned = (s.status === 'spent' && s.amount_approved)
+    ? (parseFloat(s.amount_approved) - parseFloat(s.amount_spent)) : 0;
+
+  return '<div class="hc-item' + (s.status === 'approved' ? ' pend' : '') + '">' +
+    '<div class="hc-item-top">' +
+      '<b class="hc-amt">' + hcKD(main) + ' <small>KD</small></b>' +
+      '<span class="hc-chip" style="color:' + c[1] + ';background:' + c[1] + '1a">' +
+        '<i class="ti ' + c[2] + '"></i>' + t(c[0]) + '</span>' +
+    '</div>' +
+    '<div class="hc-item-meta">' +
+      '<span><i class="ti ti-tag"></i>' + t('cat_' + (s.category || 'other')) + '</span>' +
+      (s.vendor ? '<span><i class="ti ti-building-store"></i>' + hcEsc(s.vendor) + '</span>' : '') +
+      '<span><i class="ti ti-calendar"></i>' + hcEsc((s.requested_at || '').slice(0,10)) + '</span>' +
+    '</div>' +
+    '<div class="hc-item-note">' + hcEsc(s.purpose) + '</div>' +
+    (s.status === 'approved' && parseFloat(s.amount_approved) < parseFloat(s.amount_requested)
+      ? '<div class="hc-sp-diff">' + t('hc_sp_requested') + ' ' + hcKD(s.amount_requested) +
+        ' · ' + t('hc_sp_approved') + ' <b>' + hcKD(s.amount_approved) + '</b></div>' : '') +
+    (s.status === 'spent'
+      ? '<div class="hc-sp-diff">' + t('hc_sp_approved') + ' ' + hcKD(s.amount_approved) +
+        ' · ' + t('hc_sp_spent') + ' <b>' + hcKD(s.amount_spent) + '</b>' +
+        (returned > 0 ? ' · ' + t('hc_sp_returned') + ' <b>' + hcKD(returned) + '</b>' : '') + '</div>' : '') +
+    (s.status === 'rejected' && s.reject_reason
+      ? '<div class="hc-reject"><i class="ti ti-alert-triangle"></i><span><b>' + t('hc_reason') + ':</b> ' +
+        hcEsc(s.reject_reason) + '</span></div>' : '') +
+    (s.status === 'approved'
+      ? '<div class="hc-actions">' +
+          '<button class="hc-primary sm" onclick="hcSpendRecOpen(\'' + s.id + '\')">' +
+            '<i class="ti ti-camera"></i> ' + t('hc_sp_do') + '</button>' +
+          '<button class="hc-mini danger" onclick="hcSpendCancel(\'' + s.id + '\')">' + t('hc_sp_cancel') + '</button>' +
+        '</div>' : '') +
+    (s.status === 'pending'
+      ? '<button class="hc-mini danger" style="margin-top:9px" onclick="hcSpendCancel(\'' + s.id + '\')">' +
+        '<i class="ti ti-x"></i> ' + t('hc_sp_cancel') + '</button>' : '') +
+    (s.status === 'spent' && s.receipt_url
+      ? '<a class="hc-mini" style="margin-top:9px;text-decoration:none" target="_blank" rel="noopener" href="' +
+        hcEsc(s.receipt_url) + '"><i class="ti ti-photo"></i> ' + t('hc_sp_view') + '</a>' : '') +
+  '</div>';
+}
+
+function hcSpendSubmit(){
+  var amt = parseFloat(($('hcSpAmount') || {}).value);
+  var cat = (($('hcSpCat') || {}).value) || 'other';
+  var pur = ((($('hcSpPurpose') || {}).value) || '').trim();
+  var ven = ((($('hcSpVendor') || {}).value) || '').trim();
+
+  if(!amt || amt <= 0){ toast(t('hc_sp_err_amount')); return; }
+  if(!pur){ toast(t('hc_sp_err_purpose')); return; }
+  if(!confirm(t('hc_sp_confirm', hcKD(amt)))) return;
+
+  var btn = $('hcSpBtn');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px"></div> ' + t('hc_loading'); }
+
+  hcRpc('homi_cash_spend_request', {
+    p_receiver_id: DRIVER.id, p_amount: amt,
+    p_category: cat, p_purpose: pur, p_vendor: ven || null
+  }).then(function(){
+    if($('hcSpAmount'))  $('hcSpAmount').value  = '';
+    if($('hcSpPurpose')) $('hcSpPurpose').value = '';
+    if($('hcSpVendor'))  $('hcSpVendor').value  = '';
+    toast(t('hc_sp_sent'));
+    return hcSpendSync().then(function(){ return hcSync(true); });
+  }).catch(function(e){ toast(hcErrMsg(e)); })
+    .then(function(){ hcRender(); });
+}
+
+function hcSpendCancel(id){
+  if(!confirm(t('hc_sp_cancel_q'))) return;
+  hcRpc('homi_cash_spend_cancel', {p_id:id, p_receiver_id:DRIVER.id})
+    .then(function(){ return hcSpendSync(); })
+    .catch(function(e){ toast(hcErrMsg(e)); })
+    .then(function(){ hcRender(); });
+}
+
+/* ── إثبات الصرف ── */
+function hcSpendRecOpen(id){
+  var s = HC.spends.filter(function(x){ return x.id === id; })[0];
+  if(!s) return;
+  HC.recTarget = s; HC.recPhoto = null;
+  $('hcRecTitle').textContent = t('hc_sp_rec_title');
+  $('hcRecBody').innerHTML =
+    '<div class="hc-item-note" style="margin:0 0 12px">' + hcEsc(s.purpose) + '</div>' +
+    '<div class="hc-f"><label>' + t('hc_sp_rec_amount') + '</label>' +
+      '<input id="hcRecAmount" type="number" inputmode="decimal" step="0.001" min="0" ' +
+      'max="' + s.amount_approved + '" value="' + s.amount_approved + '" class="hc-amount-in">' +
+      '<div class="hc-hint" style="margin:6px 0 0">' + t('hc_sp_rec_max', hcKD(s.amount_approved)) + '</div></div>' +
+    '<div class="hc-f"><label>' + t('hc_sp_rec_photo') + '</label>' +
+      '<label class="hc-photo" id="hcRecPhotoBox">' +
+        '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="hcRecPick(this)">' +
+        '<i class="ti ti-camera"></i><span>' + t('hc_sp_rec_pick') + '</span>' +
+      '</label></div>' +
+    '<div class="hc-f"><label>' + t('hc_sp_rec_note') + '</label><input id="hcRecNote" type="text"></div>';
+  $('hcRecSave').innerHTML = '<i class="ti ti-check"></i> ' + t('hc_sp_rec_save');
+  $('hcRecModal').classList.add('on');
+}
+function hcRecClose(){ $('hcRecModal').classList.remove('on'); HC.recTarget = null; HC.recPhoto = null; }
+
+function hcRecPick(input){
+  var f = input.files && input.files[0];
+  if(!f) return;
+  var box = $('hcRecPhotoBox');
+  compressImage(f, 1200).then(function(small){
+    HC.recPhoto = small || f;
+    var url = URL.createObjectURL(HC.recPhoto);
+    box.innerHTML = '<img src="' + url + '" alt="">' +
+      '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="hcRecPick(this)">';
+    box.classList.add('has');
+  }).catch(function(){
+    HC.recPhoto = f;
+    box.classList.add('has');
+    box.querySelector('span').textContent = f.name;
+  });
+}
+
+function hcRecSave(){
+  var s = HC.recTarget; if(!s) return;
+  var amt = parseFloat(($('hcRecAmount') || {}).value);
+  var note = ((($('hcRecNote') || {}).value) || '').trim();
+  if(!amt || amt <= 0){ toast(t('hc_sp_err_amount')); return; }
+  if(amt > parseFloat(s.amount_approved) + 0.0001){ toast(t('hc_sp_rec_over')); return; }
+  if(!HC.recPhoto){ toast(t('hc_sp_rec_need_photo')); return; }
+
+  var btn = $('hcRecSave');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px"></div> ' + t('hc_sp_uploading');
+
+  uploadImage(HC.recPhoto, 'homi-cash-receipts').then(function(url){
+    return hcRpc('homi_cash_spend_record', {
+      p_id: s.id, p_receiver_id: DRIVER.id,
+      p_amount: amt, p_receipt_url: url, p_note: note || null
+    });
+  }).then(function(res){
+    var r = (res && res.returned) ? parseFloat(res.returned) : 0;
+    toast(t('hc_sp_done', hcKD(r)));
+    hcRecClose();
+    return hcSpendSync().then(function(){ return hcSync(true); });
+  }).catch(function(e){
+    toast(hcErrMsg(e));
+  }).then(function(){
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-check"></i> ' + t('hc_sp_rec_save');
+    hcRender();
+  });
+}
+
 </script>
 
 <!-- ══ شاشة تسجيل البريد الإلكتروني ══ -->
@@ -6446,5 +6781,20 @@ function hcSettleSend(){
 <!-- كارت التحفيز عند تسجيل الحضور -->
 <div id="motivCard" class="motiv-card hide"></div>
 
+
+<!-- إثبات صرف كاش هومي -->
+<div class="hcr-ov" id="hcRecModal" onclick="if(event.target===this)hcRecClose()">
+  <div class="hcr-sheet">
+    <div class="hcr-hd">
+      <h3><i class="ti ti-receipt"></i> <span id="hcRecTitle">إثبات الصرف</span></h3>
+      <button class="hcr-x" onclick="hcRecClose()" aria-label="close">✕</button>
+    </div>
+    <div class="hcr-body" id="hcRecBody"></div>
+    <div class="hcr-acts">
+      <button class="hcr-cancel" onclick="hcRecClose()" id="hcRecCancel">إلغاء</button>
+      <button class="hcr-save" id="hcRecSave" onclick="hcRecSave()"><i class="ti ti-check"></i> حفظ وإنهاء</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

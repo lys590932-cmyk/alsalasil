@@ -2155,6 +2155,143 @@ body::after{
   <div id="payrollBody"></div>
 </div>
 
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   كاش هومي — انضباط الجداول المالية
+   ───────────────────────────────────────────────────────────────────
+   المشكلة التي يعالجها هذا الملف: أعمدة الأرقام كانت تُحاذى يساراً
+   بينما عناوينها يميناً، فالرقم لا يقع تحت عنوانه، والكسور العشرية
+   لا تتحاذى فيتعذّر مسح العمود بالعين.
+
+   القاعدة هنا: الرقم والعنوان على نفس الحافة، وبأرقام ثابتة العرض.
+   ولأن كل المبالغ بثلاث خانات عشرية، تتحاذى الفواصل تلقائياً.
+   الأنماط كلها محصورة في #view-homicash فلا تمسّ شاشة الرواتب.
+   ═══════════════════════════════════════════════════════════════════ */
+
+#view-homicash .pay-card{padding:0;overflow:hidden}
+#view-homicash .pay-card > .pay-h3,
+#view-homicash .pay-card > .pay-grid4,
+#view-homicash .pay-card > .pay-hint,
+#view-homicash .pay-card > div:not(.pay-table-wrap):not(.hca-tbl-head){padding-inline:15px}
+#view-homicash .pay-card > .pay-h3{padding-top:14px}
+
+/* ── رأس الجدول ── */
+#view-homicash .hca-tbl-head{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:13px 15px;border-bottom:1px solid var(--br);background:var(--s2)}
+#view-homicash .hca-tbl-head b{font-size:13px;font-weight:900}
+#view-homicash .hca-tbl-head .hca-count{
+  font-size:11px;font-weight:800;color:var(--muted);
+  background:var(--s3);border-radius:20px;padding:3px 10px}
+#view-homicash .hca-tbl-head .hca-sum{margin-inline-start:auto;display:flex;gap:16px;flex-wrap:wrap}
+#view-homicash .hca-tbl-head .hca-sum > div{text-align:center}
+#view-homicash .hca-tbl-head .hca-sum span{display:block;font-size:9.5px;color:var(--muted);font-weight:700}
+#view-homicash .hca-tbl-head .hca-sum b{display:block;font-size:14px;font-variant-numeric:tabular-nums}
+
+/* ── الجدول ── */
+#view-homicash .pay-table-wrap{overflow-x:auto;max-height:calc(100vh - 430px)}
+#view-homicash .pay-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+#view-homicash .pay-table thead th{
+  position:sticky;top:0;z-index:3;background:var(--s2);
+  padding:10px 13px;font-size:10.5px;font-weight:900;color:var(--muted);
+  border-bottom:1px solid var(--br);white-space:nowrap;text-align:right;
+  letter-spacing:.2px}
+#view-homicash .pay-table td{
+  padding:11px 13px;border-bottom:1px solid var(--br);vertical-align:middle;text-align:right}
+#view-homicash .pay-table tbody tr:nth-child(even){background:rgba(15,23,41,.022)}
+#view-homicash .pay-table tbody tr:hover{background:rgba(13,148,136,.07)}
+#view-homicash .pay-table tbody tr:last-child td{border-bottom:none}
+
+/* ★ الأرقام: نفس حافة العنوان + عرض ثابت للأرقام = تحاذٍ عشري تلقائي */
+#view-homicash .pay-table th.n,
+#view-homicash .pay-table td.n{
+  text-align:right;white-space:nowrap;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+#view-homicash .pay-table td.n{font-weight:700}
+
+/* ── المبلغ ── */
+#view-homicash .hca-money{font-size:13.5px;font-weight:900;font-variant-numeric:tabular-nums}
+#view-homicash .hca-money i{
+  font-style:normal;font-size:9.5px;font-weight:700;color:var(--muted);margin-inline-start:3px}
+#view-homicash .hca-money.up{color:#059669}
+#view-homicash .hca-money.dn{color:#dc2626}
+#view-homicash .hca-money.z{color:var(--muted);font-weight:700}
+
+/* ── الاسم والكود ── */
+#view-homicash .hca-who{min-width:170px}
+#view-homicash .hca-who b{display:block;font-size:12.5px;font-weight:800;line-height:1.4}
+#view-homicash .hca-who span{display:block;font-size:10.5px;color:var(--muted);font-weight:700;margin-top:1px}
+
+/* ── التاريخ والوقت ── */
+#view-homicash .hca-when{white-space:nowrap}
+#view-homicash .hca-when b{display:block;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+#view-homicash .hca-when span{display:block;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
+
+/* ── شارة الحالة: عرض موحّد فلا يتعرّج العمود ── */
+#view-homicash .hca-st{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  min-width:118px;padding:5px 10px;border-radius:20px;
+  font-size:10.5px;font-weight:800;white-space:nowrap;border:1px solid transparent}
+#view-homicash .hca-st .dot{width:6px;height:6px;border-radius:50%;flex:0 0 6px}
+#view-homicash .hca-st.wait{background:rgba(245,158,11,.12);color:#b45309;border-color:rgba(245,158,11,.28)}
+#view-homicash .hca-st.wait .dot{background:#f59e0b}
+#view-homicash .hca-st.hold{background:rgba(5,150,105,.11);color:#047857;border-color:rgba(5,150,105,.26)}
+#view-homicash .hca-st.hold .dot{background:#059669}
+#view-homicash .hca-st.tran{background:rgba(14,165,233,.12);color:#0369a1;border-color:rgba(14,165,233,.28)}
+#view-homicash .hca-st.tran .dot{background:#0ea5e9}
+#view-homicash .hca-st.done{background:rgba(13,148,136,.13);color:#0f766e;border-color:rgba(13,148,136,.3)}
+#view-homicash .hca-st.done .dot{background:#0d9488}
+#view-homicash .hca-st.bad{background:rgba(220,38,38,.1);color:#b91c1c;border-color:rgba(220,38,38,.26)}
+#view-homicash .hca-st.bad .dot{background:#dc2626}
+#view-homicash .hca-st.off{background:var(--s3);color:var(--muted);border-color:var(--br)}
+#view-homicash .hca-st.off .dot{background:var(--muted)}
+
+/* ── سطر الإجمالي ── */
+#view-homicash .pay-table tfoot td{
+  position:sticky;bottom:0;z-index:2;
+  background:var(--s2);border-top:2px solid var(--br);border-bottom:none;
+  padding:12px 13px;font-weight:900;font-size:13px}
+#view-homicash .pay-table tfoot td.n{font-size:14px}
+
+/* ── سبب / ملاحظة ── */
+#view-homicash .hca-note{font-size:11.5px;color:var(--muted);line-height:1.6;max-width:260px}
+#view-homicash .hca-note.bad{color:#b91c1c}
+
+/* ── شريط الفلاتر ── */
+#view-homicash .hca-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+#view-homicash .hca-filters .wide{grid-column:span 2}
+@media(max-width:900px){#view-homicash .hca-filters .wide{grid-column:span 1}}
+#view-homicash .hca-filters label{
+  display:block;font-size:10.5px;font-weight:800;color:var(--muted);margin-bottom:5px}
+#view-homicash .hca-filters input,#view-homicash .hca-filters select{
+  width:100%;padding:9px 11px;border:1px solid var(--br);border-radius:10px;
+  background:var(--s2);color:var(--text);font-family:inherit;font-size:12.5px}
+#view-homicash .hca-bar{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  padding:12px 15px;border-top:1px solid var(--br);background:var(--s2)}
+
+/* ── بطاقة التوريد المعلّق ── */
+#view-homicash .hca-settle{border:1px solid rgba(220,38,38,.3);border-radius:16px;
+  background:var(--s1);overflow:hidden;margin-bottom:13px}
+#view-homicash .hca-settle-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:15px;border-bottom:1px solid var(--br)}
+#view-homicash .hca-settle-who{flex:1;min-width:190px}
+#view-homicash .hca-settle-who b{display:block;font-size:17px;font-weight:900}
+#view-homicash .hca-settle-who span{display:block;font-size:11px;color:var(--muted);margin-top:3px;font-weight:700}
+#view-homicash .hca-settle-amt{text-align:center;padding-inline:18px}
+#view-homicash .hca-settle-amt span{display:block;font-size:10px;color:var(--muted);font-weight:800}
+#view-homicash .hca-settle-amt b{display:block;font-size:27px;font-weight:900;color:#0d9488;
+  font-variant-numeric:tabular-nums;line-height:1.2}
+#view-homicash .hca-settle-amt em{font-style:normal;font-size:10px;color:var(--muted);font-weight:700}
+#view-homicash .hca-settle-acts{display:flex;gap:8px;flex-wrap:wrap;padding:13px 15px;background:var(--s2)}
+
+/* ── صفوف فارغة ── */
+#view-homicash .hca-empty{text-align:center;padding:46px 20px;color:var(--muted)}
+#view-homicash .hca-empty i{font-size:36px;opacity:.5}
+#view-homicash .hca-empty b{display:block;margin-top:12px;font-size:14px;font-weight:800;color:var(--text)}
+#view-homicash .hca-empty p{margin:6px 0 0;font-size:12px;line-height:1.8}
+</style>
+
 <!-- HOMI CASH VIEW -->
 <div id="view-homicash" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
   <div id="homiCashBody"></div>
@@ -17447,7 +17584,305 @@ async function hcaRpc(fn, args){
   try{ return JSON.parse(txt); }catch(e){ return txt; }
 }
 
-function _hk(n){ return (parseFloat(n)||0).toFixed(3); }
+/* ══════════════════════════════════════════════════════════════════════
+   كاش هومي — مكوّنات العرض الموحّدة
+   كل رقم وكل تاريخ وكل حالة في الشاشة تمرّ من هنا، فلا يختلف
+   تنسيق العمود الواحد بين جدول وآخر.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** مبلغ بفواصل الآلاف وثلاث خانات عشرية — التحاذي العشري يأتي من ثبات الخانات */
+function _hk(n){
+  const v = parseFloat(n) || 0;
+  return v.toLocaleString('en-US', {minimumFractionDigits:3, maximumFractionDigits:3});
+}
+/** خلية مبلغ داخل الجدول — بلا وحدة، فالوحدة في العنوان لا في كل صف */
+function _hcM(n, tone){
+  const v = parseFloat(n) || 0;
+  return '<span class="hca-money ' + (!v ? 'z' : (tone || '')) + '">' +
+         (v ? _hk(v) : '—') + '</span>';
+}
+/** مبلغ بالوحدة — لسطر الإجمالي والأرقام الرئيسية */
+function _hcMU(n, tone){
+  const v = parseFloat(n) || 0;
+  return '<span class="hca-money ' + (!v ? 'z' : (tone || '')) + '">' +
+         (v ? _hk(v) : '—') + (v ? '<i>د.ك</i>' : '') + '</span>';
+}
+/** تاريخ فوق وقت — أسهل في المسح البصري من سطر واحد مختلط الاتجاه */
+function _hcW(ts){
+  if(!ts) return '<span class="pay-sub">—</span>';
+  const s = String(ts);
+  return '<div class="hca-when"><b>' + _he(s.slice(0,10)) + '</b>' +
+         (s.length > 11 ? '<span>' + _he(s.slice(11,16)) + '</span>' : '') + '</div>';
+}
+/** اسم فوق كود */
+function _hcWho(name, sub){
+  return '<div class="hca-who"><b>' + _he(name || '—') + '</b>' +
+         (sub ? '<span>' + _he(sub) + '</span>' : '') + '</div>';
+}
+/** شارة حالة بعرض موحّد */
+function _hcSt(cls, label){
+  return '<span class="hca-st ' + cls + '"><span class="dot"></span>' + _he(label) + '</span>';
+}
+/** حالة عملية التسليم — تراعي حالة التوريد الذي دخلته */
+function hcaStatusFlag(t){
+  if(t.status === 'pending')   return _hcSt('wait','بانتظار تأكيد المستلم');
+  if(t.status === 'rejected')  return _hcSt('bad','مرفوض');
+  if(t.status === 'cancelled') return _hcSt('off','ملغى');
+  const st = HCA.sts.find(s => s.id === t.settlement_id);
+  if(st && st.status === 'confirmed') return _hcSt('done','وُرِّد للإدارة');
+  if(st && st.status === 'pending')   return _hcSt('tran','في توريد معلّق');
+  return _hcSt('hold','في يد المستلم');
+}
+/** رأس جدول موحّد: العنوان + العدد + إجماليات على اليسار */
+function _hcHead(title, count, sums){
+  return '<div class="hca-tbl-head"><b>' + _he(title) + '</b>' +
+    (count != null ? '<span class="hca-count">' + count + '</span>' : '') +
+    (sums && sums.length
+      ? '<div class="hca-sum">' + sums.map(s =>
+          '<div><span>' + _he(s[0]) + '</span><b>' + s[1] + '</b></div>').join('') + '</div>'
+      : '') +
+  '</div>';
+}
+function _hcEmpty(icon, title, note){
+  return '<div class="hca-empty"><i class="ti ' + icon + '"></i><b>' + _he(title) + '</b>' +
+         (note ? '<p>' + _he(note) + '</p>' : '') + '</div>';
+}
+
+/* ══════════════ بانتظار اعتماد المدير ══════════════ */
+function hcaPendingHTML(){
+  const pend = hcaPendingSettlements();
+  if(!pend.length){
+    return '<div class="pay-note ok"><i class="ti ti-check"></i><div>' +
+      '<b>لا توريدات معلّقة.</b> كل ما ورّده المستلمون مؤكَّد استلامه.</div></div>' +
+      hcaDisputesHTML();
+  }
+  return '<div class="pay-note"><i class="ti ti-info-circle"></i><div>' +
+      'كل توريد هنا دفعة نقدية فعلية في يد المستلم بانتظار تسليمها لك. ' +
+      '<b>لا تؤكّد قبل عدّ المبلغ</b> — التأكيد يُصفّر رصيد المستلم عن هذه الدفعة ولا يُتراجَع عنه.' +
+    '</div></div>' +
+    pend.map(s => {
+      const lines = HCA.txns.filter(t => t.settlement_id === s.id);
+      return '<div class="hca-settle">' +
+        '<div class="hca-settle-top">' +
+          '<div class="hca-settle-who"><b>' + _he(s.receiver_name) + '</b>' +
+            '<span>' + s.txn_count + ' عملية · أُرسل ' + _he(_hdt(s.created_at)) + '</span></div>' +
+          '<div class="hca-settle-amt"><span>إجمالي الدفعة</span>' +
+            '<b>' + _hk(s.total) + '</b><em>د.ك</em></div>' +
+        '</div>' +
+        (s.note ? '<div style="padding:11px 15px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--br)">' +
+                  '<i class="ti ti-note"></i> ' + _he(s.note) + '</div>' : '') +
+        '<div class="pay-table-wrap" style="max-height:none"><table class="pay-table"><thead><tr>' +
+          '<th>السائق</th><th>تاريخ الكاش</th><th>وقت التسليم</th><th>وقت التأكيد</th><th class="n">المبلغ (د.ك)</th>' +
+        '</tr></thead><tbody>' +
+        lines.map(t =>
+          '<tr><td>' + _hcWho(t.driver_name, t.driver_id) + '</td>' +
+          '<td>' + _hcW(t.cash_date) + '</td>' +
+          '<td>' + _hcW(t.created_at) + '</td>' +
+          '<td>' + _hcW(t.confirmed_at) + '</td>' +
+          '<td class="n">' + _hcM(t.amount, 'up') + '</td></tr>').join('') +
+        '</tbody><tfoot><tr><td colspan="4">الإجمالي</td>' +
+        '<td class="n">' + _hcMU(s.total) + '</td></tr></tfoot></table></div>' +
+        '<div class="hca-settle-acts">' +
+          '<button class="pay-btn lock" onclick="hcaSettleRespond(\'' + s.id + '\',\'confirm\')">' +
+            '<i class="ti ti-check"></i>عددت المبلغ — تأكيد الاستلام</button>' +
+          '<button class="pay-btn warn" onclick="hcaSettleRespond(\'' + s.id + '\',\'reject\')">' +
+            '<i class="ti ti-x"></i>رفض بسبب</button>' +
+          '<button class="pay-btn" onclick="hcaPrintSettlement(\'' + s.id + '\')">' +
+            '<i class="ti ti-printer"></i>إيصال</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') + hcaDisputesHTML();
+}
+
+function hcaDisputesHTML(){
+  const d = HCA.txns.filter(t => t.status === 'rejected').slice(0, 20);
+  if(!d.length) return '';
+  return '<div class="pay-card" style="margin-top:14px">' +
+    _hcHead('خلافات على مبالغ — تحتاج قراراً بشرياً', d.length,
+            [['إجمالي المتنازع عليه', _hk(d.reduce((s,x)=>s+(+x.amount||0),0))]]) +
+    '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+      '<th>السائق</th><th>المستلم</th><th class="n">المبلغ (د.ك)</th><th>تاريخ الكاش</th>' +
+      '<th>سبب الرفض</th><th>وقت الرفض</th></tr></thead><tbody>' +
+      d.map(t => '<tr><td>' + _hcWho(t.driver_name, t.driver_id) + '</td>' +
+        '<td>' + _he(t.receiver_name) + '</td>' +
+        '<td class="n">' + _hcM(t.amount, 'dn') + '</td>' +
+        '<td>' + _hcW(t.cash_date) + '</td>' +
+        '<td><div class="hca-note bad">' + _he(t.reject_reason || '—') + '</div></td>' +
+        '<td>' + _hcW(t.rejected_at) + '</td></tr>').join('') +
+    '</tbody></table></div>' +
+    '<div class="pay-hint" style="padding:0 15px 14px">الرفض لا يحذف شيئاً — يبقى مسجّلاً باسم من رفض وسببه ووقته. ' +
+    'التصحيح يتم بتسليم جديد من السائق بالمبلغ الصحيح.</div></div>';
+}
+
+/* ══════════════ أرصدة المستلمين ══════════════ */
+function hcaBalancesHTML(){
+  if(!HCA.bals.length){
+    return '<div class="pay-note warn"><i class="ti ti-user-off"></i><div>' +
+      'لا يوجد مستلمون مسجّلون — أضِفهم من تبويب «المستلمون والإعدادات».</div></div>';
+  }
+  const rows = HCA.bals.slice().sort((a,b) => (+b.held_total||0) - (+a.held_total||0));
+  const S = k => rows.reduce((s,x) => s + (+x[k]||0), 0);
+
+  return '<div class="pay-note"><i class="ti ti-wallet"></i><div>' +
+      '<b>«في يده الآن»</b> هو ما يجب أن تجده معه لو عددت هذه اللحظة. ينقسم إلى ' +
+      '<b>قابل للتوريد</b> (لم يُعلنه بعد) و<b>أعلنه لك</b> (أرسل توريداً ينتظر تأكيدك) — والرقمان لا يتداخلان.' +
+    '</div></div>' +
+    '<div class="pay-card">' +
+      _hcHead('أرصدة المستلمين — كل المبالغ بالدينار الكويتي', rows.length, [
+        ['في أيديهم الآن', _hk(S('held_total'))],
+        ['معلّق عند السائقين', _hk(S('pending_amount'))]
+      ]) +
+      '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+      '<th>المستلم</th><th class="n">معلّق</th><th class="n">في يده الآن</th>' +
+      '<th class="n">قابل للتوريد</th><th class="n">أعلنه لك</th><th class="n">سلّمه لك</th><th>آخر حركة</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(b =>
+        '<tr><td>' + _hcWho(b.name_ar, b.receiver_id + (b.active === false ? ' · معطَّل' : '')) + '</td>' +
+        '<td class="n">' + (+b.pending_amount
+            ? _hcM(b.pending_amount) + '<div class="pay-sub">' + b.pending_count + ' عملية</div>'
+            : _hcM(0)) + '</td>' +
+        '<td class="n">' + _hcM(b.held_total, 'up') + '</td>' +
+        '<td class="n">' + _hcM(b.on_hand) + '</td>' +
+        '<td class="n">' + _hcM(b.in_transit) + '</td>' +
+        '<td class="n">' + _hcM(b.settled_total) + '</td>' +
+        '<td>' + _hcW(b.last_txn_at) + '</td></tr>').join('') +
+      '</tbody><tfoot><tr><td>الإجمالي</td>' +
+        '<td class="n">' + _hcM(S('pending_amount')) + '</td>' +
+        '<td class="n">' + _hcM(S('held_total'), 'up') + '</td>' +
+        '<td class="n">' + _hcM(S('on_hand')) + '</td>' +
+        '<td class="n">' + _hcM(S('in_transit')) + '</td>' +
+        '<td class="n">' + _hcM(S('settled_total')) + '</td>' +
+        '<td></td></tr></tfoot></table></div></div>';
+}
+
+/* ══════════════ دفتر العمليات ══════════════ */
+function hcaLedgerHTML(){
+  const rows = hcaFiltered();
+  const tot  = rows.reduce((s,x) => s + (+x.amount||0), 0);
+  const conf = rows.filter(x => x.status === 'confirmed').reduce((s,x) => s + (+x.amount||0), 0);
+  const pend = rows.filter(x => x.status === 'pending').reduce((s,x) => s + (+x.amount||0), 0);
+
+  const filters = '<div class="pay-card" style="margin-bottom:13px">' +
+    '<div style="padding:14px 15px 0"><div class="hca-filters">' +
+      '<div><label>من تاريخ</label><input type="date" value="' + _he(HCA.f.from) + '" onchange="hcaSetF(\'from\',this.value)"></div>' +
+      '<div><label>إلى تاريخ</label><input type="date" value="' + _he(HCA.f.to) + '" onchange="hcaSetF(\'to\',this.value)"></div>' +
+      '<div><label>المستلم</label><select onchange="hcaSetF(\'receiver\',this.value)"><option value="">الكل</option>' +
+        HCA.rcvs.map(r => '<option value="' + _he(r.driver_id) + '"' +
+          (HCA.f.receiver === r.driver_id ? ' selected' : '') + '>' + _he(r.name_ar) + '</option>').join('') +
+        '</select></div>' +
+      '<div><label>الحالة</label><select onchange="hcaSetF(\'status\',this.value)">' +
+        [['','الكل'],['pending','بانتظار التأكيد'],['confirmed','مؤكَّد'],['rejected','مرفوض'],['cancelled','ملغى']]
+          .map(o => '<option value="' + o[0] + '"' + (HCA.f.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
+        '</select></div>' +
+      '<div class="wide"><label>بحث بالاسم أو الكود أو الملاحظة</label>' +
+        '<input type="text" value="' + _he(HCA.f.q) + '" oninput="HCA.f.q=this.value" ' +
+        'onchange="renderHomiCash()" placeholder="اكتب ثم اضغط Enter"></div>' +
+    '</div><div style="height:14px"></div></div>' +
+    '<div class="hca-bar">' +
+      '<button class="pay-btn" onclick="HCA.f={from:\'\',to:\'\',receiver:\'\',status:\'\',q:\'\'};renderHomiCash()">' +
+        '<i class="ti ti-filter-off"></i>مسح الفلاتر</button>' +
+      '<button class="pay-btn primary" onclick="hcaExportExcel()">' +
+        '<i class="ti ti-file-spreadsheet"></i>تصدير Excel</button>' +
+      '<span class="pay-sub" style="margin-inline-start:auto;font-variant-numeric:tabular-nums">' +
+        rows.length + ' عملية · إجمالي ' + _hk(tot) + ' · مؤكَّد ' + _hk(conf) + ' · معلّق ' + _hk(pend) + ' د.ك</span>' +
+    '</div></div>';
+
+  if(!rows.length){
+    return filters + '<div class="pay-card">' +
+      _hcEmpty('ti-search-off','لا عمليات تطابق الفلتر','جرّب توسيع المدى الزمني أو مسح الفلاتر') + '</div>';
+  }
+
+  return filters + '<div class="pay-card">' +
+    _hcHead('دفتر العمليات', rows.length, [
+      ['الإجمالي', _hk(tot)], ['مؤكَّد', _hk(conf)], ['معلّق', _hk(pend)]
+    ]) +
+    '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>السائق</th><th>المستلم</th><th class="n">المبلغ (د.ك)</th><th>تاريخ الكاش</th>' +
+    '<th>سُجّل في</th><th>الحالة</th><th>ملاحظة / سبب</th>' +
+    '</tr></thead><tbody>' +
+    rows.slice(0,400).map(t =>
+      '<tr><td>' + _hcWho(t.driver_name, t.driver_id) + '</td>' +
+      '<td>' + _he(t.receiver_name) + '</td>' +
+      '<td class="n">' + _hcM(t.amount, t.status === 'rejected' || t.status === 'cancelled' ? '' : 'up') + '</td>' +
+      '<td>' + _hcW(t.cash_date) + '</td>' +
+      '<td>' + _hcW(t.created_at) + '</td>' +
+      '<td>' + hcaStatusFlag(t) + '</td>' +
+      '<td><div class="hca-note' + (t.reject_reason ? ' bad' : '') + '">' +
+        _he(t.reject_reason || t.note || '—') + '</div></td></tr>').join('') +
+    '</tbody><tfoot><tr><td colspan="2">الإجمالي</td>' +
+    '<td class="n">' + _hcMU(tot) + '</td><td colspan="4"></td></tr></tfoot></table></div>' +
+    (rows.length > 400
+      ? '<div class="pay-hint" style="padding:0 15px 14px">تُعرض أول 400 عملية — ضيّق الفلتر أو صدّر Excel للكل.</div>'
+      : '') + '</div>';
+}
+
+/* ══════════════ التوريدات ══════════════ */
+function hcaSettlementsHTML(){
+  if(!HCA.sts.length){
+    return '<div class="pay-card">' +
+      _hcEmpty('ti-building-bank','لم يُرسل أي توريد بعد',
+               'التوريد يبدأ من المستلم في تطبيق فلاي بعد تأكيده لتسليمات السائقين') + '</div>';
+  }
+  const conf = HCA.sts.filter(s => s.status === 'confirmed').reduce((a,x) => a + (+x.total||0), 0);
+  const wait = HCA.sts.filter(s => s.status === 'pending').reduce((a,x) => a + (+x.total||0), 0);
+
+  return '<div class="pay-card">' +
+    _hcHead('التوريدات', HCA.sts.length, [
+      ['استلمته', _hk(conf)], ['بانتظارك', _hk(wait)]
+    ]) +
+    '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>المستلم</th><th class="n">الإجمالي (د.ك)</th><th class="n">عدد العمليات</th>' +
+    '<th>أُرسل</th><th>الحالة</th><th>أكّده</th><th></th>' +
+    '</tr></thead><tbody>' +
+    HCA.sts.map(s => {
+      const flag = s.status === 'confirmed' ? _hcSt('done','مؤكَّد')
+                 : s.status === 'rejected'  ? _hcSt('bad','مرفوض')
+                 :                            _hcSt('wait','بانتظارك');
+      return '<tr><td>' + _hcWho(s.receiver_name, s.id) + '</td>' +
+        '<td class="n">' + _hcM(s.total, s.status === 'rejected' ? '' : 'up') + '</td>' +
+        '<td class="n">' + s.txn_count + '</td>' +
+        '<td>' + _hcW(s.created_at) + '</td>' +
+        '<td>' + flag + (s.status === 'rejected' && s.reject_reason
+            ? '<div class="hca-note bad" style="margin-top:5px">' + _he(s.reject_reason) + '</div>' : '') + '</td>' +
+        '<td>' + (s.confirmed_by
+            ? _hcWho(s.confirmed_by, (s.confirmed_at||'').slice(0,16).replace('T',' '))
+            : '<span class="pay-sub">—</span>') + '</td>' +
+        '<td class="n"><button class="pay-icon" onclick="hcaPrintSettlement(\'' + s.id + '\')" ' +
+          'title="إيصال"><i class="ti ti-printer"></i></button></td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+}
+
+/* ══════════════ سجل التدقيق ══════════════ */
+function hcaAuditHTML(){
+  const actAr = {
+    submit:['سجّل تسليماً','wait'], confirm:['أكّد الاستلام','hold'], reject:['رفض','bad'],
+    cancel:['ألغى','off'], settle:['أرسل توريداً','tran'],
+    settle_confirm:['أكّد استلام التوريد','done'], settle_reject:['رفض التوريد','bad']
+  };
+  const roleAr = { driver:'سائق', receiver:'مستلم', manager:'الإدارة' };
+  if(!HCA.events.length){
+    return '<div class="pay-card">' + _hcEmpty('ti-history','لا أحداث بعد','أول تسليم يُسجَّل هنا فوراً') + '</div>';
+  }
+  return '<div class="pay-note"><i class="ti ti-lock"></i><div>' +
+      'هذا السجل <b>غير قابل للتعديل أو الحذف</b> — حتى من قاعدة البيانات نفسها. ' +
+      'هو المرجع عند أي خلاف على مبلغ: من قال ماذا ومتى.</div></div>' +
+    '<div class="pay-card">' + _hcHead('سجل التدقيق', HCA.events.length) +
+    '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+    '<th>الوقت</th><th>من</th><th>الدور</th><th>الإجراء</th><th class="n">المبلغ (د.ك)</th><th>تفاصيل</th>' +
+    '</tr></thead><tbody>' +
+    HCA.events.map(e => {
+      const a = actAr[e.action] || [e.action, 'off'];
+      return '<tr><td>' + _hcW(e.created_at) + '</td>' +
+      '<td><b style="font-size:12.5px">' + _he(e.actor_name || e.actor_id || '—') + '</b></td>' +
+      '<td><span class="pay-sub">' + _he(roleAr[e.actor_role] || e.actor_role || '—') + '</span></td>' +
+      '<td>' + _hcSt(a[1], a[0]) + '</td>' +
+      '<td class="n">' + _hcM(e.amount) + '</td>' +
+      '<td><div class="hca-note' + (e.meta && e.meta.reason ? ' bad' : '') + '">' +
+        _he(e.meta && e.meta.reason ? e.meta.reason : (e.entity_id || '')) + '</div></td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+}
+
+
 function _he(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function _hdt(s){ return s ? String(s).slice(0,16).replace('T',' ') : '—'; }
 
@@ -17456,16 +17891,18 @@ async function hcaSync(silent){
   HCA.loading = true; HCA.err = null;
   if(!silent) renderHomiCash();
   try{
-    const [txns, sts, rcvs, bals, cfg, ev] = await Promise.all([
+    const [txns, sts, rcvs, bals, cfg, ev, spends] = await Promise.all([
       hcaGet(HC_TBL.txn + '?select=*&order=created_at.desc&limit=1500'),
       hcaGet(HC_TBL.st  + '?select=*&order=created_at.desc&limit=400'),
       hcaGet(HC_TBL.rcv + '?select=*&order=sort_order'),
       hcaGet(HC_TBL.bal + '?select=*'),
       hcaGet(HC_TBL.cfg + '?select=*&id=eq.1'),
-      hcaGet(HC_TBL.ev  + '?select=*&order=created_at.desc&limit=250')
+      hcaGet(HC_TBL.ev  + '?select=*&order=created_at.desc&limit=250'),
+      hcaGet('homi_cash_spend?select=*&order=requested_at.desc&limit=400')
     ]);
     HCA.txns = txns||[]; HCA.sts = sts||[]; HCA.rcvs = rcvs||[];
     HCA.bals = bals||[]; HCA.cfg = (cfg&&cfg[0])||null; HCA.events = ev||[];
+    HCA.spends = spends||[];
     HCA.lastSync = Date.now();
   }catch(e){
     HCA.err = String(e.message||e);
@@ -17478,7 +17915,7 @@ async function hcaSync(silent){
 
 function hcaPendingSettlements(){ return HCA.sts.filter(s => s.status === 'pending'); }
 function hcaPaintBadge(){
-  const n = hcaPendingSettlements().length;
+  const n = hcaPendingSettlements().length + hcaSpendPending().length;
   const el = document.getElementById('navHomiCashBadge');
   if(el){ el.style.display = n ? 'inline-flex' : 'none'; el.textContent = n; }
 }
@@ -17503,6 +17940,7 @@ function renderHomiCash(){
     ['balances','أرصدة المستلمين','ti-wallet'],
     ['ledger','دفتر العمليات','ti-list-details'],
     ['settlements','التوريدات','ti-building-bank'],
+    ['spend','طلبات الصرف','ti-shopping-cart', hcaSpendPending().length],
     ['setup','المستلمون والإعدادات','ti-settings'],
     ['audit','سجل التدقيق','ti-history']
   ];
@@ -17532,6 +17970,7 @@ function renderHomiCash(){
   else if(HCA.tab === 'balances')    body.innerHTML = hcaBalancesHTML();
   else if(HCA.tab === 'ledger')      body.innerHTML = hcaLedgerHTML();
   else if(HCA.tab === 'settlements') body.innerHTML = hcaSettlementsHTML();
+  else if(HCA.tab === 'spend')       body.innerHTML = hcaSpendHTML();
   else if(HCA.tab === 'setup')       body.innerHTML = hcaSetupHTML();
   else if(HCA.tab === 'audit')       body.innerHTML = hcaAuditHTML();
 }
@@ -17554,69 +17993,17 @@ function hcaKpisHTML(){
     payKpi('بانتظار اعتمادك', _hk(pendTotal), pend.length + ' توريد', 'ti-inbox', pend.length ? '#dc2626' : '#94a3b8') +
     payKpi('معلّق عند السائقين', _hk(sum('pending_amount')), 'لم يؤكّده المستلم بعد', 'ti-clock', '#f59e0b') +
     payKpi('وُرِّد هذا الشهر', _hk(settledMonth), 'استلمته الإدارة', 'ti-check', '#059669') +
+    payKpi('طلبات صرف', hcaSpendPending().length,
+      hcaSpendPending().length ? 'بانتظار إذنك' : 'لا طلبات',
+      'ti-shopping-cart', hcaSpendPending().length ? '#b45309' : '#94a3b8') +
     payKpi('خلافات', disputes, disputes ? 'عمليات مرفوضة' : 'لا خلافات', 'ti-alert-triangle', disputes ? '#b45309' : '#94a3b8') +
   '</div>';
 }
 
 /* ── بانتظار اعتماد المدير ───────────────────────────────────────────── */
-function hcaPendingHTML(){
-  const pend = hcaPendingSettlements();
-  if(!pend.length){
-    return '<div class="pay-note ok"><i class="ti ti-check"></i><div>' +
-      '<b>لا توريدات معلّقة.</b> كل ما ورّده المستلمون مؤكَّد استلامه.</div></div>' +
-      hcaDisputesHTML();
-  }
-  return '<div class="pay-note"><i class="ti ti-info-circle"></i><div>' +
-      'كل توريد هنا دفعة نقدية فعلية في يد المستلم بانتظار تسليمها لك. ' +
-      '<b>لا تؤكّد قبل عدّ المبلغ</b> — التأكيد يُصفّر رصيد المستلم عن هذه الدفعة ولا يُتراجَع عنه.' +
-    '</div></div>' +
-    pend.map(s => {
-      const lines = HCA.txns.filter(t => t.settlement_id === s.id);
-      return '<div class="pay-card" style="margin-bottom:12px;border-color:rgba(220,38,38,.3)">' +
-        '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:11px">' +
-          '<div style="flex:1;min-width:180px">' +
-            '<div style="font-size:19px;font-weight:900">' + _he(s.receiver_name) + '</div>' +
-            '<div class="pay-sub">' + s.txn_count + ' عملية · أُرسل ' + _hdt(s.created_at) + '</div>' +
-          '</div>' +
-          '<div style="text-align:center"><div class="pay-sub">إجمالي الدفعة</div>' +
-            '<div style="font-size:26px;font-weight:900;color:#0d9488;font-variant-numeric:tabular-nums">' + _hk(s.total) + '</div>' +
-            '<div class="pay-sub">د.ك</div></div>' +
-        '</div>' +
-        (s.note ? '<div class="pay-note" style="margin-bottom:10px"><i class="ti ti-note"></i><div>' + _he(s.note) + '</div></div>' : '') +
-        '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
-          '<th>السائق</th><th>تاريخ الكاش</th><th>سُلّم في</th><th>أكّده المستلم</th><th>المبلغ</th></tr></thead><tbody>' +
-          lines.map(t => '<tr><td><b>' + _he(t.driver_name) + '</b><div class="pay-sub">' + _he(t.driver_id) + '</div></td>' +
-            '<td>' + _he(t.cash_date) + '</td><td class="pay-sub">' + _hdt(t.created_at) + '</td>' +
-            '<td class="pay-sub">' + _hdt(t.confirmed_at) + '</td>' +
-            '<td class="num up">' + _hk(t.amount) + '</td></tr>').join('') +
-          '</tbody><tfoot><tr><td colspan="4"><b>الإجمالي</b></td><td class="num net"><b>' + _hk(s.total) + '</b></td></tr></tfoot>' +
-        '</table></div>' +
-        '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
-          '<button class="pay-btn lock" onclick="hcaSettleRespond(\'' + s.id + '\',\'confirm\')">' +
-            '<i class="ti ti-check"></i>عددت المبلغ — تأكيد الاستلام</button>' +
-          '<button class="pay-btn warn" onclick="hcaSettleRespond(\'' + s.id + '\',\'reject\')">' +
-            '<i class="ti ti-x"></i>رفض بسبب</button>' +
-          '<button class="pay-btn" onclick="hcaPrintSettlement(\'' + s.id + '\')"><i class="ti ti-printer"></i>إيصال</button>' +
-        '</div>' +
-      '</div>';
-    }).join('') + hcaDisputesHTML();
-}
 
-function hcaDisputesHTML(){
-  const d = HCA.txns.filter(t => t.status === 'rejected').slice(0, 15);
-  if(!d.length) return '';
-  return '<div class="pay-card" style="margin-top:14px"><h3 class="pay-h3">' +
-    '<i class="ti ti-alert-triangle" style="color:#b45309"></i>خلافات على مبالغ — تحتاج قراراً بشرياً</h3>' +
-    '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
-    '<th>السائق</th><th>المستلم</th><th>المبلغ</th><th>تاريخ الكاش</th><th>سبب الرفض</th><th>وقت الرفض</th>' +
-    '</tr></thead><tbody>' + d.map(t =>
-      '<tr><td><b>' + _he(t.driver_name) + '</b></td><td>' + _he(t.receiver_name) + '</td>' +
-      '<td class="num dn">' + _hk(t.amount) + '</td><td>' + _he(t.cash_date) + '</td>' +
-      '<td>' + _he(t.reject_reason||'—') + '</td><td class="pay-sub">' + _hdt(t.rejected_at) + '</td></tr>').join('') +
-    '</tbody></table></div>' +
-    '<div class="pay-hint">الرفض لا يحذف شيئاً — يبقى مسجّلاً باسم من رفض وسببه ووقته. ' +
-    'التصحيح يتم بتسليم جديد من السائق بالمبلغ الصحيح.</div></div>';
-}
+
+
 
 async function hcaSettleRespond(id, action){
   const s = HCA.sts.find(x => x.id === id); if(!s) return;
@@ -17642,37 +18029,7 @@ async function hcaSettleRespond(id, action){
 }
 
 /* ── أرصدة المستلمين ─────────────────────────────────────────────────── */
-function hcaBalancesHTML(){
-  if(!HCA.bals.length){
-    return '<div class="pay-note warn"><i class="ti ti-user-off"></i><div>' +
-      'لا يوجد مستلمون مسجّلون — أضِفهم من تبويب «المستلمون والإعدادات».</div></div>';
-  }
-  return '<div class="pay-note"><i class="ti ti-wallet"></i><div>' +
-      '<b>«في يده الآن»</b> هو ما يجب أن تجده معه لو عددت هذه اللحظة. ينقسم إلى ' +
-      '<b>قابل للتوريد</b> (لم يُعلنه بعد) و<b>أعلنه لك</b> (أرسل توريداً ينتظر تأكيدك) — والرقمان لا يتداخلان.' +
-    '</div></div>' +
-    '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
-    '<th>المستلم</th><th>معلّق</th><th>في يده الآن</th><th>قابل للتوريد</th><th>أعلنه لك</th><th>سلّمه لك</th><th>آخر حركة</th>' +
-    '</tr></thead><tbody>' +
-    HCA.bals.slice().sort((a,b) => parseFloat(b.on_hand||0) - parseFloat(a.on_hand||0)).map(b =>
-      '<tr><td><b>' + _he(b.name_ar) + '</b><div class="pay-sub">' + _he(b.receiver_id) +
-        (b.active === false ? ' · <span class="pay-flag">معطَّل</span>' : '') + '</div></td>' +
-      '<td class="num">' + (parseFloat(b.pending_amount)>0
-          ? '<span style="color:#b45309">' + _hk(b.pending_amount) + '</span><div class="pay-sub">' + b.pending_count + ' عملية</div>'
-          : '—') + '</td>' +
-      '<td class="num net" style="color:#0d9488">' + _hk(b.held_total) + '</td>' +
-      '<td class="num">' + (parseFloat(b.on_hand)>0 ? _hk(b.on_hand) : '—') + '</td>' +
-      '<td class="num">' + (parseFloat(b.in_transit)>0 ? _hk(b.in_transit) : '—') + '</td>' +
-      '<td class="num up">' + _hk(b.settled_total) + '</td>' +
-      '<td class="pay-sub">' + _hdt(b.last_txn_at) + '</td></tr>').join('') +
-    '</tbody><tfoot><tr><td><b>الإجمالي</b></td>' +
-      '<td class="num"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.pending_amount||0),0)) + '</b></td>' +
-      '<td class="num net"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.held_total||0),0)) + '</b></td>' +
-      '<td class="num"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.on_hand||0),0)) + '</b></td>' +
-      '<td class="num"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.in_transit||0),0)) + '</b></td>' +
-      '<td class="num up"><b>' + _hk(HCA.bals.reduce((s,x)=>s+(+x.settled_total||0),0)) + '</b></td>' +
-      '<td></td></tr></tfoot></table></div></div>';
-}
+
 
 /* ── دفتر العمليات ───────────────────────────────────────────────────── */
 function hcaFiltered(){
@@ -17692,88 +18049,12 @@ function hcaFiltered(){
 }
 function hcaSetF(k, v){ HCA.f[k] = v; renderHomiCash(); }
 
-function hcaStatusFlag(t){
-  if(t.status === 'pending')   return '<span class="pay-flag amber">بانتظار التأكيد</span>';
-  if(t.status === 'rejected')  return '<span class="pay-flag red">مرفوض</span>';
-  if(t.status === 'cancelled') return '<span class="pay-flag">ملغى</span>';
-  const st = HCA.sts.find(s => s.id === t.settlement_id);
-  if(st && st.status === 'confirmed') return '<span class="pay-flag green">وُرِّد للإدارة</span>';
-  if(st && st.status === 'pending')   return '<span class="pay-flag blue">في توريد معلّق</span>';
-  return '<span class="pay-flag green">مؤكَّد — في يد المستلم</span>';
-}
 
-function hcaLedgerHTML(){
-  const rows = hcaFiltered();
-  const tot  = rows.reduce((s,x) => s + (parseFloat(x.amount)||0), 0);
-  const conf = rows.filter(x => x.status==='confirmed').reduce((s,x) => s + (+x.amount||0), 0);
 
-  const filters = '<div class="pay-card" style="margin-bottom:12px"><div class="pay-grid4">' +
-    '<div><label>من تاريخ</label><input type="date" value="' + _he(HCA.f.from) + '" onchange="hcaSetF(\'from\',this.value)"></div>' +
-    '<div><label>إلى تاريخ</label><input type="date" value="' + _he(HCA.f.to) + '" onchange="hcaSetF(\'to\',this.value)"></div>' +
-    '<div><label>المستلم</label><select onchange="hcaSetF(\'receiver\',this.value)"><option value="">الكل</option>' +
-      HCA.rcvs.map(r => '<option value="' + _he(r.driver_id) + '"' + (HCA.f.receiver===r.driver_id?' selected':'') + '>' + _he(r.name_ar) + '</option>').join('') +
-      '</select></div>' +
-    '<div><label>الحالة</label><select onchange="hcaSetF(\'status\',this.value)">' +
-      [['','الكل'],['pending','بانتظار التأكيد'],['confirmed','مؤكَّد'],['rejected','مرفوض'],['cancelled','ملغى']]
-        .map(o => '<option value="' + o[0] + '"' + (HCA.f.status===o[0]?' selected':'') + '>' + o[1] + '</option>').join('') +
-      '</select></div>' +
-    '<div style="grid-column:1/-1"><label>بحث بالاسم أو الكود أو الملاحظة</label>' +
-      '<input type="text" value="' + _he(HCA.f.q) + '" oninput="HCA.f.q=this.value" onchange="renderHomiCash()" placeholder="اكتب ثم اضغط Enter"></div>' +
-    '</div>' +
-    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">' +
-      '<button class="pay-btn" onclick="HCA.f={from:\'\',to:\'\',receiver:\'\',status:\'\',q:\'\'};renderHomiCash()">' +
-        '<i class="ti ti-filter-off"></i>مسح الفلاتر</button>' +
-      '<button class="pay-btn primary" onclick="hcaExportExcel()"><i class="ti ti-file-spreadsheet"></i>تصدير Excel</button>' +
-      '<span class="pay-sub" style="margin-inline-start:auto">' + rows.length + ' عملية · إجمالي ' + _hk(tot) +
-      ' د.ك · مؤكَّد ' + _hk(conf) + ' د.ك</span>' +
-    '</div></div>';
 
-  if(!rows.length){
-    return filters + '<div class="pay-card" style="text-align:center;padding:40px;color:var(--muted)">' +
-      '<i class="ti ti-search-off" style="font-size:32px"></i><div style="margin-top:10px;font-weight:800">لا عمليات تطابق الفلتر</div></div>';
-  }
-
-  return filters + '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
-    '<th>السائق</th><th>المستلم</th><th>المبلغ</th><th>تاريخ الكاش</th><th>سُجّل في</th><th>الحالة</th><th>ملاحظة / سبب</th>' +
-    '</tr></thead><tbody>' +
-    rows.slice(0,400).map(t =>
-      '<tr><td><b>' + _he(t.driver_name) + '</b><div class="pay-sub">' + _he(t.driver_id) + '</div></td>' +
-      '<td>' + _he(t.receiver_name) + '</td>' +
-      '<td class="num net">' + _hk(t.amount) + '</td>' +
-      '<td>' + _he(t.cash_date) + '</td>' +
-      '<td class="pay-sub">' + _hdt(t.created_at) + '</td>' +
-      '<td>' + hcaStatusFlag(t) + '</td>' +
-      '<td class="pay-sub">' + _he(t.reject_reason || t.note || '') + '</td></tr>').join('') +
-    '</tbody><tfoot><tr><td colspan="2"><b>الإجمالي</b></td><td class="num net"><b>' + _hk(tot) + '</b></td>' +
-    '<td colspan="4"></td></tr></tfoot></table></div>' +
-    (rows.length > 400 ? '<div class="pay-hint">تُعرض أول 400 عملية — ضيّق الفلتر أو صدّر Excel للكل.</div>' : '') +
-    '</div>';
-}
 
 /* ── التوريدات ───────────────────────────────────────────────────────── */
-function hcaSettlementsHTML(){
-  if(!HCA.sts.length){
-    return '<div class="pay-card" style="text-align:center;padding:40px;color:var(--muted)">' +
-      '<i class="ti ti-building-bank" style="font-size:32px"></i>' +
-      '<div style="margin-top:10px;font-weight:800">لم يُرسل أي توريد بعد</div></div>';
-  }
-  return '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
-    '<th>المستلم</th><th>الإجمالي</th><th>عدد العمليات</th><th>أُرسل</th><th>الحالة</th><th>أكّده</th><th></th>' +
-    '</tr></thead><tbody>' +
-    HCA.sts.map(s => {
-      const flag = s.status==='confirmed' ? '<span class="pay-flag green">مؤكَّد</span>'
-                 : s.status==='rejected'  ? '<span class="pay-flag red">مرفوض</span>'
-                 :                          '<span class="pay-flag amber">بانتظارك</span>';
-      return '<tr><td><b>' + _he(s.receiver_name) + '</b></td>' +
-        '<td class="num net">' + _hk(s.total) + '</td>' +
-        '<td class="num">' + s.txn_count + '</td>' +
-        '<td class="pay-sub">' + _hdt(s.created_at) + '</td>' +
-        '<td>' + flag + (s.status==='rejected' && s.reject_reason
-            ? '<div class="pay-sub">' + _he(s.reject_reason) + '</div>' : '') + '</td>' +
-        '<td class="pay-sub">' + _he(s.confirmed_by||'—') + '<div>' + _hdt(s.confirmed_at) + '</div></td>' +
-        '<td class="num"><button class="pay-icon" onclick="hcaPrintSettlement(\'' + s.id + '\')" title="إيصال"><i class="ti ti-printer"></i></button></td></tr>';
-    }).join('') + '</tbody></table></div></div>';
-}
+
 
 /* ── المستلمون والإعدادات ───────────────────────────────────────────── */
 function hcaSetupHTML(){
@@ -17900,30 +18181,7 @@ async function hcaSaveCfg(){
 }
 
 /* ── سجل التدقيق ────────────────────────────────────────────────────── */
-function hcaAuditHTML(){
-  const actAr = {
-    submit:'سجّل تسليماً', confirm:'أكّد الاستلام', reject:'رفض', cancel:'ألغى',
-    settle:'أرسل توريداً', settle_confirm:'أكّد استلام التوريد', settle_reject:'رفض التوريد'
-  };
-  const roleAr = { driver:'سائق', receiver:'مستلم', manager:'الإدارة' };
-  if(!HCA.events.length){
-    return '<div class="pay-card" style="text-align:center;padding:40px;color:var(--muted)">لا أحداث بعد</div>';
-  }
-  return '<div class="pay-note"><i class="ti ti-lock"></i><div>' +
-      'هذا السجل <b>غير قابل للتعديل أو الحذف</b> — حتى من قاعدة البيانات نفسها. ' +
-      'هو المرجع عند أي خلاف على مبلغ: من قال ماذا ومتى.</div></div>' +
-    '<div class="pay-card"><div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
-    '<th>الوقت</th><th>من</th><th>الدور</th><th>الإجراء</th><th>المبلغ</th><th>تفاصيل</th>' +
-    '</tr></thead><tbody>' +
-    HCA.events.map(e =>
-      '<tr><td class="pay-sub">' + _hdt(e.created_at) + '</td>' +
-      '<td><b>' + _he(e.actor_name||e.actor_id||'—') + '</b></td>' +
-      '<td>' + _he(roleAr[e.actor_role]||e.actor_role||'—') + '</td>' +
-      '<td>' + _he(actAr[e.action]||e.action) + '</td>' +
-      '<td class="num">' + (e.amount ? _hk(e.amount) : '—') + '</td>' +
-      '<td class="pay-sub">' + _he(e.meta && e.meta.reason ? e.meta.reason : (e.entity_id||'')) + '</td></tr>').join('') +
-    '</tbody></table></div></div>';
-}
+
 
 /* ── التصدير والطباعة ───────────────────────────────────────────────── */
 function hcaExportExcel(){
@@ -18016,6 +18274,233 @@ function hcaStopAuto(){ clearInterval(HCA_TIMER); }
 
 /* شارة التوريدات المعلّقة تُحدَّث عند فتح ARK */
 setTimeout(function(){ try{ hcaSync(true); }catch(e){} }, 3500);
+
+/* ══════════════════════════════════════════════════════════════════════
+   ARK — إذن الصرف من كاش هومي
+   لا يخرج دينار من الكاش قبل إذن مكتوب منك. وكل صرف مُثبَت بإيصال
+   يُسجَّل مصروفاً في المحاسبة بمعرّف ثابت لا يتضاعف مهما زامنت.
+   ══════════════════════════════════════════════════════════════════════ */
+
+HCA.spends = [];
+HCA.spendTab = 'pending';
+
+const HC_CAT_AR = {
+  fuel:'وقود', maintenance:'صيانة وقطع غيار', residency:'إقامات ورخص',
+  admin:'مصاريف إدارية', violations:'مخالفات', rent:'إيجارات',
+  insurance:'تأمين', other:'أخرى'
+};
+
+function hcaSpendPending(){ return HCA.spends.filter(s => s.status === 'pending'); }
+function hcaSpendOpen(){    return HCA.spends.filter(s => s.status === 'approved'); }
+
+/* ── الحالة ── */
+function hcaSpendSt(s){
+  if(s.status === 'pending')   return _hcSt('wait','بانتظار إذنك');
+  if(s.status === 'approved')  return _hcSt('tran','مأذون — لم يُصرف بعد');
+  if(s.status === 'rejected')  return _hcSt('bad','مرفوض');
+  if(s.status === 'cancelled') return _hcSt('off','ملغى');
+  return _hcSt('done','مصروف');
+}
+
+/* ══════════════ الشاشة ══════════════ */
+function hcaSpendHTML(){
+  const pend = hcaSpendPending();
+  const open = hcaSpendOpen();
+  const spent = HCA.spends.filter(s => s.status === 'spent');
+  const spentTotal = spent.reduce((a,x) => a + (+x.amount_spent||0), 0);
+  const unposted = spent.filter(s => !s.posted_expense_id).length;
+
+  let html = '<div class="pay-note"><i class="ti ti-shield-lock"></i><div>' +
+    '<b>لا يخرج دينار من كاش هومي قبل إذنك.</b> المستلم يطلب، وأنت تأذن بمبلغ محدَّد — ' +
+    'ويقدر يكون أقل من المطلوب. رصيده لا ينقص إلا لما يرفع الإيصال بالمبلغ الفعلي، والفرق يرجع لرصيده تلقائياً.' +
+    '</div></div>';
+
+  /* ── طلبات بانتظار الإذن ── */
+  if(pend.length){
+    html += pend.map(s =>
+      '<div class="hca-settle" style="border-color:rgba(245,158,11,.4)">' +
+        '<div class="hca-settle-top">' +
+          '<div class="hca-settle-who"><b>' + _he(s.receiver_name) + '</b>' +
+            '<span>' + _he(HC_CAT_AR[s.category] || s.category) +
+            (s.vendor ? ' · ' + _he(s.vendor) : '') + ' · ' + _he(_hdt(s.requested_at)) + '</span></div>' +
+          '<div class="hca-settle-amt"><span>المطلوب</span>' +
+            '<b style="color:#b45309">' + _hk(s.amount_requested) + '</b><em>د.ك</em></div>' +
+        '</div>' +
+        '<div style="padding:13px 15px;border-bottom:1px solid var(--br)">' +
+          '<div style="font-size:10.5px;color:var(--muted);font-weight:800;margin-bottom:4px">الغرض</div>' +
+          '<div style="font-size:13.5px;line-height:1.7">' + _he(s.purpose) + '</div>' +
+        '</div>' +
+        '<div class="hca-settle-acts" style="align-items:flex-end">' +
+          '<div style="min-width:170px">' +
+            '<label style="display:block;font-size:10.5px;font-weight:800;color:var(--muted);margin-bottom:5px">' +
+              'المبلغ المأذون به (د.ك)</label>' +
+            '<input type="number" step="0.001" min="0" max="' + s.amount_requested + '" ' +
+              'id="hcaSpAmt_' + s.id + '" value="' + s.amount_requested + '" ' +
+              'style="width:100%;padding:9px 11px;border:1px solid var(--br);border-radius:10px;' +
+              'background:var(--s2);color:var(--text);font-family:inherit;font-size:14px;font-weight:800;' +
+              'text-align:center;font-variant-numeric:tabular-nums"></div>' +
+          '<button class="pay-btn lock" onclick="hcaSpendDecide(\'' + s.id + '\',\'approve\')">' +
+            '<i class="ti ti-check"></i>أذن بهذا المبلغ</button>' +
+          '<button class="pay-btn warn" onclick="hcaSpendDecide(\'' + s.id + '\',\'reject\')">' +
+            '<i class="ti ti-x"></i>رفض بسبب</button>' +
+        '</div>' +
+      '</div>').join('');
+  }else{
+    html += '<div class="pay-note ok"><i class="ti ti-check"></i><div>' +
+      '<b>لا طلبات صرف بانتظارك.</b></div></div>';
+  }
+
+  /* ── مأذون ولم يُصرف ── */
+  if(open.length){
+    html += '<div class="pay-card" style="margin-top:14px">' +
+      _hcHead('مأذون به ولم يُصرف بعد', open.length,
+              [['الملتزَم به', _hk(open.reduce((a,x)=>a+(+x.amount_approved||0),0))]]) +
+      '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+      '<th>المستلم</th><th class="n">المأذون (د.ك)</th><th>البند</th><th>الغرض</th><th>أذنت في</th>' +
+      '</tr></thead><tbody>' +
+      open.map(s => '<tr><td>' + _hcWho(s.receiver_name, s.receiver_id) + '</td>' +
+        '<td class="n">' + _hcM(s.amount_approved, 'up') + '</td>' +
+        '<td>' + _he(HC_CAT_AR[s.category] || s.category) + '</td>' +
+        '<td><div class="hca-note">' + _he(s.purpose) + '</div></td>' +
+        '<td>' + _hcW(s.approved_at) + '</td></tr>').join('') +
+      '</tbody></table></div>' +
+      '<div class="pay-hint" style="padding:0 15px 14px">هذه مبالغ أذنت بها ولم يرفع المستلم إيصالها بعد — ' +
+      'رصيده لم ينقص، لكنه لا يستطيع توريدها.</div></div>';
+  }
+
+  /* ── المصروف فعلاً ── */
+  html += '<div class="pay-card" style="margin-top:14px">' +
+    _hcHead('المصروف من الكاش', HCA.spends.filter(s=>s.status!=='pending').length,
+            [['إجمالي المصروف', _hk(spentTotal)]]) +
+    (unposted
+      ? '<div style="padding:12px 15px;background:rgba(245,158,11,.08);border-bottom:1px solid var(--br);' +
+        'display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+        '<i class="ti ti-alert-triangle" style="color:#b45309;font-size:17px"></i>' +
+        '<div style="flex:1;min-width:200px;font-size:12px;line-height:1.7">' +
+        '<b>' + unposted + ' مصروف لم يدخل المحاسبة بعد.</b> اضغط لتسجيلها كمصروفات في ARK بمعرّف ثابت لا يتضاعف.</div>' +
+        '<button class="pay-btn primary" onclick="hcaSpendPostAll()">' +
+        '<i class="ti ti-file-import"></i>سجّلها في المحاسبة</button></div>'
+      : '') +
+    (HCA.spends.filter(s => s.status !== 'pending').length
+      ? '<div class="pay-table-wrap"><table class="pay-table"><thead><tr>' +
+        '<th>المستلم</th><th class="n">المطلوب</th><th class="n">المأذون</th><th class="n">المصروف (د.ك)</th>' +
+        '<th>البند</th><th>الغرض</th><th>الحالة</th><th>الإيصال</th><th>المحاسبة</th>' +
+        '</tr></thead><tbody>' +
+        HCA.spends.filter(s => s.status !== 'pending').map(s =>
+          '<tr><td>' + _hcWho(s.receiver_name, s.receiver_id) + '</td>' +
+          '<td class="n">' + _hcM(s.amount_requested) + '</td>' +
+          '<td class="n">' + _hcM(s.amount_approved) + '</td>' +
+          '<td class="n">' + _hcM(s.amount_spent, 'dn') + '</td>' +
+          '<td>' + _he(HC_CAT_AR[s.category] || s.category) + '</td>' +
+          '<td><div class="hca-note' + (s.reject_reason ? ' bad' : '') + '">' +
+            _he(s.reject_reason || s.purpose) + '</div></td>' +
+          '<td>' + hcaSpendSt(s) + '</td>' +
+          '<td>' + (s.receipt_url
+              ? '<a class="pay-btn sm" target="_blank" rel="noopener" style="text-decoration:none" href="' +
+                _he(s.receipt_url) + '"><i class="ti ti-photo"></i>عرض</a>'
+              : '<span class="pay-sub">—</span>') + '</td>' +
+          '<td>' + (s.status !== 'spent' ? '<span class="pay-sub">—</span>'
+              : (s.posted_expense_id
+                  ? '<span class="pay-flag green">مُسجَّل</span>'
+                  : '<span class="pay-flag amber">لم يُسجَّل</span>')) + '</td></tr>').join('') +
+        '</tbody></table></div>'
+      : _hcEmpty('ti-receipt-off','لا مصروفات بعد','أول طلب صرف يظهر هنا فور إرساله')) +
+  '</div>';
+
+  return html;
+}
+
+/* ══════════════ الإذن والرفض ══════════════ */
+async function hcaSpendDecide(id, action){
+  if(!requirePerm('salaries')) return;
+  const s = HCA.spends.find(x => x.id === id); if(!s) return;
+  const actor = (typeof ARK_USER !== 'undefined' && ARK_USER) ? (ARK_USER.name || ARK_USER.email) : 'الإدارة';
+  let amt = null, note = null;
+
+  if(action === 'approve'){
+    const el = document.getElementById('hcaSpAmt_' + id);
+    amt = parseFloat(el && el.value);
+    if(!amt || amt <= 0){ toast('أدخل مبلغاً صحيحاً','e'); return; }
+    if(amt > parseFloat(s.amount_requested) + 0.0001){ toast('لا يمكن الإذن بأكثر من المطلوب','e'); return; }
+    const less = amt < parseFloat(s.amount_requested);
+    if(!confirm('تأذن لـ' + s.receiver_name + ' بصرف ' + _hk(amt) + ' د.ك؟\n\n' +
+      (less ? 'طلب ' + _hk(s.amount_requested) + ' وأنت تأذن بـ' + _hk(amt) + '.\n' : '') +
+      'الغرض: ' + s.purpose + '\n\nلن ينقص رصيده إلا بعد رفع الإيصال.')) return;
+    if(less) note = prompt('سبب تقليل المبلغ (اختياري):') || null;
+  }else{
+    note = prompt('سبب رفض طلب ' + _hk(s.amount_requested) + ' د.ك (مطلوب):');
+    if(note === null) return;
+    if(!note.trim()){ toast('لا بد من كتابة السبب','e'); return; }
+  }
+
+  try{
+    await hcaRpc('homi_cash_spend_decide', {
+      p_id:id, p_action:action, p_amount_approved:amt, p_actor:actor, p_note:note
+    });
+    try{ audit(action === 'approve' ? 'spend_approve' : 'spend_reject','homi_cash_spend', id,
+               {requested:s.amount_requested}, {approved:amt, reason:note}); }catch(e){}
+    toast(action === 'approve' ? '✅ أُذن بصرف ' + _hk(amt) + ' د.ك' : 'سُجّل الرفض وأُبلغ المستلم',
+          action === 'approve' ? 's' : 'e');
+    await hcaSync(true);
+  }catch(e){ toast(String(e.message||e),'e'); }
+}
+
+/* ══════════════ التسجيل في المحاسبة ══════════════
+   نفس نمط العهدة المُجرَّب: معرّف ثابت HCSP_<id> يمنع التضاعف
+   مهما أُعيدت المزامنة، ويسمح بتصحيح المبلغ لو تغيّر.        */
+function hcaSpendPostAll(){
+  if(!requirePerm('edit','acc')) return;
+  if(typeof EXPENSES === 'undefined'){ toast('المحاسبة غير محمّلة','e'); return; }
+
+  const rows = HCA.spends.filter(s => s.status === 'spent');
+  if(!rows.length){ toast('لا مصروفات للتسجيل','s'); return; }
+
+  const total = rows.filter(s => !s.posted_expense_id).reduce((a,x) => a + (+x.amount_spent||0), 0);
+  if(!confirm('تسجيل مصروفات كاش هومي في المحاسبة؟\n\n' +
+    'عدد غير المسجَّل: ' + rows.filter(s => !s.posted_expense_id).length + '\n' +
+    'الإجمالي: ' + _hk(total) + ' د.ك\n\n' +
+    'المعرّف ثابت — إعادة التسجيل لا تضاعف أي رقم.')) return;
+
+  const byId = {};
+  EXPENSES.forEach(e => { if(String(e.id).indexOf('HCSP_') === 0) byId[e.id] = e; });
+
+  let added = 0, updated = 0;
+  const posted = [];
+
+  rows.forEach(s => {
+    const id  = 'HCSP_' + s.id;
+    const row = {
+      id: id,
+      date: String(s.spent_at || s.approved_at || '').slice(0,10),
+      amount: Number(s.amount_spent) || 0,
+      category: HC_CAT_AR[s.category] ? s.category : 'other',
+      driverId: '',
+      note: '[كاش هومي — ' + (s.receiver_name || '—') + '] ' + (s.purpose || '') +
+            (s.vendor ? ' · ' + s.vendor : ''),
+      _homiCash: true
+    };
+    const cur = byId[id];
+    if(!cur){ EXPENSES.push(row); added++; }
+    else if(cur.amount !== row.amount || cur.date !== row.date ||
+            cur.category !== row.category || cur.note !== row.note){
+      Object.assign(cur, row); updated++;
+    }
+    if(!s.posted_expense_id) posted.push([s.id, id]);
+  });
+
+  try{ saveExp(); }catch(e){ console.warn('[homi-spend] saveExp', e); }
+
+  /* نعلّم على الخادم أنها سُجّلت — فلا تظهر «لم تُسجَّل» على جهاز آخر */
+  posted.forEach(([spendId, expId]) => {
+    hcaRpc('homi_cash_spend_mark_posted', {p_id:spendId, p_expense_id:expId})
+      .catch(e => console.warn('[homi-spend] mark posted', e));
+  });
+
+  try{ audit('post','homi_cash_spend','batch', null, {added, updated}); }catch(e){}
+  toast('المحاسبة: أُضيف ' + added + (updated ? ' · حُدِّث ' + updated : ''),'s');
+  setTimeout(() => hcaSync(true), 900);
+}
+
 </script>
 
 </body>

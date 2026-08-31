@@ -1901,7 +1901,8 @@ const HCM_VAPID = 'BE7cUweRPvPKFlb0k0YQUc7fWnSMX9xuVN-1LdB0QwGvlzVzsgbpokJNgSiEG
 const HCM_SK_ID = 'mgr_homicash_push_id';
 const HCM_MGR_ID = 'MGR-ARK';   // معرّف الإدارة — كل أجهزة المديرين تحته
 
-let HCM = { pending: [], seen: new Set(), init: false, busy: false };
+let HCM = { pending: [], spends: [], seen: new Set(), init: false, busy: false };
+const HCM_CAT = {fuel:'وقود', maintenance:'صيانة وقطع غيار', residency:'إقامات ورخص', admin:'مصاريف إدارية', other:'أخرى'};
 
 function _hcmK(n){ return (parseFloat(n)||0).toFixed(3); }
 function _hcmE(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1931,6 +1932,9 @@ async function hcmFetchPending(notify){
     // الجداول غير منشأة بعد أو لا شبكة — لا نزعج المستخدم
     return;
   }
+  try{
+    HCM.spends = (await hcmRpc('homi_cash_spend_pending', {})) || [];
+  }catch(e){ HCM.spends = HCM.spends || []; }
   hcmPaintBadge();
 
   // أول تحميل: نعلّم الموجود كمقروء بلا إشعار
@@ -1954,13 +1958,28 @@ async function hcmFetchPending(notify){
       if(navigator.vibrate) navigator.vibrate([180,90,180]);
     }catch(e){}
   });
+
+  (HCM.spends || []).forEach(s => {
+    if(HCM.seen.has(s.id)) return;
+    HCM.seen.add(s.id);
+    try{
+      mgrShowNotif({
+        title: '🛒 طلب إذن صرف',
+        body: s.receiver_name + ' يطلب صرف ' + _hcmK(s.amount_requested) + ' د.ك — ' + (s.purpose||''),
+        tag: 'homispend-' + s.id,
+        data: { url:'./manager.html' }
+      });
+      if(navigator.vibrate) navigator.vibrate([180,90,180]);
+    }catch(e){}
+  });
 }
 
 function hcmPaintBadge(){
+  const n = HCM.pending.length + (HCM.spends ? HCM.spends.length : 0);
   const el = document.getElementById('qa-homicash-count');
-  if(el) el.textContent = HCM.pending.length ? '(' + HCM.pending.length + ')' : '';
+  if(el) el.textContent = n ? '(' + n + ')' : '';
   const dot = document.getElementById('qa-homicash-dot');
-  if(dot) dot.style.display = HCM.pending.length ? 'block' : 'none';
+  if(dot) dot.style.display = n ? 'block' : 'none';
 }
 
 /* ── شاشة التوريدات ───────────────────────────────────────────────── */
@@ -2029,10 +2048,54 @@ function hcmRenderSheet(){
       '</div>';
   }
 
+  let spendHtml = '';
+  if(HCM.spends && HCM.spends.length){
+    spendHtml = '<div style="font-size:13px;font-weight:900;margin:16px 0 9px">' +
+        '🛒 طلبات إذن صرف (' + HCM.spends.length + ')</div>' +
+      HCM.spends.map(s =>
+        '<div style="background:#161b22;border:1px solid rgba(245,158,11,.35);border-radius:14px;padding:14px;margin-bottom:11px">' +
+          '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-size:15px;font-weight:900">' + _hcmE(s.receiver_name) + '</div>' +
+              '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">' +
+                _hcmE(HCM_CAT[s.category] || s.category) +
+                (s.vendor ? ' · ' + _hcmE(s.vendor) : '') + '</div>' +
+            '</div>' +
+            '<div style="text-align:center">' +
+              '<div style="font-size:22px;font-weight:900;color:#f59e0b;font-variant-numeric:tabular-nums">' +
+                _hcmK(s.amount_requested) + '</div>' +
+              '<div style="font-size:10px;color:#8b949e">د.ك</div></div>' +
+          '</div>' +
+          '<div style="font-size:12.5px;line-height:1.7;background:#21262d;border-radius:9px;padding:9px 11px;margin-bottom:10px">' +
+            _hcmE(s.purpose) + '</div>' +
+          '<div style="font-size:10.5px;color:#8b949e;margin-bottom:10px">' +
+            'المتاح في يده: <b style="color:#e6edf3">' + _hcmK(s.available) + ' د.ك</b></div>' +
+          '<div style="display:flex;gap:8px;align-items:center;margin-bottom:9px">' +
+            '<span style="font-size:11px;color:#8b949e;font-weight:800">أذن بـ</span>' +
+            '<input type="number" step="0.001" min="0" max="' + s.amount_requested + '" ' +
+              'id="hcmSpAmt_' + s.id + '" value="' + s.amount_requested + '" ' +
+              'style="flex:1;padding:10px;border:1px solid #30363d;border-radius:10px;background:#21262d;' +
+              'color:#e6edf3;font-family:inherit;font-size:15px;font-weight:900;text-align:center">' +
+            '<span style="font-size:11px;color:#8b949e;font-weight:800">د.ك</span>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button onclick="hcmSpendDecide(\'' + s.id + '\',\'approve\')" ' +
+              'style="flex:1;background:linear-gradient(135deg,#0d9488,#059669);color:#fff;border:none;' +
+              'padding:12px;border-radius:11px;font-family:inherit;font-weight:900;font-size:13px;cursor:pointer">' +
+              '<i class="ti ti-check"></i> أذن بالصرف</button>' +
+            '<button onclick="hcmSpendDecide(\'' + s.id + '\',\'reject\')" ' +
+              'style="background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.3);' +
+              'padding:12px 15px;border-radius:11px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">' +
+              '<i class="ti ti-x"></i> رفض</button>' +
+          '</div>' +
+        '</div>').join('');
+  }
+
+  const total = HCM.pending.length + (HCM.spends ? HCM.spends.length : 0);
   box.innerHTML = '<div class="sheet-head"><h3>كاش هومي' +
-      (HCM.pending.length ? ' (' + HCM.pending.length + ')' : '') + '</h3>' +
+      (total ? ' (' + total + ')' : '') + '</h3>' +
     '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
-    '<div style="padding:0 2px">' + pushRow + body + '</div>';
+    '<div style="padding:0 2px">' + pushRow + body + spendHtml + '</div>';
 }
 
 async function hcmRespond(id, action){
@@ -2058,6 +2121,43 @@ async function hcmRespond(id, action){
       ? '✅ تم تأكيد استلام ' + _hcmK(s.total) + ' د.ك'
       : 'سُجّل الرفض وأُبلغ المستلم');
     HCM.pending = HCM.pending.filter(x => x.id !== id);
+    hcmPaintBadge();
+    hcmRenderSheet();
+  }catch(e){
+    toast(String(e.message||e).slice(0,120));
+  }
+  HCM.busy = false;
+}
+
+/* ── إذن الصرف: أذن بمبلغ محدَّد أو ارفض بسبب ── */
+async function hcmSpendDecide(id, action){
+  if(HCM.busy) return;
+  const s = (HCM.spends || []).find(x => x.id === id); if(!s) return;
+  let amt = null, note = null;
+
+  if(action === 'approve'){
+    const el = document.getElementById('hcmSpAmt_' + id);
+    amt = parseFloat(el && el.value);
+    if(!amt || amt <= 0){ toast('أدخل مبلغاً صحيحاً'); return; }
+    if(amt > parseFloat(s.amount_requested) + 0.0001){ toast('لا يمكن الإذن بأكثر من المطلوب'); return; }
+    const less = amt < parseFloat(s.amount_requested);
+    if(!confirm('تأذن لـ' + s.receiver_name + ' بصرف ' + _hcmK(amt) + ' د.ك؟\n\n' +
+      (less ? 'طلب ' + _hcmK(s.amount_requested) + ' وأنت تأذن بـ' + _hcmK(amt) + '.\n' : '') +
+      'الغرض: ' + s.purpose + '\n\nرصيده لن ينقص إلا بعد رفع الإيصال.')) return;
+  }else{
+    note = prompt('سبب رفض طلب ' + _hcmK(s.amount_requested) + ' د.ك (مطلوب):');
+    if(note === null) return;
+    if(!note.trim()){ toast('لا بد من كتابة السبب'); return; }
+  }
+
+  HCM.busy = true;
+  try{
+    await hcmRpc('homi_cash_spend_decide', {
+      p_id:id, p_action:action, p_amount_approved:amt,
+      p_actor:'المدير (السلاسل مدير)', p_note:note
+    });
+    toast(action === 'approve' ? '✅ أُذن بصرف ' + _hcmK(amt) + ' د.ك' : 'سُجّل الرفض وأُبلغ المستلم');
+    HCM.spends = HCM.spends.filter(x => x.id !== id);
     hcmPaintBadge();
     hcmRenderSheet();
   }catch(e){
