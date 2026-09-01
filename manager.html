@@ -196,6 +196,115 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
   border-radius:20px;background:#dc2626;color:#fff;font-size:9.5px;font-weight:900;
   display:grid;place-items:center;padding:0 4px}
 
+/* ══════════════════════════════════════════════════════════════
+   المحاسبة والعهدة
+   ══════════════════════════════════════════════════════════════ */
+#tab-acc,#tab-custody{padding:0}
+
+.fn-top{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 15px 18px}
+.fn-top h2{margin:0 0 12px;font-size:18px;font-weight:900;display:flex;align-items:center;gap:9px}
+.fn-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:12px;padding:7px 9px;margin-bottom:14px}
+.fn-nav button{background:rgba(255,255,255,.16);border:none;color:#fff;width:32px;height:32px;
+  border-radius:9px;cursor:pointer;font-size:16px;display:grid;place-items:center;font-family:inherit}
+.fn-nav button:disabled{opacity:.35;cursor:default}
+.fn-nav b{font-size:14px;font-weight:900}
+
+/* الرقم الكبير: صافي الشهر */
+.fn-net{text-align:center;padding:4px 0 2px}
+.fn-net span{display:block;font-size:11px;opacity:.8;font-weight:700}
+.fn-net b{display:block;font-size:33px;font-weight:900;line-height:1.2;
+  font-variant-numeric:tabular-nums;margin-top:2px}
+.fn-net b.up{color:#6ee7b7} .fn-net b.dn{color:#fca5a5}
+.fn-net em{font-style:normal;font-size:12px;opacity:.75;font-weight:700}
+
+.fn-two{display:flex;gap:9px;margin-top:14px}
+.fn-two > div{flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:12px;padding:11px 10px;text-align:center}
+.fn-two span{display:block;font-size:10px;opacity:.8;font-weight:700}
+.fn-two b{display:block;font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;margin-top:2px}
+.fn-two .in b{color:#6ee7b7} .fn-two .out b{color:#fca5a5}
+
+/* التبويبات الفرعية */
+.fn-tabs{display:flex;gap:7px;padding:12px 14px;overflow-x:auto;
+  border-bottom:1px solid var(--br,#e5e7eb);background:var(--card,#fff)}
+.fn-tabs::-webkit-scrollbar{display:none}
+.fn-tab{flex:0 0 auto;border:1px solid var(--br,#e5e7eb);background:var(--bg2,#f6f8fa);
+  color:var(--muted,#57606a);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:800;
+  font-family:inherit;cursor:pointer}
+.fn-tab.on{background:#0d9488;border-color:#0d9488;color:#fff}
+
+.fn-body{padding:13px 14px 90px}
+.fn-sec{font-size:12.5px;font-weight:900;color:var(--muted,#57606a);margin:16px 0 9px}
+.fn-sec:first-child{margin-top:0}
+
+/* شريط توزيع */
+.fn-bar{background:var(--card,#fff);border:1px solid var(--br,#e5e7eb);border-radius:13px;
+  padding:12px 13px;margin-bottom:9px}
+.fn-bar-top{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.fn-bar-top b{font-size:13px;font-weight:800;flex:1;min-width:0}
+.fn-bar-top .v{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums}
+.fn-bar-top .p{font-size:10.5px;color:var(--muted,#57606a);font-weight:700}
+.fn-track{height:7px;border-radius:4px;background:var(--bg2,#eef1f4);overflow:hidden}
+.fn-fill{height:100%;border-radius:4px;transition:width .35s}
+
+/* صف قيد */
+.fn-row{background:var(--card,#fff);border:1px solid var(--br,#e5e7eb);border-radius:13px;
+  padding:11px 13px;margin-bottom:8px;display:flex;align-items:center;gap:11px}
+.fn-row .ic{width:34px;height:34px;border-radius:10px;flex:0 0 34px;display:grid;place-items:center;
+  font-size:15px;color:#fff}
+.fn-row .ic.in{background:#059669} .fn-row .ic.out{background:#dc2626}
+.fn-row .tx{flex:1;min-width:0}
+.fn-row .tx b{display:block;font-size:13px;font-weight:800;line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fn-row .tx span{display:block;font-size:10.5px;color:var(--muted,#57606a);margin-top:2px;font-weight:700}
+.fn-row .amt{font-size:14.5px;font-weight:900;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.fn-row .amt.in{color:#059669} .fn-row .amt.out{color:#dc2626}
+.fn-row .del{background:none;border:none;color:var(--muted,#57606a);cursor:pointer;
+  font-size:17px;padding:4px;flex:0 0 auto}
+.fn-mob{background:rgba(13,148,136,.13);color:#0f766e;border-radius:6px;
+  padding:1px 6px;font-size:9.5px;font-weight:800;margin-inline-start:5px}
+
+/* زر عائم للإضافة */
+.fn-fab{position:fixed;inset-inline-end:16px;bottom:78px;z-index:60;
+  background:#0d9488;color:#fff;border:none;border-radius:28px;padding:14px 20px;
+  font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;
+  box-shadow:0 8px 26px rgba(13,148,136,.42);display:flex;align-items:center;gap:8px}
+.fn-fab:active{transform:scale(.97)}
+
+/* العهدة */
+.cu-card{background:var(--card,#fff);border:1px solid var(--br,#e5e7eb);border-radius:15px;
+  padding:14px;margin-bottom:10px}
+.cu-hd{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.cu-av{width:42px;height:42px;border-radius:12px;background:#1c5878;color:#fff;
+  display:grid;place-items:center;font-size:15px;font-weight:900;flex:0 0 42px}
+.cu-hd .tx{flex:1;min-width:0}
+.cu-hd .tx b{display:block;font-size:15px;font-weight:900}
+.cu-hd .tx span{display:block;font-size:10.5px;color:var(--muted,#57606a);font-weight:700;margin-top:1px}
+.cu-bal{text-align:center;flex:0 0 auto}
+.cu-bal b{display:block;font-size:20px;font-weight:900;color:#0d9488;
+  font-variant-numeric:tabular-nums;line-height:1.2}
+.cu-bal span{display:block;font-size:9.5px;color:var(--muted,#57606a);font-weight:700}
+.cu-split{display:flex;gap:9px}
+.cu-split > div{flex:1;background:var(--bg2,#f6f8fa);border-radius:10px;padding:9px;text-align:center}
+.cu-split span{display:block;font-size:9.5px;color:var(--muted,#57606a);font-weight:800}
+.cu-split b{display:block;font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;margin-top:2px}
+.cu-split .r b{color:#059669} .cu-split .s b{color:#dc2626}
+.cu-more{width:100%;margin-top:10px;background:var(--bg2,#f6f8fa);border:1px solid var(--br,#e5e7eb);
+  border-radius:10px;padding:9px;font-family:inherit;font-size:12px;font-weight:800;
+  color:var(--muted,#57606a);cursor:pointer}
+
+.fn-empty{text-align:center;padding:52px 24px;color:var(--muted,#57606a)}
+.fn-empty i{font-size:44px;opacity:.4}
+.fn-empty b{display:block;margin-top:12px;font-size:15px;font-weight:900;color:var(--text,#1f2328)}
+.fn-empty p{margin:6px 0 0;font-size:12.5px;line-height:1.8}
+.fn-load{text-align:center;padding:44px;color:var(--muted,#57606a);font-size:13px}
+.fn-err{margin:14px;background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.28);
+  border-radius:13px;padding:14px;font-size:12.5px;line-height:1.8;color:#b91c1c}
+.fn-err b{display:block;margin-bottom:4px}
+
+
 
 /* شريط الهوية أعلى التطبيق */
 .mgr-who{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted,#8b949e)}
@@ -534,6 +643,8 @@ body::after{
     </div>
 
     <div class="tab" id="tab-decisions"></div>
+    <div class="tab" id="tab-acc"></div>
+    <div class="tab" id="tab-custody"></div>
 
     <!-- CONVERSATION VIEW MODAL -->
     <div id="mgrConvOv" onclick="if(event.target===this)closeMgrConv()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:8000;align-items:flex-end;justify-content:center">
@@ -567,6 +678,17 @@ body::after{
         <div class="row" onclick="openAttendSheet()" style="padding:14px;cursor:pointer">
           <div class="row-av" style="background:var(--green)"><i class="ti ti-clock-check"></i></div>
           <div class="row-info"><div class="row-name">الحضور اللحظي</div><div class="row-sub">مين داخل ومين متأخر ومين غايب</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openTab('orders')" style="padding:14px;cursor:pointer;position:relative">
+          <div class="row-av" style="background:var(--violet)"><i class="ti ti-package"></i></div>
+          <div class="row-info"><div class="row-name">الأوردرات</div><div class="row-sub">التوصيلات وتوزيعها على السائقين</div></div>
+          <span id="ordersBadge" style="display:none;background:#ef4444;color:#fff;font-size:9px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px;margin-inline-end:6px">0</span>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
+        <div class="row" onclick="openTab('drivers')" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:var(--teal)"><i class="ti ti-users"></i></div>
+          <div class="row-info"><div class="row-name">السائقين</div><div class="row-sub">ملفاتهم وبياناتهم والتواصل معاهم</div></div>
           <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
         </div>
         <div class="row" onclick="openTab('live')" style="padding:14px;cursor:pointer">
@@ -638,15 +760,12 @@ body::after{
   <!-- BOTTOM TAB BAR -->
   <div class="btab">
     <button class="btab-item on" onclick="openTab('home')"><i class="ti ti-dashboard"></i><span>الرئيسية</span></button>
-    <button class="btab-item" onclick="openTab('orders')" style="position:relative">
-      <i class="ti ti-package"></i><span>أوردرات</span>
-      <span id="ordersBadge" style="display:none;position:absolute;top:4px;right:18px;background:#ef4444;color:#fff;font-size:9px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
-    </button>
+    <button class="btab-item" onclick="openTab('acc')"><i class="ti ti-calculator"></i><span>المحاسبة</span></button>
     <button class="btab-item" onclick="openTab('decisions')" style="position:relative">
       <i class="ti ti-gavel"></i><span>القرارات</span>
       <span id="navDecisionsDot" class="nav-dot" style="display:none">0</span>
     </button>
-    <button class="btab-item" onclick="openTab('drivers')"><i class="ti ti-users"></i><span>السائقين</span></button>
+    <button class="btab-item" onclick="openTab('custody')"><i class="ti ti-wallet"></i><span>العهدة</span></button>
     <button class="btab-item" onclick="openTab('more')"><i class="ti ti-menu-2"></i><span>المزيد</span></button>
   </div>
 </div>
@@ -690,23 +809,26 @@ function openTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.getElementById('tab-'+t).classList.add('on');
   document.querySelectorAll('.btab-item').forEach((b,i)=>{
-    const map = ['home','orders','decisions','drivers','more'];
+    const map = ['home','acc','decisions','custody','more'];
     /* الخريطة والرسائل بيتفتحوا من «المزيد» ومش ليهم زرار في الشريط،
        فبنسيب «المزيد» متعلّم وإحنا جواهم عشان المستخدم يعرف هو فين. */
-    const mark = (t==='live'||t==='msg') ? 'more' : t;
+    /* الشاشات اللي بتتفتح من «المزيد» بتسيب «المزيد» متعلّم */
+    const mark = ['live','msg','orders','drivers'].indexOf(t)>=0 ? 'more' : t;
     b.classList.toggle('on', map[i]===mark);
   });
   const lang = localStorage.getItem('ark_lang') || 'ar';
   const titles = (lang==='en')
-    ? {home:'Home',drivers:'Drivers',live:'Live Map',msg:'Messages',more:'More',orders:'Orders',decisions:'Decisions'}
-    : {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد',orders:'الأوردرات',decisions:'مركز القرارات'};
-  const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2',orders:'ti-package',decisions:'ti-gavel'};
+    ? {home:'Home',drivers:'Drivers',live:'Live Map',msg:'Messages',more:'More',orders:'Orders',decisions:'Decisions',acc:'Accounting',custody:'Custody'}
+    : {home:'الرئيسية',drivers:'السائقين',live:'الخريطة المباشرة',msg:'الرسائل',more:'المزيد',orders:'الأوردرات',decisions:'مركز القرارات',acc:'المحاسبة',custody:'العهدة'};
+  const icons = {home:'ti-dashboard',drivers:'ti-users',live:'ti-map-2',msg:'ti-message-circle',more:'ti-menu-2',orders:'ti-package',decisions:'ti-gavel',acc:'ti-calculator',custody:'ti-wallet'};
   document.getElementById('topbar-title').innerHTML = `<i class="ti ${icons[t]}"></i> ${titles[t]}`;
   if(t==='live') setTimeout(initLiveMap, 100);
   if(t==='drivers') renderDriversList();
   if(t==='msg') renderMsgList();
   if(t==='orders') renderOrders();
   if(t==='decisions'){ dcRender(); dcLoad(true); try{ SalasilBell.seen(); }catch(e){} }
+  if(t==='acc'){ fnRender(); fnLoad(true); }
+  if(t==='custody'){ cuRender(); cuLoad(true); }
   if(t==='more'){ var _b=document.getElementById('mgrBioLbl');
     if(_b) _b.textContent = (window.MGRAUTH && MGRAUTH.bioEnrolled()) ? 'الفتح بالبصمة — مفعّل ✅' : 'فعّل الفتح بالبصمة'; }
   if(t==='home') { try{ mxHomeStrip(); }catch(e){} }
@@ -2671,10 +2793,10 @@ var ROLE_PERMS = {
                 decide:['spend','settlement','advance'] },
   hr:         { view:['dash','drivers','att','apps','vio','decisions'],
                 edit:['drivers','att','apps'], del:false, salaries:true,
-                decide:['leave','application'] },
+                decide:['leave'] },
   operations: { view:['dash','drivers','att','clockin','livemap','orders','dreports','decisions'],
                 edit:['att','clockin','orders','dreports'], del:false, salaries:false,
-                decide:['maint'] },
+                decide:[] },
   supervisor: { view:['dash','drivers','att','clockin','livemap'],
                 edit:['att','clockin'], del:false, salaries:false, decide:[] }
 };
@@ -3126,10 +3248,10 @@ var DC_KIND = {
   spend:       { ic:'ti-shopping-cart',    ar:'إذن صرف',   ok:'أذن بالصرف',  no:'رفض' },
   settlement:  { ic:'ti-cash-banknote',    ar:'توريد كاش', ok:'أكّد الاستلام', no:'رفض' },
   advance:     { ic:'ti-coins',            ar:'سلفة',      ok:'اعتمد السلفة', no:'رفض' },
-  leave:       { ic:'ti-beach',            ar:'إجازة',     ok:'وافق',        no:'رفض' },
-  application: { ic:'ti-user-plus',        ar:'توظيف',     ok:'اقبل',        no:'ارفض' },
-  maint:       { ic:'ti-tool',             ar:'صيانة',     ok:'تم الإصلاح',  no:'أهمل' }
+  leave:       { ic:'ti-beach',            ar:'إجازة',     ok:'وافق',        no:'رفض' }
 };
+/* الصيانة وطلبات التوظيف اتشالوا من مركز القرارات بطلب من الإدارة —
+   الطلبات نفسها لسه بتتسجّل وبتتشاف من ARK. */
 
 function dcE(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
@@ -3292,15 +3414,6 @@ function dcCard(x){
     if(ex.from && ex.to) tags.push(['من', String(ex.from) + ' لـ ' + String(ex.to)]);
     if(ex.days) tags.push(['المدة', ex.days + ' يوم']);
   }
-  if(x.kind === 'application'){
-    if(ex.phone) tags.push(['تليفون', ex.phone]);
-    if(ex.age)   tags.push(['السن', ex.age]);
-    if(ex.car)   tags.push(['العربية', ex.car]);
-  }
-  if(x.kind === 'maint'){
-    if(ex.plate)    tags.push(['اللوحة', ex.plate]);
-    if(ex.severity) tags.push(['الخطورة', ex.severity]);
-  }
   if(x.kind === 'spend' && ex.vendor) tags.push(['المحل', ex.vendor]);
 
   var tagHtml = tags.length
@@ -3308,15 +3421,7 @@ function dcCard(x){
         return '<span class="dc-tag">' + dcE(t[0]) + ' <b>' + dcE(t[1]) + '</b></span>';
       }).join('') + '</div>' : '';
 
-  /* صورة العطل + الموقع */
   var photo = '';
-  if(x.kind === 'maint' && ex.photo)
-    photo = '<a class="dc-photo" href="' + dcE(ex.photo) + '" target="_blank" rel="noopener">' +
-            '<img src="' + dcE(ex.photo) + '" alt="صورة العطل" loading="lazy"></a>';
-  if(x.kind === 'maint' && ex.lat && ex.lng)
-    tagHtml += '<div class="dc-meta"><a class="dc-tag" target="_blank" rel="noopener" ' +
-      'style="text-decoration:none" href="https://www.google.com/maps?q=' +
-      encodeURIComponent(ex.lat + ',' + ex.lng) + '"><i class="ti ti-map-pin"></i> شوف المكان</a></div>';
 
   /* المبلغ القابل للتعديل — للصرف والسلفة بس */
   var edit = '';
@@ -3440,6 +3545,345 @@ setInterval(function(){
 if(window.SalasilBell){
   SalasilBell.watch(function(){ return DC.items.length; });
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   المحاسبة والعهدة — تطبيق المدير
+   ──────────────────────────────────────────────────────────────────────────
+   المحاسبة بتقرا من ark_income و ark_expense اللي ARK بيرفعهم للسحابة.
+   العهدة بتقرا من custody_txn مباشرةً (هي أصلاً في السحابة).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var FN = {
+  m: new Date().getMonth() + 1, y: new Date().getFullYear(),
+  sum: null, entries: [], tab: 'sum',
+  loading: false, err: null
+};
+var CU = { rows: [], open: null, txns: {}, loading: false, err: null };
+
+var EXP_AR = {
+  salaries:'مرتبات', fuel:'بنزين ووقود', maintenance:'صيانة سيارات',
+  violations:'مخالفات مرورية', rent:'إيجارات', insurance:'تأمين',
+  residency:'إقامات ورخص', admin:'مصاريف إدارية', other:'أخرى'
+};
+var EXP_COLOR = {
+  salaries:'#f59e0b', fuel:'#ea580c', maintenance:'#3b82f6', violations:'#dc2626',
+  rent:'#8b5cf6', insurance:'#059669', residency:'#ec4899', admin:'#0ea5e9', other:'#94a3b8'
+};
+var MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                 'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function fnKD(v){
+  var n = parseFloat(v);
+  if(isNaN(n)) return '—';
+  return n.toLocaleString('en-US', {minimumFractionDigits:3, maximumFractionDigits:3});
+}
+function fnE(s){ return dcE(s); }
+
+/* ══════════════ المحاسبة ══════════════ */
+function fnLoad(silent){
+  if(FN.loading) return Promise.resolve();
+  FN.loading = true;
+  if(!silent) fnRender();
+  return Promise.all([
+    dcRpc('ark_finance_month',   {p_month:FN.m, p_year:FN.y}),
+    dcRpc('ark_finance_entries', {p_month:FN.m, p_year:FN.y, p_kind:null})
+  ]).then(function(r){
+    FN.sum = r[0] || null; FN.entries = r[1] || []; FN.err = null;
+  }).catch(function(e){
+    var m = String(e.message || e);
+    FN.err = /does not exist|schema cache|ark_finance/i.test(m) ? '__NOSQL__' : m;
+  }).then(function(){ FN.loading = false; fnRender(); });
+}
+
+function fnMonth(delta){
+  var d = new Date(FN.y, FN.m - 1 + delta, 1);
+  var now = new Date();
+  /* مفيش شهور جاية */
+  if(d > new Date(now.getFullYear(), now.getMonth(), 1)) return;
+  FN.m = d.getMonth() + 1; FN.y = d.getFullYear();
+  fnLoad();
+}
+function fnGo(t){ FN.tab = t; fnRender(); }
+
+function fnRender(){
+  var el = document.getElementById('tab-acc');
+  if(!el) return;
+
+  var s = FN.sum || {};
+  var net = Number(s.net || 0);
+  var isNow = (FN.m === new Date().getMonth()+1 && FN.y === new Date().getFullYear());
+
+  var head =
+    '<div class="fn-top">' +
+      '<h2><i class="ti ti-calculator"></i>المحاسبة</h2>' +
+      '<div class="fn-nav">' +
+        '<button onclick="fnMonth(-1)" aria-label="الشهر السابق">›</button>' +
+        '<b>' + MONTHS_AR[FN.m-1] + ' ' + FN.y + '</b>' +
+        '<button onclick="fnMonth(1)" ' + (isNow ? 'disabled' : '') + ' aria-label="الشهر التالي">‹</button>' +
+      '</div>' +
+      '<div class="fn-net"><span>صافي الشهر</span>' +
+        '<b class="' + (net >= 0 ? 'up' : 'dn') + '">' + fnKD(net) + '</b>' +
+        '<em>د.ك</em></div>' +
+      '<div class="fn-two">' +
+        '<div class="in"><span>الدخل</span><b>' + fnKD(s.income || 0) + '</b></div>' +
+        '<div class="out"><span>المصروفات</span><b>' + fnKD(s.expense || 0) + '</b></div>' +
+      '</div>' +
+    '</div>';
+
+  if(FN.err === '__NOSQL__'){
+    el.innerHTML = head + '<div class="fn-err"><b>المحاسبة لسه مترفعتش للسحابة.</b>' +
+      'شغّل ملف <code>ark_finance.sql</code> على Supabase، وبعدها افتح ARK على اللاب ' +
+      'وسيبه دقيقة عشان يرفع الأرقام. من غير كده الشاشة دي هتفضل فاضية — ' +
+      'الدخل والمصروفات متخزّنين في متصفح اللاب مش في السحابة.' +
+      '<div style="margin-top:10px"><button class="fn-tab on" onclick="fnLoad()">' +
+      'إعادة المحاولة</button></div></div>';
+    return;
+  }
+  if(FN.err){
+    el.innerHTML = head + '<div class="fn-err"><b>تعذّر قراءة المحاسبة.</b>' + fnE(FN.err) +
+      '<div style="margin-top:10px"><button class="fn-tab on" onclick="fnLoad()">إعادة المحاولة</button></div></div>';
+    return;
+  }
+  if(FN.loading && !FN.sum){ el.innerHTML = head + '<div class="fn-load">جارٍ التحميل…</div>'; return; }
+
+  var tabs = '<div class="fn-tabs">' +
+    [['sum','الملخّص'],['out','المصروفات'],['in','الدخل']].map(function(t){
+      return '<button class="fn-tab' + (FN.tab===t[0]?' on':'') + '" onclick="fnGo(\'' + t[0] + '\')">' +
+             t[1] + '</button>';
+    }).join('') + '</div>';
+
+  var body = '';
+  if(FN.tab === 'sum')      body = fnSummaryHTML(s);
+  else if(FN.tab === 'out') body = fnListHTML('expense');
+  else                      body = fnListHTML('income');
+
+  el.innerHTML = head + tabs + '<div class="fn-body">' + body + '</div>' +
+    (MGRAUTH.canEdit('acc')
+      ? '<button class="fn-fab" onclick="fnAdd()"><i class="ti ti-plus"></i>قيد جديد</button>' : '');
+}
+
+function fnSummaryHTML(s){
+  var cats = s.by_category || [], srcs = s.by_source || [];
+  var h = '';
+
+  if(cats.length){
+    var maxC = Math.max.apply(null, cats.map(function(c){ return Number(c.total)||0; }));
+    h += '<div class="fn-sec">المصروفات فين؟</div>';
+    h += cats.map(function(c){
+      var v = Number(c.total)||0, pct = maxC ? (v/maxC*100) : 0;
+      var share = s.expense ? (v/Number(s.expense)*100) : 0;
+      var col = EXP_COLOR[c.key] || '#94a3b8';
+      return '<div class="fn-bar"><div class="fn-bar-top">' +
+        '<b>' + fnE(EXP_AR[c.key] || c.key) + '</b>' +
+        '<span class="v" style="color:' + col + '">' + fnKD(v) + '</span>' +
+        '<span class="p">' + share.toFixed(0) + '٪</span></div>' +
+        '<div class="fn-track"><div class="fn-fill" style="width:' + pct.toFixed(1) +
+        '%;background:' + col + '"></div></div></div>';
+    }).join('');
+  }
+
+  if(srcs.length){
+    var maxS = Math.max.apply(null, srcs.map(function(c){ return Number(c.total)||0; }));
+    h += '<div class="fn-sec">الدخل منين؟</div>';
+    h += srcs.map(function(c){
+      var v = Number(c.total)||0, pct = maxS ? (v/maxS*100) : 0;
+      var share = s.income ? (v/Number(s.income)*100) : 0;
+      return '<div class="fn-bar"><div class="fn-bar-top">' +
+        '<b>' + fnE(c.key) + '</b>' +
+        '<span class="v" style="color:#059669">' + fnKD(v) + '</span>' +
+        '<span class="p">' + share.toFixed(0) + '٪</span></div>' +
+        '<div class="fn-track"><div class="fn-fill" style="width:' + pct.toFixed(1) +
+        '%;background:#059669"></div></div></div>';
+    }).join('');
+  }
+
+  if(!h) h = '<div class="fn-empty"><i class="ti ti-file-invoice"></i>' +
+    '<b>مفيش قيود في الشهر ده</b><p>غيّر الشهر من فوق، أو ضيف قيد جديد.</p></div>';
+  return h;
+}
+
+function fnListHTML(kind){
+  var rows = FN.entries.filter(function(x){ return x.kind === kind; });
+  if(!rows.length) return '<div class="fn-empty"><i class="ti ti-file-invoice"></i>' +
+    '<b>مفيش ' + (kind==='income'?'دخل':'مصروفات') + ' في الشهر ده</b></div>';
+  var isIn = kind === 'income';
+  return rows.map(function(r){
+    var mob = String(r.id).indexOf('MOB_') === 0;
+    var label = isIn ? (r.bucket || 'أخرى') : (EXP_AR[r.bucket] || r.bucket || 'أخرى');
+    return '<div class="fn-row">' +
+      '<div class="ic ' + (isIn?'in':'out') + '"><i class="ti ti-' +
+        (isIn?'arrow-down-left':'arrow-up-right') + '"></i></div>' +
+      '<div class="tx"><b>' + fnE(r.note || label) + '</b>' +
+        '<span>' + fnE(label) + ' · ' + String(r.entry_date).slice(0,10) +
+        (mob ? '<span class="fn-mob">من الموبايل</span>' : '') + '</span></div>' +
+      '<div class="amt ' + (isIn?'in':'out') + '">' + fnKD(r.amount) + '</div>' +
+      (mob && MGRAUTH.canEdit('acc')
+        ? '<button class="del" onclick="fnDel(\'' + fnE(r.kind) + '\',\'' + fnE(r.id) +
+          '\')" aria-label="حذف"><i class="ti ti-trash"></i></button>' : '') +
+    '</div>';
+  }).join('');
+}
+
+/* ── قيد جديد ── */
+function fnAdd(){
+  if(!MGRAUTH.require('edit','acc')) return;
+  var kind = confirm('اضغط «موافق» لمصروف، أو «إلغاء» لدخل') ? 'expense' : 'income';
+
+  var buckets = kind === 'expense'
+    ? Object.keys(EXP_AR).map(function(k,i){ return (i+1) + ') ' + EXP_AR[k]; }).join('\n')
+    : '1) keeta\n2) homy\n3) other';
+  var keys = kind === 'expense' ? Object.keys(EXP_AR) : ['keeta','homy','other'];
+
+  var pick = prompt('اختار البند برقمه:\n\n' + buckets);
+  if(pick === null) return;
+  var bi = parseInt(pick, 10) - 1;
+  if(isNaN(bi) || bi < 0 || bi >= keys.length){ mgrToast('رقم مش موجود','err'); return; }
+
+  var amt = prompt('المبلغ (د.ك):');
+  if(amt === null) return;
+  amt = parseFloat(amt);
+  if(isNaN(amt) || amt <= 0){ mgrToast('اكتب مبلغ صحيح','err'); return; }
+
+  var note = prompt('ملاحظة (اختياري):') || null;
+  var today = new Date();
+  var dstr = today.getFullYear() + '-' +
+             String(today.getMonth()+1).padStart(2,'0') + '-' +
+             String(today.getDate()).padStart(2,'0');
+
+  if(!confirm((kind==='expense'?'مصروف':'دخل') + ' ' + fnKD(amt) + ' د.ك — ' +
+              (kind==='expense' ? EXP_AR[keys[bi]] : keys[bi]) + '؟')) return;
+
+  dcRpc('ark_finance_add', {
+    p_kind: kind, p_date: dstr, p_amount: amt, p_bucket: keys[bi],
+    p_note: note, p_driver_id: null,
+    p_actor: (MGRAUTH.user && (MGRAUTH.user.name || MGRAUTH.user.email)) || 'الإدارة'
+  }).then(function(){
+    mgrToast('اتسجّل ✅');
+    /* لو القيد في شهر معروض غير الحالي، نرجّع الشاشة للشهر الحالي */
+    FN.m = today.getMonth()+1; FN.y = today.getFullYear();
+    return fnLoad(true);
+  }).catch(function(e){ mgrToast(String(e.message||e),'err'); });
+}
+
+function fnDel(kind, id){
+  if(!MGRAUTH.require('edit','acc')) return;
+  if(!confirm('تمسح القيد ده؟')) return;
+  dcRpc('ark_finance_delete', {p_kind:kind, p_id:id})
+    .then(function(){ mgrToast('اتمسح'); return fnLoad(true); })
+    .catch(function(e){ mgrToast(String(e.message||e),'err'); });
+}
+
+/* ══════════════ العهدة ══════════════ */
+function cuLoad(silent){
+  if(CU.loading) return Promise.resolve();
+  CU.loading = true;
+  if(!silent) cuRender();
+  return dcRpc('ark_custody_balances', {})
+    .then(function(r){ CU.rows = r || []; CU.err = null; })
+    .catch(function(e){
+      var m = String(e.message || e);
+      CU.err = /does not exist|schema cache|ark_custody/i.test(m) ? '__NOSQL__' : m;
+    })
+    .then(function(){ CU.loading = false; cuRender(); });
+}
+
+function cuToggle(id){
+  if(CU.open === id){ CU.open = null; cuRender(); return; }
+  CU.open = id;
+  if(CU.txns[id]){ cuRender(); return; }
+  cuRender();
+  dcRpc('ark_custody_txns', {p_holder:id, p_limit:30})
+    .then(function(r){ CU.txns[id] = r || []; cuRender(); })
+    .catch(function(){ CU.txns[id] = []; cuRender(); });
+}
+
+function cuRender(){
+  var el = document.getElementById('tab-custody');
+  if(!el) return;
+
+  var total = CU.rows.reduce(function(a,x){ return a + (Number(x.balance)||0); }, 0);
+  var head =
+    '<div class="fn-top">' +
+      '<h2><i class="ti ti-wallet"></i>العهدة</h2>' +
+      '<div class="fn-net"><span>إجمالي اللي في إيد الموظفين</span>' +
+        '<b class="up">' + fnKD(total) + '</b><em>د.ك</em></div>' +
+      '<div class="fn-two">' +
+        '<div><span>عدد الحائزين</span><b>' + CU.rows.length + '</b></div>' +
+        '<div><span>إجمالي الحركات</span><b>' +
+          CU.rows.reduce(function(a,x){ return a + (Number(x.txn_count)||0); }, 0) + '</b></div>' +
+      '</div>' +
+    '</div>';
+
+  if(CU.err === '__NOSQL__'){
+    el.innerHTML = head + '<div class="fn-err"><b>دوال العهدة لسه متركّبتش.</b>' +
+      'شغّل ملف <code>ark_finance.sql</code> على Supabase.' +
+      '<div style="margin-top:10px"><button class="fn-tab on" onclick="cuLoad()">إعادة المحاولة</button></div></div>';
+    return;
+  }
+  if(CU.err){
+    el.innerHTML = head + '<div class="fn-err"><b>تعذّر قراءة العهدة.</b>' + fnE(CU.err) + '</div>';
+    return;
+  }
+  if(CU.loading && !CU.rows.length){ el.innerHTML = head + '<div class="fn-load">جارٍ التحميل…</div>'; return; }
+  if(!CU.rows.length){
+    el.innerHTML = head + '<div class="fn-empty"><i class="ti ti-wallet-off"></i>' +
+      '<b>مفيش عهدة مسجّلة</b><p>الحركات بتتسجّل من نظام العهدة على اللاب.</p></div>';
+    return;
+  }
+
+  el.innerHTML = head + '<div class="fn-body">' + CU.rows.map(function(r){
+    var nm = r.holder_name || r.holder_id || '—';
+    var init = String(nm).trim().charAt(0) || '؟';
+    var isOpen = CU.open === r.holder_id;
+    var tx = CU.txns[r.holder_id];
+
+    var detail = '';
+    if(isOpen){
+      if(!tx) detail = '<div class="fn-load" style="padding:18px">جارٍ التحميل…</div>';
+      else if(!tx.length) detail = '<div class="fn-load" style="padding:18px">مفيش حركات</div>';
+      else detail = '<div style="margin-top:11px">' + tx.map(function(t){
+        /* العهدة فيها تلات أنواع مش اتنين: استلام (+) · صرف (−) · رد (−) */
+        var K = { receive:['in','arrow-down-left','استلام عهدة'],
+                  spend:  ['out','arrow-up-right','صرف'],
+                  ret:    ['out','arrow-back-up','رد للإدارة'] };
+        var k = K[t.kind] || K.ret;
+        return '<div class="fn-row" style="margin-bottom:6px">' +
+          '<div class="ic ' + k[0] + '"><i class="ti ti-' + k[1] + '"></i></div>' +
+          '<div class="tx"><b>' + fnE(t.note || k[2]) + '</b>' +
+            '<span>' + fnE(t.kind === 'spend' ? (EXP_AR[t.category] || t.category || '—') : k[2]) +
+            ' · ' + String(t.txn_date).slice(0,10) + '</span></div>' +
+          '<div class="amt ' + k[0] + '">' + fnKD(t.amount) + '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    return '<div class="cu-card">' +
+      '<div class="cu-hd">' +
+        '<div class="cu-av">' + fnE(init) + '</div>' +
+        '<div class="tx"><b>' + fnE(nm) + '</b><span>' + fnE(r.holder_id || '') +
+          ' · آخر حركة ' + (r.last_txn ? String(r.last_txn).slice(0,10) : '—') + '</span></div>' +
+        '<div class="cu-bal"><b>' + fnKD(r.balance) + '</b><span>د.ك معاه</span></div>' +
+      '</div>' +
+      '<div class="cu-split">' +
+        '<div class="r"><span>استلم</span><b>' + fnKD(r.received) + '</b></div>' +
+        '<div class="s"><span>صرف</span><b>' + fnKD(r.spent) + '</b></div>' +
+        (Number(r.returned) > 0
+          ? '<div class="s"><span>رجّع</span><b>' + fnKD(r.returned) + '</b></div>' : '') +
+      '</div>' +
+      '<button class="cu-more" onclick="cuToggle(\'' + fnE(r.holder_id) + '\')">' +
+        (isOpen ? 'اخفي الحركات' : 'شوف آخر الحركات (' + (r.txn_count||0) + ')') + '</button>' +
+      detail +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+/* تحديث دوري هادي */
+setInterval(function(){
+  if(typeof mgrAuthed === 'function' && !mgrAuthed()) return;
+  if(document.hidden) return;
+  if(currentTab === 'acc')     fnLoad(true);
+  if(currentTab === 'custody') cuLoad(true);
+}, 60000);
 
 </script>
 </body>
