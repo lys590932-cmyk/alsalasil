@@ -4165,9 +4165,18 @@ function loadShiftSettings(){
   return sb('app_settings?select=key,value')
     .then(function(rows){
       (rows||[]).forEach(function(r){
-        if(r.key==='late_grace_minutes')    SHIFT_CFG.grace    = parseInt(r.value,10)||30;
-        if(r.key==='late_deduct_fraction')  SHIFT_CFG.fraction = parseFloat(r.value)||0.5;
-        if(r.key==='prealert_minutes')      SHIFT_CFG.prealert = parseInt(r.value,10)||30;
+        /* ★ كان || 0.5 — و«0 || 0.5» بترجّع 0.5، يعني الإدارة لو قفلت
+           الخصم بصفر، التطبيق كان بيرجّعه نص يوم ويكمّل خصم. */
+        var _n;
+        if(r.key==='late_grace_minutes'){
+          _n = parseInt(r.value,10);  if(!isNaN(_n) && _n>=0) SHIFT_CFG.grace = _n;
+        }
+        if(r.key==='late_deduct_fraction'){
+          _n = parseFloat(r.value);   if(!isNaN(_n) && _n>=0) SHIFT_CFG.fraction = _n;
+        }
+        if(r.key==='prealert_minutes'){
+          _n = parseInt(r.value,10);  if(!isNaN(_n) && _n>=0) SHIFT_CFG.prealert = _n;
+        }
       });
     }).catch(function(){});
 }
@@ -4328,6 +4337,19 @@ function checkShiftAlerts(){
     }
     markAlertSent('late30');
     var actualLate = ci ? Math.round((ci - start)/60000) : lateMin;
+
+    /* نسبة الخصم صفر = القاعدة مقفولة. بننبّه السائق إنه اتأخر لكن
+       مابنكتبش أي خصم — ومابنسيبش صف في القاعدة الإدارة تضطر تلغيه بعدين. */
+    if(!(SHIFT_CFG.fraction > 0)){
+      fireShiftNotif(
+        LANG==='ar' ? '⏰ اتأخرت عن الشفت' : '⏰ You were late',
+        LANG==='ar' ? 'اتأخرت '+actualLate+' دقيقة عن بداية الشفت. مفيش خصم — بس التأخير متسجّل.'
+                    : 'You were '+actualLate+' min late. No deduction — but the lateness is recorded.',
+        'shift-late', 'warn'
+      );
+      return;
+    }
+
     createLateDeduction(actualLate, sh.shift_start).then(function(amount){
       fireShiftNotif(
         LANG==='ar' ? '⚠️ تم خصم تأخير' : '⚠️ Late deduction applied',
