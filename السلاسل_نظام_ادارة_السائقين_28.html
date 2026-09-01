@@ -2081,7 +2081,8 @@ body::after{
       <button class="tbtn" onclick="exportBankSheet()"><i class="ti ti-building-bank"></i> <span data-i18n="btn_bank_sheet">شيت البنك</span></button>
 
       <h6>البيانات والمزامنة</h6>
-      <button class="tbtn" onclick="syncDriversToSupabase()"><i class="ti ti-arrows-exchange"></i> <span data-i18n="btn_sync_app">مزامنة App</span></button>
+      <button class="tbtn" onclick="ARKDRV.pushNow()" title="ارفع السائقين للتطبيقات دلوقتي (بيحصل تلقائياً بعد أي تعديل كمان)"><i class="ti ti-arrows-exchange"></i> <span data-i18n="btn_sync_app">مزامنة App</span></button>
+      <span id="drvSyncState" style="font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:5px"></span>
       <button class="tbtn" onclick="manualSaveFile()"><i class="ti ti-device-floppy"></i> <span data-i18n="btn_save_file">حفظ الملف</span></button>
       <button class="tbtn" onclick="openBackupModal()" style="position:relative"><i class="ti ti-cloud-upload"></i> <span data-i18n="btn_backup">نسخ احتياطي</span><span id="backupStatusDot" style="width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:auto" title="حالة آخر نسخة"></span></button>
       <button class="tbtn" onclick="doExport()"><i class="ti ti-download"></i> <span data-i18n="btn_export">تصدير</span></button>
@@ -18967,6 +18968,153 @@ window.finPaint = function(){
 /* أول رفع بعد ما ARK يخلص تحميل، وبعدها كل عشر دقايق */
 setTimeout(function(){ push(true).then(pull); }, 9000);
 setInterval(function(){ if(!document.hidden) push(true); }, 600000);
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK — مزامنة السائقين تلقائياً
+   ──────────────────────────────────────────────────────────────────────────
+   المشكلة اللي بيحلّها:
+   لما تغيّر شريك سائق في ARK (مثلاً أوكشوكو وسامسون من هومي لكيتا)،
+   التغيير بيتحفظ في متصفح اللاب بس. جدول drivers في السحابة بيفضل
+   بالبيانات القديمة، فتطبيق المدير وفلاي بيشوفوا الشريك الغلط.
+
+   المزامنة كانت موجودة أصلاً (زر «مزامنة App») لكن **يدوية** — يعني
+   البيانات بتفضل غلط لحد ما حد يفتكر يضغط الزر. وده مش نظام، ده أمل.
+
+   دلوقتي: أي حفظ في ملف سائق بيرفع التغيير تلقائياً بعد ثواني.
+
+   ★ وحاجة تانية مهمة: المزامنة القديمة بترفع وبتحدّث بس — عمرها ما
+   بتمسح. يعني سائق شلته من ARK بيفضل ظاهر في التطبيق للأبد. أضفت
+   تنظيف: أي سائق موجود في السحابة ومش موجود في ARK بيتعلّم كـ
+   inactive بدل ما يتحذف (عشان تاريخه ما يضيعش).
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+var DS = window.ARKDRV = { last:null, busy:false, err:null, pending:false };
+
+function tok(){
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        var v = JSON.parse(localStorage.getItem(k) || '{}');
+        if(v && v.access_token) return v.access_token;
+      }
+    }
+  }catch(e){}
+  return null;
+}
+function H(extra){
+  var h = { apikey:SUPA_KEY, Authorization:'Bearer ' + (tok() || SUPA_KEY),
+            'Content-Type':'application/json' };
+  if(extra) Object.keys(extra).forEach(function(k){ h[k] = extra[k]; });
+  return h;
+}
+
+/* ── رفع دفعة واحدة: أسرع بكتير من نداء لكل سائق ── */
+function pushAll(silent){
+  if(DS.busy){ DS.pending = true; return Promise.resolve(); }
+  if(typeof DRV === 'undefined' || !Array.isArray(DRV) || !DRV.length) return Promise.resolve();
+  DS.busy = true;
+
+  var rows = DRV.map(function(d){
+    var r = {
+      id: d.id, name: d.name, partner: d.partner || null,
+      sim: d.sim || '', car: d.car || '', license: d.license || '',
+      civil: d.civil || '', device: d.device || '', petrol: d.petrol || '',
+      nationality: d.nationality || '', age: parseInt(d.age) || 0,
+      start_date: d.startDate || '', health: d.health || '',
+      is_active: true
+    };
+    try{ r.salary_base = (getSalData(d.id) || {}).base || 0; }catch(e){ r.salary_base = 0; }
+    var em = (d.email || '').trim();
+    if(em) r.email = em;
+    return r;
+  });
+
+  return fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
+    method:'POST',
+    headers: H({ 'Prefer':'resolution=merge-duplicates,return=minimal' }),
+    body: JSON.stringify(rows)
+  }).then(function(r){
+    if(!r.ok) return r.text().then(function(t){ throw new Error(r.status + ' ' + t.slice(0,120)); });
+    return prune(rows.map(function(x){ return x.id; }));
+  }).then(function(gone){
+    DS.last = new Date(); DS.err = null;
+    if(!silent && typeof toast === 'function')
+      toast('السائقون اترفعوا — ' + rows.length + ' سائق' +
+            (gone ? ' · ' + gone + ' اتعلّم كغير نشط' : ''), 's');
+    try{ drvSyncPaint(); }catch(e){}
+  }).catch(function(e){
+    DS.err = String(e.message || e);
+    /* عمود is_active ممكن ميكونش موجود — مش سبب لفشل الرفع كله */
+    if(/is_active/.test(DS.err)) DS.err = 'عمود is_active مش موجود في جدول drivers';
+    if(!silent && typeof toast === 'function') toast('تعذّر رفع السائقين: ' + DS.err, 'e');
+    try{ drvSyncPaint(); }catch(x){}
+  }).then(function(){
+    DS.busy = false;
+    if(DS.pending){ DS.pending = false; setTimeout(function(){ pushAll(true); }, 800); }
+  });
+}
+
+/* ── السائق اللي اتشال من ARK: نعلّمه غير نشط، مش نمسحه ──
+   الحذف كان هيضيّع تاريخه في الحضور والرواتب والعهدة. */
+function prune(liveIds){
+  return fetch(SUPA_URL + '/rest/v1/drivers?select=id,is_active', { headers:H() })
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      var gone = rows.filter(function(x){
+        return liveIds.indexOf(x.id) < 0 && x.is_active !== false;
+      }).map(function(x){ return x.id; });
+      if(!gone.length) return 0;
+      return fetch(SUPA_URL + '/rest/v1/drivers?id=in.(' +
+          gone.map(encodeURIComponent).join(',') + ')', {
+        method:'PATCH', headers:H({'Prefer':'return=minimal'}),
+        body: JSON.stringify({ is_active:false })
+      }).then(function(){ return gone.length; }).catch(function(){ return 0; });
+    })
+    .catch(function(){ return 0; });
+}
+
+/* ── رفع مؤجّل بعد أي حفظ ── */
+var t = null;
+function schedule(){
+  clearTimeout(t);
+  t = setTimeout(function(){ pushAll(true); }, 3500);
+}
+DS.pushNow = function(){ return pushAll(false); };
+
+/* نلفّ save() الأصلية — أي تعديل في سائق أو شريك بيرفع تلقائياً */
+if(typeof window.save === 'function'){
+  var _save = window.save;
+  window.save = function(){
+    var r = _save.apply(this, arguments);
+    try{ schedule(); }catch(e){}
+    return r;
+  };
+}
+
+/* ── حالة المزامنة جنب زر «مزامنة App» ── */
+window.drvSyncPaint = function(){
+  var el = document.getElementById('drvSyncState');
+  if(!el) return;
+  if(DS.err){
+    el.innerHTML = '<i class="ti ti-cloud-off" style="color:#b91c1c"></i> ' +
+                   '<span style="color:#b91c1c">' + DS.err + '</span>';
+  }else if(DS.last){
+    el.innerHTML = '<i class="ti ti-cloud-check" style="color:#059669"></i> التطبيقات محدَّثة ' +
+      DS.last.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+  }else{
+    el.innerHTML = '<i class="ti ti-cloud" style="color:var(--muted)"></i> لسه مترفعش';
+  }
+};
+
+/* رفع أول ما ARK يفتح — عشان أي تعديل اتعمل والنت مقطوع يلحق يروح */
+setTimeout(function(){ pushAll(true); }, 12000);
+/* وكل ربع ساعة — شبكة أمان */
+setInterval(function(){ if(!document.hidden) pushAll(true); }, 900000);
 })();
 
 </script>
