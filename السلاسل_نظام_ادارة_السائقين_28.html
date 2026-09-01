@@ -2083,6 +2083,7 @@ body::after{
       <h6>البيانات والمزامنة</h6>
       <button class="tbtn" onclick="ARKDRV.pushNow()" title="ارفع السائقين للتطبيقات دلوقتي (بيحصل تلقائياً بعد أي تعديل كمان)"><i class="ti ti-arrows-exchange"></i> <span data-i18n="btn_sync_app">مزامنة App</span></button>
       <span id="drvSyncState" style="font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:5px"></span>
+      <button class="tbtn" onclick="arkDiagRun()" style="color:#b45309" title="بيمشي في خطوات الرفع واحدة واحدة ويقول فين بالظبط بيقف"><i class="ti ti-stethoscope"></i> <span>افحص المزامنة</span></button>
       <button class="tbtn" onclick="manualSaveFile()"><i class="ti ti-device-floppy"></i> <span data-i18n="btn_save_file">حفظ الملف</span></button>
       <button class="tbtn" onclick="openBackupModal()" style="position:relative"><i class="ti ti-cloud-upload"></i> <span data-i18n="btn_backup">نسخ احتياطي</span><span id="backupStatusDot" style="width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:auto" title="حالة آخر نسخة"></span></button>
       <button class="tbtn" onclick="doExport()"><i class="ti ti-download"></i> <span data-i18n="btn_export">تصدير</span></button>
@@ -19067,6 +19068,9 @@ function doPush(cols, silent){
     };
     if(hasActive) r.is_active = true;
     try{ r.salary_base = (getSalData(d.id) || {}).base || 0; }catch(e){ r.salary_base = 0; }
+    /* الإيميل بنبعته للسائق اللي عنده واحد بس.
+       لو بعتناه فاضي أو null، الـ upsert هيمسح الإيميل اللي السائق
+       سجّله من فلاي — ودي بيانات مش بتترجع. */
     var em = (d.email || '').trim();
     if(em) r.email = em;
     /* نشيل أي حقل مش موجود في الجدول — ده اللي بيمنع الـ 400 */
@@ -19074,12 +19078,30 @@ function doPush(cols, silent){
     return r;
   });
 
-  return fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
-    method:'POST',
-    headers: H({ 'Prefer':'resolution=merge-duplicates,return=minimal' }),
-    body: JSON.stringify(rows)
-  }).then(function(r){
-    if(!r.ok) return r.text().then(function(t){ throw new Error(r.status + ' ' + t.slice(0,120)); });
+  /* ★ PostgREST بيرفض الدفعة لو الصفوف مفاتيحها مختلفة:
+        PGRST102 "All object keys must match".
+     وعندنا الإيميل بيتبعت للبعض بس. فبنقسّم الصفوف لمجموعات كل
+     مجموعة مفاتيحها واحدة، ونبعت كل مجموعة لوحدها. كده بنحافظ على
+     إننا مانمسحش إيميل حد، وفي نفس الوقت كل دفعة صالحة.
+     (المزامنة القديمة كانت بترفع سائق سائق فمكنتش بتقع في ده — بس
+      كانت بتعمل 40 نداء بدل 2.) */
+  var groups = {};
+  rows.forEach(function(r){
+    var sig = Object.keys(r).sort().join('|');
+    (groups[sig] = groups[sig] || []).push(r);
+  });
+  var batches = Object.keys(groups).map(function(k){ return groups[k]; });
+
+  return Promise.all(batches.map(function(batch){
+    return fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
+      method:'POST',
+      headers: H({ 'Prefer':'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify(batch)
+    }).then(function(r){
+      if(!r.ok) return r.text().then(function(t){
+        throw new Error(r.status + ' ' + t.slice(0,140)); });
+    });
+  })).then(function(){
     return hasActive ? prune(rows.map(function(x){ return x.id; })) : 0;
   }).then(function(gone){
     DS.last = new Date(); DS.err = null;
@@ -19091,6 +19113,8 @@ function doPush(cols, silent){
     DS.err = String(e.message || e);
     var m = DS.err.match(/column "([a-z_]+)" does not exist|'([a-z_]+)' column/i);
     if(m){ DS.err = 'عمود ' + (m[1] || m[2]) + ' مش موجود في جدول drivers'; COLS = null; }
+    else if(/PGRST102|object keys must match/i.test(DS.err))
+      DS.err = 'صفوف الدفعة مفاتيحها مختلفة (PGRST102)';
     if(!silent && typeof toast === 'function') toast('تعذّر رفع السائقين: ' + DS.err, 'e');
     try{ drvSyncPaint(); }catch(x){}
   }).then(function(){
@@ -19155,6 +19179,253 @@ window.drvSyncPaint = function(){
 setTimeout(function(){ pushAll(true); }, 12000);
 /* وكل ربع ساعة — شبكة أمان */
 setInterval(function(){ if(!document.hidden) pushAll(true); }, 900000);
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK — فاحص المزامنة
+   ──────────────────────────────────────────────────────────────────────────
+   المزامنة بتشتغل في الخلفية بصمت. لو فشلت، مفيش حاجة بتقول ليه —
+   وده اللي خلانا نلف كتير: الشريك مش بيتحدّث، والمحاسبة فاضية، ومحدش
+   عارف السبب في أنهي خطوة بالظبط.
+
+   الفاحص ده بيمشي في نفس خطوات الرفع واحدة واحدة، وبيوقف عند أول
+   خطوة فاشلة ويقول رد الخادم بالحرف. يعني بدل «فيه مشكلة» تبقى
+   «الخطوة 4 رجّعت 401 — المفتاح مرفوض».
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+function tok(){
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        var v = JSON.parse(localStorage.getItem(k) || '{}');
+        if(v && v.access_token) return v.access_token;
+      }
+    }
+  }catch(e){}
+  return null;
+}
+function H(x){
+  var h = { apikey:SUPA_KEY, Authorization:'Bearer ' + (tok() || SUPA_KEY),
+            'Content-Type':'application/json' };
+  if(x) Object.keys(x).forEach(function(k){ h[k] = x[k]; });
+  return h;
+}
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
+}
+
+var steps = [];
+function step(name, ok, detail, fix){
+  steps.push({ name:name, ok:ok, detail:detail || '', fix:fix || '' });
+  paint();
+}
+/* اللوحة بتتبني لوحدها وتتعلّق في الصفحة — أضمن من إني أدوّر على
+   مكان أحقنها فيه في HTML طوله ميجا */
+function ensurePanel(){
+  if(document.getElementById('arkDiagPanel')) return;
+  var d = document.createElement('div');
+  d.id = 'arkDiagPanel';
+  d.style.cssText = 'position:fixed;inset-inline-end:18px;bottom:18px;z-index:99999;' +
+    'width:min(430px,calc(100vw - 36px));max-height:78vh;display:flex;flex-direction:column;' +
+    'background:var(--s1,#fff);border:1px solid var(--br,#e5e7eb);border-radius:16px;' +
+    'box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden;font-family:inherit';
+  d.innerHTML =
+    '<div style="padding:13px 15px;border-bottom:1px solid var(--br);background:var(--s2);' +
+      'display:flex;align-items:center;gap:9px;flex:0 0 auto">' +
+      '<b style="font-size:13.5px;flex:1">🩺 فحص المزامنة مع السحابة</b>' +
+      '<button onclick="arkDiagCopy()" style="background:var(--s3,#eef1f4);border:1px solid var(--br);' +
+        'border-radius:9px;padding:6px 11px;font-family:inherit;font-size:11.5px;font-weight:800;' +
+        'cursor:pointer;color:var(--text)">انسخ</button>' +
+      '<button onclick="document.getElementById(\'arkDiagPanel\').remove()" ' +
+        'style="background:none;border:none;font-size:19px;cursor:pointer;color:var(--muted);' +
+        'padding:0 4px">×</button>' +
+    '</div>' +
+    '<div id="arkDiagBody" style="overflow-y:auto;flex:1 1 auto"></div>';
+  document.body.appendChild(d);
+}
+
+function paint(){
+  var el = document.getElementById('arkDiagBody');
+  if(!el) return;
+  el.innerHTML = steps.map(function(s, i){
+    var ic = s.ok === true ? '✅' : (s.ok === false ? '❌' : '⏳');
+    var col = s.ok === true ? '#059669' : (s.ok === false ? '#b91c1c' : 'var(--muted)');
+    return '<div style="padding:11px 13px;border-bottom:1px solid var(--br);' +
+      'display:flex;gap:10px;align-items:flex-start">' +
+      '<span style="font-size:15px;flex:0 0 auto">' + ic + '</span>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13px;font-weight:800;color:' + col + '">' +
+          (i+1) + ') ' + esc(s.name) + '</div>' +
+        (s.detail ? '<div style="font-size:11.5px;color:var(--muted);margin-top:3px;' +
+          'line-height:1.7;word-break:break-word;font-family:monospace">' +
+          esc(s.detail) + '</div>' : '') +
+        (s.fix ? '<div style="font-size:12px;margin-top:6px;padding:8px 10px;' +
+          'background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);' +
+          'border-radius:8px;line-height:1.75"><b>الحل:</b> ' + esc(s.fix) + '</div>' : '') +
+      '</div></div>';
+  }).join('');
+}
+
+window.arkDiagRun = async function(){
+  steps = [];
+  ensurePanel();
+  paint();
+
+  /* 1) النسخة المرفوعة */
+  var isNew = typeof window.ARKDRV !== 'undefined';
+  step('نسخة ARK المفتوحة',
+       isNew,
+       isNew ? 'النسخة الجديدة (فيها المزامنة التلقائية)'
+             : 'نسخة قديمة — مفيش مزامنة تلقائية فيها',
+       isNew ? '' : 'ارفع ملف ARK على GitHub واعمل Ctrl+Shift+R. النسخة اللي شغّالة دلوقتي قديمة.');
+  if(!isNew) return;
+
+  /* 2) عدد السائقين محلياً */
+  var n = (typeof DRV !== 'undefined' && DRV) ? DRV.length : 0;
+  step('السائقون في ARK', n > 0, n + ' سائق',
+       n ? '' : 'مفيش سائقين محفوظين في المتصفح ده.');
+  if(!n) return;
+
+  /* 3) الاتصال بالخادم */
+  try{
+    var r0 = await fetch(SUPA_URL + '/rest/v1/', { headers:H() });
+    step('الاتصال بـ Supabase', r0.ok, 'HTTP ' + r0.status,
+      r0.ok ? '' : (r0.status === 401 ? 'المفتاح مرفوض — SUPA_KEY في ARK قديم أو اتغيّر.'
+                                      : 'الخادم مش رادّ.'));
+    if(!r0.ok) return;
+  }catch(e){
+    step('الاتصال بـ Supabase', false, String(e.message||e),
+      'مفيش إنترنت، أو الخادم محجوب.');
+    return;
+  }
+
+  /* 4) القراءة من جدول drivers */
+  var cols = null;
+  try{
+    var r1 = await fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=1', { headers:H() });
+    var t1 = await r1.text();
+    if(!r1.ok){
+      step('قراءة جدول drivers', false, 'HTTP ' + r1.status + ' — ' + t1.slice(0,160),
+        r1.status === 401 || r1.status === 403
+          ? 'صلاحيات RLS مانعة القراءة على جدول drivers.'
+          : 'الجدول مش موجود أو الاسم مختلف.');
+      return;
+    }
+    var rows = JSON.parse(t1 || '[]');
+    cols = rows.length ? Object.keys(rows[0]) : null;
+    step('قراءة جدول drivers', true,
+      rows.length ? ('الأعمدة: ' + cols.join(', ')) : 'الجدول فاضي');
+  }catch(e){
+    step('قراءة جدول drivers', false, String(e.message||e)); return;
+  }
+
+  /* 5) تجربة رفع سائق واحد — نفس منطق المزامنة بالظبط */
+  var KNOWN = ['id','name','partner','sim','salary_base','car','license','civil',
+               'device','petrol','nationality','age','start_date','health','email'];
+  var allow = cols || KNOWN;
+  var d = DRV[0];
+  var row = {
+    id:d.id, name:d.name, partner:d.partner || null, sim:d.sim || '',
+    car:d.car || '', license:d.license || '', civil:d.civil || '',
+    device:d.device || '', petrol:d.petrol || '', nationality:d.nationality || '',
+    age:parseInt(d.age) || 0, start_date:d.startDate || '', health:d.health || ''
+  };
+  if(allow.indexOf('is_active') >= 0) row.is_active = true;
+  try{ row.salary_base = (getSalData(d.id)||{}).base || 0; }catch(e){}
+  var em = (d.email||'').trim(); if(em) row.email = em;
+  Object.keys(row).forEach(function(k){ if(allow.indexOf(k) < 0) delete row[k]; });
+
+  try{
+    var r2 = await fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
+      method:'POST', headers:H({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify([row])
+    });
+    var t2 = r2.ok ? '' : await r2.text();
+    step('رفع سائق واحد (' + d.id + ')', r2.ok,
+      r2.ok ? 'تم' : ('HTTP ' + r2.status + ' — ' + t2.slice(0,200)),
+      r2.ok ? '' : (/PGRST102/.test(t2) ? 'مفاتيح الصفوف مختلفة.'
+              : /does not exist/.test(t2) ? 'عمود مش موجود في الجدول — الرسالة فوق بتقول اسمه.'
+              : /42501|permission/.test(t2) ? 'صلاحيات RLS مانعة الكتابة على drivers.'
+              : 'رد الخادم فوق بالحرف.'));
+    if(!r2.ok) return;
+  }catch(e){
+    step('رفع سائق واحد', false, String(e.message||e)); return;
+  }
+
+  /* 6) الرفع الكامل */
+  try{
+    await ARKDRV.pushNow();
+    var ok = !ARKDRV.err;
+    step('رفع كل السائقين', ok,
+      ok ? (n + ' سائق اترفعوا') : ARKDRV.err,
+      ok ? '' : 'الرسالة فوق هي رد الخادم.');
+  }catch(e){
+    step('رفع كل السائقين', false, String(e.message||e));
+  }
+
+  /* 7) نتأكد إن اللي في السحابة بقى زي اللي في ARK */
+  try{
+    var ids = DRV.slice(0,5).map(function(x){ return x.id; });
+    var r3 = await fetch(SUPA_URL + '/rest/v1/drivers?select=id,name,partner&id=in.(' +
+             ids.map(encodeURIComponent).join(',') + ')', { headers:H() });
+    var cloud = r3.ok ? await r3.json() : [];
+    var bad = [];
+    cloud.forEach(function(c){
+      var loc = DRV.filter(function(x){ return x.id === c.id; })[0];
+      if(loc && (loc.partner||null) !== (c.partner||null))
+        bad.push(c.id + ': ARK=' + (loc.partner||'—') + ' السحابة=' + (c.partner||'—'));
+    });
+    step('مطابقة الشريك (أول 5 سائقين)', bad.length === 0,
+      bad.length ? bad.join(' · ') : 'كله مطابق',
+      bad.length ? 'الرفع نجح بس القيم مختلفة — ابعتلي السطر ده.' : '');
+  }catch(e){
+    step('مطابقة الشريك', false, String(e.message||e));
+  }
+
+  /* 8) المحاسبة */
+  try{
+    var r4 = await fetch(SUPA_URL + '/rest/v1/rpc/ark_finance_month', {
+      method:'POST', headers:H(),
+      body: JSON.stringify({p_month:new Date().getMonth()+1, p_year:new Date().getFullYear()})
+    });
+    if(!r4.ok){
+      var t4 = await r4.text();
+      step('المحاسبة على السحابة', false, 'HTTP ' + r4.status + ' — ' + t4.slice(0,140),
+        /does not exist|schema cache/.test(t4)
+          ? 'ملف ark_finance.sql لسه متشغّلش على Supabase.' : '');
+    }else{
+      var m = await r4.json();
+      var has = m && (Number(m.inc_count) > 0 || Number(m.exp_count) > 0);
+      step('المحاسبة على السحابة', has,
+        'دخل: ' + (m.inc_count||0) + ' قيد · مصروف: ' + (m.exp_count||0) + ' قيد',
+        has ? '' : 'الجداول موجودة بس فاضية — اضغط «ارفع للسحابة» في شاشة المحاسبة.');
+    }
+  }catch(e){
+    step('المحاسبة على السحابة', false, String(e.message||e));
+  }
+};
+
+/* نسخ النتيجة عشان تبعتهالي */
+window.arkDiagCopy = function(){
+  var txt = steps.map(function(s,i){
+    return (i+1) + ') ' + (s.ok===true?'OK':'FAIL') + ' — ' + s.name +
+           (s.detail ? '\n   ' + s.detail : '');
+  }).join('\n');
+  try{
+    navigator.clipboard.writeText(txt);
+    toast('اتنسخ — الصقه في الشات','s');
+  }catch(e){
+    var ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast('اتنسخ','s'); }catch(x){}
+    document.body.removeChild(ta);
+  }
+};
 })();
 
 </script>
