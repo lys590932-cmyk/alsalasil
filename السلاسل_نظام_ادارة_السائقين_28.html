@@ -18984,10 +18984,15 @@ setInterval(function(){ if(!document.hidden) push(true); }, 600000);
 
    دلوقتي: أي حفظ في ملف سائق بيرفع التغيير تلقائياً بعد ثواني.
 
-   ★ وحاجة تانية مهمة: المزامنة القديمة بترفع وبتحدّث بس — عمرها ما
-   بتمسح. يعني سائق شلته من ARK بيفضل ظاهر في التطبيق للأبد. أضفت
-   تنظيف: أي سائق موجود في السحابة ومش موجود في ARK بيتعلّم كـ
-   inactive بدل ما يتحذف (عشان تاريخه ما يضيعش).
+   ★ وحاجة تانية: المزامنة القديمة بترفع وبتحدّث بس — عمرها ما بتمسح.
+   يعني سائق شلته من ARK بيفضل ظاهر في التطبيق للأبد. أضفت تنظيف
+   بيعلّمه غير نشط بدل ما يمسحه (عشان تاريخه ما يضيعش) — بس ده
+   بيشتغل فقط لو عمود is_active موجود في الجدول.
+
+   ★★ الكود ده بيسأل الجدول عن أعمدته قبل ما يبعت أي حاجة، وبيبعت
+   الحقول الموجودة بس. السبب: بعتّ قبل كده عمود is_active وهو مش
+   موجود عند العميل، فالرفع كله كان هيفشل بـ 400 — سائق واحد بحقل
+   غلط كان كفيل يوقّف مزامنة السائقين كلها.
    ══════════════════════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
@@ -19013,11 +19018,44 @@ function H(extra){
   return h;
 }
 
+/* ── نسأل الجدول عن أعمدته مرة واحدة ونفتكرها ──
+   PostgREST بيرجّع خطأ 400 لو بعتّ عمود مش موجود، وبيفشل الدفعة كلها.
+   فبدل ما نفترض، بنقرا صف واحد ونشوف مفاتيحه. لو الجدول فاضي بنسأل
+   وصف الـ API نفسه. */
+var COLS = null;
+function columns(){
+  if(COLS) return Promise.resolve(COLS);
+  return fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=1', { headers:H() })
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      if(rows && rows.length){ COLS = Object.keys(rows[0]); return COLS; }
+      /* جدول فاضي — نجيب الأعمدة من وصف الـ API */
+      return fetch(SUPA_URL + '/rest/v1/', { headers:H() })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(spec){
+          var d = spec && spec.definitions && spec.definitions.drivers;
+          COLS = (d && d.properties) ? Object.keys(d.properties) : null;
+          return COLS;
+        }).catch(function(){ return null; });
+    })
+    .catch(function(){ return null; });
+}
+
 /* ── رفع دفعة واحدة: أسرع بكتير من نداء لكل سائق ── */
 function pushAll(silent){
   if(DS.busy){ DS.pending = true; return Promise.resolve(); }
   if(typeof DRV === 'undefined' || !Array.isArray(DRV) || !DRV.length) return Promise.resolve();
   DS.busy = true;
+  return columns().then(function(cols){ return doPush(cols, silent); });
+}
+
+function doPush(cols, silent){
+  /* لو معرفناش الأعمدة، بنبعت المجموعة اللي المزامنة القديمة كانت
+     بتبعتها وهي شغّالة أصلاً — أأمن من التخمين */
+  var KNOWN = ['id','name','partner','sim','salary_base','car','license','civil',
+               'device','petrol','nationality','age','start_date','health','email'];
+  var allow = cols || KNOWN;
+  var hasActive = allow.indexOf('is_active') >= 0;
 
   var rows = DRV.map(function(d){
     var r = {
@@ -19025,12 +19063,14 @@ function pushAll(silent){
       sim: d.sim || '', car: d.car || '', license: d.license || '',
       civil: d.civil || '', device: d.device || '', petrol: d.petrol || '',
       nationality: d.nationality || '', age: parseInt(d.age) || 0,
-      start_date: d.startDate || '', health: d.health || '',
-      is_active: true
+      start_date: d.startDate || '', health: d.health || ''
     };
+    if(hasActive) r.is_active = true;
     try{ r.salary_base = (getSalData(d.id) || {}).base || 0; }catch(e){ r.salary_base = 0; }
     var em = (d.email || '').trim();
     if(em) r.email = em;
+    /* نشيل أي حقل مش موجود في الجدول — ده اللي بيمنع الـ 400 */
+    Object.keys(r).forEach(function(k){ if(allow.indexOf(k) < 0) delete r[k]; });
     return r;
   });
 
@@ -19040,7 +19080,7 @@ function pushAll(silent){
     body: JSON.stringify(rows)
   }).then(function(r){
     if(!r.ok) return r.text().then(function(t){ throw new Error(r.status + ' ' + t.slice(0,120)); });
-    return prune(rows.map(function(x){ return x.id; }));
+    return hasActive ? prune(rows.map(function(x){ return x.id; })) : 0;
   }).then(function(gone){
     DS.last = new Date(); DS.err = null;
     if(!silent && typeof toast === 'function')
@@ -19049,8 +19089,8 @@ function pushAll(silent){
     try{ drvSyncPaint(); }catch(e){}
   }).catch(function(e){
     DS.err = String(e.message || e);
-    /* عمود is_active ممكن ميكونش موجود — مش سبب لفشل الرفع كله */
-    if(/is_active/.test(DS.err)) DS.err = 'عمود is_active مش موجود في جدول drivers';
+    var m = DS.err.match(/column "([a-z_]+)" does not exist|'([a-z_]+)' column/i);
+    if(m){ DS.err = 'عمود ' + (m[1] || m[2]) + ' مش موجود في جدول drivers'; COLS = null; }
     if(!silent && typeof toast === 'function') toast('تعذّر رفع السائقين: ' + DS.err, 'e');
     try{ drvSyncPaint(); }catch(x){}
   }).then(function(){
