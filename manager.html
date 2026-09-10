@@ -210,6 +210,64 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
   border-radius:9px;cursor:pointer;font-size:16px;display:grid;place-items:center;font-family:inherit}
 .fn-nav button:disabled{opacity:.35;cursor:default}
 .fn-nav b{font-size:14px;font-weight:900}
+/* ── إعدادات كاش السلاسل ── */
+.hcr-sec{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:900;
+  color:var(--muted,#57606a);margin:20px 0 9px;padding:0 2px}
+.hcr-sec:first-child{margin-top:4px}
+.hcr-sec i{font-size:15px}
+.hcr-note{margin:-4px 2px 10px;font-size:11px;line-height:1.75;color:var(--muted,#57606a)}
+.hcr-tot{display:flex;gap:9px;margin-bottom:11px}
+.hcr-tot > div{flex:1;background:var(--bg2,#f6f8fa);border-radius:11px;padding:11px;text-align:center}
+.hcr-tot span{display:block;font-size:10px;color:var(--muted,#57606a);font-weight:800}
+.hcr-tot b{display:block;font-size:17px;font-weight:900;margin-top:3px;font-variant-numeric:tabular-nums}
+.hcr-tot b.bad{color:#dc2626}
+.hcr-age{background:var(--card,#fff);border:1px solid var(--br,#e5e7eb);border-radius:13px;
+  padding:12px;margin-bottom:9px}
+.hcr-age .top{display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap}
+.hcr-age .top b{font-size:14px;font-weight:900}
+.hcr-age .top em{font-style:normal;font-size:10px;font-weight:800;color:var(--muted,#57606a);
+  background:var(--bg2,#f6f8fa);padding:2px 7px;border-radius:999px}
+.hcr-age .top .st{margin-inline-start:auto;font-size:10px;font-weight:900;
+  padding:3px 9px;border-radius:999px}
+.hcr-age .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.hcr-age .nums > div{text-align:center;background:var(--bg2,#f6f8fa);border-radius:9px;padding:7px 3px}
+.hcr-age .nums span{display:block;font-size:9px;color:var(--muted,#57606a);font-weight:800}
+.hcr-age .nums b{display:block;font-size:12.5px;font-weight:900;margin-top:2px;
+  font-variant-numeric:tabular-nums}
+.hcr-track{height:5px;border-radius:99px;background:var(--bg2,#eef1f4);margin-top:9px;overflow:hidden}
+.hcr-fill{height:100%;border-radius:99px;transition:width .3s}
+.hcr-row{display:flex;align-items:center;gap:11px;background:var(--card,#fff);
+  border:1px solid var(--br,#e5e7eb);border-radius:13px;padding:11px;margin-bottom:8px;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hcr-row:active{background:var(--bg2,#f6f8fa)}
+.hcr-row .ic{width:38px;height:38px;border-radius:11px;background:#1c5878;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
+.hcr-row .tx{flex:1;min-width:0}
+.hcr-row .tx b{display:block;font-size:13.5px;font-weight:900}
+.hcr-row .tx em{font-style:normal;font-size:9.5px;background:#fee2e2;color:#b91c1c;
+  padding:1px 6px;border-radius:999px;font-weight:800}
+.hcr-row .tx span{display:block;font-size:10.5px;color:var(--muted,#57606a);
+  font-weight:700;margin-top:2px;line-height:1.6}
+.hcr-row .tx span.c{color:#0d9488;font-weight:800}
+.hcr-row > i.ti-chevron-left{color:var(--muted,#9aa4ae);font-size:19px;flex:none}
+.hcr-empty{text-align:center;padding:18px;color:var(--muted,#57606a);font-size:12px;
+  background:var(--bg2,#f6f8fa);border-radius:12px;margin-bottom:8px}
+.hcr-add{width:100%;background:var(--bg2,#f6f8fa);border:1px dashed var(--br,#cbd5e1);
+  border-radius:12px;padding:12px;font:inherit;font-weight:900;font-size:12.5px;
+  color:#0d9488;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.hcr-add:active{background:var(--br,#e5e7eb)}
+.fn-nav b.pick{display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.16);
+  transition:background .15s;-webkit-tap-highlight-color:transparent}
+.fn-nav b.pick:hover,.fn-nav b.pick:active{background:rgba(255,255,255,.28)}
+.fn-nav b.pick i{font-size:13px;opacity:.75}
+.fn-hint{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin:10px 0 0;padding:8px 11px;border-radius:11px;
+  background:rgba(255,255,255,.14);color:#fff;font-size:11.5px;line-height:1.6}
+.fn-hint i{font-size:14px;opacity:.85;flex:none}
+.fn-hint button{background:rgba(255,255,255,.24);border:none;color:#fff;
+  font:inherit;font-weight:800;padding:3px 10px;border-radius:999px;cursor:pointer;
+  width:auto;height:auto}
 
 /* الرقم الكبير: صافي الشهر */
 .fn-net{text-align:center;padding:4px 0 2px}
@@ -235,7 +293,7 @@ body{font-family:'Cairo',-apple-system,BlinkMacSystemFont,sans-serif;background:
   font-family:inherit;cursor:pointer}
 .fn-tab.on{background:#0d9488;border-color:#0d9488;color:#fff}
 
-.fn-body{padding:13px 14px 90px}
+.fn-body{padding:13px 14px 148px}   /* مساحة تحت زر «قيد جديد» عشان ما يغطّيش آخر سطر */
 .fn-sec{font-size:12.5px;font-weight:900;color:var(--muted,#57606a);margin:16px 0 9px}
 .fn-sec:first-child{margin-top:0}
 
@@ -785,6 +843,11 @@ body::after{
     <!-- MORE TAB -->
     <div class="tab" id="tab-more">
       <div class="section" style="padding:0">
+        <div class="row" onclick="openHcRules()" style="padding:14px;cursor:pointer">
+          <div class="row-av" style="background:#0d9488"><i class="ti ti-settings-dollar"></i></div>
+          <div class="row-info"><div class="row-name">إعدادات كاش هومي</div><div class="row-sub">السقوف والنواب ومين ماسك كام</div></div>
+          <i class="ti ti-chevron-left" style="color:var(--muted);font-size:20px"></i>
+        </div>
         <div class="row" onclick="openRatingSheet()" style="padding:14px;cursor:pointer">
           <div class="row-av" style="background:#d97706"><i class="ti ti-award"></i></div>
           <div class="row-info"><div class="row-name">التقييمات</div><div class="row-sub">ترتيب الفريق ومين محتاج متابعة</div></div>
@@ -2307,7 +2370,8 @@ const HCM_VAPID = 'BE7cUweRPvPKFlb0k0YQUc7fWnSMX9xuVN-1LdB0QwGvlzVzsgbpokJNgSiEG
 const HCM_SK_ID = 'mgr_homicash_push_id';
 const HCM_MGR_ID = 'MGR-ARK';   // معرّف الإدارة — كل أجهزة المديرين تحته
 
-let HCM = { pending: [], spends: [], seen: new Set(), init: false, busy: false };
+let HCM = { pending: [], spends: [], aging: [], tab: 'work',
+            seen: new Set(), init: false, busy: false, agingErr: null };
 const HCM_CAT = {fuel:'وقود', maintenance:'صيانة وقطع غيار', residency:'إقامات ورخص', admin:'مصاريف إدارية', other:'أخرى'};
 
 function _hcmK(n){ return (parseFloat(n)||0).toFixed(3); }
@@ -2390,11 +2454,15 @@ function hcmPaintBadge(){
 
 /* ── شاشة التوريدات ───────────────────────────────────────────────── */
 async function openHomiCashSheet(){
+  HCM.tab = 'work';
   openSheet('<div class="sheet-head"><h3>كاش هومي</h3>' +
     '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
     '<div style="padding:26px;text-align:center;color:#8b949e">جارٍ التحميل…</div>');
   await hcmFetchPending(false);
   hcmRenderSheet();
+  /* الأرصدة تُحمَّل في الخلفية — شريط الملخّص أعلى الشاشة يحتاجها،
+     ولا ننتظرها حتى لا تتأخّر قائمة القرارات. */
+  hcmLoadAging();
   try{ mgrBellPaint(); }catch(e){}
 }
 
@@ -2403,31 +2471,32 @@ function hcmRenderSheet(){
   if(!box) return;
 
   const savedId = (function(){ try{ return localStorage.getItem(HCM_SK_ID)||''; }catch(e){ return ''; } })();
-  const pushRow =
-    '<div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:11px 13px;margin-bottom:14px">' +
-      '<div style="display:flex;align-items:center;gap:9px">' +
-        '<i class="ti ti-bell" style="font-size:17px;color:' + (savedId ? '#10b981' : '#f59e0b') + '"></i>' +
+
+  /* الإشعارات: لافتة بارزة فقط لو غير مفعّلة. بعد التفعيل تنكمش إلى
+     سطر صغير — الشاشة للعمل لا للإعدادات. */
+  const pushRow = savedId
+    ? '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;font-size:11px;color:#8b949e">' +
+        '<i class="ti ti-bell-check" style="font-size:14px;color:#10b981"></i>' +
+        '<span style="flex:1">الإشعارات مفعّلة على هذا الجهاز</span>' +
+        '<button id="mgrBellBtn" onclick="mgrBellToggle()" style="background:none;border:none;' +
+          'color:#8b949e;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;' +
+          'text-decoration:underline;padding:4px">الجرس</button>' +
+        '<button onclick="hcmEnablePush()" style="background:none;border:none;color:#8b949e;' +
+          'font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;' +
+          'text-decoration:underline;padding:4px">إعادة تفعيل</button>' +
+      '</div>'
+    : '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);' +
+        'border-radius:12px;padding:11px 13px;margin-bottom:13px;display:flex;align-items:center;gap:10px">' +
+        '<i class="ti ti-bell-exclamation" style="font-size:19px;color:#f59e0b"></i>' +
         '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:12.5px;font-weight:800">' +
-            (savedId ? 'الإشعارات مفعّلة على هذا الجهاز' : 'فعّل الإشعارات على هذا الجهاز') + '</div>' +
+          '<div style="font-size:12.5px;font-weight:800;color:#f59e0b">الإشعارات غير مفعّلة</div>' +
           '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">' +
-            (savedId ? 'يصلك الإشعار حتى والتطبيق مقفول'
-                     : 'ضغطة واحدة — بدونها يصلك الإشعار فقط والتطبيق مفتوح') + '</div>' +
+            'من غيرها مش هتعرف بالتوريد إلا لما تفتح التطبيق بنفسك</div>' +
         '</div>' +
-        '<button onclick="hcmEnablePush()" style="background:' + (savedId ? '#21262d' : '#0d9488') +
-          ';color:#fff;border:none;padding:8px 13px;border-radius:9px;font-family:inherit;font-size:11.5px;font-weight:800;cursor:pointer">' +
-          (savedId ? 'إعادة تفعيل' : 'تفعيل') + '</button>' +
-      '</div>' +
-      '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #30363d">' +
-        '<div style="font-size:11px;color:#8b949e;line-height:1.7;margin-bottom:9px">' +
-          'صوت الجرس لما التطبيق مفتوح — بيفضل يرن كل 30 ثانية لحد ما تفتح الطلب</div>' +
-        '<button id="mgrBellBtn" onclick="mgrBellToggle()" style="width:100%;background:#21262d;' +
-          'color:#e6edf3;border:1px solid #30363d;padding:10px 12px;border-radius:9px;' +
-          'font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;display:flex;' +
-          'align-items:center;justify-content:center;gap:6px">' +
-          '<i class="ti ti-bell-ringing"></i> الجرس شغّال</button>' +
-      '</div>' +
-    '</div>';
+        '<button onclick="hcmEnablePush()" style="background:#f59e0b;color:#0d1117;border:none;' +
+          'padding:9px 14px;border-radius:9px;font-family:inherit;font-size:11.5px;' +
+          'font-weight:900;cursor:pointer">فعّل</button>' +
+      '</div>';
 
   let body;
   if(!HCM.pending.length){
@@ -2507,11 +2576,151 @@ function hcmRenderSheet(){
         '</div>').join('');
   }
 
-  const total = HCM.pending.length + (HCM.spends ? HCM.spends.length : 0);
+  const nWork = HCM.pending.length + (HCM.spends ? HCM.spends.length : 0);
+
+  /* ── شريط الملخّص: الرقم الذي يهمّ المدير قبل أي شيء ──
+     كم من كاش الشركة خارج الخزنة الآن، وكم منه يحتاج انتباهاً. */
+  const ag  = HCM.aging || [];
+  const out = ag.reduce((a,x) => a + (Number(x.held)||0), 0);
+  const risk = ag.filter(x => x.status === 'over' || x.status === 'warn').length;
+  const oldest = ag.reduce((a,x) => Math.max(a, Number(x.oldest_days)||0), 0);
+  const holders = ag.filter(x => (Number(x.held)||0) > 0).length;
+
+  const summary =
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px">' +
+      '<div style="background:#161b22;border:1px solid #30363d;border-top:2px solid #0d9488;' +
+        'border-radius:11px;padding:10px 11px">' +
+        '<div style="font-size:10px;color:#8b949e">خارج الخزنة</div>' +
+        '<div style="font-size:19px;font-weight:900;color:#0d9488;font-variant-numeric:tabular-nums;' +
+          'line-height:1.3" dir="ltr">' + _hcmK(out) + '</div>' +
+        '<div style="font-size:9.5px;color:#8b949e">مع ' + holders + ' مستلم</div></div>' +
+      '<div style="background:#161b22;border:1px solid #30363d;border-top:2px solid ' +
+        (risk ? '#f59e0b' : '#30363d') + ';border-radius:11px;padding:10px 11px">' +
+        '<div style="font-size:10px;color:#8b949e">يحتاج انتباه</div>' +
+        '<div style="font-size:19px;font-weight:900;line-height:1.3;color:' +
+          (risk ? '#f59e0b' : '#e6edf3') + '" dir="ltr">' + risk + '</div>' +
+        '<div style="font-size:9.5px;color:#8b949e">قارب السقف أو تجاوزه</div></div>' +
+      '<div style="background:#161b22;border:1px solid #30363d;border-top:2px solid ' +
+        (oldest > 7 ? '#ef4444' : '#30363d') + ';border-radius:11px;padding:10px 11px">' +
+        '<div style="font-size:10px;color:#8b949e">أقدم مبلغ</div>' +
+        '<div style="font-size:19px;font-weight:900;line-height:1.3;color:' +
+          (oldest > 7 ? '#ef4444' : '#e6edf3') + '" dir="ltr">' + oldest + '</div>' +
+        '<div style="font-size:9.5px;color:#8b949e">يوم بلا توريد</div></div>' +
+    '</div>';
+
+  /* ── تبويبان: ما يحتاج قراراً الآن · وأين الكاش قاعد ── */
+  const tabBtn = (key, label, n) =>
+    '<button onclick="hcmSetTab(\'' + key + '\')" style="flex:1;background:' +
+      (HCM.tab === key ? '#0d9488' : 'transparent') + ';color:' +
+      (HCM.tab === key ? '#fff' : '#8b949e') + ';border:none;padding:10px 8px;' +
+      'border-radius:9px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer">' +
+      label + (n ? ' <span style="font-variant-numeric:tabular-nums">(' + n + ')</span>' : '') + '</button>';
+
+  const tabs = '<div style="display:flex;gap:3px;background:#161b22;border:1px solid #30363d;' +
+    'border-radius:11px;padding:3px;margin-bottom:13px">' +
+    tabBtn('work', 'المطلوب منك', nWork) + tabBtn('bal', 'الأرصدة', 0) + '</div>';
+
+  /* المطلوب منك: التوريدات أولاً (فيها فلوس داخلة) ثم طلبات الصرف */
+  let work = '';
+  if(HCM.pending.length){
+    work += '<div style="font-size:12.5px;font-weight:900;color:#0d9488;margin:2px 0 9px;' +
+      'display:flex;align-items:center;gap:6px"><i class="ti ti-cash-banknote"></i>' +
+      'توريدات بانتظار عدّك (' + HCM.pending.length + ')</div>';
+  }
+  work += body;
+  if(spendHtml){
+    work += '<div style="height:1px;background:#30363d;margin:18px 0 14px"></div>' + spendHtml;
+  }
+
   box.innerHTML = '<div class="sheet-head"><h3>كاش هومي' +
-      (total ? ' (' + total + ')' : '') + '</h3>' +
+      (nWork ? ' (' + nWork + ')' : '') + '</h3>' +
     '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
-    '<div style="padding:0 2px">' + pushRow + body + spendHtml + '</div>';
+    '<div style="padding:0 2px">' + pushRow + summary + tabs +
+      (HCM.tab === 'bal' ? hcmBalancesHTML() : work) + '</div>';
+}
+
+/* تبديل التبويب — الأرصدة تُحمَّل عند أول فتح فقط */
+function hcmSetTab(k){
+  HCM.tab = k;
+  hcmRenderSheet();
+  if(k === 'bal' && !HCM.aging.length && !HCM.agingErr) hcmLoadAging();
+}
+
+async function hcmLoadAging(){
+  try{
+    HCM.aging = (await hcmRpc('homi_cash_aging', {})) || [];
+    HCM.agingErr = null;
+  }catch(e){
+    HCM.agingErr = String(e && e.message ? e.message : e);
+  }
+  if(document.getElementById('sheet-box')) hcmRenderSheet();
+}
+
+/* ── تبويب الأرصدة: الكاش قاعد فين ومع مين ومن إمتى ── */
+function hcmBalancesHTML(){
+  if(HCM.agingErr){
+    const noSql = /does not exist|schema cache|homi_cash_aging/i.test(HCM.agingErr);
+    return '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);' +
+      'border-radius:12px;padding:14px;font-size:12px;line-height:1.8;color:#f87171">' +
+      (noSql ? 'شاشة الأرصدة تحتاج تشغيل <code>homi_cash_v2.sql</code> على Supabase مرة واحدة.'
+             : 'تعذّر التحميل: ' + _hcmE(HCM.agingErr)) +
+      '<div style="margin-top:10px"><button onclick="HCM.agingErr=null;hcmLoadAging()" ' +
+      'style="background:#21262d;color:#e6edf3;border:1px solid #30363d;padding:8px 14px;' +
+      'border-radius:9px;font-family:inherit;font-size:11.5px;font-weight:800;cursor:pointer">' +
+      'إعادة المحاولة</button></div></div>';
+  }
+  if(!HCM.aging.length){
+    return '<div style="padding:30px 0;text-align:center;color:#8b949e;font-size:12.5px">' +
+      '<i class="ti ti-loader-2" style="font-size:26px"></i>' +
+      '<p style="margin-top:9px">جارٍ تحميل الأرصدة…</p></div>';
+  }
+
+  /* الترتيب بالخطورة: المتجاوز أولاً — المدير يرى المشكلة قبل أن يبحث عنها */
+  const rank = { over:0, warn:1, ok:2, idle:3 };
+  const rows = HCM.aging.slice().sort((a,b) =>
+    (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || (Number(b.held)||0) - (Number(a.held)||0));
+
+  const LBL = { over:'تجاوز السقف', warn:'قارب السقف', ok:'ضمن الحد', idle:'بلا رصيد' };
+  const COL = { over:'#ef4444', warn:'#f59e0b', ok:'#10b981', idle:'#6e7681' };
+
+  return rows.map(r => {
+    const held = Number(r.held)||0, cap = Number(r.max_hold)||0;
+    const pct  = cap ? Math.min(100, Math.round(held/cap*100)) : null;
+    const col  = COL[r.status] || '#6e7681';
+    const days = Number(r.oldest_days)||0;
+    return '<div style="background:#161b22;border:1px solid #30363d;border-inline-start:3px solid ' +
+      col + ';border-radius:12px;padding:12px 13px;margin-bottom:9px">' +
+      '<div style="display:flex;align-items:flex-start;gap:10px">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:14px;font-weight:900">' + _hcmE(r.name_ar) + '</div>' +
+          '<div style="font-size:10.5px;color:' + col + ';font-weight:800;margin-top:2px">' +
+            (LBL[r.status] || r.status) + '</div>' +
+        '</div>' +
+        '<div style="text-align:center;flex:0 0 auto">' +
+          '<div style="font-size:20px;font-weight:900;color:' + col +
+            ';font-variant-numeric:tabular-nums;line-height:1.2" dir="ltr">' + _hcmK(held) + '</div>' +
+          '<div style="font-size:9.5px;color:#8b949e">د.ك في يده</div></div>' +
+      '</div>' +
+      (cap ? '<div style="margin-top:9px">' +
+        '<div style="height:6px;background:#21262d;border-radius:99px;overflow:hidden">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + col + '"></div></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:9.5px;color:#8b949e;' +
+          'margin-top:4px"><span dir="ltr">' + pct + '%</span>' +
+          '<span>السقف <span dir="ltr">' + _hcmK(cap) + '</span> د.ك</span></div></div>'
+        : '<div style="margin-top:7px;font-size:10px;color:#8b949e">لا سقف محدَّد لهذا المستلم</div>') +
+      '<div style="display:flex;gap:14px;margin-top:9px;padding-top:9px;' +
+        'border-top:1px solid #21262d;font-size:10.5px;color:#8b949e">' +
+        '<span>أقدم مبلغ <b style="color:' + (days > 7 ? '#ef4444' : '#e6edf3') +
+          '" dir="ltr">' + days + '</b> يوم</span>' +
+        '<span>عمليات مفتوحة <b style="color:#e6edf3" dir="ltr">' +
+          (r.unsettled_count || 0) + '</b></span>' +
+        (r.pending_spends ? '<span style="color:#f59e0b">طلبات صرف <b dir="ltr">' +
+          r.pending_spends + '</b></span>' : '') +
+      '</div></div>';
+  }).join('') +
+  '<div style="font-size:10.5px;color:#8b949e;line-height:1.8;padding:4px 4px 0">' +
+    'الأرقام من قاعدة البيانات مباشرة — «في يده» هو الرصيد المؤكَّد غير المورَّد. ' +
+    'السقوف تُضبط من <b>إعدادات كاش هومي</b>.</div>';
 }
 
 async function hcmRespond(id, action){
@@ -2585,9 +2794,14 @@ async function hcmSpendDecide(id, action){
 
   HCM.busy = true;
   try{
+    /* بنبعت كود الموافق كمان — الخادم بيتحقق من صلاحيته وسقفه.
+       بدونه كل نداء بيتعامل كأنه من المدير، وده كان مقبول قبل ما
+       يبقى فيه نواب. */
     await hcmRpc('homi_cash_spend_decide', {
       p_id:id, p_action:action, p_amount_approved:amt,
-      p_actor:'المدير (السلاسل مدير)', p_note:note
+      p_actor: (window.MGRAUTH && MGRAUTH.name && MGRAUTH.name()) || 'المدير (السلاسل مدير)',
+      p_note:note,
+      p_actor_id: (window.MGRAUTH && MGRAUTH.userCode && MGRAUTH.userCode()) || null
     });
     toast(action === 'approve' ? '✅ أُذن بصرف ' + _hcmK(amt) + ' د.ك' : 'سُجّل الرفض وأُبلغ المستلم');
     HCM.spends = HCM.spends.filter(x => x.id !== id);
@@ -2949,6 +3163,15 @@ function allow(kind, what){
 }
 AUTH.canView   = function(v){ return allow('view', v); };
 AUTH.canEdit   = function(s){ return allow('edit', s); };
+
+/* اسم المستخدم وهويته — الخادم بيتحقق من الصلاحية بالإيميل مش بالاسم،
+   فالاسم للعرض والإيميل للتحقق. */
+AUTH.name = function(){
+  return (AUTH.user && (AUTH.user.name || AUTH.user.email)) || 'المدير';
+};
+AUTH.userCode = function(){
+  return (AUTH.user && AUTH.user.email) ? String(AUTH.user.email).toLowerCase() : null;
+};
 AUTH.canDecide = function(k){ return allow('decide', k); };
 AUTH.roleLabel = function(){ return ROLE_AR[AUTH.role] || AUTH.role || '—'; };
 
@@ -3602,7 +3825,9 @@ if(window.SalasilBell){
 var FN = {
   m: new Date().getMonth() + 1, y: new Date().getFullYear(),
   sum: null, entries: [], tab: 'sum',
-  loading: false, err: null
+  loading: false, err: null,
+  hist: null,        /* [{ym,income,expense,net}] — الشهور اللي فيها أرقام */
+  autoed: false      /* قفزنا لآخر شهر فيه بيانات؟ مرة واحدة بس */
 };
 var CU = { rows: [], open: null, txns: {}, loading: false, err: null };
 
@@ -3611,6 +3836,17 @@ var EXP_AR = {
   violations:'مخالفات مرورية', rent:'إيجارات', insurance:'تأمين',
   residency:'إقامات ورخص', admin:'مصاريف إدارية', other:'أخرى'
 };
+/* الشركاء ومصادر الدخل — كانت بتتعرض بالإنجليزي جوّه شاشة عربية */
+var INC_AR = {
+  keeta:'كيتا', homy:'هومي', caboria:'كابوريا', talabat:'طلبات',
+  restaurant:'مطاعم', society:'جمعيات', other:'أخرى'
+};
+var INC_COLOR = {
+  keeta:'#f43f5e', homy:'#0ea5e9', caboria:'#8b5cf6', talabat:'#f59e0b',
+  restaurant:'#059669', society:'#ec4899', other:'#94a3b8'
+};
+function incAr(k){ return INC_AR[String(k||'').toLowerCase()] || k || 'أخرى'; }
+
 var EXP_COLOR = {
   salaries:'#f59e0b', fuel:'#ea580c', maintenance:'#3b82f6', violations:'#dc2626',
   rent:'#8b5cf6', insurance:'#059669', residency:'#ec4899', admin:'#0ea5e9', other:'#94a3b8'
@@ -3626,19 +3862,76 @@ function fnKD(v){
 function fnE(s){ return dcE(s); }
 
 /* ══════════════ المحاسبة ══════════════ */
+/* ── تاريخ الشهور ──
+   الشاشة كانت بتفتح على الشهر الحالي دايماً. لو الشهر لسه ما اتقفلش
+   (والدخل بيتسجّل آخر الشهر)، الشاشة بتفتح فاضية والواحد يفتكرها بايظة.
+   فبنجيب أول مرة ملخّص السنتين اللي فاتوا، ونفتح على آخر شهر فيه أرقام. */
+function fnHist(){
+  if(FN.hist) return Promise.resolve(FN.hist);
+  return dcRpc('ark_finance_trend', {p_months:24}).then(function(rows){
+    FN.hist = (rows || []).filter(function(r){
+      return Number(r.income) || Number(r.expense);
+    });
+    return FN.hist;
+  }).catch(function(){ FN.hist = []; return FN.hist; });
+}
+
 function fnLoad(silent){
   if(FN.loading) return Promise.resolve();
   FN.loading = true;
   if(!silent) fnRender();
   return Promise.all([
     dcRpc('ark_finance_month',   {p_month:FN.m, p_year:FN.y}),
-    dcRpc('ark_finance_entries', {p_month:FN.m, p_year:FN.y, p_kind:null})
+    dcRpc('ark_finance_entries', {p_month:FN.m, p_year:FN.y, p_kind:null}),
+    fnHist()
   ]).then(function(r){
     FN.sum = r[0] || null; FN.entries = r[1] || []; FN.err = null;
   }).catch(function(e){
     var m = String(e.message || e);
     FN.err = /does not exist|schema cache|ark_finance/i.test(m) ? '__NOSQL__' : m;
-  }).then(function(){ FN.loading = false; fnRender(); });
+  }).then(function(){
+    FN.loading = false;
+    /* الشهر المفتوح فاضي وفيه شهور تانية فيها أرقام → نقفز لآخر واحد */
+    if(!FN.autoed && !FN.err){
+      FN.autoed = true;
+      var empty = !FN.sum || (!Number(FN.sum.income) && !Number(FN.sum.expense));
+      var last  = FN.hist && FN.hist.length ? FN.hist[FN.hist.length - 1] : null;
+      if(empty && last){
+        var p = String(last.ym).split('-');
+        var ny = parseInt(p[0], 10), nm = parseInt(p[1], 10);
+        if(ny && nm && (ny !== FN.y || nm !== FN.m)){
+          FN.y = ny; FN.m = nm;
+          return fnLoad(silent);
+        }
+      }
+    }
+    fnRender();
+  });
+}
+
+/* اختيار الشهر من قائمة — أسرع من الضغط على السهم عشر مرات،
+   وبتوريك الشهور اللي فيها أرقام فعلاً */
+function fnPickMonth(){
+  var list = (FN.hist || []).slice().reverse();
+  if(!list.length){ mgrToast('مفيش شهور فيها قيود لسه'); return; }
+  var items = list.map(function(r){
+    var p = String(r.ym).split('-');
+    var net = Number(r.net) || 0;
+    return {
+      key: r.ym,
+      icon: net >= 0 ? 'ti-trending-up' : 'ti-trending-down',
+      label: MONTHS_AR[parseInt(p[1],10)-1] + ' ' + p[0] +
+             '  ·  صافي ' + fnKD(net) + ' د.ك'
+    };
+  });
+  mxPick({ title:'اختر الشهر', icon:'ti-calendar-month', instant:true,
+           items:items, value: FN.y + '-' + ('0'+FN.m).slice(-2) })
+    .then(function(v){
+      if(!v) return;
+      var p = String(v).split('-');
+      FN.y = parseInt(p[0],10); FN.m = parseInt(p[1],10);
+      fnLoad();
+    });
 }
 
 function fnMonth(delta){
@@ -3646,6 +3939,11 @@ function fnMonth(delta){
   var now = new Date();
   /* مفيش شهور جاية */
   if(d > new Date(now.getFullYear(), now.getMonth(), 1)) return;
+  FN.m = d.getMonth() + 1; FN.y = d.getFullYear();
+  fnLoad();
+}
+function fnGoNow(){
+  var d = new Date();
   FN.m = d.getMonth() + 1; FN.y = d.getFullYear();
   fnLoad();
 }
@@ -3664,9 +3962,15 @@ function fnRender(){
       '<h2><i class="ti ti-calculator"></i>المحاسبة</h2>' +
       '<div class="fn-nav">' +
         '<button onclick="fnMonth(-1)" aria-label="الشهر السابق">›</button>' +
-        '<b>' + MONTHS_AR[FN.m-1] + ' ' + FN.y + '</b>' +
+        '<b class="pick" onclick="fnPickMonth()" role="button" tabindex="0">' +
+          MONTHS_AR[FN.m-1] + ' ' + FN.y +
+          '<i class="ti ti-chevron-down"></i></b>' +
         '<button onclick="fnMonth(1)" ' + (isNow ? 'disabled' : '') + ' aria-label="الشهر التالي">‹</button>' +
       '</div>' +
+      (isNow ? '' :
+        '<div class="fn-hint"><i class="ti ti-info-circle"></i>' +
+        'بتشوف ' + MONTHS_AR[FN.m-1] + ' ' + FN.y + ' — مش الشهر الحالي. ' +
+        '<button onclick="fnGoNow()">ارجع للشهر الحالي</button></div>') +
       '<div class="fn-net"><span>صافي الشهر</span>' +
         '<b class="' + (net >= 0 ? 'up' : 'dn') + '">' + fnKD(net) + '</b>' +
         '<em>د.ك</em></div>' +
@@ -3734,12 +4038,13 @@ function fnSummaryHTML(s){
     h += srcs.map(function(c){
       var v = Number(c.total)||0, pct = maxS ? (v/maxS*100) : 0;
       var share = s.income ? (v/Number(s.income)*100) : 0;
+      var icol = INC_COLOR[String(c.key||'').toLowerCase()] || '#059669';
       return '<div class="fn-bar"><div class="fn-bar-top">' +
-        '<b>' + fnE(c.key) + '</b>' +
-        '<span class="v" style="color:#059669">' + fnKD(v) + '</span>' +
+        '<b>' + fnE(incAr(c.key)) + '</b>' +
+        '<span class="v" style="color:' + icol + '">' + fnKD(v) + '</span>' +
         '<span class="p">' + share.toFixed(0) + '٪</span></div>' +
         '<div class="fn-track"><div class="fn-fill" style="width:' + pct.toFixed(1) +
-        '%;background:#059669"></div></div></div>';
+        '%;background:' + icol + '"></div></div></div>';
     }).join('');
   }
 
@@ -3755,7 +4060,7 @@ function fnListHTML(kind){
   var isIn = kind === 'income';
   return rows.map(function(r){
     var mob = String(r.id).indexOf('MOB_') === 0;
-    var label = isIn ? (r.bucket || 'أخرى') : (EXP_AR[r.bucket] || r.bucket || 'أخرى');
+    var label = isIn ? incAr(r.bucket) : (EXP_AR[r.bucket] || r.bucket || 'أخرى');
     return '<div class="fn-row">' +
       '<div class="ic ' + (isIn?'in':'out') + '"><i class="ti ti-' +
         (isIn?'arrow-down-left':'arrow-up-right') + '"></i></div>' +
@@ -4245,7 +4550,8 @@ function fnAdd(){
     salaries:'👥', fuel:'⛽', maintenance:'🔧', violations:'🚨', rent:'🏢',
     insurance:'🛡️', residency:'📄', admin:'📋', other:'⋯'
   };
-  var INC = { keeta:'Keeta', homy:'HOMY', caboria:'Caboria', imile:'iMile', other:'أخرى' };
+  var INC = { keeta:'كيتا', homy:'هومي', caboria:'كابوريا',
+              talabat:'طلبات', restaurant:'مطاعم', society:'جمعيات', other:'أخرى' };
 
   function optsHTML(){
     var items = kind === 'expense'
@@ -4406,6 +4712,328 @@ function openWebAdmin(){
     'الرواتب والتقارير الشاملة بيفتحوا من ARK على اللاب توب.\n\n' +
     'التطبيق ده للقرارات والمتابعة السريعة وانت بره المكتب.','ti-device-desktop');
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   السلاسل مدير — إعدادات كاش هومي
+   ──────────────────────────────────────────────────────────────────────────
+   الشاشة دي هي اللي بتخلّي النظام مرن. قبلها كانت كل القواعد مكتوبة
+   في الكود: سقف واحد للكل، مفيش نائب، مفيش حد للكاش اللي في الإيد.
+   دلوقتي كل ده أرقام بتتظبط من الموبايل، والقواعد بتتفرض في قاعدة
+   البيانات نفسها — يعني حتى لو حد كلّم الخادم من بره التطبيق، القواعد
+   بتفضل شغّالة.
+
+   بتستخدم dcRpc عشان الدوال دي مفتوحة للمسجَّل دخوله بس، مش للمفتاح
+   العام — الإعدادات مش حاجة يقدر أي حد يقراها.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+var HR = window.HCRULES = { aging:[], rules:[], approvers:[], loading:false, err:null };
+
+/* بنود المصروفات — نفس أسماء ARK */
+var CATS = [
+  ['fuel','بنزين ووقود'], ['maintenance','صيانة سيارات'], ['violations','مخالفات مرورية'],
+  ['residency','إقامات ورخص'], ['admin','مصاريف إدارية'], ['rent','إيجارات'],
+  ['insurance','تأمين'], ['salaries','مرتبات'], ['other','أخرى']
+];
+function catAr(k){ for(var i=0;i<CATS.length;i++) if(CATS[i][0]===k) return CATS[i][1]; return k; }
+function K(v){
+  var n = parseFloat(v);
+  if(v == null || isNaN(n)) return '—';
+  return n.toLocaleString('en-US',{minimumFractionDigits:3, maximumFractionDigits:3});
+}
+function E(s){ return (typeof dcE === 'function') ? dcE(s) : String(s == null ? '' : s); }
+/* رقم أو NULL — الفرق بين «صفر» و«بلا حدّ» مهم هنا */
+function num(v){
+  if(v === '' || v == null) return null;
+  var n = parseFloat(String(v).replace(/[^\d.]/g,''));
+  return isNaN(n) || n <= 0 ? null : n;
+}
+
+/* ── التحميل ── */
+function load(){
+  if(HR.loading) return Promise.resolve();
+  HR.loading = true; paint();
+  return Promise.all([
+    dcRpc('homi_cash_aging',        {}),
+    dcRpc('homi_cash_rules_list',   {}),
+    dcRpc('homi_cash_approver_list',{})
+  ]).then(function(r){
+    HR.aging = r[0]||[]; HR.rules = r[1]||[]; HR.approvers = r[2]||[];
+    HR.err = null;
+  }).catch(function(e){
+    var m = String(e.message||e);
+    HR.err = /does not exist|schema cache|homi_cash_aging/i.test(m) ? '__NOSQL__' : m;
+  }).then(function(){ HR.loading = false; paint(); });
+}
+
+/* ── الشاشة ── */
+window.openHcRules = function(){
+  openSheet('<div class="sheet-head"><h3>إعدادات كاش هومي</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()"><i class="ti ti-x"></i></button></div>' +
+    '<div id="hcrBody" class="sheet-body"><div class="fn-load">جارٍ التحميل…</div></div>');
+  load();
+};
+
+function paint(){
+  var el = document.getElementById('hcrBody');
+  if(!el) return;
+
+  if(HR.err === '__NOSQL__'){
+    el.innerHTML = '<div class="fn-err"><b>ملف الترقية لسه متشغّلش.</b>' +
+      'شغّل <code>homi_cash_v2.sql</code> على Supabase الأول، وبعدها افتح الشاشة دي تاني.' +
+      '<div style="margin-top:10px"><button class="fn-tab on" onclick="HCRULES.reload()">' +
+      'إعادة المحاولة</button></div></div>';
+    return;
+  }
+  if(HR.err){
+    el.innerHTML = '<div class="fn-err"><b>تعذّر التحميل.</b>' + E(HR.err) +
+      '<div style="margin-top:10px"><button class="fn-tab on" onclick="HCRULES.reload()">' +
+      'إعادة المحاولة</button></div></div>';
+    return;
+  }
+  if(HR.loading && !HR.aging.length){ el.innerHTML = '<div class="fn-load">جارٍ التحميل…</div>'; return; }
+
+  el.innerHTML = agingHTML() + rulesHTML() + approversHTML();
+}
+
+/* ── ١) الكاش قاعد فين ── */
+function agingHTML(){
+  if(!HR.aging.length) return '';
+  var total = HR.aging.reduce(function(a,x){ return a + (Number(x.held)||0); },0);
+  var over  = HR.aging.filter(function(x){ return x.status === 'over' || x.status === 'warn'; }).length;
+
+  var h = '<div class="hcr-sec"><i class="ti ti-wallet"></i>الكاش قاعد فين دلوقتي</div>' +
+    '<div class="hcr-tot"><div><span>إجمالي بره</span><b>' + K(total) + '</b></div>' +
+    '<div><span>محتاج انتباه</span><b class="' + (over?'bad':'') + '">' + over + '</b></div></div>';
+
+  h += HR.aging.map(function(r){
+    var pct = r.pct_of_limit == null ? null : Number(r.pct_of_limit);
+    var st  = r.status;
+    var col = st==='over' ? '#dc2626' : st==='warn' ? '#d97706' : st==='idle' ? '#94a3b8' : '#059669';
+    /* «قرب على السقف» غلط لو مفيش سقف أصلاً — التحذير ساعتها بسبب
+       إن الفلوس قاعدة من زمان، وده كلام تاني خالص. */
+    var days = Number(r.oldest_days) || 0;
+    var lbl;
+    if(st === 'over')       lbl = 'وصل السقف';
+    else if(st === 'idle')  lbl = 'مفيش كاش';
+    else if(st === 'warn')  lbl = (r.max_hold != null) ? 'قرب على السقف'
+                                 : 'فلوس قاعدة من ' + days + ' يوم';
+    else                    lbl = 'تمام';
+    return '<div class="hcr-age">' +
+      '<div class="top"><b>' + E(r.name_ar) + '</b>' +
+        '<span class="st" style="background:' + col + '1a;color:' + col + '">' + lbl + '</span></div>' +
+      '<div class="nums">' +
+        '<div><span>معاه</span><b>' + K(r.held) + '</b></div>' +
+        '<div><span>السقف</span><b>' + (r.max_hold == null ? 'بلا حدّ' : K(r.max_hold)) + '</b></div>' +
+        '<div><span>أقدم مبلغ</span><b>' + (Number(r.oldest_days)||0) + ' يوم</b></div>' +
+        '<div><span>مش مورَّد</span><b>' + (Number(r.unsettled_count)||0) + '</b></div>' +
+      '</div>' +
+      (pct == null ? '' :
+        '<div class="hcr-track"><div class="hcr-fill" style="width:' +
+        Math.min(pct,100) + '%;background:' + col + '"></div></div>') +
+      '</div>';
+  }).join('');
+  return h;
+}
+
+/* ── ٢) قواعد كل مستلم ── */
+function rulesHTML(){
+  var h = '<div class="hcr-sec"><i class="ti ti-adjustments"></i>قواعد كل مستلم</div>' +
+    '<p class="hcr-note">الفاضي معناه بلا حدّ. غيّر أي رقم وهو بيسري فوراً على الطلبات الجاية.</p>';
+  h += HR.rules.map(function(r){
+    var cats = r.allowed_categories && r.allowed_categories.length
+      ? r.allowed_categories.map(catAr).join('، ') : 'كل البنود';
+    return '<div class="hcr-row" onclick="HCRULES.edit(\'' + E(r.receiver_id) + '\')">' +
+      '<div class="ic"><i class="ti ti-user-cog"></i></div>' +
+      '<div class="tx"><b>' + E(r.name_ar) + '</b>' +
+        '<span>سقف الطلب ' + (r.max_request == null ? 'بلا حدّ' : K(r.max_request)) +
+        ' · في الإيد ' + (r.max_hold == null ? 'بلا حدّ' : K(r.max_hold)) +
+        ' · الإذن ' + (r.approval_ttl_hours == null ? 'مالوش مدة' : r.approval_ttl_hours + ' ساعة') +
+        '</span><span class="c">' + E(cats) + '</span></div>' +
+      '<i class="ti ti-chevron-left"></i></div>';
+  }).join('');
+  return h;
+}
+
+/* ── ٣) الموافقون ── */
+function approversHTML(){
+  var h = '<div class="hcr-sec"><i class="ti ti-user-shield"></i>مين يقدر يوافق</div>' +
+    '<p class="hcr-note">المدير بلا سقف. النائب بسقف — بيوافق على الصغير لما تكون مش متاح، ' +
+    'والكبير يفضل مستنيك.</p>';
+  h += (HR.approvers.length ? HR.approvers.map(function(a){
+    return '<div class="hcr-row" onclick="HCRULES.editApprover(\'' + E(a.user_id) + '\')">' +
+      '<div class="ic" style="background:' + (a.role==='manager'?'#1c5878':'#0d9488') + '">' +
+        '<i class="ti ti-' + (a.role==='manager'?'crown':'user-check') + '"></i></div>' +
+      '<div class="tx"><b>' + E(a.name) + (a.active ? '' : ' <em class="off">موقوف</em>') + '</b>' +
+        '<span>' + (a.role==='manager' ? 'مدير — بلا سقف'
+                    : 'نائب — لحد ' + K(a.max_approve) + ' د.ك') +
+          (a.push_id ? '' : ' · <b style="color:#d97706;display:inline">مش بيوصله إشعار</b>') +
+          '</span></div>' +
+      '<i class="ti ti-chevron-left"></i></div>';
+  }).join('') : '<div class="hcr-empty">مفيش نائب معتمد — كل طلب مستنيك انت.</div>');
+  h += '<button class="hcr-add" onclick="HCRULES.editApprover(null)">' +
+       '<i class="ti ti-plus"></i>ضيف نائب</button>';
+  return h;
+}
+
+/* ══════════════ التعديل ══════════════ */
+
+HR.reload = function(){ HR.err = null; load(); };
+
+function actor(){
+  try{ return (window.MGRAUTH && MGRAUTH.name && MGRAUTH.name()) || 'المدير'; }
+  catch(e){ return 'المدير'; }
+}
+
+HR.edit = function(rid){
+  var r = null;
+  HR.rules.forEach(function(x){ if(x.receiver_id === rid) r = x; });
+  if(!r) return;
+  var cur = r.allowed_categories || [];
+  var sel = cur.slice();
+
+  var v = function(x){ return x == null ? '' : x; };
+  mxForm({
+    title:'قواعد ' + r.name_ar, icon:'ti-user-cog',
+    sub:'الخانة الفاضية معناها بلا حدّ.',
+    body:
+      '<div class="mx-f"><label for="hrReq">أقصى مبلغ للطلب الواحد (د.ك)</label>' +
+        '<input class="mx-in" id="hrReq" type="number" inputmode="decimal" step="0.001" ' +
+        'min="0" placeholder="فاضي = بلا حدّ" value="' + v(r.max_request) + '"></div>' +
+      '<div class="mx-f"><label for="hrHold">أقصى كاش يفضل في إيده (د.ك)</label>' +
+        '<input class="mx-in" id="hrHold" type="number" inputmode="decimal" step="0.001" ' +
+        'min="0" placeholder="فاضي = بلا حدّ" value="' + v(r.max_hold) + '">' +
+        '<div class="hint">لما يوصل الحد، السائقين مش هيقدروا يسلّموه لحد ما يورّد</div></div>' +
+      '<div class="mx-f"><label for="hrTtl">الإذن صالح كام ساعة؟</label>' +
+        '<input class="mx-in" id="hrTtl" type="number" inputmode="numeric" step="1" min="1" ' +
+        'placeholder="فاضي = مالوش مدة" value="' + v(r.approval_ttl_hours) + '">' +
+        '<div class="hint">بعد المدة دي الإذن بيلغي نفسه ولازم يطلب من جديد</div></div>' +
+      '<div class="mx-f"><label>البنود المسموح له بيها</label>' +
+        '<div class="mx-opts" id="hrCats">' +
+        CATS.map(function(c){
+          return '<button type="button" class="mx-opt' + (sel.indexOf(c[0])>=0 ? ' on' : '') +
+                 '" data-k="' + c[0] + '"><i class="ti ti-point"></i>' + c[1] + '</button>';
+        }).join('') + '</div>' +
+        '<div class="hint">ما تختارش حاجة = كل البنود مسموحة</div></div>',
+    ok:'احفظ القواعد',
+    onOpen: function(){
+      document.getElementById('hrCats').addEventListener('click', function(e){
+        var b = e.target.closest('.mx-opt'); if(!b) return;
+        var k = b.getAttribute('data-k'), i = sel.indexOf(k);
+        if(i >= 0){ sel.splice(i,1); b.classList.remove('on'); }
+        else      { sel.push(k);     b.classList.add('on'); }
+      });
+    },
+    collect: function(){
+      var g = function(id){ return (document.getElementById(id)||{}).value; };
+      var req = num(g('hrReq')), hold = num(g('hrHold')), ttl = num(g('hrTtl'));
+      if(g('hrReq') && req === null)  return {__error:'سقف الطلب لازم يكون أكبر من صفر'};
+      if(g('hrHold') && hold === null) return {__error:'سقف الكاش لازم يكون أكبر من صفر'};
+      if(g('hrTtl') && ttl === null)   return {__error:'المدة لازم تكون ساعة على الأقل'};
+      if(req && hold && req > hold)
+        return {__error:'سقف الطلب أكبر من الكاش المسموح في إيده — مش هيقدر يصرفه'};
+      return { req:req, hold:hold, ttl: ttl ? Math.round(ttl) : null,
+               cats: sel.length ? sel.slice() : null };
+    }
+  }).then(function(res){
+    if(!res || res === false) return;
+    return dcRpc('homi_cash_rules_set', {
+      p_receiver_id: rid, p_max_request: res.req, p_max_hold: res.hold,
+      p_categories: res.cats, p_ttl_hours: res.ttl, p_actor: actor()
+    }).then(function(){ mgrToast('اتحفظت'); return load(); });
+  }).catch(function(e){ mgrToast(String(e.message||e).slice(0,120)); });
+};
+
+HR.editApprover = function(uid){
+  var a = null;
+  if(uid) HR.approvers.forEach(function(x){ if(x.user_id === uid) a = x; });
+  var role = a ? a.role : 'deputy';
+
+  mxForm({
+    title: a ? 'تعديل ' + a.name : 'نائب جديد', icon:'ti-user-shield',
+    sub: a ? null : 'النائب لازم يكون له سقف — ده اللي بيفرّقه عن مدير تاني.',
+    body:
+      '<div class="mx-f"><label for="hrUid">إيميل الدخول</label>' +
+        '<input class="mx-in" id="hrUid" type="email" inputmode="email" ' +
+        'placeholder="name@example.com" ' +
+        (a ? 'readonly ' : '') + 'value="' + (a ? a.user_id : '') + '">' +
+        '<div class="hint">نفس الإيميل اللي بيدخل بيه على تطبيق المدير</div></div>' +
+      '<div class="mx-f"><label for="hrName">الاسم</label>' +
+        '<input class="mx-in" id="hrName" type="text" value="' + (a ? a.name : '') + '"></div>' +
+      '<div class="mx-f"><label>الدور</label>' +
+        '<div class="mx-seg" id="hrRole">' +
+          '<button type="button" class="' + (role==='deputy'?'on':'') + '" data-k="deputy">' +
+            '<i class="ti ti-user-check"></i>نائب</button>' +
+          '<button type="button" class="' + (role==='manager'?'on':'') + '" data-k="manager">' +
+            '<i class="ti ti-crown"></i>مدير</button>' +
+        '</div></div>' +
+      '<div class="mx-f" id="hrCapWrap"><label for="hrCap">سقف موافقته (د.ك)</label>' +
+        '<input class="mx-in" id="hrCap" type="number" inputmode="decimal" step="0.001" min="0" ' +
+        'value="' + (a && a.max_approve != null ? a.max_approve : '') + '">' +
+        '<div class="hint">الطلبات فوق الرقم ده تفضل مستنياك انت</div></div>' +
+      '<div class="mx-f"><label for="hrPush">كود الموظف للإشعارات (اختياري)</label>' +
+        '<input class="mx-in" id="hrPush" type="text" placeholder="SA1002" ' +
+        'value="' + (a && a.push_id ? a.push_id : '') + '">' +
+        '<div class="hint">من غيره مش هيوصله تنبيه بالطلبات الجديدة</div></div>' +
+      '<div class="mx-f"><label>الحالة</label>' +
+        '<div class="mx-seg" id="hrAct">' +
+          '<button type="button" class="' + (!a || a.active ? 'on' : '') + '" data-k="1">شغّال</button>' +
+          '<button type="button" class="' + (a && !a.active ? 'on' : '') + '" data-k="0">موقوف</button>' +
+        '</div></div>',
+    autofocus: a ? 'hrName' : 'hrUid', ok:'احفظ',
+    onOpen: function(){
+      var seg = function(id, cb){
+        document.getElementById(id).addEventListener('click', function(e){
+          var b = e.target.closest('button'); if(!b) return;
+          [].forEach.call(this.children, function(x){ x.className = x === b ? 'on' : ''; });
+          cb(b.getAttribute('data-k'));
+        });
+      };
+      seg('hrRole', function(k){
+        role = k;
+        document.getElementById('hrCapWrap').style.display = k === 'manager' ? 'none' : '';
+      });
+      seg('hrAct', function(){});
+      if(role === 'manager') document.getElementById('hrCapWrap').style.display = 'none';
+    },
+    collect: function(){
+      var g = function(id){ return ((document.getElementById(id)||{}).value || '').trim(); };
+      var uidv = g('hrUid').toLowerCase(), nm = g('hrName');
+      if(!uidv) return {__error:'اكتب إيميل الدخول'};
+      if(uidv.indexOf('@') < 0) return {__error:'الإيميل مش مظبوط'};
+      if(!nm)   return {__error:'اكتب الاسم'};
+      var cap = num(g('hrCap'));
+      if(role === 'deputy' && !cap)
+        return {__error:'النائب لازم يكون له سقف أكبر من صفر'};
+      var on = document.querySelector('#hrAct button.on');
+      return { uid:uidv, name:nm, role:role,
+               cap: role === 'manager' ? null : cap,
+               push: g('hrPush').toUpperCase() || null,
+               active: !on || on.getAttribute('data-k') === '1' };
+    }
+  }).then(function(res){
+    if(!res || res === false) return;
+    return dcRpc('homi_cash_approver_set', {
+      p_user_id: res.uid, p_name: res.name, p_role: res.role,
+      p_max_approve: res.cap, p_active: res.active, p_actor: actor(),
+      p_push_id: res.push
+    }).then(function(){ mgrToast('اتحفظ'); return load(); });
+  }).catch(function(e){ mgrToast(String(e.message||e).slice(0,120)); });
+};
+
+/* ── الكنس: بينضّف الأذونات المنتهية ويصعّد المتأخر ──
+   مرة عند فتح التطبيق. مفيش مجدول على الخادم فالتطبيق هو اللي بيوقّظه. */
+setTimeout(function(){
+  if(typeof dcRpc !== 'function') return;
+  dcRpc('homi_cash_sweep', {}).then(function(r){
+    if(r && (r.expired || r.escalated))
+      console.info('[كاش] كنس:', r.expired, 'إذن منتهي ·', r.escalated, 'طلب اتصعّد');
+  }).catch(function(){});
+}, 14000);
+
+})();
 
 </script>
 </body>
