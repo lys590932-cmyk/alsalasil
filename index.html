@@ -1187,7 +1187,51 @@ function avColor(seed){
   for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
   return AV_COLORS[h % AV_COLORS.length];
 }
-function todayStr(){ return new Date().toISOString().split('T')[0]; }
+/* ═══════════════════════════════════════════════════════════════
+   التوقيت — كل حسابات الشفتات والحضور بتوقيت الكويت حصراً
+   ───────────────────────────────────────────────────────────────
+   خطآن كانا هنا:
+
+   1) todayStr() كانت ترجع تاريخ UTC عبر toISOString، والكويت +3،
+      فمن منتصف الليل حتى الثالثة فجراً كان التطبيق يظن أن اليوم
+      هو أمس، فيقارن حضور السائق بشفت الأمس ويخصم عليه تأخيراً وهمياً.
+
+   2) الحساب كان يتبع توقيت جهاز السائق. وسائقونا وافدون، وكثير من
+      هواتفهم مضبوط على توقيت بلادهم. هاتف على توقيت الهند (+5:30)
+      يحسب بداية الشفت قبل موعدها بساعتين ونصف، فيبدو السائق متأخراً
+      وهو ملتزم — وهذا خلل لا يُرى لأنه يختلف من جهاز لآخر.
+
+   الحل: الكويت لا تطبّق توقيتاً صيفياً، فإزاحتها ثابتة +03:00 طوال
+   العام. نثبّت كل الحسابات عليها بصرف النظر عن إعدادات الجهاز.
+   ═══════════════════════════════════════════════════════════════ */
+var KW_TZ = 'Asia/Kuwait', KW_OFFSET = '+03:00';
+
+/* YYYY-MM-DD بتوقيت الكويت — en-CA تعطي هذا الترتيب مباشرة */
+var _kwDateFmt = null;
+function _ymdLocal(d){
+  d = d ? new Date(d) : new Date();
+  try {
+    if(!_kwDateFmt) _kwDateFmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: KW_TZ, year:'numeric', month:'2-digit', day:'2-digit' });
+    return _kwDateFmt.format(d);
+  } catch(e) {
+    /* احتياط لو المتصفح لا يدعم المناطق الزمنية: نزيح يدوياً +3 */
+    var s = new Date(d.getTime() + 3*3600000);
+    return s.getUTCFullYear()+'-'+String(s.getUTCMonth()+1).padStart(2,'0')+
+           '-'+String(s.getUTCDate()).padStart(2,'0');
+  }
+}
+function todayStr(){ return _ymdLocal(); }
+
+/* حساب الأيام على نص التاريخ مباشرة — لا كائنات Date ولا مناطق زمنية.
+   منتصف النهار UTC يبعدنا عن حدود اليوم فلا ينزلق التاريخ يوماً. */
+function _addDaysStr(ymdStr, n){
+  var d = new Date(ymdStr + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + (n||0));
+  return d.toISOString().slice(0,10);
+}
+/* رقم يوم الأسبوع لتاريخ نصّي (0=أحد .. 6=سبت) */
+function _dowStr(ymdStr){ return new Date(ymdStr + 'T12:00:00Z').getUTCDay(); }
 function fmtKD(n){ return (parseFloat(n)||0).toFixed(3); }
 function fmtTime(d){
   try{ return new Date(d).toLocaleTimeString(LANG==='ar'?'ar-EG':'en-GB',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; }
@@ -1458,7 +1502,9 @@ function isCurrentlyIn(){
 }
 function todayClockins(){
   var ts=todayStr();
-  return CLOCKINS.filter(function(r){ return (r.created_at||'').indexOf(ts)===0; });
+  /* created_at مخزّن UTC — نحوّله لتاريخ الكويت قبل المقارنة.
+     المقارنة النصية على أول 10 حروف كانت تقارن تاريخاً بتوقيتين مختلفين. */
+  return CLOCKINS.filter(function(r){ return r.created_at && _ymdLocal(r.created_at)===ts; });
 }
 
 function deductionsOf(month, year){
@@ -3087,11 +3133,9 @@ var TODAY_REPORT = null;  // selected-date submitted report (if any)
 var RECENT_REPORTS = [];   // last 14 reports for history
 var SELECTED_REPORT_DATE = null;  // date string YYYY-MM-DD (defaults to today)
 
-function _todayLocal(){ // returns YYYY-MM-DD in local timezone
-  var d = new Date();
-  var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), da = String(d.getDate()).padStart(2,'0');
-  return y+'-'+m+'-'+da;
-}
+/* التقرير اليومي يستخدم نفس مصدر التاريخ — دالة واحدة للتاريخ في التطبيق كله.
+   كان هنا حساب منفصل بتوقيت الجهاز، فكان تاريخ التقرير قد يخالف تاريخ الشفت. */
+function _todayLocal(){ return _ymdLocal(); }
 
 function setReportDate(dateStr){
   if(!dateStr) return;
@@ -3381,8 +3425,9 @@ async function renderOrders(){
   var active = MY_ORDERS.filter(function(o){ return ['assigned','picked_up'].indexOf(o.status)>=0; });
   var delivered = MY_ORDERS.filter(function(o){ return o.status==='delivered'; });
   var cashToday = delivered.filter(function(o){
-    var today = new Date().toISOString().split('T')[0];
-    return o.payment_method==='cash' && (o.delivered_at||o.created_at||'').startsWith(today);
+    var today = todayStr();              // بتوقيت الكويت
+    return o.payment_method==='cash' &&
+           _ymdLocal(o.delivered_at || o.created_at) === today;
   });
   var cashSum = cashToday.reduce(function(s,o){ return s + parseFloat(o.order_amount||0); }, 0);
 
@@ -4185,9 +4230,13 @@ function loadShiftSettings(){
 function shiftDateTime(dateStr, hhmm){
   if(!dateStr || !hhmm) return null;
   var p = String(hhmm).split(':');
-  var d = new Date(dateStr+'T00:00:00');
-  d.setHours(parseInt(p[0],10)||0, parseInt(p[1],10)||0, 0, 0);
-  return d;
+  var hh = String(parseInt(p[0],10)||0).padStart(2,'0');
+  var mm = String(parseInt(p[1],10)||0).padStart(2,'0');
+  /* لحظة مطلقة محدّدة بتوقيت الكويت — لا تتأثر بتوقيت جهاز السائق.
+     قبلها كان 'T00:00:00' + setHours يفسّر الوقت بتوقيت الجهاز،
+     فهاتف على توقيت الهند يزيح بداية الشفت ساعتين ونصف. */
+  var d = new Date(dateStr+'T'+hh+':'+mm+':00'+KW_OFFSET);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 /* شفت اليوم من الجدول */
@@ -4206,8 +4255,8 @@ function todayClockInTime(){
   var best = null;
   CLOCKINS.forEach(function(c){
     if(c.action!=='clock_in') return;
-    var d = String(c.created_at||'').slice(0,10);
-    if(d!==ts) return;
+    if(!c.created_at) return;
+    if(_ymdLocal(c.created_at) !== ts) return;   // بتوقيت الكويت لا UTC
     var t = new Date(c.created_at);
     if(!best || t<best) best = t;
   });
@@ -4333,6 +4382,23 @@ function checkShiftAlerts(){
     // لو سجّل حضور قبل انتهاء المهلة → لا خصم
     if(ci){
       var ciLate = Math.round((ci - start)/60000);
+
+      /* ═══ حارس: ممنوع الخصم على من حضر قبل شفته ═══
+         السائق الذي سجّل حضوره عند بداية الشفت أو قبلها لم يتأخر —
+         فأي رقم تأخير موجب هنا معناه أن الحساب نفسه غلط (شفت خاطئ،
+         أو تاريخ خاطئ، أو جدول لم يُحدَّث). في هذه الحالة نصمت ولا
+         نخصم: خطأ في الحساب يجب ألا يتحوّل إلى خصم من راتب أحد. */
+      if(ciLate <= 0){ markAlertSent('late30'); return; }
+
+      /* تأخير يتجاوز طول الشفت مستحيل عملياً — مؤشر على مقارنة بشفت
+         خاطئ لا على تأخير حقيقي. نسجّل تحذيراً للمراجعة ولا نخصم. */
+      if(ciLate > 12*60){
+        markAlertSent('late30');
+        console.warn('[shift] تأخير غير منطقي:', ciLate, 'دقيقة — لم يُخصم. الشفت:',
+          sh.date, sh.shift_start, '| الحضور:', ci.toISOString());
+        return;
+      }
+
       if(ciLate < SHIFT_CFG.grace){ markAlertSent('late30'); return; }
     }
     markAlertSent('late30');
@@ -4694,14 +4760,18 @@ function shiftMeta(type){
 
 function weekScheduleHTML(){
   var ar = LANG==='ar';
-  var start = weekStartSat(_weekOffset);
   var todayS = todayStr();
+  /* بداية الأسبوع (السبت) محسوبة من تاريخ الكويت نصّياً —
+     قبلها كانت من Date بتوقيت الجهاز، فكان الجدول ينزلق يوماً
+     على هاتف مضبوط على توقيت بلد آخر. */
+  var startS = _addDaysStr(todayS, -((_dowStr(todayS) + 1) % 7) + (_weekOffset||0)*7);
+  var start = new Date(startS + 'T12:00:00Z');
 
   // اجمع أيام الأسبوع
   var days = [];
   for(var i=0;i<7;i++){
-    var d = new Date(start); d.setDate(d.getDate()+i);
-    var ds = ymd(d);
+    var ds = _addDaysStr(startS, i);
+    var d = new Date(ds + 'T12:00:00Z');
     var sh = null;
     for(var j=0;j<SCHEDULES.length;j++){ if(SCHEDULES[j].date===ds){ sh=SCHEDULES[j]; break; } }
     days.push({date:ds, dt:d, sh:sh, isToday: ds===todayS});
@@ -4835,10 +4905,10 @@ function weekNav(dir, reset){
 function nextDaysStripHTML(){
   var ar = LANG==='ar';
   var out = [];
-  var d = new Date(); d.setHours(0,0,0,0);
+  var base = todayStr();                 // تاريخ الكويت لا تاريخ الجهاز
   for(var i=0;i<5;i++){
-    var dd = new Date(d); dd.setDate(dd.getDate()+i);
-    var ds = ymd(dd);
+    var ds = _addDaysStr(base, i);
+    var dd = new Date(ds + 'T12:00:00Z');
     var sh = null;
     for(var j=0;j<SCHEDULES.length;j++){ if(SCHEDULES[j].date===ds){ sh=SCHEDULES[j]; break; } }
     out.push({dt:dd, sh:sh, isToday:i===0});
