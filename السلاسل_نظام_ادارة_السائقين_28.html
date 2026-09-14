@@ -2578,7 +2578,14 @@ function onStaffTypeChange(){
     </div>
 
     <!-- DEDUCTIONS LIST -->
-    <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">الخصومات هذا الشهر</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;flex:1">الخصومات هذا الشهر</div>
+      <button class="btn btn-cancel" style="padding:4px 10px;font-size:10.5px"
+              onclick="cancelLateForShownMonth()"
+              title="يلغي خصومات التأخير التلقائية لكل السائقين في الشهر المعروض">
+        <i class="ti ti-clock-off"></i> ألغِ خصومات التأخير للشهر ده
+      </button>
+    </div>
     <div id="ded-list" style="max-height:200px;overflow-y:auto"></div>
 
     <!-- NET SALARY -->
@@ -4536,22 +4543,121 @@ function addDeduction() {
   }
 }
 
-function removeDeduction(driverId, dedId) {
-  if (!confirm('حذف هذا الخصم؟')) return;
-  const sal  = getSalData(driverId);
-  const ded  = sal.deductions.find(x => x.id === dedId);
-  sal.deductions = sal.deductions.filter(x => x.id !== dedId);
-  saveSalaries();
-  renderSalaryModal();
-  toast('تم حذف الخصم','e');
+/* ── إلغاء خصم ──────────────────────────────────────────────────────────
+   الغلطة اللي كانت هنا:
+   الدالة كانت بتشيل الخصم من SALARIES (تخزين المتصفح) وبس. الصف في
+   Supabase بيفضل status='active'، وأول ما pullDeductionsFromSupabase
+   تشتغل تاني (عند فتح ARK أو بضغطة مزامنة) بترجّعه مكانه.
 
-  // Send cancellation notification to driver
-  if(ded) {
-    const d = DRV.find(x => x.id === driverId);
-    if(d && confirm('إرسال إشعار إلغاء الخصم للسائق ' + d.name + '؟')) {
-      sendDeductionCancelNotif(driverId, ded);
+   النتيجة اللي شافها المستخدم: «بلغي الخصم ومازال موجود في شيت الراتب».
+   مش الإلغاء اللي مش شغّال — الخصم بيرجع من السحابة.
+
+   دلوقتي: بنلغيه في السحابة الأول، ولما ينجح نشيله محلياً. لو الشبكة
+   وقعت مانشيلوش حاجة ونقوله — أحسن من إننا نوهمه إنه اتلغى.
+   ─────────────────────────────────────────────────────────────────────── */
+async function removeDeduction(driverId, dedId) {
+  if (!confirm('إلغاء هذا الخصم؟')) return;
+  const ded = (getSalData(driverId).deductions || []).find(x => x.id === dedId);
+  if (!ded) return;
+
+  /* الخصومات اللي مصدرها FLY لها صف في السحابة لازم يتلغي.
+     المعرّف المحلي هو uniq_key، أو 'SB_<id>' لو مكانش ليه uniq_key. */
+  const isCloud = ded.src === 'fly' || /^(LATE_|SB_)/.test(String(dedId));
+  if (isCloud) {
+    const key = String(dedId);
+    const q = key.indexOf('SB_') === 0
+      ? 'id=eq.' + encodeURIComponent(key.slice(3))
+      : 'uniq_key=eq.' + encodeURIComponent(key);
+    try {
+      const r = await fetch(SUPA_URL + '/rest/v1/deductions?' + q, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
+                   'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: 'cancelled', amount: 0, days: 0 })
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
+    } catch (e) {
+      toast('تعذّر إلغاء الخصم على السحابة — هيرجع تاني. ' + (e.message || e), 'e');
+      return;                       /* ما نشيلوش محلياً عشان ما نكدبش عليه */
     }
   }
+
+  /* لازم نجيب الكائن الحيّ تاني بعد الـ await — أي إعادة تحميل لـ SALARIES
+     أثناء نداء الشبكة بتخلّي النسخة القديمة منفصلة، فالتعديل عليها
+     بيروح في الهوا والخصم بيفضل ظاهر. */
+  const salNow = getSalData(driverId);
+  salNow.deductions = (salNow.deductions || []).filter(x => x.id !== dedId);
+  saveSalaries();
+  try { renderSalaryModal(); } catch (e) {}
+  try { if (typeof renderList === 'function') renderList(); } catch (e) {}
+  toast('اتلغى الخصم' + (isCloud ? ' — ومش هيرجع' : ''), 's');
+
+  const d = DRV.find(x => x.id === driverId);
+  if (d && confirm('إرسال إشعار إلغاء الخصم للسائق ' + d.name + '؟')) {
+    sendDeductionCancelNotif(driverId, ded);
+  }
+}
+
+/* الشهر المعروض في كارت الراتب — نقراه من نفس المتغيّرات اللي بترسمه */
+function cancelLateForShownMonth(){
+  /* نفس المصدر اللي بترسم منه الشاشة — القائمتين اللي فوق كارت الراتب */
+  var mEl = document.getElementById('sal-month');
+  var yEl = document.getElementById('sal-year');
+  var m = mEl ? parseInt(mEl.value, 10) : 0;
+  var y = yEl ? parseInt(yEl.value, 10) : 0;
+  if(!m) m = new Date().getMonth() + 1;
+  if(!y) y = new Date().getFullYear();
+  return cancelLateDeductionsForMonth(m, y);
+}
+
+/* ── إلغاء كل خصومات التأخير في شهر ──────────────────────────────────────
+   لما القاعدة تفضل شغّالة شهر كامل، الإلغاء واحد واحد مش عملي. */
+async function cancelLateDeductionsForMonth(m, y) {
+  m = parseInt(m, 10); y = parseInt(y, 10);
+  if (!m || !y) return;
+  const MON_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                  'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const label = MON_AR[m - 1] + ' ' + y;
+  /* نفلتر على خصومات التأخير بس — ما نلمسش الغياب ولا الخصومات اليدوية */
+  const filt = SUPA_URL + '/rest/v1/deductions?auto=eq.true&status=eq.active' +
+               '&month=eq.' + m + '&year=eq.' + y +
+               '&or=(reason.ilike.*half day deduction*,reason.ilike.*' +
+               encodeURIComponent('تأخير') + '*)';
+
+  let rows = [];
+  try {
+    const res = await fetch(filt + '&select=id,driver_id,amount,reason',
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0,120));
+    rows = await res.json();
+  } catch (e) {
+    toast('تعذّر قراءة الخصومات: ' + (e.message || e), 'e');
+    return;
+  }
+
+  if (!rows.length) { toast('مفيش خصومات تأخير شغّالة في ' + label, 's'); return; }
+
+  const total = rows.reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+  if (!confirm('إلغاء ' + rows.length + ' خصم تأخير في ' + label +
+               ' بإجمالي ' + total.toFixed(3) + ' د.ك؟')) return;
+
+  try {
+    const r = await fetch(filt, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
+                 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: 'cancelled', amount: 0, days: 0 })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
+  } catch (e) {
+    toast('تعذّر الإلغاء: ' + (e.message || e), 'e');
+    return;
+  }
+
+  /* المزامنة هي اللي بتشيلهم من الشيت — الإلغاء لوحده مش كفاية */
+  await pullDeductionsFromSupabase({ silent: true });
+  toast('اتلغى ' + rows.length + ' خصم تأخير في ' + label +
+        ' — ' + total.toFixed(3) + ' د.ك رجعت للسائقين', 's');
 }
 
 function sendDeductionCancelNotif(driverId, ded) {
@@ -4938,6 +5044,103 @@ function saveAtt(){ try{localStorage.setItem('sl_att2',JSON.stringify(ATTENDANCE
 function saveVio(){ try{localStorage.setItem('sl_vio2',JSON.stringify(VIOLATIONS));}catch(e){} }
 function saveInc(){ try{localStorage.setItem('sl_inc',JSON.stringify(INCOMES));}catch(e){} }
 function saveExp(){ try{localStorage.setItem('sl_exp',JSON.stringify(EXPENSES));}catch(e){} }
+
+/* ════════════════════════════════════════════════════════════════
+   مزامنة المالية مع السحابة
+   ────────────────────────────────────────────────────────────────
+   كانت المالية محفوظة في ذاكرة هذا المتصفح وحده: جهاز واحد، بلا
+   نسخة، ولا يمكن قراءتها لبناء تقرير إلا بتصدير يدوي.
+   الآن كل إضافة تُرفع فوراً، وكل فتحة تسحب ما أضافه جهاز آخر.
+   المعرّف (I… / E…) هو المفتاح، فالتكرار مستحيل مهما تكرّرت المزامنة.
+   ════════════════════════════════════════════════════════════════ */
+const FIN_TBL = { inc: 'ark_incomes', exp: 'ark_expenses' };
+
+function _finRow(kind, x){
+  const base = {
+    uniq_key: x.id,
+    date:      x.date,
+    amount:    parseFloat(x.amount) || 0,
+    driver_id: x.driverId || null,
+    note:      x.note || null,
+    updated_at: new Date().toISOString()
+  };
+  if (kind === 'inc') base.source   = x.source   || null;
+  else                base.category = x.category || null;
+  return base;
+}
+
+async function finPush(kind, rows){
+  if (!rows || !rows.length) return { ok:0, fail:0 };
+  const tbl = FIN_TBL[kind];
+  let ok = 0, fail = 0;
+  /* دفعات من 100 — الرفع دفعة واحدة كبيرة يفشل على الشبكات الضعيفة */
+  for (let i = 0; i < rows.length; i += 100){
+    const chunk = rows.slice(i, i + 100).map(x => _finRow(kind, x));
+    try{
+      const res = await fetch(SUPA_URL + '/rest/v1/' + tbl + '?on_conflict=uniq_key', {
+        method:'POST',
+        headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,
+                  'Content-Type':'application/json',
+                  'Prefer':'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(chunk)
+      });
+      if (res.ok) ok += chunk.length; else { fail += chunk.length;
+        console.warn('[fin push] HTTP '+res.status, await res.text()); }
+    }catch(e){ fail += chunk.length; console.error('[fin push]', e); }
+  }
+  return { ok, fail };
+}
+
+/* دفع صف واحد عند الإضافة — لا ينتظره المستخدم */
+function finPushOne(kind, x){ finPush(kind, [x]).catch(()=>{}); }
+
+async function finDelete(kind, id){
+  try{
+    await fetch(SUPA_URL + '/rest/v1/' + FIN_TBL[kind] + '?uniq_key=eq.' + encodeURIComponent(id), {
+      method:'DELETE',
+      headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Prefer':'return=minimal' }
+    });
+  }catch(e){ console.warn('[fin delete]', e); }
+}
+
+/* سحب ودمج — ما أضافه جهاز آخر يظهر هنا */
+async function finPull(silent){
+  let added = 0;
+  for (const kind of ['inc','exp']){
+    try{
+      const res = await fetch(SUPA_URL + '/rest/v1/' + FIN_TBL[kind] + '?select=*&order=date.desc', {
+        headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY }
+      });
+      if (!res.ok) continue;
+      const rows = await res.json();
+      const arr  = kind === 'inc' ? INCOMES : EXPENSES;
+      const have = new Set(arr.map(x => x.id));
+      rows.forEach(r => {
+        if (have.has(r.uniq_key)) return;
+        const item = { id:r.uniq_key, date:r.date, amount:parseFloat(r.amount)||0,
+                       driverId:r.driver_id || '', note:r.note || '' };
+        if (kind === 'inc') item.source = r.source || ''; else item.category = r.category || '';
+        arr.push(item); added++;
+      });
+    }catch(e){ console.warn('[fin pull]', kind, e); }
+  }
+  if (added){ saveInc(); saveExp(); try{ renderAccounting(); }catch(e){} }
+  if (!silent) toast(added ? ('نُزّل '+added+' قيداً من السحابة ✅') : 'لا قيود جديدة','s');
+  return added;
+}
+
+/* رفع كل ما في الجهاز مرة واحدة — للانتقال الأول */
+async function finBackfill(){
+  if (!confirm('رفع كل الإيرادات والمصروفات المحفوظة على هذا الجهاز إلى السحابة؟\n\n'
+    + 'إيرادات: ' + INCOMES.length + '\nمصروفات: ' + EXPENSES.length
+    + '\n\nالتكرار آمن — القيد المرفوع مسبقاً يُحدَّث ولا يتضاعف.')) return;
+  toast('⏳ جارٍ الرفع…','s');
+  const a = await finPush('inc', INCOMES);
+  const b = await finPush('exp', EXPENSES);
+  const okAll = a.ok + b.ok, failAll = a.fail + b.fail;
+  toast(failAll ? ('رُفع '+okAll+' · فشل '+failAll+' — راجع الاتصال')
+                : ('✅ رُفعت المالية كاملة — '+okAll+' قيد'), failAll ? 'e' : 's');
+}
 
 // ==========================================
 // DASHBOARD
@@ -5920,6 +6123,13 @@ let vioYear   = new Date().getFullYear();
 function renderVio(){
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
+  /* تاريخ افتراضي ذكي: لو بتتفرّج على شهر فات، التاريخ يبدأ على آخر يوم فيه
+     بدل النهاردة — عشان المخالفة تنزل في نفس الشهر اللي انت فيه، وما تختفيش
+     من الشاشة أول ما تضيفها. */
+  const _now = new Date();
+  const _viewingNow = (vioMonth === _now.getMonth()+1 && vioYear === _now.getFullYear());
+  const defDate = _viewingNow ? fmtDate(_now) : fmtDate(new Date(vioYear, vioMonth, 0));
+
   // Filter violations
   let vios = VIOLATIONS.filter(v=>{
     const d = new Date(v.date);
@@ -5970,7 +6180,15 @@ function renderVio(){
       </div>
       <div class="fg" style="margin:0"><label>السبب</label><input id="vio-reason" placeholder="سبب المخالفة..." style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none;width:100%"></div>
       <div class="fg" style="margin:0"><label>المبلغ (KD)</label><input id="vio-amt" type="number" placeholder="0.000" step="0.001" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;width:100%"></div>
+      <div class="fg" style="margin:0"><label>تاريخ المخالفة</label><input id="vio-date" type="date" value="${defDate}" max="${fmtDate(new Date())}" onchange="vioSyncMonth()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;width:100%"></div>
       <button class="btn btn-save" onclick="addViolation()" style="height:36px"><i class="ti ti-plus"></i> إضافة</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+      <span style="font-size:12px;font-weight:700">الخصم هينزل على مرتب:</span>
+      <select id="vio-pm" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none">
+        ${vioMonthOptions(defDate)}
+      </select>
+      <span style="font-size:10.5px;color:var(--muted)">بيتظبط لوحده من التاريخ — غيّره بس لو عايز الخصم على شهر تاني</span>
     </div>
   </div>`;
 
@@ -6006,26 +6224,73 @@ function renderVio(){
   document.getElementById('vio-content').innerHTML = html;
 }
 
+/* قائمة شهور الخصم — سنة قبل وسنة بعد الشهر المختار، كفاية لأي تسجيل متأخر */
+function vioMonthOptions(dateStr){
+  const M = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+             'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const d = new Date(dateStr);
+  const selM = d.getMonth()+1, selY = d.getFullYear();
+  let out = '';
+  for(let y = selY-1; y <= selY+1; y++){
+    for(let m = 1; m <= 12; m++){
+      const on = (m===selM && y===selY) ? ' selected' : '';
+      out += '<option value="'+y+'-'+m+'"'+on+'>'+M[m-1]+' '+y+'</option>';
+    }
+  }
+  return out;
+}
+
+/* لما التاريخ يتغيّر، شهر الخصم يمشي وراه — ده اللي المستخدم متوقعه */
+function vioSyncMonth(){
+  const dEl = document.getElementById('vio-date');
+  const pEl = document.getElementById('vio-pm');
+  if(!dEl || !pEl || !dEl.value) return;
+  pEl.innerHTML = vioMonthOptions(dEl.value);
+}
+
 async function addViolation(){
   const drvId  = document.getElementById('vio-drv').value;
   const reason = document.getElementById('vio-reason').value.trim();
   const amount = parseFloat(document.getElementById('vio-amt').value);
   if(!reason){ toast('يرجى إدخال سبب المخالفة','e'); return; }
   if(!amount||amount<=0){ toast('يرجى إدخال مبلغ صحيح','e'); return; }
-  const today = fmtDate(new Date());
-  const now = new Date();
-  const month = now.getMonth()+1, year = now.getFullYear();
+
+  /* ★ التاريخ بقى من الخانة مش من ساعة الجهاز.
+     قبل كده كان new Date() ثابت، يعني أي مخالفة بتتسجّل النهاردة كان
+     خصمها بينزل على الشهر الحالي مهما كان تاريخ المخالفة الحقيقي. */
+  const dEl = document.getElementById('vio-date');
+  const vDate = (dEl && dEl.value) ? dEl.value : fmtDate(new Date());
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(vDate)){ toast('تاريخ المخالفة غير صحيح','e'); return; }
+  if(vDate > fmtDate(new Date())){ toast('مينفعش تاريخ في المستقبل','e'); return; }
+
+  /* شهر الخصم: بيتبع التاريخ إلا لو المستخدم غيّره بنفسه */
+  let month, year;
+  const pEl = document.getElementById('vio-pm');
+  if(pEl && pEl.value && /^\d{4}-\d{1,2}$/.test(pEl.value)){
+    const parts = pEl.value.split('-');
+    year = parseInt(parts[0],10); month = parseInt(parts[1],10);
+  } else {
+    const p = vDate.split('-');
+    year = parseInt(p[0],10); month = parseInt(p[1],10);
+  }
+
+  const MON_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                  'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const monLabel = MON_AR[month-1] + ' ' + year;
+  const today = vDate;
   const ts = Date.now();
   const vioId = 'V'+ts;
+  const dedId = 'D_VIO_'+ts;
 
   // 1) Save violation
-  VIOLATIONS.push({ id:vioId, driverId:drvId, reason, amount, date:today, notes:'', linkedDedId:'D_VIO_'+ts });
+  VIOLATIONS.push({ id:vioId, driverId:drvId, reason, amount, date:today, notes:'',
+                    linkedDedId:dedId, payMonth:month, payYear:year });
   saveVio();
 
   // 2) Add deduction linked to violation in salary sheet
   const sal = getSalData(drvId);
   const ded = {
-    id:        'D_VIO_'+ts,
+    id:        dedId,
     reason:    'مخالفة: ' + reason,
     amount:    amount,
     days:      0,                  // مخالفة مالية مش أيام
@@ -6039,7 +6304,8 @@ async function addViolation(){
   saveSalaries();
 
   // 3) Sync deduction to Supabase (for driver app to see)
-  try { if(typeof saveDeductionToSupabase==='function') await saveDeductionToSupabase(ded, drvId); } catch(e){}
+  let cloudOk = true;
+  try { cloudOk = await saveDeductionToSupabase(ded, drvId); } catch(e){ cloudOk = false; }
 
   // 4) Send in-app notification to driver via messages table
   try {
@@ -6056,34 +6322,63 @@ async function addViolation(){
       body: JSON.stringify({
         recipient: drvId,
         title: '🚨 مخالفة جديدة وخصم — ' + amount.toFixed(3) + ' د.ك',
-        body:  'تم تسجيل مخالفة: ' + reason + '\nبتاريخ: ' + today + '\nقيمة الخصم: ' + amount.toFixed(3) + ' د.ك\nسيتم خصمه من راتب شهر ' + month + '/' + year + '.\nللاستفسار تواصل مع الإدارة.',
+        body:  'تم تسجيل مخالفة: ' + reason + '\nبتاريخ المخالفة: ' + today +
+               '\nقيمة الخصم: ' + amount.toFixed(3) + ' د.ك' +
+               '\nسيتم خصمه من راتب شهر ' + monLabel + '.\nللاستفسار تواصل مع الإدارة.',
         level: 'important'
       })
     });
   } catch(e){ console.warn('msg send err',e); }
 
   renderVio();
-  toast('تمت إضافة المخالفة + خصم ' + amount.toFixed(3) + ' د.ك + إشعار للسائق ✅','s');
+  toast('اتسجّلت المخالفة — خصم ' + amount.toFixed(3) + ' د.ك على مرتب ' + monLabel +
+        (cloudOk ? ' ✅' : ' ⚠️ (متزامنتش مع السحابة — السائق مش هيشوفها)'),
+        cloudOk ? 's' : 'e');
 }
 
-function delViolation(id){
-  if(!confirm('حذف هذه المخالفة؟ سيتم أيضاً حذف الخصم المرتبط بها من الراتب.')) return;
+/* ★★ الغلطة الخطيرة اللي كانت هنا:
+      DELETE /deductions?driver_id=eq.<السائق>
+   ده مفيهوش أي شرط تاني — يعني حذف مخالفة واحدة كان بيمسح **كل** خصومات
+   السائق من السحابة: التأخير والغياب والمخالفات التانية، كله. وفي صمت.
+
+   دلوقتي بنمسح الصف بتاعه بس عن طريق uniq_key. والصفوف القديمة اللي
+   اتسجّلت قبل المفتاح بنطابقها بالسائق + التاريخ + المبلغ. */
+async function delViolation(id){
+  if(!confirm('حذف هذه المخالفة؟ هيتشال الخصم المرتبط بيها من الراتب كمان.')) return;
   const vio = VIOLATIONS.find(v=>v.id===id);
-  if(vio && vio.linkedDedId){
-    // remove linked deduction from salary
+  if(!vio){ return; }
+
+  if(vio.linkedDedId){
+    const q = SUPA_URL + '/rest/v1/deductions?uniq_key=eq.' + encodeURIComponent(vio.linkedDedId);
+    let done = false;
+    try {
+      const res = await fetch(q, { method:'DELETE',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,
+                 'Prefer':'return=representation'} });
+      if(res.ok){ const rows = await res.json().catch(()=>[]); done = (rows||[]).length > 0; }
+    } catch(e){}
+
+    /* صف قديم من غير uniq_key — نطابقه بدقة بدل ما نمسح على المكشوف */
+    if(!done){
+      try {
+        const amt = Number(vio.amount).toFixed(3);
+        const q2 = SUPA_URL + '/rest/v1/deductions'
+          + '?driver_id=eq.' + encodeURIComponent(vio.driverId)
+          + '&date=eq.'      + encodeURIComponent(vio.date)
+          + '&amount=eq.'    + encodeURIComponent(amt)
+          + '&reason=eq.'    + encodeURIComponent('مخالفة: ' + vio.reason);
+        await fetch(q2, { method:'DELETE',
+          headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY} });
+      } catch(e){}
+    }
+
     const sal = getSalData(vio.driverId);
     sal.deductions = (sal.deductions||[]).filter(d=>d.id!==vio.linkedDedId);
     saveSalaries();
-    // also delete from supabase
-    try {
-      fetch(SUPA_URL + '/rest/v1/deductions?driver_id=eq.'+encodeURIComponent(vio.driverId), {
-        method:'DELETE',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
-      });
-    } catch(e){}
   }
+
   VIOLATIONS = VIOLATIONS.filter(v=>v.id!==id);
-  saveVio(); renderVio(); toast('تم حذف المخالفة والخصم المرتبط','e');
+  saveVio(); renderVio(); toast('اتحذفت المخالفة والخصم المرتبط بيها','e');
 }
 
 function exportVioExcel(){
@@ -6360,29 +6655,43 @@ body{font-family:'Cairo',sans-serif;background:#0d1117;color:#e6edf3;min-height:
 // ============================================================
 // SUPABASE SYNC HELPERS
 // ============================================================
+/* بيرجّع true عند النجاح بس — النداء القديم كان بيبلع أي خطأ في صمت،
+   فالخصم يبان في ARK والسائق ما يشوفوش أبداً.
+
+   ★ وبنبعت uniq_key: من غيره مفيش طريقة نمسك بيها الصف ده لوحده،
+   وده اللي خلّى الحذف القديم يمسح خصومات السائق كلها. */
 async function saveDeductionToSupabase(ded, driverId) {
   try {
-    await fetch(SUPA_URL + '/rest/v1/deductions', {
+    const res = await fetch(SUPA_URL + '/rest/v1/deductions?on_conflict=uniq_key', {
       method: 'POST',
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': 'Bearer ' + SUPA_KEY,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
       body: JSON.stringify({
+        uniq_key:  ded.id,
         driver_id: driverId,
         reason:    ded.reason,
         amount:    ded.amount,
         days:      ded.days,
         date:      ded.date,
         month:     ded.month,
-        year:      ded.year
+        year:      ded.year,
+        ded_type:  ded.source === 'violation' ? 'violation' : null,
+        auto:      false,
+        status:    'active'
       })
     });
-    console.log('Deduction synced to Supabase');
+    if(!res.ok){
+      console.error('Supabase sync failed:', res.status, await res.text());
+      return false;
+    }
+    return true;
   } catch(e) {
     console.error('Supabase sync error:', e);
+    return false;
   }
 }
 
@@ -7645,6 +7954,9 @@ renderDetail();
     // سحب خصومات FLY التلقائية (تأخير…) إلى شيت الرواتب
     pullDeductionsFromSupabase({silent:true});
     setInterval(function(){ pullDeductionsFromSupabase({silent:true}); }, 300000);
+
+    // سحب المالية المرفوعة من أي جهاز آخر
+    finPull(true);
   }catch(e){ console.warn('[ark v2] boot', e); }
 })();
 
@@ -8620,6 +8932,7 @@ function saveIncome(){
   const newEntry = {id:'I'+Date.now(), date, amount:amt, source:src, driverId:drv, note};
   INCOMES.push(newEntry);
   saveInc();
+  finPushOne('inc', newEntry);          // يخرج من هذا الجهاز فوراً
   console.log('[INCOME ADDED]', newEntry, 'Total INCOMES:', INCOMES.length);
   closeModal('incomeModal');
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -8650,8 +8963,10 @@ function saveExpense(){
   if(!date){ toast('أدخل التاريخ','e'); return; }
   if(!amt || amt<=0){ toast('أدخل مبلغ صحيح','e'); return; }
   const [y, m, d] = date.split('-').map(n=>parseInt(n,10));
-  EXPENSES.push({id:'E'+Date.now(), date, amount:amt, category:cat, driverId:drv, note});
+  const newExp = {id:'E'+Date.now(), date, amount:amt, category:cat, driverId:drv, note};
+  EXPENSES.push(newExp);
   saveExp();
+  finPushOne('exp', newExp);            // يخرج من هذا الجهاز فوراً
   closeModal('expenseModal');
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   if(accMonth !== m || accYear !== y){
@@ -8666,12 +8981,12 @@ function saveExpense(){
 function deleteIncome(id){
   if(!confirm('حذف هذا الإيراد؟')) return;
   INCOMES = INCOMES.filter(x=>x.id!==id);
-  saveInc(); renderAccounting();
+  saveInc(); finDelete('inc', id); renderAccounting();
 }
 function deleteExpense(id){
   if(!confirm('حذف هذا المصروف؟')) return;
   EXPENSES = EXPENSES.filter(x=>x.id!==id);
-  saveExp(); renderAccounting();
+  saveExp(); finDelete('exp', id); renderAccounting();
 }
 
 
@@ -9453,6 +9768,24 @@ function renderAccounting(){
     }
     h += '</div></div>';
   }
+
+  /* شريط حالة المزامنة — المالية لم تعد حبيسة هذا الجهاز،
+     ووجود الزر ظاهراً يذكّر بأن النسخة السحابية هي المرجع. */
+  h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;'+
+    'background:#161b22;border:1px solid #30363d;border-radius:12px;'+
+    'padding:11px 13px;margin-bottom:14px">'+
+    '<i class="ti ti-cloud-upload" style="font-size:18px;color:#0d9488"></i>'+
+    '<div style="flex:1;min-width:170px">'+
+      '<div style="font-size:12.5px;font-weight:800">المالية على السحابة</div>'+
+      '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">'+
+        'كل إضافة تُرفع تلقائياً · '+INCOMES.length+' إيراد و'+EXPENSES.length+' مصروف على هذا الجهاز</div>'+
+    '</div>'+
+    '<button class="btn btn-s" onclick="finPull()" style="padding:7px 12px;font-size:11px">'+
+      '<i class="ti ti-refresh"></i> تنزيل</button>'+
+    '<button class="btn btn-s" onclick="finBackfill()" style="padding:7px 12px;font-size:11px;'+
+      'background:#0d9488;color:#fff;border-color:#0d9488">'+
+      '<i class="ti ti-cloud-up"></i> رفع الكل</button>'+
+  '</div>';
 
   // Two-column: Incomes + Expenses
   h += '<div class="dash-bottom">';
@@ -13335,15 +13668,26 @@ async function openLateSettings(){
 
     var g = prompt('⏱️ مهلة التأخير قبل الخصم (بالدقائق):', grace);
     if(g===null) return;
-    var f = prompt('💸 نسبة الخصم عند التأخير (0.5 = نصف يوم، 1 = يوم كامل):', frac);
+    var f = prompt('💸 نسبة الخصم عند التأخير\n' +
+                   '0   = إيقاف الخصم تماماً (التأخير يتسجّل بس من غير فلوس)\n' +
+                   '0.5 = نصف يوم\n' +
+                   '1   = يوم كامل', frac);
     if(f===null) return;
     var p = prompt('🔔 التنبيه قبل الشفت بكام دقيقة:', pre);
     if(p===null) return;
 
+    /* ★ كان مكتوب parseFloat(f) || 0.5 — و«0 || 0.5» في جافاسكريبت بترجّع 0.5.
+       يعني اللي يكتب صفر عشان يوقف الخصم، النظام بيرجّعه نص يوم في صمت،
+       ومكانش فيه أي طريقة يقفل القاعدة من الواجهة أصلاً. */
+    var fNum = parseFloat(f);
+    if(isNaN(fNum) || fNum < 0){ toast('نسبة الخصم لازم تكون رقم من 0 لفوق','e'); return; }
+    var gNum = parseInt(g,10); if(isNaN(gNum) || gNum < 0) gNum = 30;
+    var pNum = parseInt(p,10); if(isNaN(pNum) || pNum < 0) pNum = 30;
+
     var payload = [
-      {key:'late_grace_minutes', value:String(parseInt(g,10)||30), updated_at:new Date().toISOString()},
-      {key:'late_deduct_fraction', value:String(parseFloat(f)||0.5), updated_at:new Date().toISOString()},
-      {key:'prealert_minutes', value:String(parseInt(p,10)||30), updated_at:new Date().toISOString()}
+      {key:'late_grace_minutes', value:String(gNum), updated_at:new Date().toISOString()},
+      {key:'late_deduct_fraction', value:String(fNum), updated_at:new Date().toISOString()},
+      {key:'prealert_minutes', value:String(pNum), updated_at:new Date().toISOString()}
     ];
     var r2 = await fetch(SUPA_URL+'/rest/v1/app_settings?on_conflict=key', {
       method:'POST',
@@ -13352,7 +13696,9 @@ async function openLateSettings(){
       body: JSON.stringify(payload)
     });
     if(!r2.ok) throw new Error(await r2.text());
-    toast('✅ تم حفظ الإعدادات','s');
+    toast(fNum === 0
+      ? '✅ اتقفل خصم التأخير — التأخير هيفضل يتسجّل من غير خصم فلوس'
+      : '✅ اتحفظت الإعدادات — الخصم ' + fNum + ' من اليوم بعد ' + gNum + ' دقيقة', 's');
   }catch(e){ toast('خطأ: '+e.message,'e'); }
 }
 </script>
@@ -18826,6 +19172,81 @@ window.arkBellPaint = function(){
 
 
 /* ══════════════════════════════════════════════════════════════════════════
+   ARK — ترويسة الاتصال بـ Supabase (مشتركة)
+   ──────────────────────────────────────────────────────────────────────────
+   الغلطة اللي بيصلّحها الملف ده:
+
+   الكود القديم في ARK كان بيبعت مفتاح المشروع دايماً:
+       Authorization: 'Bearer ' + SUPA_KEY
+   وكان شغّال.
+
+   أنا غيّرتها لـ «ابعت تذكرة دخول المستخدم لو موجودة، وإلا المفتاح»:
+       Authorization: 'Bearer ' + (tok() || SUPA_KEY)
+   الفكرة كانت إن العمليات تبقى منسوبة لصاحبها. المشكلة: التذكرة دي
+   بتنتهي بعد ساعة. ولو انتهت، الخادم بيرفض **كل** نداء بـ 401 —
+   مش بيرجع للمفتاح لوحده. يعني مزامنة السائقين والمحاسبة كلها بتقف،
+   وفي الخلفية وبصمت.
+
+   الحل هنا:
+   1) منستخدمش تذكرة منتهية أصلاً — بنبص على وقت انتهائها الأول.
+   2) ولو الخادم رجّع 401 برضه، بنعيد المحاولة بمفتاح المشروع
+      ونفضل عليه — عشان تذكرة بايظة ماتوقّفش الشغل.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+var forceAnon = false;   /* اتحرقنا مرة بالتذكرة؟ نكمّل بالمفتاح */
+
+/* تذكرة صالحة بس — مش أي تذكرة */
+function liveToken(){
+  if(forceAnon) return null;
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(!k || k.indexOf('-auth-token') < 0) continue;
+      var v = JSON.parse(localStorage.getItem(k) || '{}');
+      if(!v || !v.access_token) continue;
+      /* expires_at بالثواني في Supabase. نسيب دقيقة أمان. */
+      var exp = v.expires_at ? Number(v.expires_at) * 1000 : 0;
+      if(exp && exp - Date.now() < 60000) continue;   /* منتهية أو على وشك */
+      return v.access_token;
+    }
+  }catch(e){}
+  return null;
+}
+
+function headers(extra){
+  var h = { apikey: SUPA_KEY,
+            Authorization: 'Bearer ' + (liveToken() || SUPA_KEY),
+            'Content-Type': 'application/json' };
+  if(extra) Object.keys(extra).forEach(function(k){ h[k] = extra[k]; });
+  return h;
+}
+
+/* نداء بيرجع للمفتاح لو التذكرة اترفضت */
+function sbFetch(url, opts){
+  opts = opts || {};
+  var o1 = Object.assign({}, opts, { headers: headers(opts.headers) });
+  return fetch(url, o1).then(function(r){
+    if(r.status !== 401 || forceAnon) return r;
+    /* التذكرة مرفوضة — نعيد بالمفتاح ونفضل عليه */
+    forceAnon = true;
+    console.warn('[SB] تذكرة الدخول مرفوضة — بنكمّل بمفتاح المشروع');
+    var o2 = Object.assign({}, opts, { headers: headers(opts.headers) });
+    return fetch(url, o2);
+  });
+}
+
+window.ARKSB = {
+  headers: headers,
+  fetch: sbFetch,
+  usingAnon: function(){ return forceAnon || !liveToken(); },
+  reset: function(){ forceAnon = false; }
+};
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
    ARK — رفع المحاسبة للسحابة
    ──────────────────────────────────────────────────────────────────────────
    الدخل والمصروفات كانوا متخزّنين في متصفح اللاب بس. يعني تطبيق المدير
@@ -18843,20 +19264,8 @@ window.arkBellPaint = function(){
 var FIN = window.ARKFIN = { last: null, busy: false, err: null, pulled: 0 };
 
 function rpc(fn, args){
-  var tok = null;
-  try{
-    for(var i=0;i<localStorage.length;i++){
-      var k = localStorage.key(i);
-      if(k && k.indexOf('-auth-token') > 0){
-        var v = JSON.parse(localStorage.getItem(k) || '{}');
-        if(v && v.access_token){ tok = v.access_token; break; }
-      }
-    }
-  }catch(e){}
-  return fetch(SUPA_URL + '/rest/v1/rpc/' + fn, {
+  return ARKSB.fetch(SUPA_URL + '/rest/v1/rpc/' + fn, {
     method:'POST',
-    headers:{ apikey:SUPA_KEY, Authorization:'Bearer ' + (tok || SUPA_KEY),
-              'Content-Type':'application/json' },
     body: JSON.stringify(args || {})
   }).then(function(r){
     return r.text().then(function(t){
@@ -19000,24 +19409,7 @@ setInterval(function(){ if(!document.hidden) push(true); }, 600000);
 
 var DS = window.ARKDRV = { last:null, busy:false, err:null, pending:false };
 
-function tok(){
-  try{
-    for(var i=0;i<localStorage.length;i++){
-      var k = localStorage.key(i);
-      if(k && k.indexOf('-auth-token') > 0){
-        var v = JSON.parse(localStorage.getItem(k) || '{}');
-        if(v && v.access_token) return v.access_token;
-      }
-    }
-  }catch(e){}
-  return null;
-}
-function H(extra){
-  var h = { apikey:SUPA_KEY, Authorization:'Bearer ' + (tok() || SUPA_KEY),
-            'Content-Type':'application/json' };
-  if(extra) Object.keys(extra).forEach(function(k){ h[k] = extra[k]; });
-  return h;
-}
+function H(x){ return ARKSB.headers(x); }
 
 /* ── نسأل الجدول عن أعمدته مرة واحدة ونفتكرها ──
    PostgREST بيرجّع خطأ 400 لو بعتّ عمود مش موجود، وبيفشل الدفعة كلها.
@@ -19026,12 +19418,12 @@ function H(extra){
 var COLS = null;
 function columns(){
   if(COLS) return Promise.resolve(COLS);
-  return fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=1', { headers:H() })
+  return ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=1', { headers:H() })
     .then(function(r){ return r.ok ? r.json() : []; })
     .then(function(rows){
       if(rows && rows.length){ COLS = Object.keys(rows[0]); return COLS; }
       /* جدول فاضي — نجيب الأعمدة من وصف الـ API */
-      return fetch(SUPA_URL + '/rest/v1/', { headers:H() })
+      return ARKSB.fetch(SUPA_URL + '/rest/v1/', { headers:H() })
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(spec){
           var d = spec && spec.definitions && spec.definitions.drivers;
@@ -19093,7 +19485,7 @@ function doPush(cols, silent){
   var batches = Object.keys(groups).map(function(k){ return groups[k]; });
 
   return Promise.all(batches.map(function(batch){
-    return fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
+    return ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
       method:'POST',
       headers: H({ 'Prefer':'resolution=merge-duplicates,return=minimal' }),
       body: JSON.stringify(batch)
@@ -19126,14 +19518,14 @@ function doPush(cols, silent){
 /* ── السائق اللي اتشال من ARK: نعلّمه غير نشط، مش نمسحه ──
    الحذف كان هيضيّع تاريخه في الحضور والرواتب والعهدة. */
 function prune(liveIds){
-  return fetch(SUPA_URL + '/rest/v1/drivers?select=id,is_active', { headers:H() })
+  return ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?select=id,is_active', { headers:H() })
     .then(function(r){ return r.ok ? r.json() : []; })
     .then(function(rows){
       var gone = rows.filter(function(x){
         return liveIds.indexOf(x.id) < 0 && x.is_active !== false;
       }).map(function(x){ return x.id; });
       if(!gone.length) return 0;
-      return fetch(SUPA_URL + '/rest/v1/drivers?id=in.(' +
+      return ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?id=in.(' +
           gone.map(encodeURIComponent).join(',') + ')', {
         method:'PATCH', headers:H({'Prefer':'return=minimal'}),
         body: JSON.stringify({ is_active:false })
@@ -19195,25 +19587,9 @@ setInterval(function(){ if(!document.hidden) pushAll(true); }, 900000);
    ══════════════════════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
+var BUILD = 'v3 — 2026-09-01 · بيطبع رد الخادم';
 
-function tok(){
-  try{
-    for(var i=0;i<localStorage.length;i++){
-      var k = localStorage.key(i);
-      if(k && k.indexOf('-auth-token') > 0){
-        var v = JSON.parse(localStorage.getItem(k) || '{}');
-        if(v && v.access_token) return v.access_token;
-      }
-    }
-  }catch(e){}
-  return null;
-}
-function H(x){
-  var h = { apikey:SUPA_KEY, Authorization:'Bearer ' + (tok() || SUPA_KEY),
-            'Content-Type':'application/json' };
-  if(x) Object.keys(x).forEach(function(k){ h[k] = x[k]; });
-  return h;
-}
+function H(x){ return ARKSB.headers(x); }
 function esc(s){
   return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
@@ -19291,23 +19667,67 @@ window.arkDiagRun = async function(){
        n ? '' : 'مفيش سائقين محفوظين في المتصفح ده.');
   if(!n) return;
 
-  /* 3) الاتصال بالخادم */
-  try{
-    var r0 = await fetch(SUPA_URL + '/rest/v1/', { headers:H() });
-    step('الاتصال بـ Supabase', r0.ok, 'HTTP ' + r0.status,
-      r0.ok ? '' : (r0.status === 401 ? 'المفتاح مرفوض — SUPA_KEY في ARK قديم أو اتغيّر.'
-                                      : 'الخادم مش رادّ.'));
-    if(!r0.ok) return;
-  }catch(e){
-    step('الاتصال بـ Supabase', false, String(e.message||e),
-      'مفيش إنترنت، أو الخادم محجوب.');
-    return;
+  /* بصمة النسخة — عشان نعرف إنك بتشغّل أنهي بناء بالظبط */
+  step('بناء الفاحص', true, BUILD);
+
+  /* 3) الاتصال بالخادم
+     ★ الأهم هنا: بنطبع **نص رد الخادم** مش رقم الحالة بس. الرقم
+     لوحده مش بيقول السبب — النص بيقوله. ده اللي كان ناقص وخلّانا
+     نلف على الفاضي. وبنجرّب بالمفتاح وبالتذكرة كل واحد لوحده عشان
+     نعرف مين فيهم المرفوض. */
+  var probe = SUPA_URL + '/rest/v1/drivers?select=id&limit=1';
+  async function tryWith(label, auth){
+    try{
+      var r = await fetch(probe, { headers:{ apikey:SUPA_KEY,
+        Authorization:'Bearer ' + auth, 'Content-Type':'application/json' } });
+      var t = await r.text();
+      return { label:label, ok:r.ok, status:r.status, body:t.slice(0,220) };
+    }catch(e){ return { label:label, ok:false, status:0, body:String(e.message||e) }; }
   }
+
+  var byKey = await tryWith('مفتاح المشروع', SUPA_KEY);
+  step('الاتصال بمفتاح المشروع', byKey.ok,
+    'HTTP ' + byKey.status + (byKey.body ? ' — ' + byKey.body : ''),
+    byKey.ok ? '' :
+      (/permission denied|42501/i.test(byKey.body)
+        ? 'دور anon مالوش صلاحية SELECT على جدول drivers. الحل في Supabase: GRANT SELECT, INSERT, UPDATE ON drivers TO anon, authenticated;'
+      : /JWT|apikey|API key/i.test(byKey.body)
+        ? 'المفتاح نفسه مرفوض — يمكن اتغيّر من Supabase. قارنه بالمفتاح في Settings ← API Keys.'
+      : /does not exist|PGRST205/i.test(byKey.body)
+        ? 'جدول drivers مش موجود بالاسم ده.'
+      : 'رد الخادم فوق بالحرف — ابعتهولي.'));
+
+  /* لو فيه تذكرة، نجرّبها كمان عشان نعرف هي السبب ولا لأ */
+  var raw = null;
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf('-auth-token') > 0){
+        var v = JSON.parse(localStorage.getItem(k) || '{}');
+        if(v && v.access_token){ raw = v; break; }
+      }
+    }
+  }catch(e){}
+  if(raw){
+    var expMs = raw.expires_at ? Number(raw.expires_at)*1000 : 0;
+    var alive = expMs && expMs > Date.now();
+    var byTok = await tryWith('تذكرة الدخول', raw.access_token);
+    step('الاتصال بتذكرة دخولك', byTok.ok,
+      'HTTP ' + byTok.status + ' · التذكرة ' +
+        (expMs ? (alive ? 'صالحة' : 'منتهية من ' +
+          Math.round((Date.now()-expMs)/60000) + ' دقيقة') : 'من غير تاريخ انتهاء') +
+        (byTok.body ? ' — ' + byTok.body : ''),
+      byTok.ok ? '' : 'مش مشكلة — الكود بيرجع لمفتاح المشروع تلقائياً.');
+  }else{
+    step('تذكرة دخول محفوظة', true, 'مفيش — بنشتغل بمفتاح المشروع');
+  }
+
+  if(!byKey.ok) return;
 
   /* 4) القراءة من جدول drivers */
   var cols = null;
   try{
-    var r1 = await fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=1', { headers:H() });
+    var r1 = await ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=1', { headers:H() });
     var t1 = await r1.text();
     if(!r1.ok){
       step('قراءة جدول drivers', false, 'HTTP ' + r1.status + ' — ' + t1.slice(0,160),
@@ -19341,7 +19761,7 @@ window.arkDiagRun = async function(){
   Object.keys(row).forEach(function(k){ if(allow.indexOf(k) < 0) delete row[k]; });
 
   try{
-    var r2 = await fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
+    var r2 = await ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?on_conflict=id', {
       method:'POST', headers:H({'Prefer':'resolution=merge-duplicates,return=minimal'}),
       body: JSON.stringify([row])
     });
@@ -19371,7 +19791,7 @@ window.arkDiagRun = async function(){
   /* 7) نتأكد إن اللي في السحابة بقى زي اللي في ARK */
   try{
     var ids = DRV.slice(0,5).map(function(x){ return x.id; });
-    var r3 = await fetch(SUPA_URL + '/rest/v1/drivers?select=id,name,partner&id=in.(' +
+    var r3 = await ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?select=id,name,partner&id=in.(' +
              ids.map(encodeURIComponent).join(',') + ')', { headers:H() });
     var cloud = r3.ok ? await r3.json() : [];
     var bad = [];
@@ -19389,7 +19809,7 @@ window.arkDiagRun = async function(){
 
   /* 8) المحاسبة */
   try{
-    var r4 = await fetch(SUPA_URL + '/rest/v1/rpc/ark_finance_month', {
+    var r4 = await ARKSB.fetch(SUPA_URL + '/rest/v1/rpc/ark_finance_month', {
       method:'POST', headers:H(),
       body: JSON.stringify({p_month:new Date().getMonth()+1, p_year:new Date().getFullYear()})
     });
