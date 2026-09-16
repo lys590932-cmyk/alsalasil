@@ -762,13 +762,15 @@ body::after{
     <!-- HOME TAB -->
     <div class="tab on" id="tab-home">
     <div id="mx-strip"></div>
+      <!-- الصف الأول: ما يحمل إنذاراً وينتظر قراراً. الثاني: إجراءات يبدؤها المدير. -->
       <div class="qa-grid">
+        <div class="qa" onclick="openAccSheet()" style="position:relative"><div class="ic" style="background:#b91c1c"><i class="ti ti-car-crash"></i></div><div class="l">حوادث<br><span id="qa-acc-count"></span></div><span id="qa-acc-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
+        <div class="qa" onclick="openLateSheet()" style="position:relative"><div class="ic" style="background:#ef4444"><i class="ti ti-clock-exclamation"></i></div><div class="l">تأخير<br><span id="qa-late-count"></span></div><span id="qa-late-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
+        <div class="qa" onclick="openHomiCashSheet()" style="position:relative"><div class="ic" style="background:#0d9488"><i class="ti ti-cash-banknote"></i></div><div class="l">كاش هومي<br><span id="qa-homicash-count"></span></div><span id="qa-homicash-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
+        <div class="qa" onclick="openAppsList()"><div class="ic" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div><div class="l">طلبات<br><span id="qa-apps-count">0</span></div></div>
         <div class="qa" onclick="openSendMsgSheet()"><div class="ic" style="background:var(--violet)"><i class="ti ti-message"></i></div><div class="l">رسالة</div></div>
         <div class="qa" onclick="openTab('live')"><div class="ic" style="background:var(--green)"><i class="ti ti-map-pin"></i></div><div class="l">الخريطة</div></div>
         <div class="qa" onclick="openAddVioSheet()"><div class="ic" style="background:var(--red)"><i class="ti ti-alert-triangle"></i></div><div class="l">مخالفة</div></div>
-        <div class="qa" onclick="openAppsList()"><div class="ic" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div><div class="l">طلبات<br><span id="qa-apps-count">0</span></div></div>
-        <div class="qa" onclick="openHomiCashSheet()" style="position:relative"><div class="ic" style="background:#0d9488"><i class="ti ti-cash-banknote"></i></div><div class="l">كاش هومي<br><span id="qa-homicash-count"></span></div><span id="qa-homicash-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
-        <div class="qa" onclick="openLateSheet()" style="position:relative"><div class="ic" style="background:#ef4444"><i class="ti ti-clock-exclamation"></i></div><div class="l">تأخير<br><span id="qa-late-count"></span></div><span id="qa-late-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
       </div>
 
       <div class="kpi-grid" id="kpi-grid">
@@ -924,7 +926,7 @@ body::after{
       </div>
       <div style="text-align:center;color:var(--muted);font-size:11px;margin-top:20px">
         شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>
-        تطبيق المدير v1.2
+        تطبيق المدير v1.3
       </div>
     </div>
   </div>
@@ -1708,6 +1710,15 @@ if('serviceWorker' in navigator){
          بـ kind — من غيره كان إشعار التأخير بيفتح صندوق الرسائل. */
       const kind = (e.data.data && e.data.data.kind) || '';
       if(kind === 'late'){ try{ openLateSheet(); }catch(err){} return; }
+      if(kind === 'accident'){
+        try{
+          openAccSheet().then(function(){
+            var aid = e.data.data && e.data.data.accId;
+            if(aid) accmOpen(aid);
+          });
+        }catch(err){}
+        return;
+      }
       /* كان بينادي switchTab وهي دالة مش موجودة أصلاً في الملف ده،
          فالضغط على إشعار رسالة كان بيرمي خطأ ومبيفتحش حاجة. */
       openTab('msg');
@@ -3214,6 +3225,334 @@ setInterval(() => { if(mgrAuthed()) lateScan(true); }, 60000);
 /* الرجوع للتطبيق بعد غياب: نفحص فوراً بدل انتظار الدورة */
 document.addEventListener('visibilitychange', () => {
   if(!document.hidden && mgrAuthed()) lateScan(true);
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   🚨 بلاغات الحوادث — ACCM
+   ──────────────────────────────────────────────────────────────────
+   السائق يبلّغ من مكان الحادثة، والمدير يعرف خلال ثوانٍ. البلاغ
+   يصل قبل الصور عمداً — الصور قد تستغرق دقيقتين على شبكة ضعيفة،
+   والإدارة لا يصحّ أن تنتظرها لتعرف أن هناك حادثة.
+   ══════════════════════════════════════════════════════════════════ */
+const ACCM_SEEN_K = 'mgr_acc_seen_v1';
+let ACCM = { list: [], seen: new Set(), open: null, busy: false, err: null };
+
+(function _accmLoadSeen(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(ACCM_SEEN_K) || '[]');
+    if(Array.isArray(raw)) ACCM.seen = new Set(raw);
+  }catch(e){}
+})();
+function _accmPersist(){
+  try{ localStorage.setItem(ACCM_SEEN_K, JSON.stringify([...ACCM.seen].slice(-400))); }catch(e){}
+}
+
+const ACCM_KIND = {collision:'💥 تصادم مع مركبة', parked:'🅿️ ارتطام بسيارة واقفة',
+  single:'🧱 حادث منفرد', pedestrian:'🚶 مشاة', animal:'🐈 حيوان', other:'❓ أخرى'};
+const ACCM_SEV  = {minor:['بسيط','#10b981'], moderate:['متوسط','#f59e0b'], severe:['كبير','#ef4444']};
+const ACCM_INJ  = {none:['لا إصابات','#10b981'], minor:['إصابة بسيطة','#f59e0b'], serious:['إصابة خطيرة','#ef4444']};
+const ACCM_POL  = {no:'لم تُبلَّغ', called:'تم إبلاغها', attended:'حضرت'};
+const ACCM_ST   = {new:['جديد','#ef4444'], reviewing:['قيد المراجعة','#3b82f6'], closed:['مقفول','#10b981']};
+
+function _accmE(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function _accmT(iso){
+  if(!iso) return '—';
+  try{
+    return new Date(iso).toLocaleString('ar-KW', {timeZone:KW_TZ, year:'numeric',
+      month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+  }catch(e){ return String(iso).slice(0,16).replace('T',' '); }
+}
+
+async function accmScan(notify){
+  if(ACCM.busy) return;
+  ACCM.busy = true;
+  try{
+    const rows = await api('accidents?status=neq.closed&order=reported_at.desc&limit=60') || [];
+    ACCM.list = rows;
+    ACCM.err = null;
+    accmPaintBadge();
+
+    if(!notify) return;
+    const fresh = rows.filter(r => r.id && !ACCM.seen.has(r.id));
+    if(!fresh.length) return;
+    fresh.forEach(r => ACCM.seen.add(r.id));
+    _accmPersist();
+
+    fresh.forEach(r => {
+      const sev = (ACCM_SEV[r.severity] || ['', ''])[0];
+      const inj = r.injuries && r.injuries !== 'none' ? ' • ' + (ACCM_INJ[r.injuries]||['',''])[0] : '';
+      const where = r.area ? (r.area + (r.street ? ' — ' + r.street : '')) : 'موقع غير محدّد';
+      mgrShowNotif({
+        title: '🚨 بلاغ حادثة — ' + (r.driver_name || r.driver_id),
+        body: (ACCM_KIND[r.kind] || 'حادثة') + ' • ضرر ' + sev + inj + '\n' + where,
+        tag: 'acc-' + r.id,
+        data: {url:'./manager.html', kind:'accident', accId:r.id}
+      });
+    });
+    if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]);
+    try{ if(window.SalasilBell && SalasilBell.ring) SalasilBell.ring({force:true}); }catch(e){}
+  }catch(e){
+    ACCM.err = String(e.message || e);
+  } finally {
+    ACCM.busy = false;
+  }
+}
+
+function accmPaintBadge(){
+  const n = ACCM.list.length;
+  const el = document.getElementById('qa-acc-count');
+  if(el) el.textContent = n ? '(' + n + ')' : '';
+  const dot = document.getElementById('qa-acc-dot');
+  if(dot) dot.style.display = n ? 'block' : 'none';
+}
+
+/* ── القائمة ── */
+async function openAccSheet(){
+  ACCM.open = null;
+  openSheet('<div class="sheet-head"><h3>بلاغات الحوادث</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
+    '<div style="padding:26px;text-align:center;color:#8b949e">جارٍ التحميل…</div>');
+  await accmScan(false);
+  accmRender();
+}
+
+function accmRender(){
+  const box = document.getElementById('sheet-box');
+  if(!box) return;
+  if(ACCM.open) return accmRenderOne(box);
+
+  const head = '<div class="sheet-head"><h3>بلاغات الحوادث</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()">×</button></div>';
+
+  if(ACCM.err){
+    box.innerHTML = head + '<div style="padding:22px;text-align:center;color:#f59e0b;font-size:12.5px;line-height:1.8">' +
+      'تعذّر قراءة البلاغات<br><span style="color:#8b949e;font-size:11px">' +
+      _accmE(ACCM.err.slice(0,130)) + '</span><br><span style="color:#6e7681;font-size:11px">' +
+      'لو الجدول لسه ما اتعملش، شغّل ملف accidents_setup.sql</span></div>';
+    return;
+  }
+  if(!ACCM.list.length){
+    box.innerHTML = head + '<div style="padding:30px 14px;text-align:center">' +
+      '<div style="font-size:34px">✅</div>' +
+      '<div style="font-weight:800;font-size:14px;margin-top:8px">مفيش بلاغات مفتوحة</div>' +
+      '<div style="font-size:11.5px;color:#8b949e;margin-top:4px">أي بلاغ جديد هيوصلك إشعار فوري</div></div>';
+    return;
+  }
+
+  const rows = ACCM.list.map(r => {
+    const sev = ACCM_SEV[r.severity] || ['—','#7d8590'];
+    const st  = ACCM_ST[r.status] || ['—','#7d8590'];
+    const inj = r.injuries && r.injuries !== 'none';
+    const nph = (r.photos && r.photos.length) || 0;
+    const miss = (r.photos_missing && r.photos_missing.length) || 0;
+    return '<div onclick="accmOpen(\'' + _accmE(r.id) + '\')" style="background:#161b22;border:1px solid #21262d;' +
+      'border-inline-start:3px solid ' + sev[1] + ';border-radius:11px;padding:11px 12px;margin-bottom:8px;cursor:pointer">' +
+      '<div style="display:flex;gap:9px;align-items:flex-start">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:800;font-size:13.5px">' + _accmE(r.driver_name || r.driver_id) + '</div>' +
+          '<div style="font-size:11.5px;color:#c9d1d9;margin-top:3px">' + _accmE(ACCM_KIND[r.kind] || 'حادثة') + '</div>' +
+          '<div style="font-size:11px;color:#8b949e;margin-top:2px">' + _accmT(r.occurred_at) +
+            (r.area ? ' • ' + _accmE(r.area) : '') + '</div>' +
+          '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">' +
+            (inj ? '<span style="background:rgba(239,68,68,.16);color:#ef4444;font-size:10px;font-weight:800;' +
+                   'padding:3px 7px;border-radius:6px">' + (ACCM_INJ[r.injuries]||['',''])[0] + '</span>' : '') +
+            (r.drivable === false ? '<span style="background:rgba(245,158,11,.16);color:#f59e0b;font-size:10px;' +
+                   'font-weight:800;padding:3px 7px;border-radius:6px">لا تمشي</span>' : '') +
+            '<span style="background:#21262d;color:#8b949e;font-size:10px;font-weight:700;padding:3px 7px;' +
+              'border-radius:6px">' + nph + ' صورة</span>' +
+            (miss ? '<span style="background:rgba(245,158,11,.16);color:#f59e0b;font-size:10px;font-weight:800;' +
+                   'padding:3px 7px;border-radius:6px">ناقص ' + miss + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:800;color:' + st[1] + ';white-space:nowrap">' + st[0] + '</div>' +
+      '</div></div>';
+  }).join('');
+
+  box.innerHTML = head + rows;
+}
+
+function accmOpen(id){
+  ACCM.open = ACCM.list.find(r => String(r.id) === String(id)) || null;
+  accmRender();
+}
+function accmBack(){ ACCM.open = null; accmRender(); }
+
+function accmRenderOne(box){
+  const r = ACCM.open;
+  const sev = ACCM_SEV[r.severity] || ['—','#7d8590'];
+  const st  = ACCM_ST[r.status] || ['—','#7d8590'];
+  const inj = ACCM_INJ[r.injuries] || ['—','#7d8590'];
+
+  let h = '<div class="sheet-head"><h3>تفاصيل البلاغ</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
+    '<button onclick="accmBack()" style="background:#21262d;border:0;color:#8b949e;border-radius:8px;' +
+      'padding:6px 12px;font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:12px">' +
+      '‹ كل البلاغات</button>';
+
+  h += '<div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:13px;margin-bottom:11px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:9px">' +
+      '<div><div style="font-weight:900;font-size:15px">' + _accmE(r.driver_name || r.driver_id) + '</div>' +
+      '<div style="font-size:11.5px;color:#8b949e;margin-top:2px">' +
+        _accmE(r.driver_plate || '—') + (r.partner ? ' • ' + _accmE(r.partner) : '') + '</div></div>' +
+      '<div style="font-size:11.5px;font-weight:800;color:' + st[1] + '">' + st[0] + '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px">' +
+      accmCell('النوع', ACCM_KIND[r.kind] || '—', '#c9d1d9') +
+      accmCell('حجم الضرر', sev[0], sev[1]) +
+      accmCell('الإصابات', inj[0], inj[1]) +
+      accmCell('الشرطة', (ACCM_POL[r.police] || '—') + (r.police_no ? ' • ' + _accmE(r.police_no) : ''), '#c9d1d9') +
+      accmCell('وقت الحادثة', _accmT(r.occurred_at), '#c9d1d9') +
+      accmCell('السيارة', r.drivable === false ? 'لا تمشي' : (r.drivable === true ? 'تمشي' : '—'),
+               r.drivable === false ? '#ef4444' : '#c9d1d9') +
+    '</div></div>';
+
+  // الموقع
+  const where = [r.area, r.street].filter(Boolean).join(' — ');
+  h += '<div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:13px;margin-bottom:11px">' +
+    '<div style="font-size:10.5px;color:#8b949e;font-weight:700;margin-bottom:4px">موقع الحادثة</div>' +
+    '<div style="font-weight:800;font-size:13px">📍 ' + _accmE(where || 'غير محدّد') + '</div>' +
+    (r.lat != null && r.lng != null
+      ? '<div class="mono" dir="ltr" style="font-size:10.5px;color:#8b949e;margin-top:3px">' +
+          Number(r.lat).toFixed(5) + ', ' + Number(r.lng).toFixed(5) +
+          (r.accuracy_m ? '  ±' + r.accuracy_m + 'm' : '') + '</div>' +
+        '<a href="https://maps.google.com/?q=' + r.lat + ',' + r.lng + '" target="_blank" rel="noopener" ' +
+          'style="display:inline-block;margin-top:7px;background:#21262d;color:#3b82f6;text-decoration:none;' +
+          'padding:7px 13px;border-radius:9px;font-size:11.5px;font-weight:800">فتح في الخرائط</a>'
+      : '<div style="font-size:11px;color:#f59e0b;margin-top:4px">الإحداثيات غير مسجّلة في هذا البلاغ</div>') +
+    '</div>';
+
+  // الوصف
+  if(r.description){
+    h += '<div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:13px;margin-bottom:11px">' +
+      '<div style="font-size:10.5px;color:#8b949e;font-weight:700;margin-bottom:5px">ماذا حدث</div>' +
+      '<div style="font-size:12.5px;line-height:1.8;white-space:pre-wrap">' + _accmE(r.description) + '</div></div>';
+  }
+
+  // الطرف الآخر
+  if(r.has_other){
+    const tel = (r.other_phone || '').replace(/[^\d+]/g, '');
+    h += '<div style="background:#161b22;border:1px solid #21262d;border-radius:12px;padding:13px;margin-bottom:11px">' +
+      '<div style="font-size:10.5px;color:#8b949e;font-weight:700;margin-bottom:7px">الطرف الآخر</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">' +
+        accmCell('الاسم', r.other_name || '—', '#c9d1d9') +
+        accmCell('اللوحة', r.other_plate || '—', '#c9d1d9') +
+      '</div>' +
+      (tel ? '<a href="tel:' + _accmE(tel) + '" style="display:block;text-align:center;margin-top:9px;' +
+             'background:#21262d;color:#10b981;text-decoration:none;padding:10px;border-radius:10px;' +
+             'font-size:12.5px;font-weight:800">📞 ' + _accmE(r.other_phone) + '</a>' : '') +
+      '</div>';
+  }
+
+  // الصور
+  const ph = r.photos || [];
+  h += '<div style="font-size:10.5px;color:#8b949e;font-weight:700;margin-bottom:7px">' +
+       'الصور الموثّقة (' + ph.length + ')</div>';
+  if(ph.length){
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px">' +
+      ph.map(function(p, i){
+        return '<div onclick="accmZoom(' + i + ')" style="cursor:pointer">' +
+          '<img src="' + _accmE(p.url) + '" loading="lazy" style="width:100%;height:112px;object-fit:cover;' +
+            'border-radius:10px;border:1px solid #21262d;background:#0d1117">' +
+          '<div style="font-size:10.5px;color:#8b949e;margin-top:3px;text-align:center">' +
+            _accmE(p.label || p.key) + '</div></div>';
+      }).join('') + '</div>';
+  } else {
+    h += '<div style="background:#161b22;border:1px solid #21262d;border-radius:11px;padding:16px;' +
+      'text-align:center;color:#8b949e;font-size:11.5px;margin-bottom:11px">' +
+      'لم تصل صور بعد — قد تكون قيد الرفع من جهاز السائق</div>';
+  }
+
+  if(r.photos_missing && r.photos_missing.length){
+    h += '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:11px;' +
+      'padding:12px;margin-bottom:11px">' +
+      '<div style="font-weight:800;font-size:12px;color:#f59e0b">صور إلزامية ناقصة: ' +
+        r.photos_missing.length + '</div>' +
+      (r.missing_reason ? '<div style="font-size:11.5px;color:#8b949e;margin-top:5px;line-height:1.7">سبب السائق: ' +
+        _accmE(r.missing_reason) + '</div>' : '') + '</div>';
+  }
+
+  // إجراءات
+  h += '<div style="font-size:10.5px;color:#8b949e;font-weight:700;margin-bottom:6px">ملاحظة الإدارة</div>' +
+    '<textarea id="accmNote" rows="2" placeholder="تظهر للسائق في تطبيقه…" ' +
+      'style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid #21262d;border-radius:10px;' +
+      'padding:10px;color:#c9d1d9;font-family:inherit;font-size:12.5px">' + _accmE(r.admin_note || '') + '</textarea>' +
+    '<div style="display:flex;gap:7px;margin-top:9px">' +
+      (r.status !== 'reviewing' ? '<button onclick="accmSet(\'reviewing\')" style="flex:1;background:#21262d;' +
+        'border:1px solid #3b82f6;color:#3b82f6;border-radius:10px;padding:11px;font-family:inherit;' +
+        'font-weight:800;font-size:12.5px;cursor:pointer">قيد المراجعة</button>' : '') +
+      '<button onclick="accmSet(\'closed\')" style="flex:1;background:#10b981;border:0;color:#fff;' +
+        'border-radius:10px;padding:11px;font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer">' +
+        'إقفال البلاغ</button>' +
+    '</div>' +
+    '<div style="font-size:10px;color:#6e7681;margin-top:9px;line-height:1.7">' +
+      'المعرّف <span class="mono" dir="ltr">' + _accmE(r.id) + '</span> — نفسه مطبوع على كل صورة.</div>';
+
+  box.innerHTML = h;
+}
+
+function accmCell(k, v, c){
+  return '<div style="background:#0d1117;border-radius:8px;padding:8px 10px">' +
+    '<div style="font-size:10px;color:#8b949e">' + _accmE(k) + '</div>' +
+    '<div style="font-size:12.5px;font-weight:700;color:' + c + ';margin-top:2px">' + _accmE(v) + '</div></div>';
+}
+
+/* ── عارض الصورة ── */
+function accmZoom(i){
+  const r = ACCM.open; if(!r) return;
+  const ph = r.photos || []; if(!ph[i]) return;
+  const ex = document.getElementById('accmZoom'); if(ex) ex.remove();
+  const d = document.createElement('div');
+  d.id = 'accmZoom';
+  d.style.cssText = 'position:fixed;inset:0;z-index:700;background:#05080b;display:flex;flex-direction:column';
+  d.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px">' +
+      '<div style="flex:1;font-size:12.5px;font-weight:700">' + _accmE(ph[i].label || ph[i].key) + '</div>' +
+      '<div style="font-size:11px;opacity:.7" dir="ltr">' + (i+1) + ' / ' + ph.length + '</div>' +
+      '<button onclick="document.getElementById(\'accmZoom\').remove()" style="width:36px;height:36px;' +
+        'border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:19px;cursor:pointer">×</button>' +
+    '</div>' +
+    '<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:8px">' +
+      '<img src="' + _accmE(ph[i].url) + '" style="max-width:100%;max-height:100%;object-fit:contain"></div>' +
+    '<div style="display:flex;gap:8px;justify-content:center;padding:12px 14px calc(14px + env(safe-area-inset-bottom))">' +
+      (i > 0 ? '<button onclick="accmZoom(' + (i-1) + ')" style="min-width:52px;height:42px;border-radius:11px;' +
+        'border:0;background:rgba(255,255,255,.15);color:#fff;font-size:17px;cursor:pointer">›</button>' : '') +
+      '<a href="' + _accmE(ph[i].url) + '" target="_blank" rel="noopener" style="height:42px;line-height:42px;' +
+        'padding:0 18px;border-radius:11px;background:rgba(255,255,255,.15);color:#fff;text-decoration:none;' +
+        'font-size:12.5px;font-weight:800">فتح الأصل</a>' +
+      (i < ph.length-1 ? '<button onclick="accmZoom(' + (i+1) + ')" style="min-width:52px;height:42px;' +
+        'border-radius:11px;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:17px;cursor:pointer">‹</button>' : '') +
+    '</div>';
+  document.body.appendChild(d);
+}
+
+/* ── تغيير الحالة ── */
+async function accmSet(status){
+  const r = ACCM.open; if(!r) return;
+  const noteEl = document.getElementById('accmNote');
+  const note = noteEl ? noteEl.value.trim() : '';
+  const body = {status: status, admin_note: note || null};
+  if(status === 'closed') body.closed_at = new Date().toISOString();
+  try{
+    await api('accidents?id=eq.' + encodeURIComponent(r.id), {
+      method:'PATCH', headers:{'Prefer':'return=minimal'}, body: JSON.stringify(body)
+    });
+    toast(status === 'closed' ? 'تم إقفال البلاغ' : 'تم التحديث');
+    ACCM.open = null;
+    await accmScan(false);
+    accmRender();
+  }catch(e){
+    toast('تعذّر التحديث: ' + String(e.message||e).slice(0,70));
+  }
+}
+
+/* ── التشغيل ── */
+setTimeout(() => { if(mgrAuthed()) accmScan(true); }, 3600);
+setInterval(() => { if(mgrAuthed()) accmScan(true); }, 30000);
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && mgrAuthed()) accmScan(true);
 });
 
 

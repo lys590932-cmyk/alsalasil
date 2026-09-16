@@ -3996,6 +3996,20 @@ function renderServices(){
     '<div class="sec-title" style="margin:0">'+(LANG==='ar'?'الخدمات والطلبات':'Services & Requests')+'</div>'+
     '<button class="btn-refresh" onclick="refreshServices()"><i class="ti ti-refresh"></i> '+t('refresh')+'</button></div>';
 
+  /* زر الحادثة أعلى الشاشة وبعرض كامل: في لحظة الحادثة السائق
+     مرتبك، فالزر لا يُبحَث عنه بين أربعة أزرار متشابهة. */
+  h+='<button onclick="openAccident()" style="width:100%;background:linear-gradient(135deg,#dc2626,#7f1d1d);'+
+    'border:none;border-radius:15px;padding:15px;cursor:pointer;font-family:inherit;display:flex;'+
+    'align-items:center;gap:12px;margin-bottom:11px;box-shadow:0 5px 18px rgba(220,38,38,.28)">'+
+    '<span style="font-size:27px">🚨</span>'+
+    '<div style="flex:1;text-align:'+(LANG==='ar'?'right':'left')+'">'+
+      '<div style="font-size:14.5px;font-weight:900;color:#fff">'+(LANG==='ar'?'بلّغ عن حادثة':'Report an accident')+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">'+
+        (LANG==='ar'?'صور موثّقة بالوقت والمكان — تتبعت للإدارة فوراً':'Time & location stamped photos')+'</div></div>'+
+    '<i class="ti ti-chevron-'+(LANG==='ar'?'left':'right')+'" style="font-size:19px;color:rgba(255,255,255,.7)"></i>'+
+  '</button>';
+  h+='<div id="accQueueBar" style="display:none;margin-bottom:11px"></div>';
+
   // أزرار الإجراءات
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">'+
     svcBtn('🏖️', LANG==='ar'?'طلب إجازة':'Leave', '#3b82f6', 'openLeaveForm()')+
@@ -4029,6 +4043,9 @@ function renderServices(){
     });
     h+='</div>';
   }
+
+  // بلاغات الحوادث
+  h += accListHTML();
 
   // بلاغات الصيانة
   if(MY_MAINT.length){
@@ -4129,7 +4146,7 @@ function sheetBusy(on){
 
 /* ═══════════ التحميل والتحديث ═══════════ */
 function refreshServices(){
-  return Promise.all([loadMyRequests(), loadMyFuel(), loadMyMaint()])
+  return Promise.all([loadMyRequests(), loadMyFuel(), loadMyMaint(), loadMyAccidents()])
     .then(function(){ renderCurrentTab(); updateServicesBadge(); });
 }
 function updateServicesBadge(){
@@ -7039,6 +7056,931 @@ window.flyBellPaint = function(){
                  (off ? t('bell_is_off') : t('bell_is_on'));
 };
 })();
+
+/* ═══════════════════════════════════════════════════════════════════
+   🚨 بلاغ الحوادث — ACCIDENT MODULE
+   ───────────────────────────────────────────────────────────────────
+   المبدأ الذي بُني عليه كل ما تحته:
+   الصورة لا تُصدَّق لأن التطبيق يقول إنها مصوّرة الآن، بل لأنها تحمل
+   دليلها بداخلها. فبيانات التوثيق تُحرَق في بكسل الصورة قبل رفعها —
+   لا في EXIF، لأن EXIF يُمحى بأول إعادة حفظ أو إرسال على واتساب.
+
+   والسائق في لحظة الحادثة مرتبك والشبكة قد تكون ضعيفة، فالبلاغ
+   يُحفَظ على الجهاز أولاً ثم يُرفَع، ويُعاد رفعه وحده عند عودة
+   الشبكة. المعرّف يُولَّد على الجهاز فإعادة الإرسال تحديث لا تكرار.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var ACC_PHOTOS = {};          // key → {blob, stamped, at, lat, lng}
+var ACC_FORM   = null;        // بيانات النموذج الحالي
+var ACC_GEO    = null;        // آخر موقع مقروء {lat,lng,acc,area,street,address,source}
+var ACC_STEP   = 1;
+var MY_ACCIDENTS = [];
+var ACC_BUSY   = false;
+
+/* الصور المطلوبة — تتغيّر حسب وجود طرف آخر */
+var ACC_SHOTS = [
+  {k:'my_car',     ar:'سيارتي كاملة',        en:'My car (full)',      req:'always'},
+  {k:'my_damage',  ar:'الضرر في سيارتي',     ar2:'قرّب على مكان الضرر', en:'My damage', req:'always'},
+  {k:'other_car',  ar:'سيارة الطرف الآخر',   ar2:'بيّن اللوحة في الصورة', en:'Other car + plate', req:'other'},
+  {k:'scene',      ar:'المشهد العام',        ar2:'الشارع ووضع السيارتين', en:'Wide scene', req:'always'},
+  {k:'police_doc', ar:'ورقة البلاغ',         en:'Police report',      req:'no'},
+  {k:'other_doc',  ar:'رخصة/تأمين الطرف الآخر', en:'Other party docs', req:'no'},
+  {k:'extra1',     ar:'صورة إضافية',         en:'Extra photo',        req:'no'},
+  {k:'extra2',     ar:'صورة إضافية',         en:'Extra photo',        req:'no'}
+];
+
+function accRequiredKeys(){
+  var other = !ACC_FORM || ACC_FORM.has_other !== false;
+  return ACC_SHOTS.filter(function(s){
+    return s.req === 'always' || (s.req === 'other' && other);
+  }).map(function(s){ return s.k; });
+}
+function accShot(k){
+  for(var i=0;i<ACC_SHOTS.length;i++) if(ACC_SHOTS[i].k===k) return ACC_SHOTS[i];
+  return {k:k, ar:k, en:k, req:'no'};
+}
+function accMissing(){
+  return accRequiredKeys().filter(function(k){ return !ACC_PHOTOS[k]; });
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   1) الموقع — إحداثيات ثم اسم منطقة وشارع
+   ───────────────────────────────────────────────────────────────── */
+function accPos(){
+  return new Promise(function(resolve){
+    if(!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      function(p){ resolve({lat:p.coords.latitude, lng:p.coords.longitude,
+                            acc:Math.round(p.coords.accuracy||0)}); },
+      function(){ resolve(null); },
+      /* maximumAge:0 مقصود — موقع محفوظ من نصف ساعة قد يكون لمكان
+         آخر تماماً، وموقع الحادثة تحديداً لا يحتمل التقريب. */
+      {enableHighAccuracy:true, timeout:12000, maximumAge:0}
+    );
+  });
+}
+
+/* اسم المنطقة والشارع بالعربي. خدمة خارجية، فلها مهلة قصيرة وبديل:
+   لو تأخرت أو فشلت نكمل بالإحداثيات — ولا نوقف بلاغ حادثة على
+   استجابة خادم خرائط. */
+function accGeoName(lat, lng){
+  return new Promise(function(resolve){
+    if(lat == null || lng == null) return resolve(null);
+    var done = false;
+    var tm = setTimeout(function(){ if(!done){ done=true; resolve(null); } }, 7000);
+    var u = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17'+
+            '&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng)+
+            '&accept-language=ar';
+    fetch(u, {headers:{'Accept':'application/json'}})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(done) return; done=true; clearTimeout(tm);
+        if(!j || !j.address) return resolve(null);
+        var a = j.address;
+        var area = a.suburb || a.neighbourhood || a.quarter || a.village ||
+                   a.town || a.city_district || a.city || a.state || '';
+        var street = a.road || a.pedestrian || a.footway || a.amenity || '';
+        resolve({area:area, street:street, address:j.display_name || '', source:'nominatim'});
+      })
+      .catch(function(){ if(!done){ done=true; clearTimeout(tm); resolve(null); } });
+  });
+}
+
+/* يُنادى مرة عند فتح الشاشة، والنتيجة تُستعمل لكل الصور */
+function accLoadGeo(){
+  var lbl = document.getElementById('accGeoLbl');
+  if(lbl) lbl.innerHTML = '<i class="ti ti-loader"></i> '+(LANG==='ar'?'جاري تحديد الموقع…':'Locating…');
+  return accPos().then(function(p){
+    if(!p){
+      ACC_GEO = null;
+      if(lbl) lbl.innerHTML = '<span style="color:#f59e0b">'+
+        (LANG==='ar'?'⚠️ الموقع غير متاح — فعّل الموقع وأعد المحاولة':'⚠️ Location unavailable')+'</span>';
+      return null;
+    }
+    ACC_GEO = {lat:p.lat, lng:p.lng, acc:p.acc, area:'', street:'', address:'', source:'none'};
+    accPaintGeo();
+    return accGeoName(p.lat, p.lng).then(function(g){
+      if(g && ACC_GEO){
+        ACC_GEO.area = g.area; ACC_GEO.street = g.street;
+        ACC_GEO.address = g.address; ACC_GEO.source = g.source;
+      }
+      accPaintGeo();
+      return ACC_GEO;
+    });
+  });
+}
+
+function accGeoText(){
+  if(!ACC_GEO) return LANG==='ar' ? 'الموقع غير متاح' : 'Location unavailable';
+  var parts = [];
+  if(ACC_GEO.area)   parts.push(ACC_GEO.area);
+  if(ACC_GEO.street) parts.push(ACC_GEO.street);
+  if(parts.length) return parts.join(' — ');
+  return ACC_GEO.lat.toFixed(5)+', '+ACC_GEO.lng.toFixed(5);
+}
+
+function accPaintGeo(){
+  var lbl = document.getElementById('accGeoLbl');
+  if(!lbl) return;
+  if(!ACC_GEO){ lbl.textContent = LANG==='ar'?'الموقع غير متاح':'Unavailable'; return; }
+  var map = 'https://maps.google.com/?q='+ACC_GEO.lat+','+ACC_GEO.lng;
+  lbl.innerHTML =
+    '<div style="font-weight:800;font-size:12.5px">📍 '+accEsc(accGeoText())+'</div>'+
+    '<div class="mono" dir="ltr" style="font-size:10.5px;color:var(--muted2);margin-top:2px">'+
+      ACC_GEO.lat.toFixed(5)+', '+ACC_GEO.lng.toFixed(5)+
+      (ACC_GEO.acc?'  ±'+ACC_GEO.acc+'m':'')+'</div>'+
+    '<a href="'+map+'" target="_blank" rel="noopener" style="font-size:11px;color:#3b82f6;font-weight:700">'+
+      (LANG==='ar'?'فتح في الخرائط':'Open in Maps')+'</a>';
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   2) ختم الصورة — البيانات تُحرَق داخل البكسل
+   ───────────────────────────────────────────────────────────────── */
+function accKwStamp(d){
+  /* التاريخ والوقت بتوقيت الكويت مهما كان ضبط الجهاز */
+  try{
+    var f = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Kuwait',
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+    var p = {}; f.formatToParts(d).forEach(function(x){ p[x.type]=x.value; });
+    return p.year+'-'+p.month+'-'+p.day+'  '+p.hour+':'+p.minute+':'+p.second;
+  }catch(e){
+    var s = new Date(d.getTime()+3*3600000);
+    return s.toISOString().slice(0,19).replace('T','  ');
+  }
+}
+
+function accStamp(blob, extra){
+  return new Promise(function(resolve){
+    try{
+      var img = new Image();
+      var url = URL.createObjectURL(blob);
+      img.onerror = function(){ URL.revokeObjectURL(url); resolve(blob); };
+      img.onload = function(){
+        try{
+          var W = img.width, H = img.height;
+          var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+          var x  = cv.getContext('2d');
+          x.drawImage(img, 0, 0, W, H);
+
+          var now = new Date();
+          /* حجم الخط يتبع أصغر البعدين لا العرض وحده. لو تبع العرض،
+             صورة عريضة قصيرة (16:9) يبتلع شريطها نصف الصورة تقريباً
+             لأن الخط يكبر مع العرض بينما الارتفاع لا يتسع له. */
+          var S   = Math.max(11, Math.round(Math.min(W/34, H/30)));
+          var pad = Math.round(S*0.72);
+          var lh  = Math.round(S*1.42);
+
+          var rtl = [];
+          rtl.push({t:'📍 '+accGeoText(), b:true});
+          if(extra && extra.label) rtl.push({t: extra.label, b:false, dim:true});
+          var ltrLines = [];
+          ltrLines.push(accKwStamp(now)+'  (GMT+3)');
+          if(ACC_GEO) ltrLines.push(ACC_GEO.lat.toFixed(5)+', '+ACC_GEO.lng.toFixed(5)+
+                                    (ACC_GEO.acc?'  ±'+ACC_GEO.acc+'m':''));
+          var who = (DRIVER ? (DRIVER.name||DRIVER.id) : '') +
+                    (DRIVER && DRIVER.car ? ' • '+DRIVER.car : '');
+
+          var rows = Math.max(rtl.length, 0) + ltrLines.length + (who?1:0);
+          var bandH = pad*2 + rows*lh;
+          var top   = H - bandH;
+
+          /* تدرّج بدل مستطيل مصمت: يبقى مقروءاً فوق أي خلفية
+             دون أن يحجب جزءاً من الصورة حجباً كاملاً. */
+          var g = x.createLinearGradient(0, top - S*1.6, 0, H);
+          g.addColorStop(0, 'rgba(0,0,0,0)');
+          g.addColorStop(0.28, 'rgba(0,0,0,.66)');
+          g.addColorStop(1, 'rgba(0,0,0,.88)');
+          x.fillStyle = g;
+          x.fillRect(0, top - S*1.6, W, bandH + S*1.6);
+
+          /* شريط أحمر رفيع: علامة بصرية أن الصورة موثّقة ومختومة */
+          x.fillStyle = '#ef4444';
+          x.fillRect(0, top - Math.round(S*0.16), W, Math.round(S*0.16));
+
+          var y = top + pad + S;
+          x.textBaseline = 'alphabetic';
+
+          // السطور العربية — يمين
+          x.direction = 'rtl'; x.textAlign = 'right';
+          rtl.forEach(function(l){
+            x.font = (l.b?'700 ':'500 ')+S+'px Cairo, Tahoma, Arial, sans-serif';
+            x.fillStyle = l.dim ? 'rgba(255,255,255,.82)' : '#ffffff';
+            x.shadowColor = 'rgba(0,0,0,.9)'; x.shadowBlur = Math.round(S*0.35);
+            x.fillText(l.t, W - pad, y);
+            y += lh;
+          });
+          if(who){
+            x.font = '600 '+Math.round(S*0.92)+'px Cairo, Tahoma, Arial, sans-serif';
+            x.fillStyle = 'rgba(255,255,255,.9)';
+            x.fillText('👤 '+who, W - pad, y);
+            y += lh;
+          }
+
+          // السطور الرقمية — يسار واتجاه LTR حتى لا تنقلب الأرقام
+          x.direction = 'ltr'; x.textAlign = 'left';
+          ltrLines.forEach(function(t){
+            x.font = '600 '+Math.round(S*0.86)+'px "JetBrains Mono", Consolas, monospace';
+            x.fillStyle = 'rgba(255,255,255,.95)';
+            x.fillText(t, pad, y);
+            y += lh;
+          });
+
+          // شارة أعلى الصورة
+          x.shadowBlur = Math.round(S*0.4);
+          x.direction = 'rtl'; x.textAlign = 'right';
+          x.font = '800 '+Math.round(S*0.88)+'px Cairo, Tahoma, Arial, sans-serif';
+          var badge = 'السلاسل • توثيق حادثة';
+          var bw = x.measureText(badge).width + pad*1.6;
+          x.shadowBlur = 0;
+          x.fillStyle = 'rgba(239,68,68,.92)';
+          x.fillRect(W - pad*0.6 - bw, pad*0.6, bw, Math.round(S*1.7));
+          x.fillStyle = '#ffffff';
+          x.fillText(badge, W - pad*1.4, pad*0.6 + Math.round(S*1.22));
+
+          // معرّف البلاغ — يربط الصورة ببلاغها
+          if(extra && extra.id){
+            x.direction='ltr'; x.textAlign='left';
+            x.font = '600 '+Math.round(S*0.7)+'px "JetBrains Mono", Consolas, monospace';
+            x.fillStyle = 'rgba(255,255,255,.75)';
+            x.shadowColor='rgba(0,0,0,.9)'; x.shadowBlur=Math.round(S*0.3);
+            x.fillText(extra.id, pad*0.9, pad*0.6 + Math.round(S*1.22));
+          }
+
+          cv.toBlob(function(out){
+            URL.revokeObjectURL(url);
+            if(!out) return resolve(blob);
+            out.name = 'acc.jpg';
+            resolve(out);
+          }, 'image/jpeg', 0.82);
+        }catch(e){ URL.revokeObjectURL(url); resolve(blob); }
+      };
+      img.src = url;
+    }catch(e){ resolve(blob); }
+  });
+}
+
+function accEsc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,
+    function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+}
+function accUid(){
+  try{
+    if(crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g,'').slice(0,20);
+  }catch(e){}
+  return (Date.now().toString(36) + Math.random().toString(36).slice(2,12)).slice(0,20);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   3) طابور الإرسال — الحادثة تحصل حيث الشبكة ضعيفة
+   ─────────────────────────────────────────────────────────────────
+   البلاغ يُحفَظ على الجهاز أولاً ثم يُرفع. IndexedDB لا localStorage
+   لأن الصور ثنائية وحجمها بالميجابايت، وlocalStorage نصّي ومحدود
+   بخمسة ميجا لكل النطاق — صورتان تملآنه ويتعطّل التطبيق كله.
+   ───────────────────────────────────────────────────────────────── */
+var ACC_DB = null;
+function accDB(){
+  if(ACC_DB) return Promise.resolve(ACC_DB);
+  return new Promise(function(resolve, reject){
+    try{
+      var rq = indexedDB.open('fly_accidents', 1);
+      rq.onupgradeneeded = function(e){
+        var db = e.target.result;
+        if(!db.objectStoreNames.contains('q')) db.createObjectStore('q', {keyPath:'id'});
+      };
+      rq.onsuccess = function(e){ ACC_DB = e.target.result; resolve(ACC_DB); };
+      rq.onerror   = function(){ reject(new Error('idb')); };
+    }catch(e){ reject(e); }
+  });
+}
+function accQPut(rec){
+  return accDB().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction('q','readwrite');
+      tx.objectStore('q').put(rec);
+      tx.oncomplete = function(){ res(true); };
+      tx.onerror    = function(){ rej(new Error('put')); };
+    });
+  });
+}
+function accQAll(){
+  return accDB().then(function(db){
+    return new Promise(function(res){
+      var out = [], tx = db.transaction('q','readonly');
+      var cur = tx.objectStore('q').openCursor();
+      cur.onsuccess = function(e){
+        var c = e.target.result;
+        if(c){ out.push(c.value); c.continue(); } else res(out);
+      };
+      cur.onerror = function(){ res(out); };
+    });
+  }).catch(function(){ return []; });
+}
+function accQDel(id){
+  return accDB().then(function(db){
+    return new Promise(function(res){
+      var tx = db.transaction('q','readwrite');
+      tx.objectStore('q').delete(id);
+      tx.oncomplete = function(){ res(true); };
+      tx.onerror    = function(){ res(false); };
+    });
+  }).catch(function(){ return false; });
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   4) الرفع — الصف أولاً ثم الصور
+   ─────────────────────────────────────────────────────────────────
+   الصف يُرسل قبل الصور عمداً: الإدارة تعرف بالحادثة خلال ثوانٍ
+   حتى لو ظلّت الصور ترفع دقيقتين على شبكة ضعيفة.
+   ───────────────────────────────────────────────────────────────── */
+function accUploadShot(accId, key, blob){
+  /* مسار عشوائي: الـbucket عام القراءة بالرابط، فمسار مثل
+     driverid_timestamp يمكن تخمينه وعدّه. UUID يمنع ذلك. */
+  var path = 'accidents/'+accId+'/'+key+'_'+accUid()+'.jpg';
+  return fetch(SUPA_URL+'/storage/v1/object/'+BUCKET+'/'+path, {
+    method:'POST',
+    headers:{'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY,
+             'Content-Type':'image/jpeg', 'x-upsert':'true'},
+    body: blob
+  }).then(function(r){
+    if(!r.ok) return r.text().then(function(t){ throw new Error('upload '+r.status+' '+t.slice(0,80)); });
+    return SUPA_URL+'/storage/v1/object/public/'+BUCKET+'/'+path;
+  });
+}
+
+function accPushRow(row){
+  return sb('accidents', {
+    method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body: JSON.stringify(row)
+  });
+}
+function accPatchPhotos(id, photos){
+  return sb('accidents?id=eq.'+encodeURIComponent(id), {
+    method:'PATCH',
+    headers:{'Prefer':'return=minimal'},
+    body: JSON.stringify({photos: photos})
+  });
+}
+
+/* يعالج سجلاً واحداً من الطابور. يرجّع true لو خلص تماماً. */
+function accSendOne(rec){
+  return accPushRow(rec.row).then(function(){
+    rec.rowSent = true;
+    return accQPut(rec);
+  }).then(function(){
+    var pending = (rec.shots||[]).filter(function(s){ return !s.url; });
+    if(!pending.length) return true;
+    /* رفع متسلسل لا متوازٍ: على شبكة ضعيفة أربع طلبات متوازية
+       تتزاحم وتفشل كلها، والمتسلسل ينجح صورة صورة. */
+    var chain = Promise.resolve();
+    pending.forEach(function(s){
+      chain = chain.then(function(){
+        return accUploadShot(rec.id, s.key, s.blob).then(function(url){
+          s.url = url; s.blob = null;
+          return accQPut(rec);
+        });
+      });
+    });
+    return chain.then(function(){
+      var photos = (rec.shots||[]).filter(function(s){ return s.url; })
+        .map(function(s){ return {key:s.key, label:s.label, url:s.url, at:s.at,
+                                  lat:s.lat, lng:s.lng, stamped:true}; });
+      return accPatchPhotos(rec.id, photos).then(function(){ return true; });
+    });
+  });
+}
+
+var _accFlushing = false;
+function accFlush(quiet){
+  if(_accFlushing) return Promise.resolve();
+  if(!navigator.onLine) return Promise.resolve();
+  _accFlushing = true;
+  return accQAll().then(function(list){
+    if(!list.length) return;
+    var chain = Promise.resolve();
+    list.forEach(function(rec){
+      chain = chain.then(function(){
+        return accSendOne(rec).then(function(){
+          return accQDel(rec.id).then(function(){
+            if(!quiet) toast(LANG==='ar'?'✅ تم إرسال بلاغ الحادثة':'Accident report sent','ok');
+          });
+        }).catch(function(e){
+          rec.tries = (rec.tries||0) + 1;
+          rec.lastErr = String(e && e.message || e).slice(0,140);
+          return accQPut(rec);
+        });
+      });
+    });
+    return chain;
+  }).then(function(){
+    _accFlushing = false;
+    accPaintQueueBadge();
+  }).catch(function(){ _accFlushing = false; });
+}
+
+function accPaintQueueBadge(){
+  accQAll().then(function(l){
+    var el = document.getElementById('accQueueBar');
+    if(!el) return;
+    if(!l.length){ el.style.display='none'; return; }
+    el.style.display='block';
+    el.innerHTML = '<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);'+
+      'border-radius:12px;padding:10px 12px;font-size:12px;color:#f59e0b;font-weight:700">'+
+      '<i class="ti ti-cloud-upload"></i> '+
+      (LANG==='ar' ? l.length+' بلاغ في انتظار الشبكة — سيُرسل تلقائياً'
+                   : l.length+' report(s) waiting for network')+'</div>';
+  });
+}
+
+window.addEventListener('online', function(){ setTimeout(function(){ accFlush(false); }, 1200); });
+
+/* ─────────────────────────────────────────────────────────────────
+   5) الشاشة
+   ───────────────────────────────────────────────────────────────── */
+var ACC_KINDS = [
+  {v:'collision',  ar:'تصادم مع مركبة',   ic:'💥', other:true},
+  {v:'parked',     ar:'ارتطام بسيارة واقفة', ic:'🅿️', other:true},
+  {v:'single',     ar:'حادث منفرد',        ic:'🧱', other:false},
+  {v:'pedestrian', ar:'مشاة',              ic:'🚶', other:true},
+  {v:'animal',     ar:'حيوان',             ic:'🐈', other:false},
+  {v:'other',      ar:'أخرى',              ic:'❓', other:false}
+];
+
+function openAccident(){
+  if(!DRIVER){ toast(LANG==='ar'?'سجّل الدخول أولاً':'Sign in first','err'); return; }
+  ACC_PHOTOS = {};
+  ACC_STEP = 1;
+  ACC_GEO = null;
+  ACC_FORM = {
+    id: 'ACC_' + (DRIVER.id||'x') + '_' + Date.now().toString(36).toUpperCase(),
+    kind: 'collision', has_other: true, severity: 'minor', injuries: 'none',
+    police: 'no', police_no: '', drivable: null, description: '',
+    other_name: '', other_phone: '', other_plate: '',
+    occurred_at: new Date().toISOString(), missing_reason: ''
+  };
+  accRender();
+  accLoadGeo();
+}
+
+function accClose(){
+  var el = document.getElementById('accScr');
+  if(el) el.remove();
+  document.body.style.overflow = '';
+}
+
+function accRender(){
+  var ex = document.getElementById('accScr');
+  if(!ex){
+    ex = document.createElement('div');
+    ex.id = 'accScr';
+    ex.style.cssText = 'position:fixed;inset:0;z-index:600;background:var(--bg,#0d1117);'+
+      'overflow-y:auto;-webkit-overflow-scrolling:touch';
+    document.body.appendChild(ex);
+    document.body.style.overflow = 'hidden';
+  }
+  ex.innerHTML = accHTML();
+  ex.scrollTop = 0;
+  if(ACC_GEO) accPaintGeo();
+}
+
+function accHTML(){
+  var f = ACC_FORM;
+  var h = '';
+
+  // ── الرأس ──
+  h += '<div style="position:sticky;top:0;z-index:5;background:linear-gradient(180deg,#7f1d1d,#0d1117);'+
+    'padding:calc(12px + env(safe-area-inset-top)) 15px 13px;border-bottom:1px solid var(--br)">'+
+    '<div style="display:flex;align-items:center;gap:10px">'+
+      '<button onclick="accConfirmClose()" style="background:rgba(255,255,255,.14);border:none;color:#fff;'+
+        'width:33px;height:33px;border-radius:10px;font-size:20px;line-height:1;cursor:pointer">×</button>'+
+      '<div style="flex:1"><div style="font-weight:900;font-size:16px;color:#fff">🚨 '+
+        (LANG==='ar'?'بلاغ حادثة':'Accident report')+'</div>'+
+        '<div class="mono" dir="ltr" style="font-size:10px;color:rgba(255,255,255,.65);margin-top:1px">'+
+        accEsc(f.id)+'</div></div>'+
+    '</div>'+
+    // شريط الخطوات
+    '<div style="display:flex;gap:5px;margin-top:11px">'+
+      [1,2,3].map(function(i){
+        var on = i <= ACC_STEP;
+        return '<div style="flex:1;height:4px;border-radius:99px;background:'+(on?'#ef4444':'rgba(255,255,255,.18)')+'"></div>';
+      }).join('')+
+    '</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:6px;font-weight:700">'+
+      (ACC_STEP===1 ? (LANG==='ar'?'١ من ٣ — ماذا حدث؟':'1 of 3 — What happened?')
+     : ACC_STEP===2 ? (LANG==='ar'?'٢ من ٣ — الطرف الآخر':'2 of 3 — Other party')
+                    : (LANG==='ar'?'٣ من ٣ — الصور والإرسال':'3 of 3 — Photos & submit'))+
+    '</div></div>';
+
+  h += '<div style="padding:14px 15px 120px">';
+
+  // ── شريط الموقع (ثابت في كل الخطوات) ──
+  h += '<div class="card" style="padding:11px 13px;margin-bottom:12px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--muted2)">'+
+        (LANG==='ar'?'موقع الحادثة':'Accident location')+'</div>'+
+      '<button onclick="accLoadGeo()" style="background:var(--s2);border:1px solid var(--br);color:var(--muted2);'+
+        'border-radius:8px;padding:4px 9px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer">'+
+        '<i class="ti ti-refresh"></i> '+(LANG==='ar'?'تحديث':'Refresh')+'</button>'+
+    '</div><div id="accGeoLbl" style="font-size:12px;color:var(--muted2)">…</div></div>';
+
+  h += '<div id="accQueueBar" style="display:none;margin-bottom:12px"></div>';
+
+  if(ACC_STEP === 1) h += accStep1();
+  else if(ACC_STEP === 2) h += accStep2();
+  else h += accStep3();
+
+  h += '</div>';
+
+  // ── شريط الأزرار السفلي ──
+  var nextTxt = ACC_STEP < 3 ? (LANG==='ar'?'التالي':'Next') : (LANG==='ar'?'إرسال البلاغ':'Submit');
+  h += '<div style="position:fixed;inset-inline:0;bottom:0;background:var(--s1,#161b22);'+
+    'border-top:1px solid var(--br);padding:12px 15px calc(12px + env(safe-area-inset-bottom));'+
+    'display:flex;gap:9px;z-index:6">'+
+    (ACC_STEP > 1 ? '<button onclick="accBack()" style="flex:1;padding:14px;border-radius:12px;'+
+      'border:1px solid var(--br);background:transparent;color:var(--muted2);font-family:inherit;'+
+      'font-weight:800;font-size:14px;cursor:pointer">'+(LANG==='ar'?'رجوع':'Back')+'</button>' : '')+
+    '<button id="accNext" onclick="accNext()" style="flex:2;padding:14px;border-radius:12px;border:none;'+
+      'background:'+(ACC_STEP<3?'#ef4444':'#10b981')+';color:#fff;font-family:inherit;font-weight:900;'+
+      'font-size:14.5px;cursor:pointer">'+nextTxt+'</button></div>';
+
+  return h;
+}
+
+/* ═════ الخطوة ١ — ماذا حدث؟ ═════ */
+function accStep1(){
+  var f = ACC_FORM, h = '';
+
+  h += '<div class="sec-title">'+(LANG==='ar'?'نوع الحادثة':'Type')+'</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+  ACC_KINDS.forEach(function(k){
+    var on = f.kind === k.v;
+    h += '<button onclick="accSetKind(\''+k.v+'\')" style="background:'+(on?'rgba(239,68,68,.14)':'var(--s2)')+';'+
+      'border:1.5px solid '+(on?'#ef4444':'var(--br)')+';border-radius:12px;padding:12px 8px;cursor:pointer;'+
+      'font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px">'+
+      '<span style="font-size:21px">'+k.ic+'</span>'+
+      '<span style="font-size:11.5px;font-weight:800;color:'+(on?'#ef4444':'var(--muted2)')+'">'+k.ar+'</span></button>';
+  });
+  h += '</div>';
+
+  h += accPills(LANG==='ar'?'حجم الضرر':'Severity', 'severity', [
+    {v:'minor',    ar:'بسيط',  c:'#10b981'},
+    {v:'moderate', ar:'متوسط', c:'#f59e0b'},
+    {v:'severe',   ar:'كبير',  c:'#ef4444'}]);
+
+  h += accPills(LANG==='ar'?'إصابات':'Injuries', 'injuries', [
+    {v:'none',    ar:'لا يوجد',   c:'#10b981'},
+    {v:'minor',   ar:'إصابة بسيطة', c:'#f59e0b'},
+    {v:'serious', ar:'إصابة خطيرة', c:'#ef4444'}]);
+
+  /* إصابة خطيرة: الأولوية للإسعاف لا للنموذج. التطبيق يقولها صراحة. */
+  if(f.injuries === 'serious'){
+    h += '<div style="background:rgba(239,68,68,.14);border:1.5px solid #ef4444;border-radius:13px;'+
+      'padding:13px;margin-bottom:13px">'+
+      '<div style="font-weight:900;font-size:13.5px;color:#ef4444;margin-bottom:4px">'+
+        (LANG==='ar'?'⚠️ اتصل بالطوارئ أولاً':'⚠️ Call emergency first')+'</div>'+
+      '<div style="font-size:11.5px;color:var(--muted2);line-height:1.7;margin-bottom:9px">'+
+        (LANG==='ar'?'في وجود إصابة خطيرة، الإسعاف قبل أي شيء. البلاغ يستنى.'
+                   :'With a serious injury, call an ambulance before anything else.')+'</div>'+
+      '<a href="tel:112" style="display:block;text-align:center;background:#ef4444;color:#fff;'+
+        'text-decoration:none;padding:13px;border-radius:11px;font-weight:900;font-size:15px">'+
+        '📞 '+(LANG==='ar'?'اتصل بـ 112':'Call 112')+'</a></div>';
+  }
+
+  h += accPills(LANG==='ar'?'الشرطة':'Police', 'police', [
+    {v:'no',       ar:'لم تُبلَّغ',  c:'#7d8590'},
+    {v:'called',   ar:'تم إبلاغها', c:'#3b82f6'},
+    {v:'attended', ar:'حضرت',      c:'#10b981'}]);
+
+  if(f.police === 'attended' || f.police === 'called'){
+    h += '<div style="margin-bottom:13px"><label style="font-size:11.5px;font-weight:800;color:var(--muted2);'+
+      'display:block;margin-bottom:5px">'+(LANG==='ar'?'رقم البلاغ (اختياري)':'Report number (optional)')+'</label>'+
+      '<input id="accPoliceNo" dir="ltr" value="'+accEsc(f.police_no)+'" oninput="ACC_FORM.police_no=this.value" '+
+      'placeholder="—" style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);'+
+      'border-radius:11px;padding:12px;color:var(--text);font-family:inherit;font-size:14px"></div>';
+  }
+
+  h += accPills(LANG==='ar'?'السيارة تمشي؟':'Drivable?', 'drivable', [
+    {v:true,  ar:'تمشي',        c:'#10b981'},
+    {v:false, ar:'لا تمشي',     c:'#ef4444'}]);
+
+  h += '<div style="margin-bottom:6px"><label style="font-size:11.5px;font-weight:800;color:var(--muted2);'+
+    'display:block;margin-bottom:5px">'+(LANG==='ar'?'ماذا حدث بالضبط؟':'What happened?')+'</label>'+
+    '<textarea id="accDesc" oninput="ACC_FORM.description=this.value" rows="4" '+
+    'placeholder="'+(LANG==='ar'?'اكتب بإيجاز: كنت رايح فين، إيه اللي حصل، مين اللي اصطدم بمين…':'Brief description…')+'" '+
+    'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);border-radius:11px;'+
+    'padding:12px;color:var(--text);font-family:inherit;font-size:14px;line-height:1.7;resize:vertical">'+
+    accEsc(ACC_FORM.description)+'</textarea></div>';
+
+  return h;
+}
+
+function accPills(title, field, opts){
+  var f = ACC_FORM, h = '';
+  h += '<div class="sec-title">'+title+'</div>';
+  h += '<div style="display:flex;gap:7px;margin-bottom:13px;flex-wrap:wrap">';
+  opts.forEach(function(o){
+    var on = f[field] === o.v;
+    var val = (typeof o.v === 'boolean') ? String(o.v) : "'"+o.v+"'";
+    h += '<button onclick="accSet(\''+field+'\','+val+')" style="flex:1;min-width:84px;background:'+
+      (on?o.c+'22':'var(--s2)')+';border:1.5px solid '+(on?o.c:'var(--br)')+';border-radius:11px;'+
+      'padding:11px 6px;cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;color:'+
+      (on?o.c:'var(--muted2)')+'">'+o.ar+'</button>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function accSet(field, val){
+  ACC_FORM[field] = val;
+  accSaveInputs();
+  accRender();
+}
+function accSetKind(v){
+  ACC_FORM.kind = v;
+  for(var i=0;i<ACC_KINDS.length;i++) if(ACC_KINDS[i].v===v) ACC_FORM.has_other = !!ACC_KINDS[i].other;
+  accSaveInputs();
+  accRender();
+}
+/* الحقول النصية لا تمرّ على accSet، فنلتقطها قبل أي إعادة رسم */
+function accSaveInputs(){
+  var d = document.getElementById('accDesc');       if(d) ACC_FORM.description = d.value;
+  var p = document.getElementById('accPoliceNo');   if(p) ACC_FORM.police_no  = p.value;
+  var n = document.getElementById('accOtherName');  if(n) ACC_FORM.other_name = n.value;
+  var t = document.getElementById('accOtherPhone'); if(t) ACC_FORM.other_phone= t.value;
+  var l = document.getElementById('accOtherPlate'); if(l) ACC_FORM.other_plate= l.value;
+  var m = document.getElementById('accMissReason'); if(m) ACC_FORM.missing_reason = m.value;
+}
+
+/* ═════ الخطوة ٢ — الطرف الآخر ═════ */
+function accStep2(){
+  var f = ACC_FORM, h = '';
+
+  h += '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+    ['<button onclick="accSet(\'has_other\',true)" style="flex:1;background:'+(f.has_other?'rgba(59,130,246,.15)':'var(--s2)')+
+      ';border:1.5px solid '+(f.has_other?'#3b82f6':'var(--br)')+';border-radius:12px;padding:13px;cursor:pointer;'+
+      'font-family:inherit;font-weight:800;font-size:12.5px;color:'+(f.has_other?'#3b82f6':'var(--muted2)')+'">'+
+      (LANG==='ar'?'فيه طرف آخر':'Other party')+'</button>',
+     '<button onclick="accSet(\'has_other\',false)" style="flex:1;background:'+(!f.has_other?'rgba(59,130,246,.15)':'var(--s2)')+
+      ';border:1.5px solid '+(!f.has_other?'#3b82f6':'var(--br)')+';border-radius:12px;padding:13px;cursor:pointer;'+
+      'font-family:inherit;font-weight:800;font-size:12.5px;color:'+(!f.has_other?'#3b82f6':'var(--muted2)')+'">'+
+      (LANG==='ar'?'مفيش طرف آخر':'No other party')+'</button>'].join('')+'</div>';
+
+  if(!f.has_other){
+    return h + '<div class="card" style="text-align:center;padding:26px 14px">'+
+      '<div style="font-size:32px">✅</div>'+
+      '<div style="font-weight:800;font-size:13.5px;margin-top:7px">'+
+        (LANG==='ar'?'تمام — مفيش بيانات طرف آخر':'No other party details needed')+'</div>'+
+      '<div style="font-size:11.5px;color:var(--muted2);margin-top:4px;line-height:1.7">'+
+        (LANG==='ar'?'صورة سيارة الطرف الآخر مش هتكون مطلوبة في الخطوة الجاية'
+                   :'The other-car photo will not be required')+'</div></div>';
+  }
+
+  h += '<div class="card" style="padding:13px">'+
+    '<div style="font-size:11px;color:var(--muted2);line-height:1.7;margin-bottom:12px">'+
+      (LANG==='ar'?'الأساسي بس — الرخصة والتأمين صوّرهم في الخطوة الجاية بدل ما تكتبهم.'
+                 :'Basics only — photograph licence and insurance instead of typing them.')+'</div>'+
+    accField('accOtherName',  LANG==='ar'?'اسم السائق الآخر':'Other driver name', f.other_name, 'text', '')+
+    accField('accOtherPhone', LANG==='ar'?'رقم تليفونه':'Phone', f.other_phone, 'tel', 'ltr')+
+    accField('accOtherPlate', LANG==='ar'?'رقم لوحة سيارته':'Plate number', f.other_plate, 'text', 'ltr')+
+    '</div>';
+
+  return h;
+}
+
+function accField(id, label, val, type, dir){
+  return '<div style="margin-bottom:11px">'+
+    '<label style="font-size:11.5px;font-weight:800;color:var(--muted2);display:block;margin-bottom:5px">'+
+      label+'</label>'+
+    '<input id="'+id+'" type="'+(type||'text')+'" '+(dir?'dir="'+dir+'" ':'')+'value="'+accEsc(val||'')+'" '+
+    'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);'+
+    'border-radius:11px;padding:12px;color:var(--text);font-family:inherit;font-size:14px"></div>';
+}
+
+/* ═════ الخطوة ٣ — الصور ═════ */
+function accStep3(){
+  var h = '', req = accRequiredKeys(), miss = accMissing();
+
+  h += '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(59,130,246,.35);'+
+    'background:rgba(59,130,246,.07)">'+
+    '<div style="font-size:11.5px;color:var(--muted2);line-height:1.8">'+
+      (LANG==='ar'
+        ? '📸 كل صورة بتتختم جواها بالتاريخ والوقت والمنطقة واسمك ورقم لوحتك — الختم جوه الصورة نفسها، فيفضل موجود حتى لو الصورة اتبعتت على الواتساب.'
+        : 'Every photo is stamped inside the image with date, time, area, your name and plate.')+
+    '</div></div>';
+
+  ACC_SHOTS.forEach(function(s){
+    var isReq = req.indexOf(s.k) >= 0;
+    var got = ACC_PHOTOS[s.k];
+    h += '<div style="margin-bottom:10px">'+
+      '<label style="display:block;cursor:pointer">'+
+        '<input type="file" accept="image/*" capture="environment" style="display:none" '+
+          'onchange="accPick(\''+s.k+'\',this)">'+
+        '<div style="display:flex;gap:11px;align-items:center;background:var(--s2);'+
+          'border:1.5px '+(got?'solid #10b981':(isReq?'dashed #ef4444':'dashed var(--br)'))+';'+
+          'border-radius:13px;padding:10px">'+
+          '<div id="accPrev_'+s.k+'" style="width:62px;height:62px;border-radius:10px;overflow:hidden;'+
+            'background:var(--s1,#161b22);display:flex;align-items:center;justify-content:center;flex:0 0 auto">'+
+            (got ? '<img src="'+URL.createObjectURL(got.stamped)+'" style="width:100%;height:100%;object-fit:cover">'
+                 : '<i class="ti ti-camera-plus" style="font-size:23px;color:var(--muted2)"></i>')+
+          '</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-weight:800;font-size:13px">'+s.ar+
+              (isReq?' <span style="color:#ef4444">*</span>':'')+'</div>'+
+            '<div style="font-size:11px;color:'+(got?'#10b981':'var(--muted2)')+';margin-top:2px">'+
+              (got ? (LANG==='ar'?'✓ مختومة وجاهزة':'✓ Stamped') : (s.ar2 || (LANG==='ar'?'اضغط للتصوير':'Tap to capture')))+
+            '</div>'+
+          '</div>'+
+          (got ? '<span onclick="event.preventDefault();event.stopPropagation();accDrop(\''+s.k+'\')" '+
+                 'style="color:#ef4444;font-size:19px;padding:4px 8px">×</span>' : '')+
+        '</div></label></div>';
+  });
+
+  if(miss.length){
+    h += '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:13px;'+
+      'padding:13px;margin-top:6px">'+
+      '<div style="font-weight:800;font-size:12.5px;color:#f59e0b;margin-bottom:5px">'+
+        (LANG==='ar'?'ناقص '+miss.length+' صورة إلزامية':miss.length+' required photo(s) missing')+'</div>'+
+      '<div style="font-size:11px;color:var(--muted2);line-height:1.7;margin-bottom:9px">'+
+        (LANG==='ar'?'لو مش قادر تصوّرها دلوقتي، اكتب السبب وابعت — البلاغ هيتسجّل والنقص هيبان للإدارة.'
+                   :'If you cannot take them now, write why and submit anyway.')+'</div>'+
+      '<textarea id="accMissReason" oninput="ACC_FORM.missing_reason=this.value" rows="2" '+
+        'placeholder="'+(LANG==='ar'?'سبب عدم التصوير…':'Reason…')+'" '+
+        'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);'+
+        'border-radius:10px;padding:10px;color:var(--text);font-family:inherit;font-size:13px">'+
+        accEsc(ACC_FORM.missing_reason)+'</textarea></div>';
+  }
+
+  return h;
+}
+
+function accPick(key, input){
+  var f = input.files && input.files[0];
+  if(!f) return;
+  var prev = document.getElementById('accPrev_'+key);
+  if(prev) prev.innerHTML = '<i class="ti ti-loader" style="font-size:21px;color:#3b82f6"></i>';
+  compressImage(f, 1600).then(function(small){
+    var shot = accShot(key);
+    return accStamp(small, {label: shot.ar2 ? shot.ar+' — '+shot.ar2 : shot.ar, id: ACC_FORM.id});
+  }).then(function(stamped){
+    ACC_PHOTOS[key] = {
+      stamped: stamped,
+      at: new Date().toISOString(),
+      lat: ACC_GEO ? ACC_GEO.lat : null,
+      lng: ACC_GEO ? ACC_GEO.lng : null
+    };
+    accSaveInputs();
+    accRender();
+  }).catch(function(){
+    toast(LANG==='ar'?'تعذّر تجهيز الصورة':'Could not process photo','err');
+    accRender();
+  });
+}
+function accDrop(key){
+  delete ACC_PHOTOS[key];
+  accSaveInputs();
+  accRender();
+}
+
+/* ═════ التنقّل والإرسال ═════ */
+function accBack(){ accSaveInputs(); ACC_STEP = Math.max(1, ACC_STEP-1); accRender(); }
+
+function accNext(){
+  accSaveInputs();
+  if(ACC_STEP === 1){
+    if(!ACC_FORM.description || ACC_FORM.description.trim().length < 10){
+      toast(LANG==='ar'?'اكتب وصف مختصر للحادثة':'Add a short description','err'); return;
+    }
+    ACC_STEP = 2; accRender(); return;
+  }
+  if(ACC_STEP === 2){
+    if(ACC_FORM.has_other && !ACC_FORM.other_plate.trim()){
+      toast(LANG==='ar'?'رقم لوحة الطرف الآخر مهم — لو مش واضح صوّرها':'Other plate is needed','err'); return;
+    }
+    ACC_STEP = 3; accRender(); return;
+  }
+  accSubmit();
+}
+
+function accConfirmClose(){
+  var any = Object.keys(ACC_PHOTOS).length || (ACC_FORM && ACC_FORM.description);
+  if(any && !confirm(LANG==='ar'?'تقفل البلاغ؟ اللي كتبته هيضيع.':'Discard this report?')) return;
+  accClose();
+}
+
+function accSubmit(){
+  if(ACC_BUSY) return;
+  accSaveInputs();
+  var miss = accMissing();
+  if(miss.length && !(ACC_FORM.missing_reason||'').trim()){
+    toast(LANG==='ar'?'اكتب سبب نقص الصور':'Write why photos are missing','err');
+    return;
+  }
+  ACC_BUSY = true;
+  var btn = document.getElementById('accNext');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> '+(LANG==='ar'?'جاري الحفظ…':'Saving…'); }
+
+  var f = ACC_FORM;
+  var row = {
+    id: f.id,
+    driver_id: DRIVER.id,
+    driver_name: DRIVER.name || null,
+    partner: DRIVER.partner || null,
+    driver_plate: DRIVER.car || null,
+    occurred_at: f.occurred_at,
+    reported_at: new Date().toISOString(),
+    kind: f.kind,
+    severity: f.severity,
+    injuries: f.injuries,
+    police: f.police,
+    police_no: (f.police_no||'').trim() || null,
+    drivable: (f.drivable === null ? null : !!f.drivable),
+    description: (f.description||'').trim(),
+    lat: ACC_GEO ? ACC_GEO.lat : null,
+    lng: ACC_GEO ? ACC_GEO.lng : null,
+    accuracy_m: ACC_GEO ? ACC_GEO.acc : null,
+    area: ACC_GEO ? (ACC_GEO.area||null) : null,
+    street: ACC_GEO ? (ACC_GEO.street||null) : null,
+    address: ACC_GEO ? (ACC_GEO.address||null) : null,
+    geo_source: ACC_GEO ? ACC_GEO.source : 'none',
+    has_other: !!f.has_other,
+    other_name:  f.has_other ? ((f.other_name||'').trim()  || null) : null,
+    other_phone: f.has_other ? ((f.other_phone||'').trim() || null) : null,
+    other_plate: f.has_other ? ((f.other_plate||'').trim() || null) : null,
+    photos: [],
+    photos_missing: miss.length ? miss : null,
+    missing_reason: miss.length ? (f.missing_reason||'').trim() : null,
+    status: 'new'
+  };
+
+  var shots = Object.keys(ACC_PHOTOS).map(function(k){
+    var p = ACC_PHOTOS[k], s = accShot(k);
+    return {key:k, label:s.ar, blob:p.stamped, url:null, at:p.at, lat:p.lat, lng:p.lng};
+  });
+
+  var rec = {id: f.id, row: row, shots: shots, tries: 0, at: Date.now(), rowSent: false};
+
+  /* يُحفَظ على الجهاز قبل أي محاولة رفع. لو التطبيق اتقفل أو الشبكة
+     قطعت في نص الرفع، البلاغ موجود ويُستأنف وحده. */
+  accQPut(rec).then(function(){
+    accClose();
+    toast(LANG==='ar'?'✅ اتسجّل البلاغ — جاري الإرسال':'Saved — sending','ok');
+    ACC_BUSY = false;
+    return accSendOne(rec).then(function(){
+      return accQDel(rec.id).then(function(){
+        toast(LANG==='ar'?'✅ وصل البلاغ للإدارة':'Report delivered','ok');
+        loadMyAccidents().then(function(){ renderCurrentTab(); });
+      });
+    }).catch(function(){
+      toast(LANG==='ar'?'الشبكة ضعيفة — البلاغ محفوظ وهيتبعت لوحده':'Weak network — saved, will retry','info');
+      accPaintQueueBadge();
+      renderCurrentTab();
+    });
+  }).catch(function(e){
+    ACC_BUSY = false;
+    if(btn){ btn.disabled = false; btn.textContent = LANG==='ar'?'إرسال البلاغ':'Submit'; }
+    toast(LANG==='ar'?'تعذّر الحفظ: '+String(e.message||e).slice(0,60):'Save failed','err');
+  });
+}
+
+/* ═════ سجل بلاغاتي ═════ */
+function loadMyAccidents(){
+  if(!DRIVER) return Promise.resolve([]);
+  return sb('accidents?driver_id=eq.'+encodeURIComponent(DRIVER.id)+
+            '&order=occurred_at.desc&limit=20')
+    .then(function(r){ MY_ACCIDENTS = r||[]; return MY_ACCIDENTS; })
+    .catch(function(){ return MY_ACCIDENTS; });
+}
+
+function accListHTML(){
+  if(!MY_ACCIDENTS.length) return '';
+  var h = '<div class="sec-title">'+(LANG==='ar'?'بلاغات الحوادث':'Accident reports')+'</div><div class="card">';
+  MY_ACCIDENTS.slice(0,6).forEach(function(a){
+    var st = {new:'#f59e0b', reviewing:'#3b82f6', closed:'#10b981'}[a.status] || '#7d8590';
+    var stT = {new:'جديد', reviewing:'قيد المراجعة', closed:'مقفول'}[a.status] || a.status;
+    var kind = '';
+    ACC_KINDS.forEach(function(k){ if(k.v===a.kind) kind = k.ic+' '+k.ar; });
+    var n = (a.photos && a.photos.length) || 0;
+    h += '<div style="padding:10px 4px;border-bottom:1px solid var(--br);display:flex;gap:9px;'+
+      'justify-content:space-between;align-items:flex-start">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-weight:800;font-size:13px">'+accEsc(kind||'حادثة')+'</div>'+
+        '<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+
+          fmtDate(a.occurred_at)+(a.area?' • '+accEsc(a.area):'')+' • '+n+' صورة</div>'+
+        (a.admin_note?'<div style="font-size:11px;color:'+st+';margin-top:4px">💬 '+accEsc(a.admin_note)+'</div>':'')+
+      '</div>'+
+      '<div style="font-size:11px;font-weight:800;color:'+st+';white-space:nowrap">'+stT+'</div></div>';
+  });
+  return h + '</div>';
+}
+
+/* ═════ التشغيل ═════ */
+/* عند فتح التطبيق: أي بلاغ عالق من جلسة سابقة يُستأنف وحده،
+   فلا يعتمد وصول البلاغ على أن السائق يتذكّر أنه لم يُرسَل. */
+setTimeout(function(){ try{ accPaintQueueBadge(); accFlush(true); }catch(e){} }, 4000);
+setInterval(function(){
+  try{ if(DRIVER && navigator.onLine) accFlush(true); }catch(e){}
+}, 90000);
 
 </script>
 
