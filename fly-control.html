@@ -176,6 +176,25 @@
     .ph-desc{-webkit-line-clamp:2}
   }
 </style>
+
+<!-- ARK-WATERMARK : علامة السلاسل المائية -->
+<style id="ark-watermark-style">
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url('ark-watermark.png');
+  background-repeat:no-repeat;
+  background-position:center center;
+  background-size:min(38vw,420px) auto;
+  opacity:.05;
+  pointer-events:none;
+  user-select:none;
+  z-index:99990;
+}
+@media (max-width:760px){ body::after{ background-size:min(62vw,300px) auto; opacity:.04 } }
+@media print{ body::after{ display:none !important } }
+</style>
 </head>
 <body>
 
@@ -329,6 +348,16 @@
   </div>
 
   <!-- VIOLATIONS -->
+  <div class="view" id="v-acc">
+    <div class="kpis" id="kAcc"></div>
+    <div class="toolbar">
+      <select id="accStatus" onchange="renderAcc()"></select>
+      <span style="font-size:11px;color:#94a3b8;font-weight:700" data-i18n="acc_tbl_hint"></span>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-car-crash"></i> <span data-i18n="acc_title"></span></div>
+      <div style="overflow-x:auto"><table id="tAcc"></table></div></div>
+  </div>
+
   <div class="view" id="v-vio">
     <div class="kpis" id="kVio"></div>
     <div class="toolbar">
@@ -396,6 +425,21 @@
       <div style="overflow-x:auto"><table id="rpTable"></table></div></div>
   </div>
 
+  <!-- FINANCE -->
+  <div class="view" id="v-finance">
+    <div class="toolbar">
+      <label data-i18n="month"></label><select id="fnMonth" onchange="renderFinance()" style="font-weight:800;min-width:120px"></select>
+      <span id="fnStatus"></span>
+      <button class="btn btn-gold push" onclick="location.href='finance.html'">
+        <i class="ti ti-external-link"></i> <span data-i18n="fn_open_full"></span></button>
+    </div>
+    <div id="fnAlerts"></div>
+    <div class="kpis" id="fnKpis"></div>
+    <div class="card"><div class="card-h"><i class="ti ti-report-money"></i> <span data-i18n="fn_pl"></span>
+      <span class="push" style="font-size:11px;color:var(--muted);font-weight:700" data-i18n="fn_kd"></span></div>
+      <div style="overflow-x:auto"><table id="fnTable"></table></div></div>
+  </div>
+
 </div>
 
 <!-- DUPLICATES MODAL -->
@@ -437,6 +481,25 @@
 </div>
 
 <!-- DRIVER MODAL -->
+
+<div class="modal-bg" id="accModal">
+  <div class="modal" style="max-width:880px">
+    <div class="modal-h">
+      <div><div id="amName" style="font-size:17px;font-weight:900"></div>
+      <div id="amSub" style="font-size:11px;color:#fde68a;font-weight:700;margin-top:2px"></div></div>
+      <button class="modal-x" onclick="closeAcc()">×</button>
+    </div>
+    <div class="modal-b" id="amBody"></div>
+    <div class="modal-f">
+      <button class="btn" style="background:var(--blue,#2563eb);color:#fff" onclick="accSetStatus('reviewing')">
+        <i class="ti ti-eye"></i> <span data-i18n="acc_mark_rev"></span></button>
+      <button class="btn" style="background:var(--green,#16a34a);color:#fff" onclick="accSetStatus('closed')">
+        <i class="ti ti-check"></i> <span data-i18n="acc_close_rep"></span></button>
+      <button class="btn push" style="background:var(--light);color:var(--navy);border:1px solid var(--border)"
+        onclick="closeAcc()"><span data-i18n="close"></span></button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="drvModal">
   <div class="modal" style="max-width:820px">
     <div class="modal-h">
@@ -485,9 +548,48 @@ ar:{
  settings:'إعدادات', refresh:'تحديث', export:'تصدير', close:'إغلاق', cancel:'إلغاء', save:'حفظ',
  date:'📅 التاريخ:', from:'📅 من:', to:'إلى:', month:'📅 الشهر:', all:'الكل',
  // tabs
+ c_plate:'رقم اللوحة', c_phone:'رقم التليفون',
+ t_acc:'الحوادث',
+ acc_title:'بلاغات الحوادث', acc_none:'لا توجد بلاغات حوادث',
+ k_acc_open:'بلاغات مفتوحة', k_acc_new:'جديدة لم تُراجع', k_acc_inj:'فيها إصابات', k_acc_undriv:'سيارات لا تمشي',
+ c_kind:'نوع الحادثة', c_dmg:'الضرر', c_inj:'الإصابات', c_police:'الشرطة',
+ c_where:'المكان', c_other:'الطرف الآخر', c_shots:'الصور',
+ acc_k_collision:'تصادم مع مركبة', acc_k_parked:'ارتطام بسيارة واقفة', acc_k_single:'حادث منفرد',
+ acc_k_pedestrian:'مشاة', acc_k_animal:'حيوان', acc_k_other:'أخرى',
+ acc_sev_minor:'بسيط', acc_sev_moderate:'متوسط', acc_sev_severe:'كبير',
+ acc_inj_none:'لا إصابات', acc_inj_minor:'إصابة بسيطة', acc_inj_serious:'إصابة خطيرة',
+ acc_pol_no:'لم تُبلَّغ', acc_pol_called:'تم إبلاغها', acc_pol_attended:'حضرت',
+ acc_st_new:'جديد', acc_st_reviewing:'قيد المراجعة', acc_st_closed:'مقفول',
+ acc_drivable:'تمشي', acc_undrivable:'لا تمشي',
+ acc_what:'ماذا حدث', acc_loc:'موقع الحادثة', acc_map:'فتح في الخرائط',
+ acc_coords_none:'الإحداثيات غير مسجّلة في هذا البلاغ',
+ acc_shots:'الصور الموثّقة', acc_no_shots:'لم تصل صور بعد — قد تكون قيد الرفع من جهاز السائق',
+ acc_missing:'صور إلزامية ناقصة', acc_miss_why:'سبب السائق',
+ acc_note:'ملاحظة الإدارة', acc_note_ph:'تظهر للسائق في تطبيقه…',
+ acc_mark_rev:'قيد المراجعة', acc_close_rep:'إقفال البلاغ',
+ acc_id_note:'المعرّف نفسه مطبوع على كل صورة من صور البلاغ',
+ acc_open_img:'فتح الأصل', acc_when:'وقت الحادثة', acc_reported:'وقت التبليغ',
+ acc_plate:'لوحة السائق', acc_report_no:'رقم بلاغ الشرطة',
+ acc_tbl_hint:'اضغط على أي صف لعرض الصور والتفاصيل',
  t_overview:'نظرة عامة', t_photos:'صور الشفت', t_shifts:'الشفتات والتأخير', t_daily:'التقارير اليومية',
  t_requests:'الطلبات', t_maint:'الصيانة', t_fuel:'الوقود', t_vio:'المخالفات', t_msgs:'الرسائل', t_drivers:'السائقون',
- t_reports:'التقارير',
+ t_reports:'التقارير', t_finance:'المالية',
+ // finance
+ fn_open_full:'افتح الوحدة المالية الكاملة', fn_pl:'قائمة الأرباح والخسائر (مختصرة)',
+ fn_kd:'بالدينار الكويتي', fn_kdcol:'د.ك', fn_pct:'% من الإيراد', fn_item:'البند',
+ fn_revenue:'إجمالي الإيرادات', fn_cogs:'التكاليف المباشرة', fn_gross:'مجمل الربح',
+ fn_opex:'المصروفات الإدارية', fn_dep:'الإهلاك', fn_interest:'فوائد التمويل',
+ fn_net:'صافي الربح', fn_principal:'سداد أصل القرض (ليس مصروفاً)', fn_freecash:'التدفق النقدي الحر',
+ fn_closed:'مُقفل', fn_draft:'مسودة', fn_vs:'مقابل أقساط', fn_gap:'العجز',
+ fn_al_dscr:'الأرباح التشغيلية لا تكفي لسداد الأقساط',
+ fn_al_nodep:'الأصول الثابتة غير مسجّلة — الإهلاك = صفر',
+ fn_al_nodep_s:'سجّل الأسطول في الوحدة المالية، وإلا فالربح المعروض أعلى من الحقيقة',
+ fn_al_ok:'✅ البيانات المالية مكتملة',
+ fn_no_tables:'الجداول المالية غير موجودة في قاعدة البيانات',
+ fn_no_tables_s:'شغّل ملف «المالية_setup.sql» مرة واحدة في Supabase → SQL Editor، ثم حدّث الصفحة',
+ fn_no_months:'لا توجد أشهر مالية مُدخلة بعد — افتح الوحدة المالية وأضف شهراً',
+ fn_empty:'فارغ', fn_month_empty:'شهر %s لم تُدخل بياناته بعد',
+ fn_month_empty_s:'افتح الوحدة المالية الكاملة ← الإدخال الشهري ← اختر الشهر ← «اسحب من النظام» ثم احفظ',
  // maintenance pro
  mt_search:'🔍 بحث بالسيارة أو السائق',
  del:'حذف', del_sel:'حذف المحدد', sel_n:'%s بلاغ محدد',
@@ -675,9 +777,47 @@ en:{
  app_title:'FLY Control Panel', app_sub:'Driver & Daily Operations Management',
  settings:'Settings', refresh:'Refresh', export:'Export', close:'Close', cancel:'Cancel', save:'Save',
  date:'📅 Date:', from:'📅 From:', to:'To:', month:'📅 Month:', all:'All',
+ c_plate:'Plate number', c_phone:'Phone number',
+ t_acc:'Accidents',
+ acc_title:'Accident reports', acc_none:'No accident reports',
+ k_acc_open:'Open reports', k_acc_new:'New, unreviewed', k_acc_inj:'With injuries', k_acc_undriv:'Cars not drivable',
+ c_kind:'Type', c_dmg:'Damage', c_inj:'Injuries', c_police:'Police',
+ c_where:'Location', c_other:'Other party', c_shots:'Photos',
+ acc_k_collision:'Collision', acc_k_parked:'Hit parked car', acc_k_single:'Single vehicle',
+ acc_k_pedestrian:'Pedestrian', acc_k_animal:'Animal', acc_k_other:'Other',
+ acc_sev_minor:'Minor', acc_sev_moderate:'Moderate', acc_sev_severe:'Severe',
+ acc_inj_none:'None', acc_inj_minor:'Minor injury', acc_inj_serious:'Serious injury',
+ acc_pol_no:'Not notified', acc_pol_called:'Called', acc_pol_attended:'Attended',
+ acc_st_new:'New', acc_st_reviewing:'Under review', acc_st_closed:'Closed',
+ acc_drivable:'Drivable', acc_undrivable:'Not drivable',
+ acc_what:'What happened', acc_loc:'Accident location', acc_map:'Open in Maps',
+ acc_coords_none:'No coordinates recorded on this report',
+ acc_shots:'Stamped photos', acc_no_shots:'No photos yet — they may still be uploading from the driver device',
+ acc_missing:'Required photos missing', acc_miss_why:'Driver reason',
+ acc_note:'Management note', acc_note_ph:'Shown to the driver in the app…',
+ acc_mark_rev:'Mark under review', acc_close_rep:'Close report',
+ acc_id_note:'The same id is stamped on every photo of this report',
+ acc_open_img:'Open original', acc_when:'Accident time', acc_reported:'Reported at',
+ acc_plate:'Driver plate', acc_report_no:'Police report no.',
+ acc_tbl_hint:'Tap any row to see photos and full detail',
  t_overview:'Overview', t_photos:'Shift Photos', t_shifts:'Shifts & Lateness', t_daily:'Daily Reports',
  t_requests:'Requests', t_maint:'Maintenance', t_fuel:'Fuel', t_vio:'Violations', t_msgs:'Messages', t_drivers:'Drivers',
- t_reports:'Reports',
+ t_reports:'Reports', t_finance:'Finance',
+ fn_open_full:'Open full finance module', fn_pl:'Profit & Loss (condensed)',
+ fn_kd:'in Kuwaiti Dinar', fn_kdcol:'KWD', fn_pct:'% of revenue', fn_item:'Item',
+ fn_revenue:'Total revenue', fn_cogs:'Direct costs', fn_gross:'Gross profit',
+ fn_opex:'Operating expenses', fn_dep:'Depreciation', fn_interest:'Interest expense',
+ fn_net:'Net profit', fn_principal:'Principal repayment (not an expense)', fn_freecash:'Free cash flow',
+ fn_closed:'Closed', fn_draft:'Draft', fn_vs:'vs instalments', fn_gap:'shortfall',
+ fn_al_dscr:'Operating profit does not cover the loan instalments',
+ fn_al_nodep:'Fixed assets not registered — depreciation is zero',
+ fn_al_nodep_s:'Register the fleet in the finance module, otherwise reported profit is overstated',
+ fn_al_ok:'✅ Financial data is complete',
+ fn_no_tables:'Finance tables not found in the database',
+ fn_no_tables_s:'Run «المالية_setup.sql» once in Supabase → SQL Editor, then refresh',
+ fn_no_months:'No financial months entered yet — open the finance module and add one',
+ fn_empty:'empty', fn_month_empty:'%s has no data yet',
+ fn_month_empty_s:'Open the full finance module → Monthly entry → pick the month → “Pull from system”, then save',
  mt_search:'🔍 Search vehicle or driver',
  del:'Delete', del_sel:'Delete selected', sel_n:'%s selected',
  del_confirm1:'Permanently delete this report?\n\n%s\n\nThis cannot be undone.',
@@ -860,6 +1000,7 @@ const RTL = ()=> LANG==='ar';
 const SUPA_URL='https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY='sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 let sb=null, PHOTOS=[], REQS=[], MAINT=[], FUEL=[], VIO=[], DRIVERS=[];
+let ACCS=[], _accOpen=null;
 let SCHED=[], CLOCKINS=[], DEDS=[], MSGS=[], DAILY=[], CFG={grace:30,fraction:0.5,prealert:30};
 const PM_DEFAULT=[
   {id:'oil',    cat:'engine',     km:5000,  days:90},
@@ -871,6 +1012,7 @@ const PM_DEFAULT=[
 let PM=PM_DEFAULT.map(x=>Object.assign({},x));
 let _mv='issues';
 let _mtSel=new Set(), _dupG=[];
+let FIN_M=[], FIN_L=[], FIN_A=[], FIN_READY=false;
 let _curDrv=null, _view='overview';
 
 const TABS=[
@@ -880,11 +1022,13 @@ const TABS=[
  {id:'daily',   ic:'ti-report-analytics',bdg:'bDaily'},
  {id:'requests',ic:'ti-file-text',       bdg:'bReq'},
  {id:'maint',   ic:'ti-tool',            bdg:'bMaint'},
+ {id:'acc',     ic:'ti-car-crash',       bdg:'bAcc'},
  {id:'fuel',    ic:'ti-gas-station'},
  {id:'vio',     ic:'ti-alert-triangle'},
  {id:'msgs',    ic:'ti-send'},
  {id:'drivers', ic:'ti-users'},
  {id:'reports', ic:'ti-file-analytics'},
+ {id:'finance', ic:'ti-report-money'},
 ];
 
 /* ═══════════ HELPERS ═══════════ */
@@ -954,8 +1098,8 @@ function go(v){
   const el=document.getElementById('v-'+v); if(el) el.classList.add('on');
   badges();
   ({overview:renderOverview,photos:renderPhotos,requests:renderRequests,maint:renderMaint,
-    fuel:renderFuel,vio:renderVio,shifts:renderShifts,msgs:renderMsgs,drivers:renderDrivers,
-    daily:renderDaily,reports:renderReports}[v]||(()=>{}))();
+    fuel:renderFuel,vio:renderVio,acc:renderAcc,shifts:renderShifts,msgs:renderMsgs,drivers:renderDrivers,
+    daily:renderDaily,reports:renderReports,finance:renderFinance}[v]||(()=>{}))();
 }
 
 /* ═══════════ DATA ═══════════ */
@@ -967,7 +1111,7 @@ async function loadAll(){
   setCloud('connecting',t('cl_loading'));
   DRIVERS=getDrivers();
   try{
-    const [p,r,m,f,v,sc,ci,dd,st,mg,dl]=await Promise.all([
+    const [p,r,m,f,v,sc,ci,dd,st,mg,dl,ac]=await Promise.all([
       sb.from('shift_photos').select('*').order('photo_date',{ascending:false}).limit(600),
       sb.from('driver_requests').select('*').order('created_at',{ascending:false}).limit(300),
       sb.from('maintenance_reports').select('*').order('report_date',{ascending:false}).limit(300),
@@ -979,10 +1123,14 @@ async function loadAll(){
       sb.from('app_settings').select('*'),
       sb.from('messages').select('*').order('created_at',{ascending:false}).limit(150),
       sb.from('daily_reports').select('*').order('report_date',{ascending:false}).limit(3000),
+      sb.from('accidents').select('*').order('occurred_at',{ascending:false}).limit(400),
     ]);
     PHOTOS=p.data||[];REQS=r.data||[];MAINT=m.data||[];FUEL=f.data||[];VIO=v.data||[];
     SCHED=sc.data||[];CLOCKINS=ci.data||[];DEDS=dd.data||[];
     MSGS=(mg&&mg.data)||[];DAILY=(dl&&dl.data)||[];
+    /* الجدول قد لا يكون منشأً بعد على مشروع لم يُشغّل accidents_setup.sql،
+       فالخطأ لا يُسقِط بقية اللوحة. */
+    ACCS=(ac&&ac.data)||[];
     (st.data||[]).forEach(x=>{
       if(x.key==='late_grace_minutes') CFG.grace=parseInt(x.value,10)||30;
       if(x.key==='late_deduct_fraction') CFG.fraction=parseFloat(x.value)||0.5;
@@ -991,17 +1139,177 @@ async function loadAll(){
     });
     try{ const lp=localStorage.getItem('fly_pm_rules');
       if(lp && !(st.data||[]).some(x=>x.key==='pm_rules')){ const r=JSON.parse(lp); if(Array.isArray(r)&&r.length) PM=r; } }catch(e){}
+    loadFinance();
     setCloud('connected',t('cl_connected'));
     document.getElementById('cfgGrace').textContent=CFG.grace;
     fillSelects(); badges(); go(_view);
   }catch(e){ console.error(e); setCloud('error',t('cl_error')); toast(t('err')+': '+e.message,true); }
 }
+async function loadFinance(){
+  if(!sb) return;
+  try{
+    const [fm,fl,fa]=await Promise.all([
+      sb.from('finance_months').select('*').order('month',{ascending:false}).limit(36),
+      sb.from('finance_loans').select('*'),
+      sb.from('finance_assets').select('*'),
+    ]);
+    if(fm.error) throw fm.error;
+    FIN_M=fm.data||[]; FIN_L=(fl&&fl.data)||[]; FIN_A=(fa&&fa.data)||[];
+    FIN_READY=true;
+  }catch(e){ FIN_READY=false; console.warn('finance tables not ready:',e.message); }
+}
+
+/* ═══════════ FINANCE (condensed — full module lives in finance.html) ═══════════ */
+function fnNum(v){const x=parseFloat(v);return isNaN(x)?0:x;}
+function fnKD(v,d){return (v===null||v===undefined||isNaN(v))?'—':Number(v).toLocaleString('en-US',{minimumFractionDigits:d===undefined?3:d,maximumFractionDigits:d===undefined?3:d});}
+function fnSolveRate(P,A,n){
+  if(!(P>0)||!(A>0)||!(n>0))return null;
+  if(A*n<=P)return 0;
+  const f=r=>(r===0?P/n:P*r/(1-Math.pow(1+r,-n)))-A;
+  let lo=0,hi=1; for(let i=0;i<200;i++){const m=(lo+hi)/2; if(f(m)>0)hi=m; else lo=m;}
+  return (lo+hi)/2;
+}
+function fnAmort(l){
+  const P=fnNum(l.principal),A=fnNum(l.installment),n=parseInt(l.months_total,10)||0;
+  if(!(P>0)||!(A>0)||!(n>0))return{rate:null,rows:[],totalInterest:0};
+  const r=fnSolveRate(P,A,n);const rows=[];let bal=P,ti=0;
+  for(let i=1;i<=n;i++){const it=bal*r;let pr=A-it;if(i===n||pr>bal)pr=bal;
+    rows.push({i:i,open:bal,pay:pr+it,interest:it,principal:pr,close:bal-pr});
+    ti+=it;bal-=pr;if(bal<0.0005)bal=0;}
+  return{rate:r,rows:rows,totalInterest:ti};
+}
+function fnMonthsBetween(a,b){const A=a.split('-').map(Number),B=b.split('-').map(Number);return (B[0]-A[0])*12+(B[1]-A[1]);}
+function fnLoanPeriod(l,month){
+  const S=fnAmort(l); if(!S.rows.length) return null;
+  if(!l.first_payment){const n=S.rows.length;
+    return{interest:S.totalInterest/n,principal:fnNum(l.principal)/n,pay:fnNum(l.installment),approx:true};}
+  const idx=fnMonthsBetween(String(l.first_payment).slice(0,7),month)+1;
+  if(idx<1||idx>S.rows.length)return{interest:0,principal:0,pay:0,outside:true};
+  const r=S.rows[idx-1];
+  return{idx:idx,interest:r.interest,principal:r.principal,pay:r.pay};
+}
+function fnMAdd(m,k){const p=m.split('-').map(Number);const d=new Date(p[0],p[1]-1+k,1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function fnMonthRange(){
+  const have=FIN_M.map(x=>x.month).sort(), now=today().slice(0,7);
+  let start=fnMAdd(now,-12); if(have.length&&have[0]<start)start=have[0];
+  let end=now.slice(0,4)+'-12';
+  if(have.length&&have[have.length-1]>end)end=have[have.length-1];
+  if(end<fnMAdd(now,3))end=fnMAdd(now,3);
+  const out=[];let c=start;while(c<=end){out.push(c);c=fnMAdd(c,1);}
+  return out.reverse();
+}
+function fnHasData(m){
+  const r=FIN_M.find(x=>x.month===m); if(!r)return false;
+  return ['rev_keeta','rev_homy','rev_caboria','rev_other','cost_salaries','cost_fuel','cost_maint',
+          'cost_residency','cost_insurance','opex_rent','opex_admin','opex_telecom','opex_gov',
+          'opex_fines','opex_other','orders_count'].some(k=>fnNum(r[k])!==0);
+}
+function fnDep(month){
+  return FIN_A.filter(a=>a.active!==false).reduce((s,a)=>{
+    if(a.in_service&&month&&String(a.in_service).slice(0,7)>month)return s;
+    const q=parseInt(a.qty,10)||0,c=fnNum(a.unit_cost),L=fnNum(a.life_years),sv=fnNum(a.salvage_pct)/100;
+    return s+((q>0&&c>0&&L>0)?q*c*(1-sv)/(L*12):0);},0);
+}
+function fnPL(m){
+  m=m||{};const month=m.month;
+  const revenue=fnNum(m.rev_keeta)+fnNum(m.rev_homy)+fnNum(m.rev_caboria)+fnNum(m.rev_other);
+  const cogs=fnNum(m.cost_salaries)+fnNum(m.cost_fuel)+fnNum(m.cost_maint)+fnNum(m.cost_residency)+fnNum(m.cost_insurance);
+  const opex=fnNum(m.opex_rent)+fnNum(m.opex_admin)+fnNum(m.opex_telecom)+fnNum(m.opex_gov)+fnNum(m.opex_fines)+fnNum(m.opex_other);
+  const gross=revenue-cogs;
+  const ebitda=gross-opex+fnNum(m.other_income);
+  const dep=fnDep(month);
+  const ebit=ebitda-dep;
+  let interest=0,principal=0,debt=0;
+  FIN_L.filter(l=>l.active!==false).forEach(l=>{const p=fnLoanPeriod(l,month); if(!p)return;
+    interest+=p.interest;principal+=p.principal;debt+=(p.pay||0);});
+  const net=ebit-interest-fnNum(m.zakat_tax);
+  const orders=parseInt(m.orders_count,10)||0;
+  const pct=v=>revenue>0?v/revenue*100:null;
+  return{month,revenue,cogs,gross,opex,ebitda,dep,ebit,interest,principal,debt,net,orders,
+    freeCash:ebitda-interest-principal,dscr:debt>0?ebitda/debt:null,
+    margins:{gross:pct(gross),ebitda:pct(ebitda),net:pct(net)},
+    revPerOrder:orders>0?revenue/orders:null,costPerOrder:orders>0?(cogs+opex)/orders:null};
+}
+function renderFinance(){
+  const sel=document.getElementById('fnMonth');
+  if(!FIN_READY){
+    document.getElementById('fnAlerts').innerHTML=
+      `<div class="alertbar a"><i class="ti ti-database-off"></i><div><div>${t('fn_no_tables')}</div>
+       <div style="font-weight:600;font-size:12px;opacity:.85;margin-top:2px">${t('fn_no_tables_s')}</div></div></div>`;
+    document.getElementById('fnKpis').innerHTML='';
+    document.getElementById('fnTable').innerHTML='';
+    return;
+  }
+  const list=fnMonthRange();
+  const filled=list.filter(fnHasData);
+  const cur=(sel.value&&list.indexOf(sel.value)>=0)?sel.value:(filled.length?filled[0]:today().slice(0,7));
+  sel.innerHTML=list.map(x=>`<option value="${x}"${x===cur?' selected':''}>${x}${fnHasData(x)?'':' — '+t('fn_empty')}</option>`).join('');
+  const m=FIN_M.find(x=>x.month===cur)||{month:cur}, R=fnPL(m);
+  if(!fnHasData(cur)){
+    document.getElementById('fnStatus').innerHTML=`<span class="st">${t('fn_empty')}</span>`;
+    document.getElementById('fnAlerts').innerHTML=
+      `<div class="alertbar a"><i class="ti ti-file-off"></i><div><div>${t('fn_month_empty',cur)}</div>
+       <div style="font-weight:600;font-size:12px;opacity:.85;margin-top:2px">${t('fn_month_empty_s')}</div></div></div>`;
+    document.getElementById('fnKpis').innerHTML='';
+    document.getElementById('fnTable').innerHTML='';
+    return;
+  }
+  document.getElementById('fnStatus').innerHTML=m.status==='closed'
+    ? `<span class="st g">${t('fn_closed')}</span>` : `<span class="st a">${t('fn_draft')}</span>`;
+
+  document.getElementById('fnKpis').innerHTML=kpiHTML([
+    {l:t('fn_revenue'),v:fnKD(R.revenue,0),c:'var(--navy)'},
+    {l:t('fn_gross'),v:fnKD(R.gross,0),c:'var(--blue)'},
+    {l:'EBITDA',v:fnKD(R.ebitda,0),c:'var(--purple)'},
+    {l:t('fn_net'),v:fnKD(R.net,0),c:R.net<0?'var(--red)':'var(--green)'},
+    {l:t('fn_freecash'),v:fnKD(R.freeCash,0),c:R.freeCash<0?'var(--red)':'var(--green)'},
+    {l:'DSCR',v:R.dscr===null?'—':R.dscr.toFixed(2)+'×',c:(R.dscr!==null&&R.dscr<1)?'var(--red)':'var(--green)'},
+  ]);
+
+  const A=[];
+  if(R.dscr!==null&&R.dscr<1) A.push(['r','ti-alert-triangle',t('fn_al_dscr'),
+    'EBITDA '+fnKD(R.ebitda,0)+' '+t('fn_vs')+' '+fnKD(R.debt,0)+' — '+t('fn_gap')+' '+fnKD(R.debt-R.ebitda,0)]);
+  if(R.dep===0&&!FIN_A.length) A.push(['a','ti-car',t('fn_al_nodep'),t('fn_al_nodep_s')]);
+  if(!A.length) A.push(['g','ti-circle-check',t('fn_al_ok'),'']);
+  document.getElementById('fnAlerts').innerHTML=A.map(a=>
+    `<div class="alertbar ${a[0]}"><i class="ti ${a[1]}"></i><div><div>${a[2]}</div>`+
+    (a[3]?`<div style="font-weight:600;font-size:12px;opacity:.85;margin-top:2px">${a[3]}</div>`:'')+`</div></div>`).join('');
+
+  const p=v=>R.revenue>0?(v/R.revenue*100).toFixed(1)+'%':'';
+  const L=[
+    [t('fn_revenue'),R.revenue,'100.0%','b'],
+    [t('fn_cogs'),-R.cogs,p(R.cogs),''],
+    [t('fn_gross'),R.gross,p(R.gross),'b'],
+    [t('fn_opex'),-R.opex,p(R.opex),''],
+    ['EBITDA',R.ebitda,p(R.ebitda),'B'],
+    [t('fn_dep'),-R.dep,p(R.dep),''],
+    ['EBIT',R.ebit,p(R.ebit),'b'],
+    [t('fn_interest'),-R.interest,p(R.interest),''],
+    [t('fn_net'),R.net,p(R.net),'B'],
+    ['—','','',''],
+    [t('fn_principal'),-R.principal,'',''],
+    [t('fn_freecash'),R.freeCash,'','B'],
+  ];
+  document.getElementById('fnTable').innerHTML=
+    `<thead><tr><th>${t('fn_item')}</th><th style="text-align:end">${t('fn_kdcol')}</th><th style="text-align:end">${t('fn_pct')}</th></tr></thead><tbody>`+
+    L.map(r=>{
+      if(r[0]==='—') return '<tr><td colspan="3" style="height:6px;padding:0;background:var(--light)"></td></tr>';
+      const bold=r[3]==='B'?'font-weight:900;font-size:14px;background:var(--light)':(r[3]==='b'?'font-weight:900':'');
+      const col=(typeof r[1]==='number'&&r[1]<0&&r[3]!=='')?'color:var(--red)':'';
+      const val=typeof r[1]==='number'?(r[1]<0?'('+fnKD(Math.abs(r[1]))+')':fnKD(r[1])):'';
+      return `<tr style="${bold}"><td>${r[0]}</td><td style="text-align:end;font-variant-numeric:tabular-nums;${col}">${val}</td>`+
+             `<td style="text-align:end;color:var(--muted);font-size:11.5px">${r[2]}</td></tr>`;
+    }).join('')+'</tbody>';
+}
+
 function badges(){
   const T=today();
   const uploaded=PHOTOS.filter(p=>p.photo_date===T).length;
   setB('bPhotos', Math.max(0,DRIVERS.length-uploaded));
   setB('bReq', REQS.filter(r=>r.status==='pending').length);
   setB('bMaint', MAINT.filter(m=>m.status==='open').length);
+  setB('bAcc', ACCS.filter(a=>a.status==='new').length);
 }
 
 /* ═══════════ SHIFT HELPERS ═══════════ */
@@ -2268,6 +2576,225 @@ async function openAddVio(){
     });
     toast(t('done_vio')); await loadAll();
   }catch(e){ toast(t('err')+': '+e.message,true); }
+}
+
+
+/* ═══════════ ACCIDENTS ═══════════
+   بلاغات الحوادث كما تصل من تطبيق السائق. الصور مختومة من جهة
+   السائق بالتاريخ والوقت والمنطقة داخل البكسل، فما يُعرض هنا هو
+   الدليل نفسه لا وصفاً له. */
+const ACC_ST_C = {new:'r', reviewing:'a', closed:'g'};
+
+function accKind(v){ return t('acc_k_'+(v||'other')) || v || '—'; }
+function accSev(v){  return t('acc_sev_'+(v||'minor')); }
+function accInj(v){  return t('acc_inj_'+(v||'none')); }
+function accPol(v){  return t('acc_pol_'+(v||'no')); }
+function accStT(v){  return t('acc_st_'+(v||'new')); }
+function accSevColor(v){
+  return v==='severe' ? 'var(--red)' : (v==='moderate' ? 'var(--amber)' : 'var(--green)');
+}
+/* الوقت بتوقيت الكويت دائماً — لوحة التحكم قد تُفتح من أي مكان،
+   ووقت الحادثة رقم يُحتجّ به لا يُقرأ بتوقيت متصفح المدير. */
+function accDT(iso){
+  if(!iso) return '—';
+  try{
+    /* ar-KW-u-nu-latn لا ar-KW: العربي الافتراضي يطبع أرقاماً هندية
+       (٠٨:٣٠) والختم داخل الصورة بأرقام لاتينية. المدير يقارن الصف
+       بالصورة، فاختلاف شكل الأرقام بين الاثنين يعطّل المقارنة. */
+    return new Date(iso).toLocaleString(RTL()?'ar-KW-u-nu-latn':'en-GB',
+      {timeZone:'Asia/Kuwait', year:'numeric', month:'2-digit', day:'2-digit',
+       hour:'2-digit', minute:'2-digit', hour12:false});
+  }catch(e){ return String(iso).slice(0,16).replace('T',' '); }
+}
+function accWhere(a){
+  const w = [a.area, a.street].filter(Boolean).join(' — ');
+  return w || (a.lat!=null ? Number(a.lat).toFixed(4)+', '+Number(a.lng).toFixed(4) : '—');
+}
+
+function renderAcc(){
+  const sel = document.getElementById('accStatus');
+  if(sel && !sel.options.length){
+    sel.innerHTML = `<option value="">${t('all')}</option>` +
+      ['new','reviewing','closed'].map(x=>`<option value="${x}">${accStT(x)}</option>`).join('');
+    sel.value = '';
+  }
+  const st = sel ? sel.value : '';
+  let list = ACCS.slice();
+  if(st) list = list.filter(a=>a.status===st);
+
+  const open = ACCS.filter(a=>a.status!=='closed').length;
+  const neu  = ACCS.filter(a=>a.status==='new').length;
+  const inj  = ACCS.filter(a=>a.injuries && a.injuries!=='none').length;
+  const und  = ACCS.filter(a=>a.drivable===false && a.status!=='closed').length;
+  document.getElementById('kAcc').innerHTML = kpiHTML([
+    {l:t('k_acc_open'),   v:open, c:'var(--red)'},
+    {l:t('k_acc_new'),    v:neu,  c:'var(--amber)'},
+    {l:t('k_acc_inj'),    v:inj,  c:'var(--purple)'},
+    {l:t('k_acc_undriv'), v:und,  c:'var(--navy)'},
+  ]);
+
+  const H=[t('c_driver'),t('acc_when'),t('c_kind'),t('c_dmg'),t('c_inj'),
+           t('c_police'),t('c_where'),t('c_other'),t('c_shots'),t('c_status')];
+  document.getElementById('tAcc').innerHTML =
+    '<thead><tr>'+H.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    (list.length ? list.map(a=>{
+      const nph  = (a.photos && a.photos.length) || 0;
+      const miss = (a.photos_missing && a.photos_missing.length) || 0;
+      const hasInj = a.injuries && a.injuries!=='none';
+      return `<tr onclick="openAcc('${esc(a.id)}')" style="cursor:pointer">
+        ${nmCell(a.driver_id, a.driver_name || a.driver_id)}
+        <td style="white-space:nowrap">${accDT(a.occurred_at)}</td>
+        <td>${esc(accKind(a.kind))}</td>
+        <td style="font-weight:900;color:${accSevColor(a.severity)}">${esc(accSev(a.severity))}</td>
+        <td${hasInj?' style="font-weight:900;color:var(--red)"':''}>${esc(accInj(a.injuries))}</td>
+        <td>${esc(accPol(a.police))}${a.police_no?' · '+esc(a.police_no):''}</td>
+        <td>${esc(accWhere(a))}</td>
+        <td>${a.has_other ? (esc(a.other_plate||a.other_name||'—')) : '—'}</td>
+        <td style="white-space:nowrap">${nph}${miss?` <span style="color:var(--amber);font-weight:900">−${miss}</span>`:''}</td>
+        <td><span class="st ${ACC_ST_C[a.status]||'r'}">${accStT(a.status)}</span></td></tr>`;
+    }).join('') : `<tr><td colspan="10" class="empty">${t('acc_none')}</td></tr>`)+'</tbody>';
+}
+
+function openAcc(id){
+  const a = ACCS.find(x=>String(x.id)===String(id));
+  if(!a) return;
+  _accOpen = a;
+
+  document.getElementById('amName').textContent = (a.driver_name || a.driver_id) + ' — ' + accKind(a.kind);
+  document.getElementById('amSub').textContent =
+    accDT(a.occurred_at) + ' · ' + accWhere(a) + ' · ' + accStT(a.status);
+
+  const cell = (k,v,c) => `<div style="background:var(--light,#f8fafc);border-radius:8px;padding:8px 10px">
+    <div style="font-size:10px;color:#64748b;font-weight:700">${k}</div>
+    <div style="font-size:13px;font-weight:800;color:${c||'inherit'};margin-top:2px">${v}</div></div>`;
+
+  let h = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px">
+    ${cell(t('c_dmg'), esc(accSev(a.severity)), accSevColor(a.severity))}
+    ${cell(t('c_inj'), esc(accInj(a.injuries)), (a.injuries&&a.injuries!=='none')?'var(--red)':'')}
+    ${cell(t('c_police'), esc(accPol(a.police)))}
+    ${cell(t('acc_report_no'), esc(a.police_no||'—'))}
+    ${cell(t('acc_plate'), esc(a.driver_plate||'—'))}
+    ${cell('', a.drivable===false ? `<span style="color:var(--red)">${t('acc_undrivable')}</span>`
+            : (a.drivable===true ? t('acc_drivable') : '—'))}
+    ${cell(t('acc_reported'), accDT(a.reported_at))}
+  </div>`;
+
+  // الموقع
+  h += `<div class="card" style="margin-bottom:12px"><div class="card-h">
+      <i class="ti ti-map-pin"></i> ${t('acc_loc')}</div>
+    <div style="padding:11px 13px">
+      <div style="font-weight:800;font-size:13.5px">${esc(accWhere(a))}</div>` +
+    (a.lat!=null && a.lng!=null
+      ? `<div dir="ltr" style="font-family:monospace;font-size:11px;color:#64748b;margin-top:3px">
+          ${Number(a.lat).toFixed(5)}, ${Number(a.lng).toFixed(5)}${a.accuracy_m?'  ±'+a.accuracy_m+'m':''}</div>
+         <a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" rel="noopener"
+           style="display:inline-block;margin-top:8px;font-size:12px;font-weight:800;color:#2563eb">
+           ${t('acc_map')}</a>`
+      : `<div style="font-size:11.5px;color:var(--amber);margin-top:4px">${t('acc_coords_none')}</div>`) +
+    `</div></div>`;
+
+  // الوصف
+  if(a.description){
+    h += `<div class="card" style="margin-bottom:12px"><div class="card-h">
+        <i class="ti ti-message-2"></i> ${t('acc_what')}</div>
+      <div style="padding:11px 13px;font-size:13px;line-height:1.85;white-space:pre-wrap">${esc(a.description)}</div></div>`;
+  }
+
+  // الطرف الآخر
+  if(a.has_other){
+    const tel = String(a.other_phone||'').replace(/[^\d+]/g,'');
+    h += `<div class="card" style="margin-bottom:12px"><div class="card-h">
+        <i class="ti ti-users"></i> ${t('c_other')}</div>
+      <div style="padding:11px 13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+        ${cell(t('c_driver'), esc(a.other_name||'—'))}
+        ${cell(t('c_plate'), esc(a.other_plate||'—'))}
+        ${cell(t('c_phone'), tel ? `<a href="tel:${esc(tel)}" style="color:#16a34a">${esc(a.other_phone)}</a>` : '—')}
+      </div></div>`;
+  }
+
+  // الصور
+  const ph = a.photos || [];
+  h += `<div class="card" style="margin-bottom:12px"><div class="card-h">
+      <i class="ti ti-camera"></i> ${t('acc_shots')} (${ph.length})</div><div style="padding:11px 13px">`;
+  if(ph.length){
+    h += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px">` +
+      ph.map((p,i)=>`<div>
+        <img src="${esc(p.url)}" loading="lazy" onclick="accZoom(${i})"
+          style="width:100%;height:140px;object-fit:cover;border-radius:9px;border:1px solid var(--border);cursor:zoom-in;background:#0f172a">
+        <div style="font-size:11px;color:#64748b;margin-top:4px;text-align:center">
+          ${esc(RTL() ? (p.label||p.key) : (p.label_en||p.label||p.key))}</div></div>`).join('') +
+      `</div>`;
+  } else {
+    h += `<div style="text-align:center;color:#64748b;font-size:12px;padding:12px">${t('acc_no_shots')}</div>`;
+  }
+  h += `</div></div>`;
+
+  if(a.photos_missing && a.photos_missing.length){
+    h += `<div class="card" style="margin-bottom:12px;border:1px solid var(--amber)">
+      <div style="padding:11px 13px">
+        <div style="font-weight:900;font-size:12.5px;color:var(--amber)">
+          ${t('acc_missing')}: ${a.photos_missing.length}</div>` +
+      (a.missing_reason ? `<div style="font-size:12px;color:#475569;margin-top:5px;line-height:1.7">
+          ${t('acc_miss_why')}: ${esc(a.missing_reason)}</div>` : '') + `</div></div>`;
+  }
+
+  // ملاحظة الإدارة
+  h += `<div style="font-size:11px;font-weight:800;color:#64748b;margin-bottom:5px">${t('acc_note')}</div>
+    <textarea id="amNote" rows="2" placeholder="${t('acc_note_ph')}"
+      style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:9px;
+      padding:10px;font-family:inherit;font-size:13px">${esc(a.admin_note||'')}</textarea>
+    <div dir="ltr" style="font-family:monospace;font-size:10.5px;color:#94a3b8;margin-top:8px">${esc(a.id)}</div>
+    <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">${t('acc_id_note')}</div>`;
+
+  document.getElementById('amBody').innerHTML = h;
+  document.getElementById('accModal').classList.add('on');
+}
+function closeAcc(){
+  document.getElementById('accModal').classList.remove('on');
+  _accOpen = null;
+}
+
+function accZoom(i){
+  const a = _accOpen; if(!a) return;
+  const ph = a.photos || []; if(!ph[i]) return;
+  const ex = document.getElementById('accZoomOv'); if(ex) ex.remove();
+  const d = document.createElement('div');
+  d.id = 'accZoomOv';
+  d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#05080b;display:flex;flex-direction:column';
+  d.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;color:#fff;padding:12px 16px">
+      <div style="flex:1;font-size:13px;font-weight:800">
+        ${esc(RTL() ? (ph[i].label||ph[i].key) : (ph[i].label_en||ph[i].label||ph[i].key))}</div>
+      <div dir="ltr" style="font-size:12px;opacity:.7">${i+1} / ${ph.length}</div>
+      <button onclick="document.getElementById('accZoomOv').remove()"
+        style="width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.16);
+        color:#fff;font-size:18px;cursor:pointer">×</button></div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:8px">
+      <img src="${esc(ph[i].url)}" style="max-width:100%;max-height:100%;object-fit:contain"></div>
+    <div style="display:flex;gap:8px;justify-content:center;padding:14px">
+      ${i>0?`<button onclick="accZoom(${i-1})" style="min-width:50px;height:40px;border-radius:10px;border:0;
+        background:rgba(255,255,255,.16);color:#fff;font-size:17px;cursor:pointer">${RTL()?'›':'‹'}</button>`:''}
+      <a href="${esc(ph[i].url)}" target="_blank" rel="noopener" style="height:40px;line-height:40px;padding:0 18px;
+        border-radius:10px;background:rgba(255,255,255,.16);color:#fff;text-decoration:none;font-size:12.5px;
+        font-weight:800">${t('acc_open_img')}</a>
+      ${i<ph.length-1?`<button onclick="accZoom(${i+1})" style="min-width:50px;height:40px;border-radius:10px;border:0;
+        background:rgba(255,255,255,.16);color:#fff;font-size:17px;cursor:pointer">${RTL()?'‹':'›'}</button>`:''}
+    </div>`;
+  document.body.appendChild(d);
+}
+
+async function accSetStatus(status){
+  const a = _accOpen; if(!a) return;
+  const el = document.getElementById('amNote');
+  const note = el ? el.value.trim() : '';
+  const body = {status:status, admin_note: note || null};
+  if(status === 'closed') body.closed_at = new Date().toISOString();
+  try{
+    await sb.from('accidents').update(body).eq('id', a.id);
+    toast(t('done_update'));
+    closeAcc();
+    await loadAll();
+  }catch(e){ toast(t('err')+': '+e.message, true); }
 }
 
 /* ═══════════ MESSAGES ═══════════ */

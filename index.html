@@ -272,7 +272,10 @@ button,input,select{font-family:'Cairo',sans-serif}
   position:fixed;left:50%;transform:translateX(-50%) translateY(120px);
   bottom:calc(86px + env(safe-area-inset-bottom));background:var(--s3);border:1px solid var(--br);
   color:var(--text);padding:12px 18px;border-radius:13px;font-size:13px;font-weight:700;
-  z-index:200;transition:transform .3s cubic-bezier(.2,.9,.3,1);max-width:88%;
+  /* أعلى من شاشة الحادثة (600) وعارض الصور. كان 200، فرسالة
+     التحقق كانت تُرسم خلف الشاشة: يضغط السائق «التالي» ولا يرى
+     شيئاً يحدث، والزر يبدو معطّلاً وهو يعمل. */
+  z-index:900;transition:transform .3s cubic-bezier(.2,.9,.3,1);max-width:88%;
   display:flex;align-items:center;gap:8px;box-shadow:0 12px 30px rgba(0,0,0,.4);
 }
 .toast.show{transform:translateX(-50%) translateY(0)}
@@ -7068,26 +7071,38 @@ window.flyBellPaint = function(){
    والسائق في لحظة الحادثة مرتبك والشبكة قد تكون ضعيفة، فالبلاغ
    يُحفَظ على الجهاز أولاً ثم يُرفَع، ويُعاد رفعه وحده عند عودة
    الشبكة. المعرّف يُولَّد على الجهاز فإعادة الإرسال تحديث لا تكرار.
+
+   اللغة: سائقونا منهم من لا يقرأ العربية، وشاشة الحادثة ليست شاشة
+   يُخمَّن فيها معنى الزر. فكل نص هنا يمرّ على aT(عربي, إنجليزي).
    ═══════════════════════════════════════════════════════════════════ */
 
-var ACC_PHOTOS = {};          // key → {blob, stamped, at, lat, lng}
+function aT(ar, en){ return LANG === 'ar' ? ar : en; }
+
+var ACC_PHOTOS = {};          // key → {stamped, at, lat, lng}
 var ACC_FORM   = null;        // بيانات النموذج الحالي
-var ACC_GEO    = null;        // آخر موقع مقروء {lat,lng,acc,area,street,address,source}
+var ACC_GEO    = null;        // آخر موقع مقروء
 var ACC_STEP   = 1;
+var ACC_ERR    = {};          // أخطاء التحقق — تُعرض داخل النموذج
 var MY_ACCIDENTS = [];
 var ACC_BUSY   = false;
 
 /* الصور المطلوبة — تتغيّر حسب وجود طرف آخر */
 var ACC_SHOTS = [
-  {k:'my_car',     ar:'سيارتي كاملة',        en:'My car (full)',      req:'always'},
-  {k:'my_damage',  ar:'الضرر في سيارتي',     ar2:'قرّب على مكان الضرر', en:'My damage', req:'always'},
-  {k:'other_car',  ar:'سيارة الطرف الآخر',   ar2:'بيّن اللوحة في الصورة', en:'Other car + plate', req:'other'},
-  {k:'scene',      ar:'المشهد العام',        ar2:'الشارع ووضع السيارتين', en:'Wide scene', req:'always'},
-  {k:'police_doc', ar:'ورقة البلاغ',         en:'Police report',      req:'no'},
-  {k:'other_doc',  ar:'رخصة/تأمين الطرف الآخر', en:'Other party docs', req:'no'},
-  {k:'extra1',     ar:'صورة إضافية',         en:'Extra photo',        req:'no'},
-  {k:'extra2',     ar:'صورة إضافية',         en:'Extra photo',        req:'no'}
+  {k:'my_car',     ar:'سيارتي كاملة',            en:'My car (full view)',
+                   ar2:'من مسافة تبيّن السيارة كلها', en2:'Step back so the whole car shows', req:'always'},
+  {k:'my_damage',  ar:'الضرر في سيارتي',          en:'Damage to my car',
+                   ar2:'قرّب على مكان الضرر',       en2:'Close-up on the damage', req:'always'},
+  {k:'other_car',  ar:'سيارة الطرف الآخر',        en:'Other party vehicle',
+                   ar2:'بيّن اللوحة في الصورة',     en2:'Make sure the plate is readable', req:'other'},
+  {k:'scene',      ar:'المشهد العام',             en:'Wide scene',
+                   ar2:'الشارع ووضع السيارتين',     en2:'The road and how both cars sit', req:'always'},
+  {k:'police_doc', ar:'ورقة البلاغ',              en:'Police report',        req:'no'},
+  {k:'other_doc',  ar:'رخصة/تأمين الطرف الآخر',   en:'Other party licence / insurance', req:'no'},
+  {k:'extra1',     ar:'صورة إضافية',              en:'Extra photo',          req:'no'},
+  {k:'extra2',     ar:'صورة إضافية',              en:'Extra photo',          req:'no'}
 ];
+function accShotName(s){ return aT(s.ar, s.en); }
+function accShotHint(s){ return s.ar2 ? aT(s.ar2, s.en2 || s.ar2) : ''; }
 
 function accRequiredKeys(){
   var other = !ACC_FORM || ACC_FORM.has_other !== false;
@@ -7120,9 +7135,8 @@ function accPos(){
   });
 }
 
-/* اسم المنطقة والشارع بالعربي. خدمة خارجية، فلها مهلة قصيرة وبديل:
-   لو تأخرت أو فشلت نكمل بالإحداثيات — ولا نوقف بلاغ حادثة على
-   استجابة خادم خرائط. */
+/* اسم المنطقة والشارع. خدمة خارجية، فلها مهلة قصيرة وبديل: لو تأخرت
+   أو فشلت نكمل بالإحداثيات — ولا نوقف بلاغ حادثة على خادم خرائط. */
 function accGeoName(lat, lng){
   return new Promise(function(resolve){
     if(lat == null || lng == null) return resolve(null);
@@ -7130,7 +7144,7 @@ function accGeoName(lat, lng){
     var tm = setTimeout(function(){ if(!done){ done=true; resolve(null); } }, 7000);
     var u = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17'+
             '&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng)+
-            '&accept-language=ar';
+            '&accept-language='+(LANG==='ar'?'ar':'en');
     fetch(u, {headers:{'Accept':'application/json'}})
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
@@ -7146,15 +7160,15 @@ function accGeoName(lat, lng){
   });
 }
 
-/* يُنادى مرة عند فتح الشاشة، والنتيجة تُستعمل لكل الصور */
 function accLoadGeo(){
   var lbl = document.getElementById('accGeoLbl');
-  if(lbl) lbl.innerHTML = '<i class="ti ti-loader"></i> '+(LANG==='ar'?'جاري تحديد الموقع…':'Locating…');
+  if(lbl) lbl.innerHTML = '<i class="ti ti-loader"></i> '+aT('جاري تحديد الموقع…','Locating…');
   return accPos().then(function(p){
     if(!p){
       ACC_GEO = null;
-      if(lbl) lbl.innerHTML = '<span style="color:#f59e0b">'+
-        (LANG==='ar'?'⚠️ الموقع غير متاح — فعّل الموقع وأعد المحاولة':'⚠️ Location unavailable')+'</span>';
+      if(lbl) lbl.innerHTML = '<span style="color:#f59e0b">⚠️ '+
+        aT('الموقع غير متاح — فعّل الموقع وأعد المحاولة',
+           'Location unavailable — enable location and retry')+'</span>';
       return null;
     }
     ACC_GEO = {lat:p.lat, lng:p.lng, acc:p.acc, area:'', street:'', address:'', source:'none'};
@@ -7171,7 +7185,7 @@ function accLoadGeo(){
 }
 
 function accGeoText(){
-  if(!ACC_GEO) return LANG==='ar' ? 'الموقع غير متاح' : 'Location unavailable';
+  if(!ACC_GEO) return aT('الموقع غير متاح','Location unavailable');
   var parts = [];
   if(ACC_GEO.area)   parts.push(ACC_GEO.area);
   if(ACC_GEO.street) parts.push(ACC_GEO.street);
@@ -7182,7 +7196,7 @@ function accGeoText(){
 function accPaintGeo(){
   var lbl = document.getElementById('accGeoLbl');
   if(!lbl) return;
-  if(!ACC_GEO){ lbl.textContent = LANG==='ar'?'الموقع غير متاح':'Unavailable'; return; }
+  if(!ACC_GEO){ lbl.textContent = aT('الموقع غير متاح','Unavailable'); return; }
   var map = 'https://maps.google.com/?q='+ACC_GEO.lat+','+ACC_GEO.lng;
   lbl.innerHTML =
     '<div style="font-weight:800;font-size:12.5px">📍 '+accEsc(accGeoText())+'</div>'+
@@ -7190,7 +7204,7 @@ function accPaintGeo(){
       ACC_GEO.lat.toFixed(5)+', '+ACC_GEO.lng.toFixed(5)+
       (ACC_GEO.acc?'  ±'+ACC_GEO.acc+'m':'')+'</div>'+
     '<a href="'+map+'" target="_blank" rel="noopener" style="font-size:11px;color:#3b82f6;font-weight:700">'+
-      (LANG==='ar'?'فتح في الخرائط':'Open in Maps')+'</a>';
+      aT('فتح في الخرائط','Open in Maps')+'</a>';
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -7231,22 +7245,26 @@ function accStamp(blob, extra){
           var pad = Math.round(S*0.72);
           var lh  = Math.round(S*1.42);
 
-          var rtl = [];
-          rtl.push({t:'📍 '+accGeoText(), b:true});
-          if(extra && extra.label) rtl.push({t: extra.label, b:false, dim:true});
-          var ltrLines = [];
-          ltrLines.push(accKwStamp(now)+'  (GMT+3)');
-          if(ACC_GEO) ltrLines.push(ACC_GEO.lat.toFixed(5)+', '+ACC_GEO.lng.toFixed(5)+
+          var isAr = LANG === 'ar';
+          var side = [];   // سطور جهة النص (يمين في العربية، يسار في الإنجليزية)
+          side.push({t:'📍 '+accGeoText(), b:true});
+          if(extra && extra.label) side.push({t: extra.label, b:false, dim:true});
+
+          var numLines = [];
+          numLines.push(accKwStamp(now)+'  (GMT+3)');
+          if(ACC_GEO) numLines.push(ACC_GEO.lat.toFixed(5)+', '+ACC_GEO.lng.toFixed(5)+
                                     (ACC_GEO.acc?'  ±'+ACC_GEO.acc+'m':''));
           var who = (DRIVER ? (DRIVER.name||DRIVER.id) : '') +
                     (DRIVER && DRIVER.car ? ' • '+DRIVER.car : '');
 
-          var rows = Math.max(rtl.length, 0) + ltrLines.length + (who?1:0);
+          /* عمودان مستقلان: نص اللغة في جهة القراءة، والأرقام في
+             الجهة المقابلة — كلاهما يبدأ من أعلى الشريط. ارتفاع
+             الشريط يتبع الأطول منهما لا مجموعهما. */
+          var sideRows = side.length + (who?1:0);
+          var rows  = Math.max(sideRows, numLines.length);
           var bandH = pad*2 + rows*lh;
           var top   = H - bandH;
 
-          /* تدرّج بدل مستطيل مصمت: يبقى مقروءاً فوق أي خلفية
-             دون أن يحجب جزءاً من الصورة حجباً كاملاً. */
           var g = x.createLinearGradient(0, top - S*1.6, 0, H);
           g.addColorStop(0, 'rgba(0,0,0,0)');
           g.addColorStop(0.28, 'rgba(0,0,0,.66)');
@@ -7258,53 +7276,62 @@ function accStamp(blob, extra){
           x.fillStyle = '#ef4444';
           x.fillRect(0, top - Math.round(S*0.16), W, Math.round(S*0.16));
 
-          var y = top + pad + S;
+          var y0 = top + pad + S;
           x.textBaseline = 'alphabetic';
+          x.shadowColor = 'rgba(0,0,0,.9)';
 
-          // السطور العربية — يمين
-          x.direction = 'rtl'; x.textAlign = 'right';
-          rtl.forEach(function(l){
+          // عمود اللغة
+          x.direction = isAr ? 'rtl' : 'ltr';
+          x.textAlign = isAr ? 'right' : 'left';
+          var sideX = isAr ? (W - pad) : pad;
+          var y = y0;
+          side.forEach(function(l){
             x.font = (l.b?'700 ':'500 ')+S+'px Cairo, Tahoma, Arial, sans-serif';
             x.fillStyle = l.dim ? 'rgba(255,255,255,.82)' : '#ffffff';
-            x.shadowColor = 'rgba(0,0,0,.9)'; x.shadowBlur = Math.round(S*0.35);
-            x.fillText(l.t, W - pad, y);
+            x.shadowBlur = Math.round(S*0.35);
+            x.fillText(l.t, sideX, y);
             y += lh;
           });
           if(who){
             x.font = '600 '+Math.round(S*0.92)+'px Cairo, Tahoma, Arial, sans-serif';
             x.fillStyle = 'rgba(255,255,255,.9)';
-            x.fillText('👤 '+who, W - pad, y);
-            y += lh;
+            x.fillText('👤 '+who, sideX, y);
           }
 
-          // السطور الرقمية — يسار واتجاه LTR حتى لا تنقلب الأرقام
-          x.direction = 'ltr'; x.textAlign = 'left';
-          ltrLines.forEach(function(t){
+          // عمود الأرقام — LTR دائماً حتى لا تنقلب الإحداثيات
+          x.direction = 'ltr';
+          x.textAlign = isAr ? 'left' : 'right';
+          var numX = isAr ? pad : (W - pad);
+          y = y0;
+          numLines.forEach(function(t){
             x.font = '600 '+Math.round(S*0.86)+'px "JetBrains Mono", Consolas, monospace';
             x.fillStyle = 'rgba(255,255,255,.95)';
-            x.fillText(t, pad, y);
+            x.shadowBlur = Math.round(S*0.35);
+            x.fillText(t, numX, y);
             y += lh;
           });
 
           // شارة أعلى الصورة
-          x.shadowBlur = Math.round(S*0.4);
-          x.direction = 'rtl'; x.textAlign = 'right';
-          x.font = '800 '+Math.round(S*0.88)+'px Cairo, Tahoma, Arial, sans-serif';
-          var badge = 'السلاسل • توثيق حادثة';
-          var bw = x.measureText(badge).width + pad*1.6;
           x.shadowBlur = 0;
+          x.direction = isAr ? 'rtl' : 'ltr';
+          x.textAlign = isAr ? 'right' : 'left';
+          x.font = '800 '+Math.round(S*0.88)+'px Cairo, Tahoma, Arial, sans-serif';
+          var badge = aT('السلاسل • توثيق حادثة', 'Al-Salasil • Accident evidence');
+          var bw = x.measureText(badge).width + pad*1.6;
+          var bx = isAr ? (W - pad*0.6 - bw) : pad*0.6;
           x.fillStyle = 'rgba(239,68,68,.92)';
-          x.fillRect(W - pad*0.6 - bw, pad*0.6, bw, Math.round(S*1.7));
+          x.fillRect(bx, pad*0.6, bw, Math.round(S*1.7));
           x.fillStyle = '#ffffff';
-          x.fillText(badge, W - pad*1.4, pad*0.6 + Math.round(S*1.22));
+          x.fillText(badge, isAr ? (W - pad*1.4) : (pad*1.4), pad*0.6 + Math.round(S*1.22));
 
           // معرّف البلاغ — يربط الصورة ببلاغها
           if(extra && extra.id){
-            x.direction='ltr'; x.textAlign='left';
+            x.direction = 'ltr';
+            x.textAlign = isAr ? 'left' : 'right';
             x.font = '600 '+Math.round(S*0.7)+'px "JetBrains Mono", Consolas, monospace';
             x.fillStyle = 'rgba(255,255,255,.75)';
-            x.shadowColor='rgba(0,0,0,.9)'; x.shadowBlur=Math.round(S*0.3);
-            x.fillText(extra.id, pad*0.9, pad*0.6 + Math.round(S*1.22));
+            x.shadowColor = 'rgba(0,0,0,.9)'; x.shadowBlur = Math.round(S*0.3);
+            x.fillText(extra.id, isAr ? pad*0.9 : (W - pad*0.9), pad*0.6 + Math.round(S*1.22));
           }
 
           cv.toBlob(function(out){
@@ -7444,8 +7471,8 @@ function accSendOne(rec){
     });
     return chain.then(function(){
       var photos = (rec.shots||[]).filter(function(s){ return s.url; })
-        .map(function(s){ return {key:s.key, label:s.label, url:s.url, at:s.at,
-                                  lat:s.lat, lng:s.lng, stamped:true}; });
+        .map(function(s){ return {key:s.key, label:s.label, label_en:s.label_en, url:s.url,
+                                  at:s.at, lat:s.lat, lng:s.lng, stamped:true}; });
       return accPatchPhotos(rec.id, photos).then(function(){ return true; });
     });
   });
@@ -7463,7 +7490,7 @@ function accFlush(quiet){
       chain = chain.then(function(){
         return accSendOne(rec).then(function(){
           return accQDel(rec.id).then(function(){
-            if(!quiet) toast(LANG==='ar'?'✅ تم إرسال بلاغ الحادثة':'Accident report sent','ok');
+            if(!quiet) toast(aT('✅ تم إرسال بلاغ الحادثة','✅ Accident report sent'),'ok');
           });
         }).catch(function(e){
           rec.tries = (rec.tries||0) + 1;
@@ -7488,8 +7515,8 @@ function accPaintQueueBadge(){
     el.innerHTML = '<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);'+
       'border-radius:12px;padding:10px 12px;font-size:12px;color:#f59e0b;font-weight:700">'+
       '<i class="ti ti-cloud-upload"></i> '+
-      (LANG==='ar' ? l.length+' بلاغ في انتظار الشبكة — سيُرسل تلقائياً'
-                   : l.length+' report(s) waiting for network')+'</div>';
+      aT(l.length+' بلاغ في انتظار الشبكة — سيُرسل تلقائياً',
+         l.length+' report(s) waiting for network — will send automatically')+'</div>';
   });
 }
 
@@ -7499,19 +7526,24 @@ window.addEventListener('online', function(){ setTimeout(function(){ accFlush(fa
    5) الشاشة
    ───────────────────────────────────────────────────────────────── */
 var ACC_KINDS = [
-  {v:'collision',  ar:'تصادم مع مركبة',   ic:'💥', other:true},
-  {v:'parked',     ar:'ارتطام بسيارة واقفة', ic:'🅿️', other:true},
-  {v:'single',     ar:'حادث منفرد',        ic:'🧱', other:false},
-  {v:'pedestrian', ar:'مشاة',              ic:'🚶', other:true},
-  {v:'animal',     ar:'حيوان',             ic:'🐈', other:false},
-  {v:'other',      ar:'أخرى',              ic:'❓', other:false}
+  {v:'collision',  ar:'تصادم مع مركبة',      en:'Collision',       ic:'💥', other:true},
+  {v:'parked',     ar:'ارتطام بسيارة واقفة', en:'Hit parked car',  ic:'🅿️', other:true},
+  {v:'single',     ar:'حادث منفرد',          en:'Single vehicle',  ic:'🧱', other:false},
+  {v:'pedestrian', ar:'مشاة',                en:'Pedestrian',      ic:'🚶', other:true},
+  {v:'animal',     ar:'حيوان',               en:'Animal',          ic:'🐈', other:false},
+  {v:'other',      ar:'أخرى',                en:'Other',           ic:'❓', other:false}
 ];
+function accKindName(v){
+  for(var i=0;i<ACC_KINDS.length;i++) if(ACC_KINDS[i].v===v) return aT(ACC_KINDS[i].ar, ACC_KINDS[i].en);
+  return v;
+}
 
 function openAccident(){
-  if(!DRIVER){ toast(LANG==='ar'?'سجّل الدخول أولاً':'Sign in first','err'); return; }
+  if(!DRIVER){ toast(aT('سجّل الدخول أولاً','Sign in first'),'err'); return; }
   ACC_PHOTOS = {};
   ACC_STEP = 1;
   ACC_GEO = null;
+  ACC_ERR = {};
   ACC_FORM = {
     id: 'ACC_' + (DRIVER.id||'x') + '_' + Date.now().toString(36).toUpperCase(),
     kind: 'collision', has_other: true, severity: 'minor', injuries: 'none',
@@ -7539,49 +7571,66 @@ function accRender(){
     document.body.appendChild(ex);
     document.body.style.overflow = 'hidden';
   }
+  ex.dir = LANG==='ar' ? 'rtl' : 'ltr';
   ex.innerHTML = accHTML();
   ex.scrollTop = 0;
   if(ACC_GEO) accPaintGeo();
+  accFocusErr();
+}
+
+/* رسالة الخطأ تُعرض داخل النموذج وتُمرَّر الشاشة إليها. الاعتماد على
+   التوست وحده كان يخفي السبب: التوست كان خلف هذه الشاشة، فالسائق
+   يضغط «التالي» ولا يرى شيئاً ويظن الزر معطّلاً. */
+function accErrHTML(field){
+  if(!ACC_ERR[field]) return '';
+  return '<div id="accErr_'+field+'" style="display:flex;align-items:flex-start;gap:6px;'+
+    'background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;'+
+    'padding:9px 11px;margin-bottom:11px;font-size:12px;font-weight:700;color:#ef4444;line-height:1.6">'+
+    '<i class="ti ti-alert-circle" style="font-size:15px;flex:0 0 auto;margin-top:1px"></i>'+
+    '<span>'+accEsc(ACC_ERR[field])+'</span></div>';
+}
+function accFocusErr(){
+  var k = Object.keys(ACC_ERR)[0];
+  if(!k) return;
+  var el = document.getElementById('accErr_'+k);
+  if(el && el.scrollIntoView) try{ el.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
 }
 
 function accHTML(){
   var f = ACC_FORM;
   var h = '';
 
-  // ── الرأس ──
   h += '<div style="position:sticky;top:0;z-index:5;background:linear-gradient(180deg,#7f1d1d,#0d1117);'+
     'padding:calc(12px + env(safe-area-inset-top)) 15px 13px;border-bottom:1px solid var(--br)">'+
     '<div style="display:flex;align-items:center;gap:10px">'+
       '<button onclick="accConfirmClose()" style="background:rgba(255,255,255,.14);border:none;color:#fff;'+
         'width:33px;height:33px;border-radius:10px;font-size:20px;line-height:1;cursor:pointer">×</button>'+
       '<div style="flex:1"><div style="font-weight:900;font-size:16px;color:#fff">🚨 '+
-        (LANG==='ar'?'بلاغ حادثة':'Accident report')+'</div>'+
+        aT('بلاغ حادثة','Accident report')+'</div>'+
         '<div class="mono" dir="ltr" style="font-size:10px;color:rgba(255,255,255,.65);margin-top:1px">'+
         accEsc(f.id)+'</div></div>'+
     '</div>'+
-    // شريط الخطوات
     '<div style="display:flex;gap:5px;margin-top:11px">'+
       [1,2,3].map(function(i){
-        var on = i <= ACC_STEP;
-        return '<div style="flex:1;height:4px;border-radius:99px;background:'+(on?'#ef4444':'rgba(255,255,255,.18)')+'"></div>';
+        return '<div style="flex:1;height:4px;border-radius:99px;background:'+
+          (i<=ACC_STEP?'#ef4444':'rgba(255,255,255,.18)')+'"></div>';
       }).join('')+
     '</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:6px;font-weight:700">'+
-      (ACC_STEP===1 ? (LANG==='ar'?'١ من ٣ — ماذا حدث؟':'1 of 3 — What happened?')
-     : ACC_STEP===2 ? (LANG==='ar'?'٢ من ٣ — الطرف الآخر':'2 of 3 — Other party')
-                    : (LANG==='ar'?'٣ من ٣ — الصور والإرسال':'3 of 3 — Photos & submit'))+
+      (ACC_STEP===1 ? aT('١ من ٣ — ماذا حدث؟','1 of 3 — What happened?')
+     : ACC_STEP===2 ? aT('٢ من ٣ — الطرف الآخر','2 of 3 — Other party')
+                    : aT('٣ من ٣ — الصور والإرسال','3 of 3 — Photos & submit'))+
     '</div></div>';
 
   h += '<div style="padding:14px 15px 120px">';
 
-  // ── شريط الموقع (ثابت في كل الخطوات) ──
   h += '<div class="card" style="padding:11px 13px;margin-bottom:12px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px">'+
       '<div style="font-size:11px;font-weight:800;color:var(--muted2)">'+
-        (LANG==='ar'?'موقع الحادثة':'Accident location')+'</div>'+
+        aT('موقع الحادثة','Accident location')+'</div>'+
       '<button onclick="accLoadGeo()" style="background:var(--s2);border:1px solid var(--br);color:var(--muted2);'+
         'border-radius:8px;padding:4px 9px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer">'+
-        '<i class="ti ti-refresh"></i> '+(LANG==='ar'?'تحديث':'Refresh')+'</button>'+
+        '<i class="ti ti-refresh"></i> '+aT('تحديث','Refresh')+'</button>'+
     '</div><div id="accGeoLbl" style="font-size:12px;color:var(--muted2)">…</div></div>';
 
   h += '<div id="accQueueBar" style="display:none;margin-bottom:12px"></div>';
@@ -7592,14 +7641,13 @@ function accHTML(){
 
   h += '</div>';
 
-  // ── شريط الأزرار السفلي ──
-  var nextTxt = ACC_STEP < 3 ? (LANG==='ar'?'التالي':'Next') : (LANG==='ar'?'إرسال البلاغ':'Submit');
+  var nextTxt = ACC_STEP < 3 ? aT('التالي','Next') : aT('إرسال البلاغ','Submit report');
   h += '<div style="position:fixed;inset-inline:0;bottom:0;background:var(--s1,#161b22);'+
     'border-top:1px solid var(--br);padding:12px 15px calc(12px + env(safe-area-inset-bottom));'+
     'display:flex;gap:9px;z-index:6">'+
     (ACC_STEP > 1 ? '<button onclick="accBack()" style="flex:1;padding:14px;border-radius:12px;'+
       'border:1px solid var(--br);background:transparent;color:var(--muted2);font-family:inherit;'+
-      'font-weight:800;font-size:14px;cursor:pointer">'+(LANG==='ar'?'رجوع':'Back')+'</button>' : '')+
+      'font-weight:800;font-size:14px;cursor:pointer">'+aT('رجوع','Back')+'</button>' : '')+
     '<button id="accNext" onclick="accNext()" style="flex:2;padding:14px;border-radius:12px;border:none;'+
       'background:'+(ACC_STEP<3?'#ef4444':'#10b981')+';color:#fff;font-family:inherit;font-weight:900;'+
       'font-size:14.5px;cursor:pointer">'+nextTxt+'</button></div>';
@@ -7607,11 +7655,11 @@ function accHTML(){
   return h;
 }
 
-/* ═════ الخطوة ١ — ماذا حدث؟ ═════ */
+/* ═════ الخطوة ١ ═════ */
 function accStep1(){
   var f = ACC_FORM, h = '';
 
-  h += '<div class="sec-title">'+(LANG==='ar'?'نوع الحادثة':'Type')+'</div>';
+  h += '<div class="sec-title">'+aT('نوع الحادثة','Type of accident')+'</div>';
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
   ACC_KINDS.forEach(function(k){
     var on = f.kind === k.v;
@@ -7619,56 +7667,60 @@ function accStep1(){
       'border:1.5px solid '+(on?'#ef4444':'var(--br)')+';border-radius:12px;padding:12px 8px;cursor:pointer;'+
       'font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px">'+
       '<span style="font-size:21px">'+k.ic+'</span>'+
-      '<span style="font-size:11.5px;font-weight:800;color:'+(on?'#ef4444':'var(--muted2)')+'">'+k.ar+'</span></button>';
+      '<span style="font-size:11.5px;font-weight:800;color:'+(on?'#ef4444':'var(--muted2)')+'">'+
+        aT(k.ar,k.en)+'</span></button>';
   });
   h += '</div>';
 
-  h += accPills(LANG==='ar'?'حجم الضرر':'Severity', 'severity', [
-    {v:'minor',    ar:'بسيط',  c:'#10b981'},
-    {v:'moderate', ar:'متوسط', c:'#f59e0b'},
-    {v:'severe',   ar:'كبير',  c:'#ef4444'}]);
+  h += accPills(aT('حجم الضرر','Damage severity'), 'severity', [
+    {v:'minor',    ar:'بسيط',  en:'Minor',    c:'#10b981'},
+    {v:'moderate', ar:'متوسط', en:'Moderate', c:'#f59e0b'},
+    {v:'severe',   ar:'كبير',  en:'Severe',   c:'#ef4444'}]);
 
-  h += accPills(LANG==='ar'?'إصابات':'Injuries', 'injuries', [
-    {v:'none',    ar:'لا يوجد',   c:'#10b981'},
-    {v:'minor',   ar:'إصابة بسيطة', c:'#f59e0b'},
-    {v:'serious', ar:'إصابة خطيرة', c:'#ef4444'}]);
+  h += accPills(aT('إصابات','Injuries'), 'injuries', [
+    {v:'none',    ar:'لا يوجد',     en:'None',           c:'#10b981'},
+    {v:'minor',   ar:'إصابة بسيطة', en:'Minor injury',   c:'#f59e0b'},
+    {v:'serious', ar:'إصابة خطيرة', en:'Serious injury', c:'#ef4444'}]);
 
   /* إصابة خطيرة: الأولوية للإسعاف لا للنموذج. التطبيق يقولها صراحة. */
   if(f.injuries === 'serious'){
     h += '<div style="background:rgba(239,68,68,.14);border:1.5px solid #ef4444;border-radius:13px;'+
       'padding:13px;margin-bottom:13px">'+
       '<div style="font-weight:900;font-size:13.5px;color:#ef4444;margin-bottom:4px">'+
-        (LANG==='ar'?'⚠️ اتصل بالطوارئ أولاً':'⚠️ Call emergency first')+'</div>'+
+        aT('⚠️ اتصل بالطوارئ أولاً','⚠️ Call emergency services first')+'</div>'+
       '<div style="font-size:11.5px;color:var(--muted2);line-height:1.7;margin-bottom:9px">'+
-        (LANG==='ar'?'في وجود إصابة خطيرة، الإسعاف قبل أي شيء. البلاغ يستنى.'
-                   :'With a serious injury, call an ambulance before anything else.')+'</div>'+
+        aT('في وجود إصابة خطيرة، الإسعاف قبل أي شيء. البلاغ يستنى.',
+           'With a serious injury, an ambulance comes before anything else. The report can wait.')+'</div>'+
       '<a href="tel:112" style="display:block;text-align:center;background:#ef4444;color:#fff;'+
         'text-decoration:none;padding:13px;border-radius:11px;font-weight:900;font-size:15px">'+
-        '📞 '+(LANG==='ar'?'اتصل بـ 112':'Call 112')+'</a></div>';
+        '📞 '+aT('اتصل بـ 112','Call 112')+'</a></div>';
   }
 
-  h += accPills(LANG==='ar'?'الشرطة':'Police', 'police', [
-    {v:'no',       ar:'لم تُبلَّغ',  c:'#7d8590'},
-    {v:'called',   ar:'تم إبلاغها', c:'#3b82f6'},
-    {v:'attended', ar:'حضرت',      c:'#10b981'}]);
+  h += accPills(aT('الشرطة','Police'), 'police', [
+    {v:'no',       ar:'لم تُبلَّغ',  en:'Not notified', c:'#7d8590'},
+    {v:'called',   ar:'تم إبلاغها', en:'Called',       c:'#3b82f6'},
+    {v:'attended', ar:'حضرت',      en:'Attended',     c:'#10b981'}]);
 
   if(f.police === 'attended' || f.police === 'called'){
     h += '<div style="margin-bottom:13px"><label style="font-size:11.5px;font-weight:800;color:var(--muted2);'+
-      'display:block;margin-bottom:5px">'+(LANG==='ar'?'رقم البلاغ (اختياري)':'Report number (optional)')+'</label>'+
+      'display:block;margin-bottom:5px">'+aT('رقم البلاغ (اختياري)','Report number (optional)')+'</label>'+
       '<input id="accPoliceNo" dir="ltr" value="'+accEsc(f.police_no)+'" oninput="ACC_FORM.police_no=this.value" '+
       'placeholder="—" style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);'+
       'border-radius:11px;padding:12px;color:var(--text);font-family:inherit;font-size:14px"></div>';
   }
 
-  h += accPills(LANG==='ar'?'السيارة تمشي؟':'Drivable?', 'drivable', [
-    {v:true,  ar:'تمشي',        c:'#10b981'},
-    {v:false, ar:'لا تمشي',     c:'#ef4444'}]);
+  h += accPills(aT('السيارة تمشي؟','Is the car drivable?'), 'drivable', [
+    {v:true,  ar:'تمشي',    en:'Drivable',     c:'#10b981'},
+    {v:false, ar:'لا تمشي', en:'Not drivable', c:'#ef4444'}]);
 
-  h += '<div style="margin-bottom:6px"><label style="font-size:11.5px;font-weight:800;color:var(--muted2);'+
-    'display:block;margin-bottom:5px">'+(LANG==='ar'?'ماذا حدث بالضبط؟':'What happened?')+'</label>'+
+  h += '<div class="sec-title">'+aT('ماذا حدث بالضبط؟','What exactly happened?')+'</div>';
+  h += accErrHTML('description');
+  h += '<div style="margin-bottom:6px">'+
     '<textarea id="accDesc" oninput="ACC_FORM.description=this.value" rows="4" '+
-    'placeholder="'+(LANG==='ar'?'اكتب بإيجاز: كنت رايح فين، إيه اللي حصل، مين اللي اصطدم بمين…':'Brief description…')+'" '+
-    'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);border-radius:11px;'+
+    'placeholder="'+aT('اكتب بإيجاز: كنت رايح فين، إيه اللي حصل، مين اللي اصطدم بمين…',
+                       'Briefly: where you were heading, what happened, who hit whom…')+'" '+
+    'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid '+
+      (ACC_ERR.description?'#ef4444':'var(--br)')+';border-radius:11px;'+
     'padding:12px;color:var(--text);font-family:inherit;font-size:14px;line-height:1.7;resize:vertical">'+
     accEsc(ACC_FORM.description)+'</textarea></div>';
 
@@ -7682,10 +7734,10 @@ function accPills(title, field, opts){
   opts.forEach(function(o){
     var on = f[field] === o.v;
     var val = (typeof o.v === 'boolean') ? String(o.v) : "'"+o.v+"'";
-    h += '<button onclick="accSet(\''+field+'\','+val+')" style="flex:1;min-width:84px;background:'+
+    h += '<button onclick="accSet(\''+field+'\','+val+')" style="flex:1;min-width:92px;background:'+
       (on?o.c+'22':'var(--s2)')+';border:1.5px solid '+(on?o.c:'var(--br)')+';border-radius:11px;'+
       'padding:11px 6px;cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;color:'+
-      (on?o.c:'var(--muted2)')+'">'+o.ar+'</button>';
+      (on?o.c:'var(--muted2)')+'">'+aT(o.ar,o.en)+'</button>';
   });
   h += '</div>';
   return h;
@@ -7712,62 +7764,67 @@ function accSaveInputs(){
   var m = document.getElementById('accMissReason'); if(m) ACC_FORM.missing_reason = m.value;
 }
 
-/* ═════ الخطوة ٢ — الطرف الآخر ═════ */
+/* ═════ الخطوة ٢ ═════ */
 function accStep2(){
   var f = ACC_FORM, h = '';
 
   h += '<div style="display:flex;gap:8px;margin-bottom:14px">'+
-    ['<button onclick="accSet(\'has_other\',true)" style="flex:1;background:'+(f.has_other?'rgba(59,130,246,.15)':'var(--s2)')+
-      ';border:1.5px solid '+(f.has_other?'#3b82f6':'var(--br)')+';border-radius:12px;padding:13px;cursor:pointer;'+
+    '<button onclick="accSet(\'has_other\',true)" style="flex:1;background:'+
+      (f.has_other?'rgba(59,130,246,.15)':'var(--s2)')+';border:1.5px solid '+
+      (f.has_other?'#3b82f6':'var(--br)')+';border-radius:12px;padding:13px;cursor:pointer;'+
       'font-family:inherit;font-weight:800;font-size:12.5px;color:'+(f.has_other?'#3b82f6':'var(--muted2)')+'">'+
-      (LANG==='ar'?'فيه طرف آخر':'Other party')+'</button>',
-     '<button onclick="accSet(\'has_other\',false)" style="flex:1;background:'+(!f.has_other?'rgba(59,130,246,.15)':'var(--s2)')+
-      ';border:1.5px solid '+(!f.has_other?'#3b82f6':'var(--br)')+';border-radius:12px;padding:13px;cursor:pointer;'+
+      aT('فيه طرف آخر','Other party involved')+'</button>'+
+    '<button onclick="accSet(\'has_other\',false)" style="flex:1;background:'+
+      (!f.has_other?'rgba(59,130,246,.15)':'var(--s2)')+';border:1.5px solid '+
+      (!f.has_other?'#3b82f6':'var(--br)')+';border-radius:12px;padding:13px;cursor:pointer;'+
       'font-family:inherit;font-weight:800;font-size:12.5px;color:'+(!f.has_other?'#3b82f6':'var(--muted2)')+'">'+
-      (LANG==='ar'?'مفيش طرف آخر':'No other party')+'</button>'].join('')+'</div>';
+      aT('مفيش طرف آخر','No other party')+'</button></div>';
 
   if(!f.has_other){
     return h + '<div class="card" style="text-align:center;padding:26px 14px">'+
       '<div style="font-size:32px">✅</div>'+
       '<div style="font-weight:800;font-size:13.5px;margin-top:7px">'+
-        (LANG==='ar'?'تمام — مفيش بيانات طرف آخر':'No other party details needed')+'</div>'+
+        aT('تمام — مفيش بيانات طرف آخر','No other party details needed')+'</div>'+
       '<div style="font-size:11.5px;color:var(--muted2);margin-top:4px;line-height:1.7">'+
-        (LANG==='ar'?'صورة سيارة الطرف الآخر مش هتكون مطلوبة في الخطوة الجاية'
-                   :'The other-car photo will not be required')+'</div></div>';
+        aT('صورة سيارة الطرف الآخر مش هتكون مطلوبة في الخطوة الجاية',
+           'The other-vehicle photo will not be required in the next step')+'</div></div>';
   }
 
+  h += accErrHTML('other_plate');
   h += '<div class="card" style="padding:13px">'+
     '<div style="font-size:11px;color:var(--muted2);line-height:1.7;margin-bottom:12px">'+
-      (LANG==='ar'?'الأساسي بس — الرخصة والتأمين صوّرهم في الخطوة الجاية بدل ما تكتبهم.'
-                 :'Basics only — photograph licence and insurance instead of typing them.')+'</div>'+
-    accField('accOtherName',  LANG==='ar'?'اسم السائق الآخر':'Other driver name', f.other_name, 'text', '')+
-    accField('accOtherPhone', LANG==='ar'?'رقم تليفونه':'Phone', f.other_phone, 'tel', 'ltr')+
-    accField('accOtherPlate', LANG==='ar'?'رقم لوحة سيارته':'Plate number', f.other_plate, 'text', 'ltr')+
+      aT('الأساسي بس — الرخصة والتأمين صوّرهم في الخطوة الجاية بدل ما تكتبهم.',
+         'Basics only — photograph the licence and insurance in the next step instead of typing them.')+'</div>'+
+    accField('accOtherName',  aT('اسم السائق الآخر','Other driver name'), f.other_name, 'text', '', false)+
+    accField('accOtherPhone', aT('رقم تليفونه','Phone number'), f.other_phone, 'tel', 'ltr', false)+
+    accField('accOtherPlate', aT('رقم لوحة سيارته','Plate number'), f.other_plate, 'text', 'ltr', !!ACC_ERR.other_plate)+
     '</div>';
 
   return h;
 }
 
-function accField(id, label, val, type, dir){
+function accField(id, label, val, type, dir, bad){
   return '<div style="margin-bottom:11px">'+
     '<label style="font-size:11.5px;font-weight:800;color:var(--muted2);display:block;margin-bottom:5px">'+
       label+'</label>'+
     '<input id="'+id+'" type="'+(type||'text')+'" '+(dir?'dir="'+dir+'" ':'')+'value="'+accEsc(val||'')+'" '+
-    'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);'+
-    'border-radius:11px;padding:12px;color:var(--text);font-family:inherit;font-size:14px"></div>';
+    'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid '+
+      (bad?'#ef4444':'var(--br)')+';border-radius:11px;padding:12px;color:var(--text);'+
+    'font-family:inherit;font-size:14px"></div>';
 }
 
-/* ═════ الخطوة ٣ — الصور ═════ */
+/* ═════ الخطوة ٣ ═════ */
 function accStep3(){
   var h = '', req = accRequiredKeys(), miss = accMissing();
 
   h += '<div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(59,130,246,.35);'+
     'background:rgba(59,130,246,.07)">'+
     '<div style="font-size:11.5px;color:var(--muted2);line-height:1.8">'+
-      (LANG==='ar'
-        ? '📸 كل صورة بتتختم جواها بالتاريخ والوقت والمنطقة واسمك ورقم لوحتك — الختم جوه الصورة نفسها، فيفضل موجود حتى لو الصورة اتبعتت على الواتساب.'
-        : 'Every photo is stamped inside the image with date, time, area, your name and plate.')+
+      aT('📸 كل صورة بتتختم جواها بالتاريخ والوقت والمنطقة واسمك ورقم لوحتك — الختم جوه الصورة نفسها، فيفضل موجود حتى لو الصورة اتبعتت على الواتساب.',
+         '📸 Every photo is stamped inside the image itself with date, time, area, your name and plate — so the evidence travels with the photo, even over WhatsApp.')+
     '</div></div>';
+
+  h += accErrHTML('photos');
 
   ACC_SHOTS.forEach(function(s){
     var isReq = req.indexOf(s.k) >= 0;
@@ -7785,10 +7842,11 @@ function accStep3(){
                  : '<i class="ti ti-camera-plus" style="font-size:23px;color:var(--muted2)"></i>')+
           '</div>'+
           '<div style="flex:1;min-width:0">'+
-            '<div style="font-weight:800;font-size:13px">'+s.ar+
+            '<div style="font-weight:800;font-size:13px">'+accShotName(s)+
               (isReq?' <span style="color:#ef4444">*</span>':'')+'</div>'+
             '<div style="font-size:11px;color:'+(got?'#10b981':'var(--muted2)')+';margin-top:2px">'+
-              (got ? (LANG==='ar'?'✓ مختومة وجاهزة':'✓ Stamped') : (s.ar2 || (LANG==='ar'?'اضغط للتصوير':'Tap to capture')))+
+              (got ? aT('✓ مختومة وجاهزة','✓ Stamped and ready')
+                   : (accShotHint(s) || aT('اضغط للتصوير','Tap to capture')))+
             '</div>'+
           '</div>'+
           (got ? '<span onclick="event.preventDefault();event.stopPropagation();accDrop(\''+s.k+'\')" '+
@@ -7800,13 +7858,14 @@ function accStep3(){
     h += '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);border-radius:13px;'+
       'padding:13px;margin-top:6px">'+
       '<div style="font-weight:800;font-size:12.5px;color:#f59e0b;margin-bottom:5px">'+
-        (LANG==='ar'?'ناقص '+miss.length+' صورة إلزامية':miss.length+' required photo(s) missing')+'</div>'+
+        aT('ناقص '+miss.length+' صورة إلزامية', miss.length+' required photo(s) missing')+'</div>'+
       '<div style="font-size:11px;color:var(--muted2);line-height:1.7;margin-bottom:9px">'+
-        (LANG==='ar'?'لو مش قادر تصوّرها دلوقتي، اكتب السبب وابعت — البلاغ هيتسجّل والنقص هيبان للإدارة.'
-                   :'If you cannot take them now, write why and submit anyway.')+'</div>'+
+        aT('لو مش قادر تصوّرها دلوقتي، اكتب السبب وابعت — البلاغ هيتسجّل والنقص هيبان للإدارة.',
+           'If you cannot take them now, write the reason and submit — the report is recorded and the gap is flagged to management.')+'</div>'+
       '<textarea id="accMissReason" oninput="ACC_FORM.missing_reason=this.value" rows="2" '+
-        'placeholder="'+(LANG==='ar'?'سبب عدم التصوير…':'Reason…')+'" '+
-        'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--br);'+
+        'placeholder="'+aT('سبب عدم التصوير…','Reason…')+'" '+
+        'style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid '+
+          (ACC_ERR.photos?'#ef4444':'var(--br)')+';'+
         'border-radius:10px;padding:10px;color:var(--text);font-family:inherit;font-size:13px">'+
         accEsc(ACC_FORM.missing_reason)+'</textarea></div>';
   }
@@ -7821,7 +7880,8 @@ function accPick(key, input){
   if(prev) prev.innerHTML = '<i class="ti ti-loader" style="font-size:21px;color:#3b82f6"></i>';
   compressImage(f, 1600).then(function(small){
     var shot = accShot(key);
-    return accStamp(small, {label: shot.ar2 ? shot.ar+' — '+shot.ar2 : shot.ar, id: ACC_FORM.id});
+    var nm = accShotName(shot), hint = accShotHint(shot);
+    return accStamp(small, {label: hint ? nm+' — '+hint : nm, id: ACC_FORM.id});
   }).then(function(stamped){
     ACC_PHOTOS[key] = {
       stamped: stamped,
@@ -7829,10 +7889,11 @@ function accPick(key, input){
       lat: ACC_GEO ? ACC_GEO.lat : null,
       lng: ACC_GEO ? ACC_GEO.lng : null
     };
+    if(!accMissing().length) delete ACC_ERR.photos;
     accSaveInputs();
     accRender();
   }).catch(function(){
-    toast(LANG==='ar'?'تعذّر تجهيز الصورة':'Could not process photo','err');
+    toast(aT('تعذّر تجهيز الصورة','Could not process the photo'),'err');
     accRender();
   });
 }
@@ -7843,42 +7904,63 @@ function accDrop(key){
 }
 
 /* ═════ التنقّل والإرسال ═════ */
-function accBack(){ accSaveInputs(); ACC_STEP = Math.max(1, ACC_STEP-1); accRender(); }
+function accBack(){ accSaveInputs(); ACC_ERR = {}; ACC_STEP = Math.max(1, ACC_STEP-1); accRender(); }
 
 function accNext(){
   accSaveInputs();
+  ACC_ERR = {};
+
   if(ACC_STEP === 1){
-    if(!ACC_FORM.description || ACC_FORM.description.trim().length < 10){
-      toast(LANG==='ar'?'اكتب وصف مختصر للحادثة':'Add a short description','err'); return;
+    var d = (ACC_FORM.description||'').trim();
+    if(d.length < 10){
+      ACC_ERR.description = d.length
+        ? aT('الوصف قصير — اكتب ١٠ حروف على الأقل تشرح اللي حصل',
+             'Too short — write at least 10 characters describing what happened')
+        : aT('اكتب وصف مختصر للحادثة قبل ما تكمّل',
+             'Describe the accident briefly before continuing');
+      accRender();
+      toast(ACC_ERR.description, 'err');
+      return;
     }
     ACC_STEP = 2; accRender(); return;
   }
+
   if(ACC_STEP === 2){
-    if(ACC_FORM.has_other && !ACC_FORM.other_plate.trim()){
-      toast(LANG==='ar'?'رقم لوحة الطرف الآخر مهم — لو مش واضح صوّرها':'Other plate is needed','err'); return;
+    if(ACC_FORM.has_other && !(ACC_FORM.other_plate||'').trim()){
+      ACC_ERR.other_plate = aT('رقم لوحة الطرف الآخر مطلوب — لو مش واضح اكتب «غير واضح» وصوّرها',
+                               'Other party plate is required — if unreadable, write "unclear" and photograph it');
+      accRender();
+      toast(ACC_ERR.other_plate, 'err');
+      return;
     }
     ACC_STEP = 3; accRender(); return;
   }
+
   accSubmit();
 }
 
 function accConfirmClose(){
   var any = Object.keys(ACC_PHOTOS).length || (ACC_FORM && ACC_FORM.description);
-  if(any && !confirm(LANG==='ar'?'تقفل البلاغ؟ اللي كتبته هيضيع.':'Discard this report?')) return;
+  if(any && !confirm(aT('تقفل البلاغ؟ اللي كتبته هيضيع.',
+                        'Discard this report? Everything you entered will be lost.'))) return;
   accClose();
 }
 
 function accSubmit(){
   if(ACC_BUSY) return;
   accSaveInputs();
+  ACC_ERR = {};
   var miss = accMissing();
   if(miss.length && !(ACC_FORM.missing_reason||'').trim()){
-    toast(LANG==='ar'?'اكتب سبب نقص الصور':'Write why photos are missing','err');
+    ACC_ERR.photos = aT('اكتب سبب نقص الصور، أو صوّر الناقص',
+                        'Write why the photos are missing, or take them now');
+    accRender();
+    toast(ACC_ERR.photos, 'err');
     return;
   }
   ACC_BUSY = true;
   var btn = document.getElementById('accNext');
-  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> '+(LANG==='ar'?'جاري الحفظ…':'Saving…'); }
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> '+aT('جاري الحفظ…','Saving…'); }
 
   var f = ACC_FORM;
   var row = {
@@ -7913,9 +7995,12 @@ function accSubmit(){
     status: 'new'
   };
 
+  /* التسمية تُحفظ باللغتين: الإدارة قد تقرأ بالعربية والبلاغ كُتب
+     بالإنجليزية أو العكس. */
   var shots = Object.keys(ACC_PHOTOS).map(function(k){
     var p = ACC_PHOTOS[k], s = accShot(k);
-    return {key:k, label:s.ar, blob:p.stamped, url:null, at:p.at, lat:p.lat, lng:p.lng};
+    return {key:k, label:s.ar, label_en:s.en, blob:p.stamped, url:null,
+            at:p.at, lat:p.lat, lng:p.lng};
   });
 
   var rec = {id: f.id, row: row, shots: shots, tries: 0, at: Date.now(), rowSent: false};
@@ -7924,22 +8009,23 @@ function accSubmit(){
      قطعت في نص الرفع، البلاغ موجود ويُستأنف وحده. */
   accQPut(rec).then(function(){
     accClose();
-    toast(LANG==='ar'?'✅ اتسجّل البلاغ — جاري الإرسال':'Saved — sending','ok');
+    toast(aT('✅ اتسجّل البلاغ — جاري الإرسال','✅ Report saved — sending'),'ok');
     ACC_BUSY = false;
     return accSendOne(rec).then(function(){
       return accQDel(rec.id).then(function(){
-        toast(LANG==='ar'?'✅ وصل البلاغ للإدارة':'Report delivered','ok');
+        toast(aT('✅ وصل البلاغ للإدارة','✅ Delivered to management'),'ok');
         loadMyAccidents().then(function(){ renderCurrentTab(); });
       });
     }).catch(function(){
-      toast(LANG==='ar'?'الشبكة ضعيفة — البلاغ محفوظ وهيتبعت لوحده':'Weak network — saved, will retry','info');
+      toast(aT('الشبكة ضعيفة — البلاغ محفوظ وهيتبعت لوحده',
+               'Weak network — saved, it will send automatically'),'info');
       accPaintQueueBadge();
       renderCurrentTab();
     });
   }).catch(function(e){
     ACC_BUSY = false;
-    if(btn){ btn.disabled = false; btn.textContent = LANG==='ar'?'إرسال البلاغ':'Submit'; }
-    toast(LANG==='ar'?'تعذّر الحفظ: '+String(e.message||e).slice(0,60):'Save failed','err');
+    if(btn){ btn.disabled = false; btn.textContent = aT('إرسال البلاغ','Submit report'); }
+    toast(aT('تعذّر الحفظ: ','Save failed: ')+String(e.message||e).slice(0,60),'err');
   });
 }
 
@@ -7954,19 +8040,22 @@ function loadMyAccidents(){
 
 function accListHTML(){
   if(!MY_ACCIDENTS.length) return '';
-  var h = '<div class="sec-title">'+(LANG==='ar'?'بلاغات الحوادث':'Accident reports')+'</div><div class="card">';
+  var h = '<div class="sec-title">'+aT('بلاغات الحوادث','Accident reports')+'</div><div class="card">';
   MY_ACCIDENTS.slice(0,6).forEach(function(a){
     var st = {new:'#f59e0b', reviewing:'#3b82f6', closed:'#10b981'}[a.status] || '#7d8590';
-    var stT = {new:'جديد', reviewing:'قيد المراجعة', closed:'مقفول'}[a.status] || a.status;
-    var kind = '';
-    ACC_KINDS.forEach(function(k){ if(k.v===a.kind) kind = k.ic+' '+k.ar; });
+    var stT = a.status==='new'      ? aT('جديد','New')
+            : a.status==='reviewing'? aT('قيد المراجعة','Under review')
+            : a.status==='closed'   ? aT('مقفول','Closed') : a.status;
+    var ic = '';
+    ACC_KINDS.forEach(function(k){ if(k.v===a.kind) ic = k.ic; });
     var n = (a.photos && a.photos.length) || 0;
     h += '<div style="padding:10px 4px;border-bottom:1px solid var(--br);display:flex;gap:9px;'+
       'justify-content:space-between;align-items:flex-start">'+
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-weight:800;font-size:13px">'+accEsc(kind||'حادثة')+'</div>'+
+        '<div style="font-weight:800;font-size:13px">'+ic+' '+accEsc(accKindName(a.kind))+'</div>'+
         '<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+
-          fmtDate(a.occurred_at)+(a.area?' • '+accEsc(a.area):'')+' • '+n+' صورة</div>'+
+          fmtDate(a.occurred_at)+(a.area?' • '+accEsc(a.area):'')+' • '+
+          aT(n+' صورة', n+' photo'+(n===1?'':'s'))+'</div>'+
         (a.admin_note?'<div style="font-size:11px;color:'+st+';margin-top:4px">💬 '+accEsc(a.admin_note)+'</div>':'')+
       '</div>'+
       '<div style="font-size:11px;font-weight:800;color:'+st+';white-space:nowrap">'+stT+'</div></div>';
