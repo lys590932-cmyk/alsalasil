@@ -491,6 +491,12 @@ body::after{
     </div>
     <div class="modal-b" id="amBody"></div>
     <div class="modal-f">
+      <button class="btn" style="background:#25D366;color:#053" onclick="accShareWA()">
+        <i class="ti ti-brand-whatsapp"></i> <span data-i18n="acc_share_wa"></span></button>
+      <button class="btn" style="background:var(--navy,#0f172a);color:#fff" onclick="accSharePDF()">
+        <i class="ti ti-file-type-pdf"></i> <span data-i18n="acc_share_pdf"></span></button>
+      <button class="btn" style="background:var(--light);color:var(--navy);border:1px solid var(--border)"
+        onclick="accCopy()"><i class="ti ti-copy"></i> <span data-i18n="acc_share_copy"></span></button>
       <button class="btn" style="background:var(--blue,#2563eb);color:#fff" onclick="accSetStatus('reviewing')">
         <i class="ti ti-eye"></i> <span data-i18n="acc_mark_rev"></span></button>
       <button class="btn" style="background:var(--green,#16a34a);color:#fff" onclick="accSetStatus('closed')">
@@ -549,6 +555,14 @@ ar:{
  date:'📅 التاريخ:', from:'📅 من:', to:'إلى:', month:'📅 الشهر:', all:'الكل',
  // tabs
  c_plate:'رقم اللوحة', c_phone:'رقم التليفون',
+ acc_share:'مشاركة', acc_share_wa:'واتساب', acc_share_pdf:'PDF بكل الصور', acc_share_copy:'نسخ الملخص',
+ acc_copied:'✅ اتنسخ الملخص', acc_popup_blocked:'المتصفح منع فتح النافذة — اسمح بالنوافذ المنبثقة وأعد المحاولة',
+ acc_sum_title:'بلاغ حادثة', acc_sum_co:'شركة السلاسل لتوصيل المستهلك',
+ acc_sum_kwt:'بتوقيت الكويت', acc_sum_car:'حالة السيارة', acc_sum_shots:'الصور الموثّقة (%s):',
+ acc_sum_id:'معرّف البلاغ', acc_sum_trimmed:'(روابط الصور محذوفة لطول الرسالة — موجودة في لوحة التحكم)',
+ acc_pdf_wait:'جاري تحميل الصور…', acc_pdf_ready:'جاهز — اختر «حفظ كـ PDF» في نافذة الطباعة',
+ acc_pdf_btn:'طباعة / حفظ PDF',
+ acc_pdf_foot:'الصور مختومة داخل بكسلها بالتاريخ والوقت والمنطقة من جهاز السائق وقت التصوير — الختم غير قابل للحذف بإعادة الحفظ أو الإرسال.',
  t_acc:'الحوادث',
  acc_title:'بلاغات الحوادث', acc_none:'لا توجد بلاغات حوادث',
  k_acc_open:'بلاغات مفتوحة', k_acc_new:'جديدة لم تُراجع', k_acc_inj:'فيها إصابات', k_acc_undriv:'سيارات لا تمشي',
@@ -778,6 +792,14 @@ en:{
  settings:'Settings', refresh:'Refresh', export:'Export', close:'Close', cancel:'Cancel', save:'Save',
  date:'📅 Date:', from:'📅 From:', to:'To:', month:'📅 Month:', all:'All',
  c_plate:'Plate number', c_phone:'Phone number',
+ acc_share:'Share', acc_share_wa:'WhatsApp', acc_share_pdf:'PDF with all photos', acc_share_copy:'Copy summary',
+ acc_copied:'✅ Summary copied', acc_popup_blocked:'The browser blocked the window — allow pop-ups and retry',
+ acc_sum_title:'Accident report', acc_sum_co:'Al-Salasil Consumer Delivery Co.',
+ acc_sum_kwt:'Kuwait time', acc_sum_car:'Vehicle status', acc_sum_shots:'Stamped photos (%s):',
+ acc_sum_id:'Report id', acc_sum_trimmed:'(photo links removed — message too long; they are in the control panel)',
+ acc_pdf_wait:'Loading photos…', acc_pdf_ready:'Ready — choose "Save as PDF" in the print dialog',
+ acc_pdf_btn:'Print / Save PDF',
+ acc_pdf_foot:'Photos are stamped inside their own pixels with the date, time and area captured on the driver device at the moment of the photo — the stamp cannot be stripped by re-saving or forwarding.',
  t_acc:'Accidents',
  acc_title:'Accident reports', acc_none:'No accident reports',
  k_acc_open:'Open reports', k_acc_new:'New, unreviewed', k_acc_inj:'With injuries', k_acc_undriv:'Cars not drivable',
@@ -2795,6 +2817,244 @@ async function accSetStatus(status){
     closeAcc();
     await loadAll();
   }catch(e){ toast(t('err')+': '+e.message, true); }
+}
+
+
+/* ═══════════ ACCIDENT SHARING ═══════════
+   ثلاث طرق لإخراج البلاغ من اللوحة، وكل واحدة لحالة مختلفة:
+
+   1) ملخص نصي على واتساب — للحظة التي يحتاج فيها أحدهم الخبر الآن:
+      المالك، الوسيط، ورشة السحب. نص واحد فيه كل الأرقام وروابط
+      الصور المختومة ورابط الموقع على الخرائط.
+
+   2) ملف PDF بكل الصور — لملف التأمين أو المحامي. يُبنى في نافذة
+      طباعة ويُترك للمتصفح ليرسمه، لا لمكتبة تحوّل HTML إلى صورة:
+      مكتبات html2canvas ترسم العربية في إطار معزول لا يرى الخط،
+      فتتقطّع الحروف. طباعة المتصفح تستعمل محرّك النص نفسه فتخرج
+      العربية سليمة، والنتيجة نص قابل للبحث لا صورة.
+
+   3) نسخ الملخص — للإيميل وأي تطبيق آخر.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* نفس شكل التاريخ المحروق داخل الصورة: YYYY-MM-DD HH:MM بتوقيت الكويت.
+   accDT يستعمل تنسيق المحلّية فيُدخِل علامات اتجاه غير مرئية داخل
+   النص، وهي تربك النسخ واللصق في بريد أو ملف تأمين. وهنا الفائدة
+   المزدوجة: من يقرأ الملخص يقارنه حرفاً بحرف بما هو مطبوع على الصورة. */
+function accDTplain(iso){
+  if(!iso) return '—';
+  try{
+    const f = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Kuwait',
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hour12:false});
+    const p = {}; f.formatToParts(new Date(iso)).forEach(x => p[x.type]=x.value);
+    return p.year+'-'+p.month+'-'+p.day+' '+p.hour+':'+p.minute;
+  }catch(e){ return String(iso).slice(0,16).replace('T',' '); }
+}
+
+/* الملخص النصي. سطور قصيرة لأن واتساب يعرضها على هاتف.
+   opts.noShots يُستعمل عند تجاوز حد طول رابط واتساب. */
+function accSummary(a, opts){
+  const L = [];
+  const nl = () => L.push('');
+  L.push('🚨 ' + t('acc_sum_title'));
+  nl();
+  L.push(t('c_driver') + ': ' + (a.driver_name || a.driver_id) +
+         (a.driver_plate ? ' — ' + a.driver_plate : ''));
+  L.push(t('acc_when') + ': ' + accDTplain(a.occurred_at) + ' (' + t('acc_sum_kwt') + ')');
+  L.push(t('c_kind') + ': ' + accKind(a.kind));
+  L.push(t('c_dmg') + ': ' + accSev(a.severity) + '  |  ' + t('c_inj') + ': ' + accInj(a.injuries));
+  L.push(t('c_police') + ': ' + accPol(a.police) + (a.police_no ? ' — ' + a.police_no : ''));
+  if(a.drivable !== null && a.drivable !== undefined)
+    L.push(t('acc_sum_car') + ': ' + (a.drivable ? t('acc_drivable') : t('acc_undrivable')));
+
+  nl();
+  L.push('📍 ' + t('acc_loc') + ': ' + accWhere(a));
+  if(a.lat != null && a.lng != null){
+    L.push(Number(a.lat).toFixed(5) + ', ' + Number(a.lng).toFixed(5));
+    L.push('https://maps.google.com/?q=' + a.lat + ',' + a.lng);
+  }
+
+  if(a.has_other){
+    nl();
+    L.push(t('c_other') + ':');
+    if(a.other_name)  L.push('• ' + t('c_driver') + ': ' + a.other_name);
+    if(a.other_plate) L.push('• ' + t('c_plate') + ': ' + a.other_plate);
+    if(a.other_phone) L.push('• ' + t('c_phone') + ': ' + a.other_phone);
+  }
+
+  if(a.description){ nl(); L.push(t('acc_what') + ':'); L.push(a.description); }
+
+  const ph = a.photos || [];
+  if(ph.length){
+    nl();
+    if(opts && opts.noShots){
+      /* حذف الروابط وحدها لا يكفي: ثلاثون تسمية تبقي النص فوق الحد.
+         فيُحذف القسم كله ويبقى العدد. */
+      L.push('📸 ' + t('acc_sum_shots', String(ph.length)));
+      L.push(t('acc_sum_trimmed'));
+    } else {
+      L.push('📸 ' + t('acc_sum_shots', String(ph.length)));
+      ph.forEach((p, i) => {
+        L.push((i+1) + ') ' + (RTL() ? (p.label || p.key) : (p.label_en || p.label || p.key)));
+        L.push(p.url);
+      });
+    }
+  }
+
+  if(a.photos_missing && a.photos_missing.length){
+    nl();
+    L.push('⚠️ ' + t('acc_missing') + ': ' + a.photos_missing.length +
+           (a.missing_reason ? ' — ' + t('acc_miss_why') + ': ' + a.missing_reason : ''));
+  }
+
+  if(a.admin_note){ nl(); L.push('💬 ' + t('acc_note') + ': ' + a.admin_note); }
+
+  nl();
+  L.push(t('acc_sum_id') + ': ' + a.id);
+  return L.join('\n');
+}
+
+/* واتساب بلا رقم يفتح قائمة جهات الاتصال فيختار المدير المرسَل إليه.
+   على الموبايل نفضّل مشاركة النظام: تعرض واتساب وغيره في قائمة واحدة. */
+function accShareWA(){
+  const a = _accOpen; if(!a) return;
+  const txt = accSummary(a);
+  if(navigator.share){
+    navigator.share({title: t('acc_sum_title'), text: txt})
+      .catch(() => accOpenWA(txt));
+    return;
+  }
+  accOpenWA(txt);
+}
+function accOpenWA(txt){
+  /* حدّ عملي لطول الرابط: واتساب يقتطع النص الطويل جداً بلا تنبيه،
+     فنُعيد بناء الملخص بلا قسم الصور ونكتفي بعددها. */
+  let t2 = txt;
+  if(encodeURIComponent(t2).length > 3500 && _accOpen){
+    t2 = accSummary(_accOpen, {noShots:true});
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(t2), '_blank', 'noopener');
+}
+
+async function accCopy(){
+  const a = _accOpen; if(!a) return;
+  const txt = accSummary(a);
+  try{
+    await navigator.clipboard.writeText(txt);
+    toast(t('acc_copied'));
+  }catch(e){
+    /* الحافظة تُرفض على http أو بلا لمسة مستخدم — نعرض النص ليُنسخ يدوياً */
+    const w = window.open('', '_blank');
+    if(w){
+      w.document.write('<pre dir="auto" style="font-family:Cairo,system-ui;white-space:pre-wrap;'+
+        'padding:16px;font-size:14px;line-height:1.8">'+esc(txt)+'</pre>');
+      w.document.close();
+    } else toast(t('err'), true);
+  }
+}
+
+/* ── PDF عبر طباعة المتصفح ──
+   الصور تُنتظر قبل الطباعة: نافذة تُطبع قبل تحميل صورها تُخرج مربعات
+   فارغة، وملف تأمين بلا صور لا قيمة له. */
+function accSharePDF(){
+  const a = _accOpen; if(!a) return;
+  const ph = a.photos || [];
+  const rows = (pairs) => pairs.filter(p => p[1]).map(p =>
+    '<tr><th>'+esc(p[0])+'</th><td>'+p[1]+'</td></tr>').join('');
+
+  const head = rows([
+    [t('c_driver'), esc((a.driver_name||a.driver_id)) + (a.driver_plate?' — <span dir="ltr">'+esc(a.driver_plate)+'</span>':'')],
+    [t('acc_when'), '<span dir="ltr">'+accDTplain(a.occurred_at)+'</span> ('+t('acc_sum_kwt')+')'],
+    [t('acc_reported'), '<span dir="ltr">'+accDTplain(a.reported_at)+'</span>'],
+    [t('c_kind'), esc(accKind(a.kind))],
+    [t('c_dmg'), esc(accSev(a.severity))],
+    [t('c_inj'), esc(accInj(a.injuries))],
+    [t('c_police'), esc(accPol(a.police)) + (a.police_no?' — <span dir="ltr">'+esc(a.police_no)+'</span>':'')],
+    [t('acc_sum_car'), a.drivable==null ? '' : esc(a.drivable ? t('acc_drivable') : t('acc_undrivable'))],
+    [t('acc_loc'), esc(accWhere(a)) + (a.lat!=null
+        ? '<br><span dir="ltr" style="font-family:monospace;font-size:10pt">'+
+          Number(a.lat).toFixed(5)+', '+Number(a.lng).toFixed(5)+
+          (a.accuracy_m?'  ±'+a.accuracy_m+'m':'')+'</span>' : '')],
+    [t('acc_sum_id'), '<span dir="ltr" style="font-family:monospace;font-size:10pt">'+esc(a.id)+'</span>']
+  ]);
+
+  const other = a.has_other ? rows([
+    [t('c_driver'), esc(a.other_name||'')],
+    [t('c_plate'),  a.other_plate?'<span dir="ltr">'+esc(a.other_plate)+'</span>':''],
+    [t('c_phone'),  a.other_phone?'<span dir="ltr">'+esc(a.other_phone)+'</span>':'']
+  ]) : '';
+
+  const shots = ph.map((p,i) =>
+    '<figure><img src="'+esc(p.url)+'">'+
+    '<figcaption>'+(i+1)+'. '+esc(RTL()?(p.label||p.key):(p.label_en||p.label||p.key))+'</figcaption></figure>'
+  ).join('');
+
+  const html =
+'<!DOCTYPE html><html lang="'+(RTL()?'ar':'en')+'" dir="'+(RTL()?'rtl':'ltr')+'"><head><meta charset="utf-8">'+
+'<title>'+esc(t('acc_sum_title'))+' — '+esc(a.id)+'</title>'+
+'<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">'+
+'<style>'+
+'@page{size:A4;margin:14mm}'+
+'*{box-sizing:border-box}'+
+'body{font-family:Cairo,"Segoe UI",sans-serif;color:#0f172a;margin:0;font-size:11.5pt;line-height:1.7}'+
+'header{border-bottom:3px solid #b91c1c;padding-bottom:10px;margin-bottom:16px;'+
+  'display:flex;justify-content:space-between;align-items:flex-end;gap:16px}'+
+'h1{font-size:19pt;margin:0;color:#b91c1c;font-weight:900}'+
+'header .sub{font-size:10pt;color:#64748b;margin-top:3px}'+
+'header .co{font-size:13pt;font-weight:900;color:#0f172a;text-align:'+(RTL()?'left':'right')+'}'+
+'h2{font-size:12.5pt;margin:18px 0 7px;padding-bottom:4px;border-bottom:1px solid #cbd5e1;font-weight:900}'+
+'table{width:100%;border-collapse:collapse}'+
+'th,td{border:1px solid #cbd5e1;padding:6px 9px;text-align:'+(RTL()?'right':'left')+';vertical-align:top}'+
+'th{background:#f1f5f9;width:32%;font-weight:700;font-size:10.5pt;color:#334155}'+
+'.desc{border:1px solid #cbd5e1;padding:9px 11px;white-space:pre-wrap;background:#f8fafc}'+
+'.warn{border:1px solid #f59e0b;background:#fffbeb;padding:9px 11px;color:#92400e;font-weight:700}'+
+'.shots{display:grid;grid-template-columns:1fr 1fr;gap:9px}'+
+'figure{margin:0;break-inside:avoid;page-break-inside:avoid}'+
+'figure img{width:100%;border:1px solid #94a3b8;display:block}'+
+'figcaption{font-size:9.5pt;color:#475569;margin-top:3px;font-weight:700}'+
+'footer{margin-top:20px;padding-top:8px;border-top:1px solid #cbd5e1;font-size:9pt;color:#64748b;line-height:1.6}'+
+'@media print{.noprint{display:none!important}}'+
+'.noprint{position:fixed;inset-inline:0;bottom:0;background:#0f172a;color:#fff;padding:12px;'+
+  'text-align:center;font-size:11pt;font-weight:700}'+
+'.noprint button{background:#b91c1c;color:#fff;border:0;border-radius:8px;padding:9px 20px;'+
+  'font-family:inherit;font-weight:900;font-size:11pt;cursor:pointer;margin-inline-start:10px}'+
+'</style></head><body>'+
+'<header><div><h1>🚨 '+esc(t('acc_sum_title'))+'</h1>'+
+  '<div class="sub" dir="ltr">'+esc(a.id)+'</div></div>'+
+  '<div class="co">'+esc(t('acc_sum_co'))+'</div></header>'+
+'<table>'+head+'</table>'+
+(a.description ? '<h2>'+esc(t('acc_what'))+'</h2><div class="desc">'+esc(a.description)+'</div>' : '')+
+(other ? '<h2>'+esc(t('c_other'))+'</h2><table>'+other+'</table>' : '')+
+(a.photos_missing && a.photos_missing.length
+  ? '<h2>'+esc(t('acc_missing'))+'</h2><div class="warn">'+a.photos_missing.length+
+    (a.missing_reason ? ' — '+esc(t('acc_miss_why'))+': '+esc(a.missing_reason) : '')+'</div>' : '')+
+(a.admin_note ? '<h2>'+esc(t('acc_note'))+'</h2><div class="desc">'+esc(a.admin_note)+'</div>' : '')+
+(ph.length ? '<h2>'+esc(t('acc_shots'))+' ('+ph.length+')</h2><div class="shots">'+shots+'</div>'
+           : '<h2>'+esc(t('acc_shots'))+'</h2><div class="warn">'+esc(t('acc_no_shots'))+'</div>')+
+'<footer>'+esc(t('acc_pdf_foot'))+'</footer>'+
+'<div class="noprint"><span id="st">'+esc(t('acc_pdf_wait'))+'</span>'+
+  '<button onclick="print()">'+esc(t('acc_pdf_btn'))+'</button></div>'+
+'</body></html>';
+
+  const w = window.open('', '_blank');
+  if(!w){ toast(t('acc_popup_blocked'), true); return; }
+  w.document.write(html);
+  w.document.close();
+
+  /* ننتظر الصور والخط ثم نطبع تلقائياً. مهلة قصوى حتى لا تتجمّد
+     النافذة على صورة لا تُحمَّل — والزر اليدوي موجود في كل الحالات. */
+  const ready = (async () => {
+    const imgs = Array.from(w.document.images);
+    await Promise.all(imgs.map(im => im.complete ? Promise.resolve()
+      : new Promise(r => { im.onload = im.onerror = r; })));
+    if(w.document.fonts && w.document.fonts.ready) { try{ await w.document.fonts.ready; }catch(e){} }
+  })();
+  const cap = new Promise(r => setTimeout(r, 12000));
+  Promise.race([ready, cap]).then(() => {
+    const st = w.document.getElementById('st');
+    if(st) st.textContent = t('acc_pdf_ready');
+    try{ w.focus(); w.print(); }catch(e){}
+  });
 }
 
 /* ═══════════ MESSAGES ═══════════ */

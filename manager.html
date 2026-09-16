@@ -926,7 +926,7 @@ body::after{
       </div>
       <div style="text-align:center;color:var(--muted);font-size:11px;margin-top:20px">
         شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>
-        تطبيق المدير v1.3
+        تطبيق المدير v1.4
       </div>
     </div>
   </div>
@@ -3475,6 +3475,14 @@ function accmRenderOne(box){
   }
 
   // إجراءات
+  h += '<div style="display:flex;gap:7px;margin-bottom:13px">' +
+      '<button onclick="accmShare()" style="flex:2;background:#25D366;border:0;color:#053323;' +
+        'border-radius:10px;padding:12px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">' +
+        '<i class="ti ti-brand-whatsapp"></i> مشاركة البلاغ</button>' +
+      '<button onclick="accmCopy()" style="flex:1;background:#21262d;border:1px solid #30363d;color:#8b949e;' +
+        'border-radius:10px;padding:12px;font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer">' +
+        '<i class="ti ti-copy"></i> نسخ</button></div>';
+
   h += '<div style="font-size:10.5px;color:#8b949e;font-weight:700;margin-bottom:6px">ملاحظة الإدارة</div>' +
     '<textarea id="accmNote" rows="2" placeholder="تظهر للسائق في تطبيقه…" ' +
       'style="width:100%;box-sizing:border-box;background:#0d1117;border:1px solid #21262d;border-radius:10px;' +
@@ -3526,6 +3534,85 @@ function accmZoom(i){
         'border-radius:11px;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:17px;cursor:pointer">‹</button>' : '') +
     '</div>';
   document.body.appendChild(d);
+}
+
+
+/* ── مشاركة البلاغ ──
+   على الهاتف مشاركة النظام هي الطريق الصحيح: تعرض واتساب والبريد
+   وغيرهما في قائمة واحدة، ولا تفترض أي تطبيق. wa.me بديل عند غيابها.
+   التاريخ بنفس صيغة الختم المحروق داخل الصورة حتى يقارَن حرفاً بحرف. */
+function accmDTplain(iso){
+  if(!iso) return '—';
+  try{
+    const f = new Intl.DateTimeFormat('en-GB', {timeZone:KW_TZ, year:'numeric', month:'2-digit',
+      day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false});
+    const p = {}; f.formatToParts(new Date(iso)).forEach(x => p[x.type]=x.value);
+    return p.year+'-'+p.month+'-'+p.day+' '+p.hour+':'+p.minute;
+  }catch(e){ return String(iso).slice(0,16).replace('T',' '); }
+}
+
+function accmSummary(r, noShots){
+  const L=[], nl=()=>L.push('');
+  const inj = (ACCM_INJ[r.injuries]||['—'])[0], sev = (ACCM_SEV[r.severity]||['—'])[0];
+  L.push('🚨 بلاغ حادثة');
+  nl();
+  L.push('السائق: ' + (r.driver_name||r.driver_id) + (r.driver_plate?' — '+r.driver_plate:''));
+  L.push('وقت الحادثة: ' + accmDTplain(r.occurred_at) + ' (بتوقيت الكويت)');
+  L.push('النوع: ' + (ACCM_KIND[r.kind]||'حادثة').replace(/^\S+\s/,''));
+  L.push('الضرر: ' + sev + '  |  الإصابات: ' + inj);
+  L.push('الشرطة: ' + (ACCM_POL[r.police]||'—') + (r.police_no?' — '+r.police_no:''));
+  if(r.drivable === false) L.push('حالة السيارة: لا تمشي');
+  else if(r.drivable === true) L.push('حالة السيارة: تمشي');
+
+  nl();
+  L.push('📍 الموقع: ' + ([r.area, r.street].filter(Boolean).join(' — ') || 'غير محدّد'));
+  if(r.lat != null && r.lng != null){
+    L.push(Number(r.lat).toFixed(5)+', '+Number(r.lng).toFixed(5));
+    L.push('https://maps.google.com/?q='+r.lat+','+r.lng);
+  }
+
+  if(r.has_other){
+    nl(); L.push('الطرف الآخر:');
+    if(r.other_name)  L.push('• الاسم: '+r.other_name);
+    if(r.other_plate) L.push('• اللوحة: '+r.other_plate);
+    if(r.other_phone) L.push('• التليفون: '+r.other_phone);
+  }
+
+  if(r.description){ nl(); L.push('ماذا حدث:'); L.push(r.description); }
+
+  const ph = r.photos || [];
+  if(ph.length){
+    nl();
+    L.push('📸 الصور الموثّقة ('+ph.length+'):');
+    if(noShots) L.push('(الروابط محذوفة لطول الرسالة — موجودة في التطبيق)');
+    else ph.forEach((p,i)=>{ L.push((i+1)+') '+(p.label||p.key)); L.push(p.url); });
+  }
+  if(r.photos_missing && r.photos_missing.length){
+    nl(); L.push('⚠️ صور إلزامية ناقصة: '+r.photos_missing.length +
+      (r.missing_reason ? ' — سبب السائق: '+r.missing_reason : ''));
+  }
+  if(r.admin_note){ nl(); L.push('💬 ملاحظة الإدارة: '+r.admin_note); }
+  nl(); L.push('معرّف البلاغ: '+r.id);
+  return L.join('\n');
+}
+
+function accmShare(){
+  const r = ACCM.open; if(!r) return;
+  let txt = accmSummary(r, false);
+  if(encodeURIComponent(txt).length > 3500) txt = accmSummary(r, true);
+  if(navigator.share){
+    navigator.share({title:'بلاغ حادثة', text:txt}).catch(()=>{
+      window.open('https://wa.me/?text='+encodeURIComponent(txt), '_blank', 'noopener');
+    });
+    return;
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(txt), '_blank', 'noopener');
+}
+
+async function accmCopy(){
+  const r = ACCM.open; if(!r) return;
+  try{ await navigator.clipboard.writeText(accmSummary(r,false)); toast('تم نسخ الملخص'); }
+  catch(e){ toast('تعذّر النسخ — استخدم زر المشاركة'); }
 }
 
 /* ── تغيير الحالة ── */
