@@ -768,6 +768,7 @@ body::after{
         <div class="qa" onclick="openAddVioSheet()"><div class="ic" style="background:var(--red)"><i class="ti ti-alert-triangle"></i></div><div class="l">مخالفة</div></div>
         <div class="qa" onclick="openAppsList()"><div class="ic" style="background:var(--amber)"><i class="ti ti-user-plus"></i></div><div class="l">طلبات<br><span id="qa-apps-count">0</span></div></div>
         <div class="qa" onclick="openHomiCashSheet()" style="position:relative"><div class="ic" style="background:#0d9488"><i class="ti ti-cash-banknote"></i></div><div class="l">كاش هومي<br><span id="qa-homicash-count"></span></div><span id="qa-homicash-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
+        <div class="qa" onclick="openLateSheet()" style="position:relative"><div class="ic" style="background:#ef4444"><i class="ti ti-clock-exclamation"></i></div><div class="l">تأخير<br><span id="qa-late-count"></span></div><span id="qa-late-dot" style="display:none;position:absolute;top:6px;inset-inline-end:6px;width:9px;height:9px;border-radius:50%;background:#ef4444"></span></div>
       </div>
 
       <div class="kpi-grid" id="kpi-grid">
@@ -923,7 +924,7 @@ body::after{
       </div>
       <div style="text-align:center;color:var(--muted);font-size:11px;margin-top:20px">
         شركة السلاسل لتوصيل الطلبات الاستهلاكية<br>
-        تطبيق المدير v1.1
+        تطبيق المدير v1.2
       </div>
     </div>
   </div>
@@ -965,6 +966,39 @@ body::after{
 // ==================== CONFIG ====================
 const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
 const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+/* ── التاريخ بتوقيت الكويت ─────────────────────────────────────────
+   كان النظام بيقرأ «اليوم» من toISOString() — وهي بتوقيت UTC.
+   بين منتصف الليل و3 الفجر بتوقيت الكويت، UTC لسه في اليوم السابق،
+   فكل ما يعتمد على «اليوم» (الحضور، التقارير، تأخير السائقين) كان
+   بيشتغل على يوم غلط في أخطر ساعات الشفت الليلي.
+   الكويت UTC+03:00 ثابتة بلا توقيت صيفي، فالإزاحة صريحة ومأمونة. */
+const KW_TZ = 'Asia/Kuwait', KW_OFFSET = '+03:00';
+let _kwFmt = null;
+function kwDate(d){
+  d = d ? new Date(d) : new Date();
+  if(isNaN(d.getTime())) return '';
+  try{
+    if(!_kwFmt) _kwFmt = new Intl.DateTimeFormat('en-CA',
+      {timeZone:KW_TZ, year:'numeric', month:'2-digit', day:'2-digit'});
+    return _kwFmt.format(d);
+  }catch(e){
+    const s = new Date(d.getTime() + 3*3600000);
+    return s.getUTCFullYear()+'-'+String(s.getUTCMonth()+1).padStart(2,'0')+
+           '-'+String(s.getUTCDate()).padStart(2,'0');
+  }
+}
+function kwToday(){ return kwDate(); }
+/* HH:MM في يوم محدّد → لحظة مطلقة بتوقيت الكويت */
+function kwAt(dateStr, hhmm){
+  if(!dateStr || !hhmm) return null;
+  const p = String(hhmm).split(':');
+  const hh = String(parseInt(p[0],10)||0).padStart(2,'0');
+  const mm = String(parseInt(p[1],10)||0).padStart(2,'0');
+  const d = new Date(dateStr+'T'+hh+':'+mm+':00'+KW_OFFSET);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 const PARTNERS = [
   {id:'keeta',   name:'Keeta',   color:'#fbbf24'},
   {id:'caboria', name:'Caboria', color:'#3b82f6'},
@@ -1037,9 +1071,9 @@ async function fetchDrivers(){
   catch(e){ console.error('drivers',e); DRV=[]; }
 }
 async function fetchClockin(){
-  const today = new Date().toISOString().split('T')[0];
+  const today = kwToday();
   try {
-    CLOCKIN = await api(`clockin?created_at=gte.${today}T00:00:00&order=created_at.desc&limit=200`) || [];
+    CLOCKIN = await api(`clockin?created_at=gte.${today}T00:00:00%2B03:00&order=created_at.desc&limit=400`) || [];
   } catch(e){ console.error('clockin',e); CLOCKIN=[]; }
 }
 async function fetchApps(){
@@ -1061,7 +1095,7 @@ function initials(n){ return (n||'').split(' ').map(w=>w[0]||'').join('').slice(
 
 function renderHome(){
   // KPIs
-  const today = new Date().toISOString().split('T')[0];
+  const today = kwToday();
   const ciToday = CLOCKIN.length;
   const status = {};
   CLOCKIN.forEach(r => { if(!status[r.driver_id]) status[r.driver_id]=r; });
@@ -1295,7 +1329,7 @@ function openAddVioSheet(driverId){
       </select>
     </div>
     <div class="fg"><label>المبلغ (د.ك)</label><input id="v-amt" type="number" step="0.001" placeholder="مثال: 5"></div>
-    <div class="fg"><label>التاريخ</label><input id="v-date" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div class="fg"><label>التاريخ</label><input id="v-date" type="date" value="${kwToday()}"></div>
     <div class="fg"><label>ملاحظات</label><textarea id="v-note" placeholder="تفاصيل إضافية..."></textarea></div>
     <button class="btn btn-red btn-block" onclick="doAddVio()"><i class="ti ti-check"></i> حفظ المخالفة</button>
   `;
@@ -1392,7 +1426,7 @@ function openVioSheet(){
 
 function openReportsSheet(){
   // Quick stats based on current data
-  const today = new Date().toISOString().split('T')[0];
+  const today = kwToday();
   const ciToday = CLOCKIN.length;
   const status = {};
   CLOCKIN.forEach(r => { if(!status[r.driver_id]) status[r.driver_id]=r; });
@@ -1670,6 +1704,10 @@ function mgrCheckForNewNotifs(){
 if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('message', (e) => {
     if(e.data && e.data.type === 'OPEN_MESSAGES'){
+      /* الـservice worker بيبعت نفس النوع لكل إشعار، فالتفريق هنا
+         بـ kind — من غيره كان إشعار التأخير بيفتح صندوق الرسائل. */
+      const kind = (e.data.data && e.data.data.kind) || '';
+      if(kind === 'late'){ try{ openLateSheet(); }catch(err){} return; }
       /* كان بينادي switchTab وهي دالة مش موجودة أصلاً في الملف ده،
          فالضغط على إشعار رسالة كان بيرمي خطأ ومبيفتحش حاجة. */
       openTab('msg');
@@ -1742,7 +1780,7 @@ function updateOrdersBadge(){
 
 async function renderOrders(){
   await fetchOrders();
-  const today = new Date().toISOString().split('T')[0];
+  const today = kwToday();
   const pending = ORDERS.filter(o=>o.status==='pending').length;
   const active  = ORDERS.filter(o=>['assigned','picked_up'].includes(o.status)).length;
   const done    = ORDERS.filter(o=>o.status==='delivered' && (o.delivered_at||o.created_at||'').startsWith(today)).length;
@@ -2879,6 +2917,304 @@ async function hcmEnablePush(){
 /* ── التشغيل ──────────────────────────────────────────────────────── */
 setTimeout(() => { if(mgrAuthed()) hcmFetchPending(false); }, 2600);
 setInterval(() => { if(mgrAuthed()) hcmFetchPending(true); }, 25000);
+
+
+/* ══════════════════════════════════════════════════════════════════
+   إنذار تأخير السائقين — LATE
+   ──────────────────────────────────────────────────────────────────
+   لماذا هنا وليس في تطبيق السائق؟
+   السائق المتأخر هو بالتحديد السائق الذي لم يفتح التطبيق. أي منطق
+   يعتمد على جهازه لن يعمل وقت الحاجة إليه. فالمدير هو الجهة التي
+   تقارن جدول اليوم بسجل الحضور، ومنه يخرج الإنذار.
+
+   المقارنة كلها بلحظات مطلقة محسوبة بإزاحة الكويت الصريحة، فتوقيت
+   جهاز المدير لا يغيّر النتيجة.
+   ══════════════════════════════════════════════════════════════════ */
+const LATE_SEEN_K = 'mgr_late_seen_v1';
+let LATE = {
+  list: [],          // المتأخرون اليوم
+  seen: new Set(),   // مفاتيح أُرسل عنها إشعار — تدوم في localStorage
+  grace: 30,         // المهلة بالدقائق (تُقرأ من app_settings)
+  graceLoaded: false,
+  day: '',           // اليوم الذي جُمعت له القائمة
+  busy: false,
+  err: null
+};
+
+function _kwNext(ymd){
+  const d = new Date(ymd + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+function _kwShift(n){
+  const d = new Date(kwToday() + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+/* المفتاح منسوب لتاريخ الشفت لا لتاريخ الفحص. شفت ليلي يبدأ 22:00
+   ويُنذَر عنه 22:30، ثم يُعاد فحصه بعد منتصف الليل — لو كان المفتاح
+   بتاريخ اليوم لتغيّر عند الساعة 12 وأُرسل نفس الإنذار مرتين. */
+(function _lateLoadSeen(){
+  try{
+    const keep = [_kwShift(-1), kwToday()];
+    const raw = JSON.parse(localStorage.getItem(LATE_SEEN_K) || '[]');
+    if(Array.isArray(raw))
+      LATE.seen = new Set(raw.filter(k => keep.some(d => String(k).endsWith(d))));
+  }catch(e){}
+})();
+function _latePersistSeen(){
+  try{
+    const keep = [_kwShift(-1), kwToday()];
+    localStorage.setItem(LATE_SEEN_K,
+      JSON.stringify([...LATE.seen].filter(k => keep.some(d => String(k).endsWith(d))).slice(-400)));
+  }catch(e){}
+}
+
+/* المهلة من نفس المصدر الذي يقرأ منه تطبيق السائق، حتى لا يختلف
+   رقم المدير عن الرقم الذي يُخصم عليه السائق. */
+async function lateLoadGrace(){
+  if(LATE.graceLoaded) return;
+  try{
+    const rows = await api('app_settings?select=key,value') || [];
+    rows.forEach(r => {
+      if(r.key === 'late_grace_minutes'){
+        const n = parseInt(r.value, 10);
+        if(!isNaN(n) && n >= 0) LATE.grace = n;
+      }
+    });
+  }catch(e){ /* الإعداد غير موجود — نبقى على 30 دقيقة */ }
+  LATE.graceLoaded = true;
+}
+
+async function lateScan(notify){
+  if(LATE.busy) return;
+  LATE.busy = true;
+  try{
+    await lateLoadGrace();
+    const today = kwToday(), yday = _kwShift(-1);
+    if(LATE.day && LATE.day !== today) _latePersistSeen();   // تنظيف مفاتيح ما قبل أمس
+    LATE.day = today;
+
+    /* أمس داخل الاستعلام لأن الشفت الليلي (22:00) يعيش على تاريخ أمس
+       بينما الساعة الآن بعد منتصف الليل. حارس الاثنتي عشرة ساعة أدناه
+       هو ما يمنع صفوف أمس القديمة من الظهور. */
+    const [sched, cis] = await Promise.all([
+      api('schedules?date=in.('+yday+','+today+')&select=driver_id,date,shift_type,shift_start,shift_end&limit=800'),
+      api('clockin?action=eq.clock_in&created_at=gte.'+yday+'T00:00:00%2B03:00'+
+          '&select=driver_id,created_at&order=created_at.asc&limit=900')
+    ]);
+    if(!DRV.length){ try{ await fetchDrivers(); }catch(e){} }
+
+    /* أول تسجيل حضور لكل سائق اليوم */
+    /* أول تسجيل حضور لكل سائق في كل يوم — المفتاح «السائق|التاريخ»
+       حتى لا يُحسَب حضور اليوم على شفت أمس. */
+    const firstIn = {};
+    (cis || []).forEach(c => {
+      if(!c.driver_id || !c.created_at) return;
+      const k = c.driver_id + '|' + kwDate(c.created_at);
+      if(!firstIn[k]) firstIn[k] = new Date(c.created_at);
+    });
+
+    const now = new Date();
+    const out = [];
+    (sched || []).forEach(s => {
+      if(!s.driver_id || !s.shift_start) return;
+      if(s.shift_type === 'off' || s.shift_type === 'holiday') return;
+
+      const start = kwAt(s.date, s.shift_start);
+      if(!start) return;
+
+      /* الشفت الليلي (22:00) يُسجَّل حضوره أحياناً بعد منتصف الليل، أي
+         على تاريخ اليوم التالي. فنأخذ أبكر تسجيل من اليومين يقع ضمن
+         نافذة الشفت المعقولة: من ثلاث ساعات قبل بدايته فصاعداً.
+         الحضور المبكّر يبقى حضوراً مبكّراً ولا يُعدّ تأخيراً. */
+      const WIN = start.getTime() - 3*3600000;
+      let ci = null;
+      [firstIn[s.driver_id + '|' + s.date],
+       firstIn[s.driver_id + '|' + _kwNext(s.date)]].forEach(c => {
+        if(!c || c.getTime() < WIN) return;
+        if(!ci || c < ci) ci = c;
+      });
+      /* لو سجّل: العبرة بلحظة تسجيله. لو لم يسجّل: العبرة باللحظة الحالية. */
+      const lateMin = Math.round(((ci || now) - start) / 60000);
+      if(lateMin < LATE.grace) return;
+      /* تأخير يتجاوز طول أي شفت = جدول قديم أو بيانات خاطئة، لا تأخير
+         حقيقي. لا نُنذر المدير برقم لا معنى له. */
+      if(lateMin > 12 * 60) return;
+
+      const d = DRV.find(x => String(x.id) === String(s.driver_id));
+      out.push({
+        id: s.driver_id,
+        date: s.date,
+        name: (d && d.name) || s.driver_id,
+        phone: (d && (d.sim || d.phone)) || '',
+        partner: (d && d.partner) || '',
+        start: s.shift_start,
+        end: s.shift_end || '',
+        late: lateMin,
+        clocked: !!ci,
+        at: ci ? ci.toISOString() : null
+      });
+    });
+
+    out.sort((a, b) => b.late - a.late);
+    LATE.list = out;
+    LATE.err = null;
+    latePaintBadge();
+
+    if(!notify) return;
+    const fresh = out.filter(r => !LATE.seen.has('late-' + r.id + '-' + r.date));
+    if(!fresh.length) return;
+    fresh.forEach(r => LATE.seen.add('late-' + r.id + '-' + r.date));
+    _latePersistSeen();
+
+    /* أكثر من ثلاثة في لحظة واحدة = مشكلة جماعية، إشعار واحد أنفع من
+       سيل إشعارات يُغلقها المدير دون قراءة. */
+    if(fresh.length > 3){
+      mgrShowNotif({
+        title: '🚨 ' + fresh.length + ' سائقين متأخرين',
+        body: fresh.slice(0, 3).map(r => r.name).join('، ') +
+              ' و' + (fresh.length - 3) + ' غيرهم — اضغط للتفاصيل',
+        tag: 'late-bulk-' + today,
+        data: {url:'./manager.html', kind:'late'}
+      });
+    } else {
+      fresh.forEach(r => {
+        mgrShowNotif({
+          title: '⏰ تأخير سائق',
+          body: r.name + ' متأخر ' + r.late + ' دقيقة عن شفت ' + r.start +
+                (r.clocked ? ' — سجّل حضوره متأخراً' : ' — لم يسجّل حضور'),
+          tag: 'late-' + r.id + '-' + r.date,
+          data: {url:'./manager.html', kind:'late'}
+        });
+      });
+    }
+    if(navigator.vibrate) navigator.vibrate([200,100,200]);
+    try{ if(window.SalasilBell && SalasilBell.ring) SalasilBell.ring(); }catch(e){}
+  }catch(e){
+    LATE.err = String(e.message || e);
+  } finally {
+    LATE.busy = false;
+  }
+}
+
+function latePaintBadge(){
+  const n = LATE.list.length;
+  const el = document.getElementById('qa-late-count');
+  if(el) el.textContent = n ? '(' + n + ')' : '';
+  const dot = document.getElementById('qa-late-dot');
+  if(dot) dot.style.display = n ? 'block' : 'none';
+}
+
+function _lateEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function _lateDur(m){
+  const h = Math.floor(m / 60), r = m % 60;
+  return h ? (h + ' س ' + r + ' د') : (r + ' دقيقة');
+}
+
+async function openLateSheet(){
+  openSheet('<div class="sheet-head"><h3>تأخير اليوم</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()">×</button></div>' +
+    '<div style="padding:26px;text-align:center;color:#8b949e">جارٍ الفحص…</div>');
+  await lateScan(false);
+  lateRenderSheet();
+}
+
+function lateRenderSheet(){
+  const box = document.getElementById('sheet-box');
+  if(!box) return;
+
+  const head = '<div class="sheet-head"><h3>تأخير اليوم</h3>' +
+    '<button class="sheet-x" onclick="closeSheet()">×</button></div>';
+
+  if(LATE.err){
+    box.innerHTML = head +
+      '<div style="padding:22px;text-align:center;color:#f59e0b;font-size:12.5px;line-height:1.8">' +
+      'تعذّر قراءة الجدول أو سجل الحضور<br><span style="color:#8b949e;font-size:11px">' +
+      _lateEsc(LATE.err.slice(0,120)) + '</span></div>';
+    return;
+  }
+
+  const noShow = LATE.list.filter(r => !r.clocked).length;
+  const strip =
+    '<div style="display:flex;gap:8px;margin-bottom:13px">' +
+      '<div style="flex:1;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:10px;text-align:center">' +
+        '<div style="font-size:19px;font-weight:900;color:' + (LATE.list.length?'#ef4444':'#10b981') + '" dir="ltr">' +
+        LATE.list.length + '</div>' +
+        '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">متأخر اليوم</div></div>' +
+      '<div style="flex:1;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:10px;text-align:center">' +
+        '<div style="font-size:19px;font-weight:900;color:' + (noShow?'#f59e0b':'#10b981') + '" dir="ltr">' +
+        noShow + '</div>' +
+        '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">لم يسجّل حضور</div></div>' +
+      '<div style="flex:1;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:10px;text-align:center">' +
+        '<div style="font-size:19px;font-weight:900;color:#c9d1d9" dir="ltr">' + LATE.grace + '</div>' +
+        '<div style="font-size:10.5px;color:#8b949e;margin-top:2px">مهلة بالدقائق</div></div>' +
+    '</div>';
+
+  if(!LATE.list.length){
+    box.innerHTML = head + strip +
+      '<div style="padding:26px 14px;text-align:center">' +
+      '<div style="font-size:34px">✅</div>' +
+      '<div style="font-weight:800;font-size:14px;margin-top:8px">كل السائقين في مواعيدهم</div>' +
+      '<div style="font-size:11.5px;color:#8b949e;margin-top:4px">' +
+      'لا أحد تجاوز مهلة ' + LATE.grace + ' دقيقة على جدول اليوم</div></div>';
+    return;
+  }
+
+  const rows = LATE.list.map(r => {
+    const col = r.clocked ? '#f59e0b' : '#ef4444';
+    const tag = r.clocked
+      ? 'سجّل ' + (r.at ? new Date(r.at).toLocaleTimeString('ar-KW',
+          {hour:'2-digit', minute:'2-digit', timeZone:KW_TZ}) : '') + ' — متأخراً'
+      : 'لم يسجّل حضور حتى الآن';
+    const call = r.phone
+      ? '<a href="tel:' + _lateEsc(r.phone) + '" class="btn g sm" ' +
+        'style="flex:0 0 auto;text-decoration:none;padding:7px 13px">اتصال</a>' : '';
+    const msg = '<button class="btn g sm" style="flex:0 0 auto;padding:7px 13px" ' +
+      'onclick="lateMsg(\'' + _lateEsc(r.id) + '\')">رسالة</button>';
+    return '<div style="background:#161b22;border:1px solid #21262d;border-inline-start:3px solid ' + col + ';' +
+      'border-radius:10px;padding:11px 12px;margin-bottom:8px">' +
+      '<div style="display:flex;align-items:center;gap:9px">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:800;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+            _lateEsc(r.name) + '</div>' +
+          '<div style="font-size:11px;color:#8b949e;margin-top:2px">' + _lateEsc(tag) + '</div>' +
+        '</div>' +
+        '<div style="text-align:center;flex:0 0 auto">' +
+          '<div style="font-size:15px;font-weight:900;color:' + col + '" dir="ltr">' + _lateDur(r.late) + '</div>' +
+          '<div style="font-size:10px;color:#8b949e">شفت <span dir="ltr">' + _lateEsc(r.start) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:7px;margin-top:9px">' + call + msg + '</div>' +
+    '</div>';
+  }).join('');
+
+  box.innerHTML = head + strip + rows +
+    '<div style="font-size:10.5px;color:#6e7681;line-height:1.7;margin-top:10px">' +
+    'المقارنة بين جدول اليوم وأول تسجيل حضور، بتوقيت الكويت. ' +
+    'الخصم التلقائي يتم من تطبيق السائق وليس من هنا.</div>';
+}
+
+/* رسالة سريعة للمتأخر — تفتح شاشة الإرسال الموجودة على السائق نفسه */
+function lateMsg(id){
+  closeSheet();
+  /* ننتظر انغلاق الشاشة الحالية قبل فتح شاشة الرسالة — فتحهما معاً
+     يترك الشاشة الأولى في المنتصف. */
+  setTimeout(() => { try{ openSendMsgSheet(id); }catch(e){} }, 260);
+}
+
+/* ── التشغيل ──────────────────────────────────────────────────────── */
+setTimeout(() => { if(mgrAuthed()) lateScan(true); }, 3200);
+/* دقيقة واحدة: التأخير وحدة قياسه الدقيقة، وفحص كل 25 ثانية يحمّل
+   القاعدة ثلاثة أضعاف بلا فائدة تُذكر. */
+setInterval(() => { if(mgrAuthed()) lateScan(true); }, 60000);
+/* الرجوع للتطبيق بعد غياب: نفحص فوراً بدل انتظار الدورة */
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && mgrAuthed()) lateScan(true);
+});
 
 
 /* ══════════════════════════════════════════════════════════════════
