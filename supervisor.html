@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f3a52">
+<title>السلاسل — نظام المشرف</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+:root{
+  --navy:#0f3a52; --navy2:#16506f; --gold:#c29449; --red:#dc2626;
+  --green:#16a34a; --amber:#d97706; --blue:#2563eb; --purple:#7c3aed;
+  --bg:#f1f5f9; --surf:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font-family:inherit}
+.hide{display:none !important}
+
+/* ── شاشة الدخول ── */
+#gate{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#0b2b3d,#16506f);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-card{background:#fff;border-radius:18px;padding:30px 26px;width:100%;max-width:380px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.gate-card img{width:96px;margin-bottom:6px}
+.gate-card h1{font-size:19px;margin:6px 0 2px;font-weight:900}
+.gate-card p{font-size:12.5px;color:var(--muted);margin:0 0 20px}
+.fld{text-align:right;margin-bottom:13px}
+.fld label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:5px}
+.fld input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:14.5px}
+.fld input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(15,58,82,.1)}
+.btn-main{width:100%;padding:13px;border:0;border-radius:10px;background:var(--navy);color:#fff;
+  font-weight:900;font-size:15px;cursor:pointer}
+.btn-main:disabled{opacity:.6;cursor:default}
+.gate-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:10px;
+  padding:10px;font-size:12.5px;font-weight:700;margin-bottom:12px;line-height:1.7}
+
+/* ── الهيكل ── */
+header.top{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+  position:sticky;top:0;z-index:20}
+.top-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.top h2{font-size:15.5px;margin:0;font-weight:900;flex:1}
+.top .who{font-size:11px;opacity:.85}
+.top button{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:9px;
+  padding:7px 11px;font-size:12px;font-weight:800;cursor:pointer}
+nav.tabs{background:var(--navy2);position:sticky;top:0;z-index:19;overflow-x:auto;
+  -webkit-overflow-scrolling:touch}
+.tabs-in{max-width:1100px;margin:0 auto;display:flex;gap:2px;padding:0 8px}
+.tab{background:none;border:0;color:rgba(255,255,255,.72);padding:12px 13px;font-size:12.5px;
+  font-weight:800;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;position:relative}
+.tab.on{color:#fff;border-bottom-color:var(--gold)}
+.tab .bdg{background:var(--red);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;
+  margin-inline-start:4px;font-weight:900}
+main{max-width:1100px;margin:0 auto;padding:14px 12px 40px}
+.view{display:none} .view.on{display:block}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surf);border-radius:var(--radius);padding:13px 15px;border-inline-start:4px solid var(--c,var(--navy))}
+.kpi .l{font-size:11.5px;color:var(--muted);font-weight:700}
+.kpi .v{font-size:23px;font-weight:900;margin-top:3px;color:var(--c,var(--navy))}
+
+.card{background:var(--surf);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.card-h{padding:11px 14px;border-bottom:1px solid var(--line);font-weight:900;font-size:13.5px;
+  display:flex;align-items:center;gap:7px}
+.card-h .sp{margin-inline-start:auto;font-weight:700;font-size:11.5px;color:var(--muted)}
+.card-b{padding:12px 14px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar input,.bar select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
+.btn{padding:9px 14px;border:0;border-radius:9px;font-weight:800;font-size:12.5px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px}
+.btn.p{background:var(--navy);color:#fff}
+.btn.g{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.btn.gold{background:var(--gold);color:#fff}
+.btn.ok{background:var(--green);color:#fff}
+.btn:disabled{opacity:.55;cursor:default}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8fafc;text-align:right;padding:9px 11px;font-size:11.5px;color:var(--muted);
+  font-weight:800;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 11px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+.empty{text-align:center;color:var(--muted);padding:26px;font-size:13px}
+.st{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:800}
+.st.g{background:#dcfce7;color:#166534} .st.r{background:#fee2e2;color:#991b1b}
+.st.a{background:#fef3c7;color:#92400e} .st.b{background:#dbeafe;color:#1e40af}
+.st.n{background:#f1f5f9;color:#475569}
+
+.sheet-bg{position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.55);display:flex;
+  align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;max-height:92vh;
+  display:flex;flex-direction:column}
+@media(min-width:640px){.sheet-bg{align-items:center}.sheet{border-radius:18px}}
+.sheet-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.sheet-h h3{margin:0;font-size:15px;font-weight:900;flex:1}
+.sheet-x{background:#f1f5f9;border:0;width:31px;height:31px;border-radius:9px;font-size:19px;cursor:pointer}
+.sheet-b{padding:14px 16px;overflow-y:auto;flex:1}
+.sheet-f{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);
+  display:flex;gap:8px}
+.sheet-f .btn{flex:1;justify-content:center;padding:12px}
+
+.note{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:11px 13px;
+  font-size:12px;line-height:1.75;margin-bottom:12px}
+.note.warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(110px);
+  background:var(--navy);color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;
+  font-weight:800;z-index:200;transition:transform .3s;max-width:90%;text-align:center}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--red)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+
+<!-- ══════════ شاشة الدخول ══════════ -->
+<div id="gate">
+  <div class="gate-card">
+    <img src="logo.png" alt="" onerror="this.style.display='none'">
+    <h1>نظام المشرف</h1>
+    <p>شركة السلاسل لتوصيل الطلبات الاستهلاكية</p>
+    <div id="gateErr" class="gate-err hide"></div>
+    <div class="fld"><label>البريد الإلكتروني</label>
+      <input id="gEmail" type="email" inputmode="email" autocomplete="username"
+             autocapitalize="off" spellcheck="false" dir="ltr"></div>
+    <div class="fld"><label>كلمة المرور</label>
+      <input id="gPass" type="password" autocomplete="current-password" dir="ltr"></div>
+    <button class="btn-main" id="gBtn" onclick="doLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- ══════════ التطبيق ══════════ -->
+<div id="app" class="hide">
+<header class="top"><div class="top-in">
+  <div style="flex:1">
+    <h2>نظام المشرف</h2>
+    <div class="who" id="whoAmI">—</div>
+  </div>
+  <button onclick="refreshAll()"><i class="ti ti-refresh"></i> تحديث</button>
+  <button onclick="doLogout()">خروج</button>
+</div></header>
+
+<nav class="tabs"><div class="tabs-in" id="tabsBar"></div></nav>
+
+<main>
+  <!-- الرئيسية -->
+  <section class="view on" id="v-home">
+    <div class="kpis" id="kHome"></div>
+    <div class="card"><div class="card-h"><i class="ti ti-clock"></i> حضور اليوم
+      <span class="sp" id="homeDate"></span></div>
+      <div style="overflow-x:auto"><table id="tHome"></table></div></div>
+  </section>
+
+  <!-- السائقين -->
+  <section class="view" id="v-drivers">
+    <div class="note">بيانات السائقين هنا تشغيلية فقط. الرواتب والحسابات البنكية
+      محجوبة عن هذا الحساب على مستوى قاعدة البيانات، لا بإخفائها من الشاشة.</div>
+    <div class="bar">
+      <input id="drvSearch" placeholder="بحث بالاسم أو الكود…" oninput="renderDrivers()" style="flex:1;min-width:160px">
+      <select id="drvPartner" onchange="renderDrivers()"><option value="">كل الشركاء</option></select>
+      <select id="drvStatus" onchange="renderDrivers()">
+        <option value="">كل الحالات</option><option value="active">نشط</option>
+        <option value="inactive">موقوف</option></select>
+      <button class="btn gold" onclick="openAddDriver()"><i class="ti ti-user-plus"></i> طلب إضافة سائق</button>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-users"></i> السائقون
+      <span class="sp" id="drvCount"></span></div>
+      <div style="overflow-x:auto"><table id="tDrivers"></table></div></div>
+  </section>
+
+  <!-- الحضور -->
+  <section class="view" id="v-att">
+    <div class="bar">
+      <input type="date" id="attDate" onchange="loadAttendance()">
+      <button class="btn p" onclick="openClockSheet()"><i class="ti ti-plus"></i> تسجيل حضور يدوي</button>
+    </div>
+    <div class="kpis" id="kAtt"></div>
+    <div class="card"><div class="card-h"><i class="ti ti-checklist"></i> سجل اليوم</div>
+      <div style="overflow-x:auto"><table id="tAtt"></table></div></div>
+  </section>
+
+  <!-- الجدول -->
+  <section class="view" id="v-sched">
+    <div class="note warn">تعديل الجدول يحتاج موافقة الإدارة. اختر الأيام والشفتات
+      ثم أرسل الطلب — يصل للمالك فوراً ويُطبَّق فور موافقته.</div>
+    <div class="bar">
+      <input type="date" id="schFrom" onchange="loadSchedule()">
+      <span style="color:var(--muted);font-size:12.5px">إلى</span>
+      <input type="date" id="schTo" onchange="loadSchedule()">
+      <button class="btn gold" onclick="openSchedReq()"><i class="ti ti-calendar-plus"></i> طلب تعديل</button>
+    </div>
+    <div class="card"><div class="card-h"><i class="ti ti-calendar"></i> الجدول</div>
+      <div style="overflow-x:auto"><table id="tSched"></table></div></div>
+  </section>
+
+  <!-- الرسائل -->
+  <section class="view" id="v-msg">
+    <div class="card"><div class="card-h"><i class="ti ti-send"></i> إرسال رسالة للسائقين</div>
+      <div class="card-b">
+        <div class="fld"><label>المستلم</label><select id="msTo" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></select></div>
+        <div class="fld"><label>العنوان</label><input id="msTitle" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px" placeholder="مثال: تنبيه بخصوص الشفت"></div>
+        <div class="fld"><label>نص الرسالة</label><textarea id="msBody" rows="4" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:14px;line-height:1.7"></textarea></div>
+        <button class="btn p" onclick="sendMsg()"><i class="ti ti-send"></i> إرسال</button>
+      </div></div>
+  </section>
+
+  <!-- الموافقات (للمالك فقط) -->
+  <section class="view" id="v-appr">
+    <div class="note">الطلبات دي جاية من المشرفين. الموافقة بتطبّق التغيير على
+      طول في النظام، والرفض بيتسجّل مع سببه ويشوفه صاحب الطلب.</div>
+    <div class="card"><div class="card-h"><i class="ti ti-inbox"></i> طلبات في الانتظار
+      <span class="sp" id="apprCount"></span></div>
+      <div id="apprList"></div></div>
+    <div class="card"><div class="card-h"><i class="ti ti-history"></i> اللي اتبتّ فيه</div>
+      <div style="overflow-x:auto"><table id="tApprDone"></table></div></div>
+  </section>
+
+  <!-- طلباتي -->
+  <section class="view" id="v-req">
+    <div class="card"><div class="card-h"><i class="ti ti-file-check"></i> طلباتي
+      <span class="sp" id="reqCount"></span></div>
+      <div style="overflow-x:auto"><table id="tReq"></table></div></div>
+  </section>
+</main>
+</div>
+
+<div id="sheetHost"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   نظام المشرف — السلاسل
+   ───────────────────────────────────────────────────────────────────
+   قاعدتان لا يُكسران في هذا الملف:
+
+   1) كل استدعاء يحمل توكن المستخدم، لا المفتاح العام. لو استُعمل
+      المفتاح العام وحده، الطلب يخرج بدور anon — وهو مفتوح على
+      الجداول لأن تطبيق السائق يشتغل بلا تسجيل دخول — فيرى المشرف
+      كل شيء وتسقط الحماية كلها. api() بترفض الشغل بلا توكن.
+
+   2) لا قراءة من جدول drivers أبداً. القراءة من v_drivers_ops:
+      منظور بأعمدة تشغيلية فقط، بلا راتب ولا IBAN. القاعدة أصلاً
+      تمنع هذا الحساب من الجدول الأصلي، فالمنظور ليس تجميلاً بل
+      هو الطريق الوحيد المتاح.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
+const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+
+const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true, storage:window.localStorage }
+});
+
+let ME = null;               // {id, email, name, role}
+let DRIVERS = [], ATT = [], SCHED = [], REQS = [];
+let VIEW = 'home';
+
+/* ── توقيت الكويت ── */
+const KW_TZ = 'Asia/Kuwait';
+let _kwFmt = null;
+function kwDate(d){
+  d = d ? new Date(d) : new Date();
+  if(isNaN(d.getTime())) return '';
+  try{
+    if(!_kwFmt) _kwFmt = new Intl.DateTimeFormat('en-CA',
+      {timeZone:KW_TZ, year:'numeric', month:'2-digit', day:'2-digit'});
+    return _kwFmt.format(d);
+  }catch(e){
+    const s = new Date(d.getTime()+3*3600000);
+    return s.toISOString().slice(0,10);
+  }
+}
+function kwToday(){ return kwDate(); }
+function kwTime(iso){
+  if(!iso) return '—';
+  try{
+    return new Date(iso).toLocaleTimeString('ar-KW-u-nu-latn',
+      {timeZone:KW_TZ, hour:'2-digit', minute:'2-digit', hour12:false});
+  }catch(e){ return String(iso).slice(11,16); }
+}
+function fmtD(d){
+  if(!d) return '—';
+  const s = String(d).slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '—';
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,
+    c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toast(m, err){
+  const t = document.getElementById('toast');
+  t.textContent = m; t.className = 'toast on' + (err?' err':'');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('on'), 3200);
+}
+
+/* ── الاتصال: بتوكن المستخدم حصراً ── */
+async function api(path, opts){
+  opts = opts || {};
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session || !session.access_token){
+    doLogout(true);
+    throw new Error('انتهت الجلسة — سجّل الدخول من جديد');
+  }
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
+    method: opts.method || 'GET',
+    headers: Object.assign({
+      apikey: SUPA_KEY,
+      Authorization: 'Bearer ' + session.access_token,   // ← التوكن لا المفتاح
+      'Content-Type':'application/json'
+    }, opts.headers || {}),
+    body: opts.body
+  });
+  if(!res.ok){
+    const txt = await res.text().catch(()=> '');
+    throw new Error('HTTP ' + res.status + ' ' + txt.slice(0,160));
+  }
+  if(res.status === 204) return null;
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+async function rpc(fn, args){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session) throw new Error('انتهت الجلسة');
+  const res = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, {
+    method:'POST',
+    headers:{ apikey:SUPA_KEY, Authorization:'Bearer '+session.access_token,
+              'Content-Type':'application/json' },
+    body: JSON.stringify(args||{})
+  });
+  const txt = await res.text().catch(()=> '');
+  if(!res.ok){
+    let m = txt; try{ const j = JSON.parse(txt); m = j.message || j.hint || txt; }catch(e){}
+    throw new Error(String(m).split(' / ')[0] || ('HTTP '+res.status));
+  }
+  try{ return JSON.parse(txt); }catch(e){ return txt; }
+}
+
+/* ═══════════ الدخول ═══════════ */
+function gateErr(msg){
+  const e = document.getElementById('gateErr');
+  if(!msg){ e.classList.add('hide'); return; }
+  e.innerHTML = msg; e.classList.remove('hide');
+}
+async function doLogin(){
+  const btn = document.getElementById('gBtn');
+  const email = document.getElementById('gEmail').value.trim();
+  const pass  = document.getElementById('gPass').value;
+  if(!email || !pass){ gateErr('اكتب البريد وكلمة المرور'); return; }
+  btn.disabled = true; btn.textContent = 'جاري الدخول…';
+  gateErr('');
+  try{
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if(error) throw new Error('البريد أو كلمة المرور غير صحيحة');
+    await afterAuth();
+  }catch(e){
+    gateErr(esc(e.message || 'تعذّر الدخول'));
+    btn.disabled = false; btn.textContent = 'دخول';
+  }
+}
+async function doLogout(silent){
+  if(!silent && !confirm('تسجيل الخروج؟')) return;
+  try{ await sb.auth.signOut(); }catch(e){}
+  location.reload();
+}
+
+/* الدور يُقرأ من الخادم في كل مرة. لا يُخزَّن في المتصفح ولا
+   يُقرأ منه — أي دور مخزَّن محلياً يمكن تعديله بسطر في الكونسول. */
+async function afterAuth(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ return; }
+
+  const rows = await api('profiles?select=full_name,full_name_ar,role,is_active&id=eq.'
+                          + session.user.id + '&limit=1');
+  const p = rows && rows[0];
+
+  if(!p){
+    gateErr('هذا الحساب غير مسجّل في النظام.<br>كلّم الإدارة.');
+    await sb.auth.signOut();
+    document.getElementById('gBtn').disabled = false;
+    document.getElementById('gBtn').textContent = 'دخول';
+    return;
+  }
+  if(p.is_active === false){
+    gateErr('الحساب موقوف.');
+    await sb.auth.signOut();
+    document.getElementById('gBtn').disabled = false;
+    document.getElementById('gBtn').textContent = 'دخول';
+    return;
+  }
+  if(['supervisor','operations','hr','admin'].indexOf(p.role) < 0){
+    gateErr('صلاحيتك (' + esc(p.role) + ') لا تسمح بدخول هذه الشاشة.');
+    await sb.auth.signOut();
+    document.getElementById('gBtn').disabled = false;
+    document.getElementById('gBtn').textContent = 'دخول';
+    return;
+  }
+
+  ME = { id: session.user.id, email: session.user.email,
+         name: p.full_name_ar || p.full_name || session.user.email, role: p.role };
+
+  document.getElementById('whoAmI').textContent =
+    ME.name + ' — ' + roleName(ME.role);
+  document.getElementById('gate').classList.add('hide');
+  document.getElementById('app').classList.remove('hide');
+  buildTabs();
+  await refreshAll();
+}
+function roleName(r){
+  return {supervisor:'مشرف', operations:'عمليات', hr:'موارد بشرية',
+          admin:'مدير النظام', accountant:'محاسب'}[r] || r;
+}
+
+/* ═══════════ التبويبات ═══════════ */
+const TABS = [
+  {id:'home',    ic:'ti-layout-dashboard', t:'الرئيسية'},
+  {id:'drivers', ic:'ti-users',            t:'السائقون'},
+  {id:'att',     ic:'ti-clock',            t:'الحضور'},
+  {id:'sched',   ic:'ti-calendar',         t:'الجدول'},
+  {id:'msg',     ic:'ti-send',             t:'الرسائل'},
+  {id:'req',     ic:'ti-file-check',       t:'طلباتي', bdg:'bReq'},
+  {id:'appr',    ic:'ti-checkbox',         t:'الموافقات', bdg:'bAppr', admin:true}
+];
+function buildTabs(){
+  /* تبويب الموافقات للمالك وحده. وده إخفاء واجهة لا حماية —
+     الحماية إن دالة apply_change_request بترفض أي منادٍ غير المالك،
+     فحتى لو المشرف عرف يظهّر التبويب مش هيقدر يوافق على حاجة. */
+  document.getElementById('tabsBar').innerHTML =
+    TABS.filter(x => !x.admin || ME.role === 'admin').map(x =>
+    `<button class="tab${VIEW===x.id?' on':''}" data-v="${x.id}" onclick="go('${x.id}')">
+      <i class="ti ${x.ic}"></i> ${x.t}${x.bdg?`<span class="bdg hide" id="${x.bdg}">0</span>`:''}</button>`
+  ).join('');
+}
+function go(v){
+  VIEW = v;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(s => s.classList.remove('on'));
+  const el = document.getElementById('v-'+v); if(el) el.classList.add('on');
+  ({home:renderHome, drivers:renderDrivers, att:renderAtt,
+    sched:renderSched, msg:fillMsgTo, req:renderReq, appr:renderAppr}[v] || (()=>{}))();
+}
+
+/* ═══════════ تحميل البيانات ═══════════ */
+async function refreshAll(){
+  try{
+    await Promise.all([loadDrivers(), loadAttendance(), loadSchedule(), loadRequests()]);
+    go(VIEW);
+    fillFilters();
+  }catch(e){
+    toast(e.message || 'تعذّر التحميل', true);
+  }
+}
+
+/* v_drivers_ops لا drivers — انظر القاعدة 2 أعلى الملف */
+async function loadDrivers(){
+  DRIVERS = await api('v_drivers_ops?select=*&order=name.asc') || [];
+}
+async function loadAttendance(){
+  const d = document.getElementById('attDate').value || kwToday();
+  document.getElementById('attDate').value = d;
+  ATT = await api('clockin?created_at=gte.' + d + 'T00:00:00%2B03:00'
+                + '&created_at=lt.' + d + 'T23:59:59%2B03:00'
+                + '&order=created_at.desc&limit=600') || [];
+  if(VIEW==='att') renderAtt();
+  if(VIEW==='home') renderHome();
+}
+async function loadSchedule(){
+  const f = document.getElementById('schFrom').value || kwToday();
+  const t = document.getElementById('schTo').value   || addDays(kwToday(), 6);
+  document.getElementById('schFrom').value = f;
+  document.getElementById('schTo').value   = t;
+  SCHED = await api('schedules?date=gte.'+f+'&date=lte.'+t+'&order=date.asc&limit=1000') || [];
+  if(VIEW==='sched') renderSched();
+}
+async function loadRequests(){
+  REQS = await api('change_requests?select=*&order=requested_at.desc&limit=100') || [];
+  /* المالك بيشوف طلبات الكل (سياسة cr_read_admin)، والمشرف بيشوف
+     طلباته هو بس (cr_read_own). فنفس الاستعلام بيخدم الاتنين. */
+  const mine = REQS.filter(r => r.requested_by === ME.id);
+  const b = document.getElementById('bReq');
+  if(b){
+    const n = mine.filter(r => r.status==='pending').length;
+    b.textContent = n; b.classList.toggle('hide', !n);
+  }
+  const a = document.getElementById('bAppr');
+  if(a){
+    const n = REQS.filter(r => r.status==='pending' && r.requested_by !== ME.id).length;
+    a.textContent = n; a.classList.toggle('hide', !n);
+  }
+}
+function addDays(ymd, n){
+  const d = new Date(ymd + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0,10);
+}
+function fillFilters(){
+  const sel = document.getElementById('drvPartner');
+  const cur = sel.value;
+  const parts = [...new Set(DRIVERS.map(d=>d.partner).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">كل الشركاء</option>' +
+    parts.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  sel.value = cur;
+}
+function drvName(id){
+  const d = DRIVERS.find(x => String(x.id)===String(id));
+  return d ? d.name : id;
+}
+
+/* ═══════════ الرئيسية ═══════════ */
+function renderHome(){
+  document.getElementById('homeDate').textContent = kwToday();
+  const last = {};
+  ATT.slice().reverse().forEach(r => { last[r.driver_id] = r; });
+  const working = Object.values(last).filter(r => r.action==='clock_in').length;
+  const came    = Object.keys(last).length;
+  const total   = DRIVERS.filter(d => d.status!=='inactive').length;
+  const pend    = REQS.filter(r => r.status==='pending').length;
+
+  document.getElementById('kHome').innerHTML = [
+    ['شغّال الآن', working, 'var(--green)'],
+    ['سجّل حضور اليوم', came, 'var(--blue)'],
+    ['إجمالي السائقين', total, 'var(--navy)'],
+    ['طلباتي قيد الانتظار', pend, pend?'var(--amber)':'var(--muted)']
+  ].map(([l,v,c]) => `<div class="kpi" style="--c:${c}"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+
+  const rows = Object.values(last).sort((a,b) =>
+    String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  document.getElementById('tHome').innerHTML =
+    '<thead><tr><th>السائق</th><th>آخر تسجيل</th><th>الوقت</th></tr></thead><tbody>' +
+    (rows.length ? rows.map(r => `<tr>
+      <td>${esc(drvName(r.driver_id))}</td>
+      <td><span class="st ${r.action==='clock_in'?'g':'n'}">${r.action==='clock_in'?'دخول':'خروج'}</span></td>
+      <td class="mono" dir="ltr">${kwTime(r.created_at)}</td></tr>`).join('')
+     : '<tr><td colspan="3" class="empty">لا يوجد حضور مسجّل اليوم</td></tr>') + '</tbody>';
+}
+
+/* ═══════════ السائقون ═══════════ */
+function renderDrivers(){
+  const q  = (document.getElementById('drvSearch').value||'').trim().toLowerCase();
+  const pt = document.getElementById('drvPartner').value;
+  const st = document.getElementById('drvStatus').value;
+  let list = DRIVERS.slice();
+  if(q)  list = list.filter(d => (d.name||'').toLowerCase().includes(q) ||
+                                 String(d.id||'').toLowerCase().includes(q));
+  if(pt) list = list.filter(d => d.partner===pt);
+  if(st) list = list.filter(d => (d.status||'active')===st);
+
+  document.getElementById('drvCount').textContent = list.length + ' من ' + DRIVERS.length;
+  document.getElementById('tDrivers').innerHTML =
+    '<thead><tr><th>الكود</th><th>الاسم</th><th>التليفون</th><th>الشريك</th>'+
+    '<th>السيارة</th><th>الشفت</th><th>الحالة</th><th></th></tr></thead><tbody>' +
+    (list.length ? list.map(d => `<tr>
+      <td class="mono" dir="ltr">${esc(d.id)}</td>
+      <td style="font-weight:800">${esc(d.name)}</td>
+      <td class="mono" dir="ltr">${esc(d.sim || d.phone || '—')}</td>
+      <td>${esc(d.partner||'—')}</td>
+      <td class="mono" dir="ltr">${esc(d.car||'—')}</td>
+      <td class="mono" dir="ltr">${esc((d.shift_start||'—')+(d.shift_end?' → '+d.shift_end:''))}</td>
+      <td><span class="st ${(d.status||'active')==='active'?'g':'r'}">${(d.status||'active')==='active'?'نشط':'موقوف'}</span></td>
+      <td><button class="btn g" onclick="openEditDriver('${esc(d.id)}')">طلب تعديل</button></td>
+    </tr>`).join('') : '<tr><td colspan="8" class="empty">لا نتائج</td></tr>') + '</tbody>';
+}
+
+/* ═══════════ الحضور ═══════════ */
+function renderAtt(){
+  const last = {};
+  ATT.slice().reverse().forEach(r => { last[r.driver_id] = r; });
+  const working = Object.values(last).filter(r=>r.action==='clock_in').length;
+  document.getElementById('kAtt').innerHTML = [
+    ['تسجيلات اليوم', ATT.length, 'var(--blue)'],
+    ['سائق سجّل', Object.keys(last).length, 'var(--navy)'],
+    ['شغّال الآن', working, 'var(--green)']
+  ].map(([l,v,c])=>`<div class="kpi" style="--c:${c}"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+
+  document.getElementById('tAtt').innerHTML =
+    '<thead><tr><th>الوقت</th><th>السائق</th><th>الإجراء</th></tr></thead><tbody>' +
+    (ATT.length ? ATT.map(r => `<tr>
+      <td class="mono" dir="ltr">${kwTime(r.created_at)}</td>
+      <td>${esc(drvName(r.driver_id))}</td>
+      <td><span class="st ${r.action==='clock_in'?'g':'n'}">${r.action==='clock_in'?'دخول':'خروج'}</span></td>
+    </tr>`).join('') : '<tr><td colspan="3" class="empty">لا تسجيلات في هذا اليوم</td></tr>') + '</tbody>';
+}
+
+/* تسجيل الحضور مسموح مباشرة — شغل يومي لا يحتمل انتظار موافقة */
+function openClockSheet(){
+  sheet('تسجيل حضور يدوي', `
+    <div class="note">يُسجَّل باسمك في السجل، ويظهر للسائق في تطبيقه.</div>
+    <div class="fld"><label>السائق</label>
+      <select id="ckDrv" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
+        ${DRIVERS.map(d=>`<option value="${esc(d.id)}">${esc(d.id)} — ${esc(d.name)}</option>`).join('')}
+      </select></div>
+    <div class="fld"><label>الإجراء</label>
+      <select id="ckAct" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
+        <option value="clock_in">دخول</option><option value="clock_out">خروج</option>
+      </select></div>`,
+    'تسجيل', doClock);
+}
+async function doClock(){
+  const id  = document.getElementById('ckDrv').value;
+  const act = document.getElementById('ckAct').value;
+  try{
+    await api('clockin', { method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({ driver_id:id, action:act, created_at:new Date().toISOString() }) });
+    closeSheet(); toast('تم التسجيل');
+    await loadAttendance();
+  }catch(e){ toast('تعذّر التسجيل: ' + e.message, true); }
+}
+
+/* ═══════════ الجدول ═══════════ */
+function renderSched(){
+  const byDate = {};
+  SCHED.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
+  const dates = Object.keys(byDate).sort();
+  document.getElementById('tSched').innerHTML =
+    '<thead><tr><th>التاريخ</th><th>السائق</th><th>النوع</th><th>من</th><th>إلى</th></tr></thead><tbody>' +
+    (dates.length ? dates.flatMap(d => byDate[d].map(s => `<tr>
+      <td class="mono" dir="ltr">${fmtD(s.date)}</td>
+      <td>${esc(drvName(s.driver_id))}</td>
+      <td>${shiftLabel(s.shift_type)}</td>
+      <td class="mono" dir="ltr">${esc(s.shift_start||'—')}</td>
+      <td class="mono" dir="ltr">${esc(s.shift_end||'—')}</td></tr>`)).join('')
+     : '<tr><td colspan="5" class="empty">لا يوجد جدول في هذه الفترة</td></tr>') + '</tbody>';
+}
+function shiftLabel(t){
+  const m = {off:['إجازة','r'], holiday:['عطلة','a'], day:['نهاري','b'],
+             night:['ليلي','n'], morning:['صباحي','b'], evening:['مسائي','n']};
+  const x = m[t] || [t||'—','n'];
+  return `<span class="st ${x[1]}">${esc(x[0])}</span>`;
+}
+
+function openSchedReq(){
+  sheet('طلب تعديل الجدول', `
+    <div class="note warn">الطلب يصل للمالك ولا يُطبَّق إلا بموافقته.</div>
+    <div class="fld"><label>السائق</label>
+      <select id="sqDrv" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
+        ${DRIVERS.map(d=>`<option value="${esc(d.id)}">${esc(d.id)} — ${esc(d.name)}</option>`).join('')}
+      </select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div class="fld"><label>من تاريخ</label><input type="date" id="sqFrom" value="${kwToday()}" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+      <div class="fld"><label>إلى تاريخ</label><input type="date" id="sqTo" value="${kwToday()}" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+    </div>
+    <div class="fld"><label>نوع الشفت</label>
+      <select id="sqType" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
+        <option value="day">نهاري</option><option value="night">ليلي</option>
+        <option value="off">إجازة</option><option value="holiday">عطلة رسمية</option>
+      </select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div class="fld"><label>البداية</label><input type="time" id="sqS" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+      <div class="fld"><label>النهاية</label><input type="time" id="sqE" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+    </div>
+    <div class="fld"><label>سبب الطلب</label>
+      <textarea id="sqNote" rows="2" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px" placeholder="يساعد المالك يقرّر بسرعة"></textarea></div>`,
+    'إرسال الطلب', submitSchedReq);
+}
+async function submitSchedReq(){
+  const drv = document.getElementById('sqDrv').value;
+  const f   = document.getElementById('sqFrom').value;
+  const t   = document.getElementById('sqTo').value;
+  const ty  = document.getElementById('sqType').value;
+  const s   = document.getElementById('sqS').value;
+  const e   = document.getElementById('sqE').value;
+  const note= document.getElementById('sqNote').value.trim();
+  if(!f || !t){ toast('حدّد التاريخين', true); return; }
+  if(t < f){ toast('تاريخ النهاية قبل البداية', true); return; }
+
+  const rows = [];
+  for(let d = f; d <= t; d = addDays(d,1)){
+    rows.push({ driver_id:drv, date:d, shift_type:ty, shift_start:s, shift_end:e });
+    if(rows.length > 120){ toast('الفترة طويلة جداً', true); return; }
+  }
+  try{
+    await api('change_requests', { method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        kind:'schedule',
+        title:'تعديل جدول ' + drvName(drv) + ' — ' + rows.length + ' يوم',
+        payload:{ rows }, note: note || null })});
+    closeSheet(); toast('اتبعت للمالك — هتلاقيه في «طلباتي»');
+    await loadRequests(); if(VIEW==='req') renderReq();
+  }catch(err){ toast('تعذّر الإرسال: ' + err.message, true); }
+}
+
+/* ═══════════ السائق: إضافة وتعديل ═══════════ */
+function openAddDriver(){
+  sheet('طلب إضافة سائق', `
+    <div class="note warn">السائق ما يتضافش إلا بموافقة المالك.
+      الراتب والبيانات البنكية يحطّهم المالك بعد الموافقة — مش جزء من الطلب.</div>
+    ${f('adId','كود السائق','ltr','مثال: SA1099')}
+    ${f('adName','الاسم الكامل')}
+    ${f('adPhone','رقم التليفون','ltr')}
+    ${f('adCar','رقم السيارة','ltr')}
+    <div class="fld"><label>الشريك</label>
+      <select id="adPartner" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
+        <option value="keeta">Keeta</option><option value="homy">HOMY</option>
+        <option value="caboria">Caboria</option><option value="imile">iMile</option>
+      </select></div>
+    ${f('adNote','سبب الطلب')}`,
+    'إرسال الطلب', submitAddDriver);
+}
+function f(id, label, dir, ph){
+  return `<div class="fld"><label>${label}</label>
+    <input id="${id}" ${dir?`dir="${dir}"`:''} placeholder="${ph||''}"
+      style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>`;
+}
+async function submitAddDriver(){
+  const id = document.getElementById('adId').value.trim();
+  const nm = document.getElementById('adName').value.trim();
+  if(!id || !nm){ toast('الكود والاسم مطلوبين', true); return; }
+  if(DRIVERS.some(d => String(d.id)===id)){ toast('الكود ده مستخدم بالفعل', true); return; }
+  try{
+    await api('change_requests', { method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        kind:'add_driver', title:'إضافة سائق: ' + nm + ' (' + id + ')',
+        payload:{ id, name:nm,
+                  phone: document.getElementById('adPhone').value.trim() || null,
+                  sim:   document.getElementById('adPhone').value.trim() || null,
+                  car:   document.getElementById('adCar').value.trim() || null,
+                  partner: document.getElementById('adPartner').value,
+                  status:'active' },
+        note: document.getElementById('adNote').value.trim() || null })});
+    closeSheet(); toast('اتبعت للمالك');
+    await loadRequests(); if(VIEW==='req') renderReq();
+  }catch(e){ toast('تعذّر الإرسال: ' + e.message, true); }
+}
+
+function openEditDriver(id){
+  const d = DRIVERS.find(x => String(x.id)===String(id));
+  if(!d) return;
+  sheet('طلب تعديل بيانات — ' + esc(d.name), `
+    <div class="note warn">التعديل يحتاج موافقة المالك.</div>
+    <div class="fld"><label>الاسم</label><input id="edName" value="${esc(d.name||'')}" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+    <div class="fld"><label>التليفون</label><input id="edPhone" dir="ltr" value="${esc(d.sim||d.phone||'')}" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+    <div class="fld"><label>السيارة</label><input id="edCar" dir="ltr" value="${esc(d.car||'')}" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+    <div class="fld"><label>الحالة</label>
+      <select id="edStatus" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
+        <option value="active"${(d.status||'active')==='active'?' selected':''}>نشط</option>
+        <option value="inactive"${d.status==='inactive'?' selected':''}>موقوف</option>
+      </select></div>
+    <div class="fld"><label>سبب التعديل</label><textarea id="edNote" rows="2" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></textarea></div>`,
+    'إرسال الطلب', () => submitEditDriver(id));
+}
+async function submitEditDriver(id){
+  try{
+    await api('change_requests', { method:'POST',
+      headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        kind:'edit_driver', title:'تعديل بيانات: ' + drvName(id) + ' (' + id + ')',
+        payload:{ id,
+                  name:  document.getElementById('edName').value.trim(),
+                  phone: document.getElementById('edPhone').value.trim(),
+                  sim:   document.getElementById('edPhone').value.trim(),
+                  car:   document.getElementById('edCar').value.trim(),
+                  status:document.getElementById('edStatus').value },
+        note: document.getElementById('edNote').value.trim() || null })});
+    closeSheet(); toast('اتبعت للمالك');
+    await loadRequests(); if(VIEW==='req') renderReq();
+  }catch(e){ toast('تعذّر الإرسال: ' + e.message, true); }
+}
+
+/* ═══════════ الرسائل ═══════════ */
+function fillMsgTo(){
+  const sel = document.getElementById('msTo');
+  sel.innerHTML = '<option value="all">📢 كل السائقين</option>' +
+    DRIVERS.map(d=>`<option value="${esc(d.id)}">${esc(d.id)} — ${esc(d.name)}</option>`).join('');
+}
+async function sendMsg(){
+  const to = document.getElementById('msTo').value;
+  const ti = document.getElementById('msTitle').value.trim();
+  const bo = document.getElementById('msBody').value.trim();
+  if(!bo){ toast('اكتب نص الرسالة', true); return; }
+  try{
+    await api('messages', { method:'POST', headers:{'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        recipient: to, driver_id: to==='all' ? null : to,
+        title: ti || 'رسالة من الإدارة', body: bo,
+        from_type:'admin', from_name: ME.name,
+        created_at: new Date().toISOString() })});
+    document.getElementById('msTitle').value = '';
+    document.getElementById('msBody').value  = '';
+    toast('اتبعت');
+  }catch(e){ toast('تعذّر الإرسال: ' + e.message, true); }
+}
+
+/* ═══════════ طلباتي ═══════════ */
+function renderReq(){
+  const MINE = REQS.filter(r => r.requested_by === ME.id);
+  const pend = MINE.filter(r=>r.status==='pending').length;
+  document.getElementById('reqCount').textContent =
+    pend ? pend + ' قيد الانتظار' : 'لا شيء منتظر';
+  document.getElementById('tReq').innerHTML =
+    '<thead><tr><th>الطلب</th><th>النوع</th><th>التاريخ</th><th>الحالة</th><th>رد الإدارة</th></tr></thead><tbody>' +
+    (MINE.length ? MINE.map(r => {
+      const st = {pending:['قيد الانتظار','a'], approved:['تمت الموافقة','g'],
+                  rejected:['مرفوض','r']}[r.status] || [r.status,'n'];
+      const kd = {add_driver:'إضافة سائق', edit_driver:'تعديل بيانات',
+                  schedule:'تعديل جدول', other:'أخرى'}[r.kind] || r.kind;
+      return `<tr>
+        <td style="font-weight:800">${esc(r.title)}</td>
+        <td>${esc(kd)}</td>
+        <td class="mono" dir="ltr">${fmtD(r.requested_at)}</td>
+        <td><span class="st ${st[1]}">${st[0]}</span></td>
+        <td style="color:var(--muted);font-size:12px">${esc(r.decision_note||'—')}</td></tr>`;
+    }).join('') : '<tr><td colspan="5" class="empty">لم تقدّم أي طلب بعد</td></tr>') + '</tbody>';
+}
+
+/* ═══════════ الموافقات — للمالك ═══════════ */
+const KIND_AR = {add_driver:'إضافة سائق', edit_driver:'تعديل بيانات سائق',
+                 schedule:'تعديل جدول', other:'أخرى'};
+
+function renderAppr(){
+  const pend = REQS.filter(r => r.status==='pending');
+  const done = REQS.filter(r => r.status!=='pending').slice(0,40);
+  document.getElementById('apprCount').textContent =
+    pend.length ? pend.length + ' طلب' : 'مفيش طلبات منتظرة';
+
+  document.getElementById('apprList').innerHTML = pend.length ? pend.map(r => `
+    <div style="padding:13px 14px;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:9px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:900;font-size:14px">${esc(r.title)}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">
+            ${esc(KIND_AR[r.kind]||r.kind)} · ${fmtD(r.requested_at)}</div>
+          ${r.note ? `<div style="font-size:12.5px;color:#334155;margin-top:6px;
+            background:#f8fafc;border-radius:8px;padding:8px 10px">💬 ${esc(r.note)}</div>` : ''}
+          <details style="margin-top:7px">
+            <summary style="font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:800">
+              تفاصيل التغيير</summary>
+            <div style="margin-top:6px">${payloadView(r)}</div>
+          </details>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn ok" onclick="decide(${r.id},true)">موافقة</button>
+          <button class="btn g" onclick="decide(${r.id},false)">رفض</button>
+        </div>
+      </div></div>`).join('')
+    : '<div class="empty">مفيش طلبات في الانتظار</div>';
+
+  document.getElementById('tApprDone').innerHTML =
+    '<thead><tr><th>الطلب</th><th>التاريخ</th><th>القرار</th><th>الملاحظة</th></tr></thead><tbody>' +
+    (done.length ? done.map(r => {
+      const st = r.status==='approved' ? ['تمت الموافقة','g'] : ['مرفوض','r'];
+      return `<tr><td>${esc(r.title)}</td>
+        <td class="mono" dir="ltr">${fmtD(r.decided_at||r.requested_at)}</td>
+        <td><span class="st ${st[1]}">${st[0]}</span>${r.applied===false && r.status==='approved'
+            ? ' <span class="st a">لم يُطبَّق</span>' : ''}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(r.decision_note||'—')}</td></tr>`;
+    }).join('') : '<tr><td colspan="4" class="empty">لا شيء بعد</td></tr>') + '</tbody>';
+}
+
+/* عرض محتوى الطلب بشكل مقروء بدل JSON خام */
+function payloadView(r){
+  const p = r.payload || {};
+  if(r.kind === 'schedule'){
+    const rows = p.rows || [];
+    return '<table style="font-size:12px"><thead><tr><th>التاريخ</th><th>السائق</th>'
+      + '<th>الشفت</th><th>من</th><th>إلى</th></tr></thead><tbody>'
+      + rows.slice(0,30).map(x => `<tr><td class="mono" dir="ltr">${esc(x.date)}</td>
+          <td>${esc(drvName(x.driver_id))}</td><td>${shiftLabel(x.shift_type)}</td>
+          <td class="mono" dir="ltr">${esc(x.shift_start||'—')}</td>
+          <td class="mono" dir="ltr">${esc(x.shift_end||'—')}</td></tr>`).join('')
+      + (rows.length>30 ? `<tr><td colspan="5" style="color:var(--muted)">و${rows.length-30} يوم آخر…</td></tr>` : '')
+      + '</tbody></table>';
+  }
+  const LBL = {id:'الكود', name:'الاسم', phone:'التليفون', sim:'التليفون',
+               car:'السيارة', partner:'الشريك', status:'الحالة'};
+  const keys = Object.keys(p).filter(k => k!=='sim' && p[k]!=null && p[k]!=='');
+  return '<table style="font-size:12.5px"><tbody>' + keys.map(k =>
+    `<tr><th style="width:110px">${esc(LBL[k]||k)}</th><td>${esc(String(p[k]))}</td></tr>`
+  ).join('') + '</tbody></table>';
+}
+
+async function decide(id, approve){
+  const note = prompt(approve ? 'ملاحظة للموافقة (اختياري):'
+                              : 'سبب الرفض — هيشوفه صاحب الطلب:');
+  if(note === null) return;                 // ضغط إلغاء
+  if(!approve && !note.trim()){ toast('اكتب سبب الرفض', true); return; }
+  try{
+    const res = await rpc(approve ? 'apply_change_request' : 'reject_change_request',
+                          { p_id: id, p_note: note.trim() || null });
+    if(approve && res && res.applied === false){
+      toast('اتوافق عليه بس محتاج تطبيق يدوي', true);
+    } else {
+      toast(approve ? 'تمت الموافقة والتغيير اتطبّق' : 'اترفض');
+    }
+    await Promise.all([loadRequests(), loadDrivers(), loadSchedule()]);
+    renderAppr();
+  }catch(e){
+    toast('تعذّر التنفيذ: ' + e.message, true);
+  }
+}
+
+/* ═══════════ الشيت ═══════════ */
+let _sheetCb = null;
+function sheet(title, body, okLabel, cb){
+  _sheetCb = cb;
+  document.getElementById('sheetHost').innerHTML = `
+    <div class="sheet-bg" onclick="if(event.target===this)closeSheet()">
+      <div class="sheet">
+        <div class="sheet-h"><h3>${title}</h3>
+          <button class="sheet-x" onclick="closeSheet()">×</button></div>
+        <div class="sheet-b">${body}</div>
+        <div class="sheet-f">
+          <button class="btn g" onclick="closeSheet()">إلغاء</button>
+          <button class="btn p" id="sheetOk" onclick="sheetOk()">${okLabel}</button>
+        </div></div></div>`;
+}
+function closeSheet(){ document.getElementById('sheetHost').innerHTML=''; _sheetCb=null; }
+async function sheetOk(){
+  const b = document.getElementById('sheetOk');
+  if(b){ b.disabled = true; b.textContent = 'جاري…'; }
+  try{ if(_sheetCb) await _sheetCb(); }
+  finally{ if(b && document.body.contains(b)){ b.disabled=false; } }
+}
+
+/* ═══════════ التشغيل ═══════════ */
+(async function boot(){
+  document.getElementById('attDate').value  = kwToday();
+  document.getElementById('schFrom').value  = kwToday();
+  document.getElementById('schTo').value    = addDays(kwToday(), 6);
+  document.getElementById('gPass').addEventListener('keydown', e => {
+    if(e.key === 'Enter') doLogin();
+  });
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session) { try{ await afterAuth(); }catch(e){ console.warn(e); } }
+})();
+</script>
+</body>
+</html>
