@@ -20,6 +20,8 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg);color:var(--te
   min-height:100vh;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font-family:inherit}
 .hide{display:none !important}
+tbody tr.clk{cursor:pointer}
+tbody tr.clk:hover{background:#f8fafc}
 
 /* ── شاشة الدخول ── */
 #gate{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#0b2b3d,#16506f);
@@ -111,6 +113,157 @@ tr:last-child td{border-bottom:0}
 .toast.on{transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--red)}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* ═══════════════════════════════════════════════════════════════
+   جسر أسماء المتغيّرات
+   ───────────────────────────────────────────────────────────────
+   شاشة الجدول منقولة من ARK حرفياً بأنماطها، وARK بيسمّي ألوانه
+   بأسماء تانية. بدل ما نعدّل ١٢٠ سطر CSS ونكسر التطابق مع الأصل،
+   بنعرّف الأسماء دي كمرادفات للوحة ألوان المشرف. أي تعديل مستقبلي
+   على الشاشة يتنقل من ARK بلا لمس.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --s1:var(--surf); --s2:#f8fafc; --s3:#eef2f7;
+  --br:var(--line); --border:var(--line); --surface2:#f8fafc;
+  --accent:var(--navy); --muted2:#94a3b8;
+}
+
+/* ═══════ شاشة الجدول — منقولة من ARK ═══════ */
+.sch-week-header{display:grid;grid-template-columns:150px repeat(7,1fr);gap:3px;margin-bottom:3px}
+.sch-day-head{text-align:center;padding:6px 3px;border-radius:7px;font-size:11px;font-weight:700;background:var(--surface2);color:var(--muted2)}
+.sch-day-head.today{background:rgba(59,130,246,0.2);color:var(--blue)}
+.sch-row{display:grid;grid-template-columns:150px repeat(7,1fr);gap:3px;margin-bottom:3px;align-items:center}
+.sch-driver-cell{font-size:11px;font-weight:600;padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.sch-cell{border-radius:7px;min-height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted)}
+.sch-cell:hover{filter:brightness(1.2);transform:scale(1.04)}
+.sch-cell .cell-inner{font-size:9px;font-weight:700;text-align:center;line-height:1.3;padding:2px}
+.sch-cell .shift-t{font-size:8px;opacity:.8;display:block}
+.sch-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.sch-nav h3{font-size:14px;font-weight:900;flex:1;margin:0}
+.sch-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted2)}
+.leg-dot{width:9px;height:9px;border-radius:2px}
+.sch-fbar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.sch-ftab{padding:3px 9px;border-radius:20px;font-size:11px;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--muted2);font-family:'Cairo',sans-serif;transition:all .15s}
+.sch-ftab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.schv2-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:12px 14px;background:var(--s2);border:1px solid var(--br);border-radius:14px;margin-bottom:10px}
+.schv2-search{position:relative;flex:1 1 190px;min-width:170px}
+.schv2-search i{position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted);pointer-events:none}
+.schv2-search input{width:100%;padding:8px 10px;padding-inline-start:32px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12.5px;outline:none;transition:.15s}
+.schv2-search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(28,88,120,.10)}
+.schv2-fld{display:flex;flex-direction:column;gap:4px}
+.schv2-fld>span{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.3px}
+.schv2-fld select,.schv2-fld input{padding:7px 9px;background:var(--s1);border:1px solid var(--br);border-radius:9px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;outline:none}
+.schv2-fld input[type=number]{width:74px;text-align:center;font-family:'JetBrains Mono',monospace}
+.schv2-fld select:focus,.schv2-fld input:focus{border-color:var(--accent)}
+.schv2-spacer{flex:1 1 auto}
+.schv2-btn{padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s}
+.schv2-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.schv2-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.schv2-pal{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.schv2-pal-lbl{font-size:11px;font-weight:800;color:var(--muted);display:inline-flex;align-items:center;gap:5px;margin-inline-end:2px}
+.schv2-chip{padding:5px 11px;border-radius:20px;border:1.5px solid var(--br);background:var(--s1);font-family:'Cairo',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--muted);transition:.15s;display:inline-flex;align-items:center;gap:4px}
+.schv2-chip:hover{transform:translateY(-1px)}
+.schv2-chip.on{box-shadow:0 3px 10px rgba(15,23,41,.16)}
+.schv2-hint{font-size:10.5px;color:var(--muted);margin-inline-start:4px}
+
+.schv2-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-bottom:12px}
+.schv2-kpi{background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:10px 12px}
+.schv2-kpi-t{font-size:10.5px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.schv2-kpi-t i{font-size:14px}
+.schv2-kpi-v{font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1.1}
+.schv2-kpi-s{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600}
+
+.schv2-cover{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:12px 14px 10px;margin-bottom:14px}
+.schv2-cover-h{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:10px}
+.schv2-cover-h b{font-size:12.5px;font-weight:800;display:inline-flex;align-items:center;gap:6px;color:var(--text)}
+.schv2-cover-h b i{color:var(--accent)}
+.schv2-cover-lg{display:flex;flex-wrap:wrap;gap:10px;margin-inline-start:auto;font-size:10.5px;color:var(--muted);font-weight:600}
+.schv2-cover-lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-inline-end:4px;vertical-align:middle}
+.schv2-cover-b{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;min-height:150px}
+.schv2-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;border-radius:9px;padding:4px 2px 5px;transition:.15s}
+.schv2-col.peak{background:rgba(217,119,6,.07)}
+.schv2-col.today{background:rgba(28,88,120,.09)}
+.schv2-num{font-size:14px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1}
+.schv2-num i{font-size:11px}
+.schv2-bar-wrap{display:flex;flex-direction:column-reverse;width:60%;max-width:46px;min-height:2px;border-radius:5px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,41,.12)}
+.schv2-seg{width:100%}
+.schv2-day{font-size:10.5px;font-weight:700;color:var(--muted);text-align:center;line-height:1.35}
+.schv2-day b{color:var(--amber);font-size:9px}
+.schv2-day span{display:block;font-size:9px;opacity:.75;font-family:'JetBrains Mono',monospace}
+.schv2-target{position:absolute;inset-inline:0;border-top:1.5px dashed var(--red);opacity:.65;pointer-events:none}
+.schv2-target span{position:absolute;inset-inline-end:0;top:-8px;font-size:9px;font-weight:800;color:var(--red);background:var(--s1);padding:0 4px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+
+.schv2-scroll{overflow-x:auto;overflow-y:visible;padding-bottom:4px}
+.schv2-grid{min-width:940px}
+.schv2-head{display:grid;gap:4px;margin-bottom:5px;position:sticky;top:0;z-index:3}
+.schv2-hc{font-size:11px;font-weight:800;color:var(--muted);padding:7px 8px;background:var(--s2);border:1px solid var(--br);border-radius:9px}
+.schv2-hc.c{text-align:center}
+.schv2-hc span{display:block;font-size:9px;opacity:.7;font-weight:600;font-family:'JetBrains Mono',monospace}
+.schv2-hc.today{background:rgba(28,88,120,.13);color:var(--accent);border-color:rgba(28,88,120,.3)}
+.schv2-hc.peak{background:rgba(217,119,6,.11);color:var(--amber);border-color:rgba(217,119,6,.28)}
+.schv2-sticky{position:sticky;inset-inline-start:0;z-index:4;background:var(--s1)}
+.schv2-head .schv2-sticky{background:var(--s2)}
+
+.schv2-row{display:grid;gap:4px;margin-bottom:4px;align-items:stretch;border-radius:11px;transition:.12s}
+.schv2-row:hover{background:rgba(28,88,120,.045)}
+.schv2-row.warn{background:rgba(185,28,28,.055);box-shadow:inset 0 0 0 1px rgba(185,28,28,.22)}
+.schv2-drv{display:flex;align-items:center;gap:7px;padding:7px 9px;min-width:0}
+.schv2-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.schv2-dn{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.25}
+.schv2-dn b{font-size:11.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schv2-dn i{font-size:9px;color:var(--muted);font-style:normal;font-family:'JetBrains Mono',monospace}
+.schv2-acts{display:flex;gap:3px;opacity:0;transition:.15s}
+.schv2-row:hover .schv2-acts{opacity:1}
+.schv2-acts button{width:23px;height:23px;border-radius:7px;border:1px solid var(--br);background:var(--s2);color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:12px;padding:0}
+.schv2-acts button:hover{border-color:var(--accent);color:var(--accent)}
+
+.schv2-cell{border:1.5px solid var(--br);border-radius:9px;padding:5px 4px;min-height:50px;cursor:pointer;transition:.13s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--s1)}
+.schv2-cell:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(15,23,41,.13)}
+.schv2-cell b{font-size:10px;font-weight:800;text-align:center;line-height:1.25}
+.schv2-cell i{font-size:8.5px;font-style:normal;opacity:.85;font-family:'JetBrains Mono',monospace}
+.schv2-cell.gap{border-style:dashed;border-color:#cbd5e1;background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(148,163,184,.07) 6px 12px)}
+.schv2-cell.peak{box-shadow:inset 0 2px 0 rgba(217,119,6,.35)}
+.schv2-gap{font-size:15px;color:#94a3b8;font-weight:800}
+
+.schv2-tot{background:var(--s2);border:1px solid var(--br);border-radius:9px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.schv2-tot b{font-size:15px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1}
+.schv2-tot i{font-size:9px;color:var(--muted);font-style:normal;font-weight:700}
+.schv2-tot.warn{background:rgba(217,119,6,.13);border-color:rgba(217,119,6,.32)}
+.schv2-tot.warn b{color:var(--amber)}
+.schv2-tot.bad{background:rgba(185,28,28,.13);border-color:rgba(185,28,28,.32)}
+.schv2-tot.bad b{color:var(--red)}
+
+.schv2-foot{display:grid;gap:4px;margin-top:6px}
+.schv2-fc{font-size:12px;font-weight:800;color:var(--text);padding:7px 8px;background:var(--s2);border:1px solid var(--br);border-radius:9px;font-family:'JetBrains Mono',monospace}
+.schv2-fc.c{text-align:center}
+.schv2-fc span{font-size:9.5px;color:var(--muted);font-weight:600}
+.schv2-fc.bad{background:rgba(185,28,28,.12);border-color:rgba(185,28,28,.3);color:var(--red)}
+.schv2-fc.schv2-sticky{background:var(--s2);font-family:'Cairo',sans-serif;font-size:11px;color:var(--muted)}
+
+.schv2-empty{text-align:center;padding:34px 16px;color:var(--muted)}
+.schv2-empty i{font-size:34px;opacity:.3;display:block;margin-bottom:8px}
+.schv2-empty p{font-size:12.5px}
+.schv2-cell i,.schv2-hc span,.schv2-day span{direction:ltr;unicode-bidi:isolate}
+.schv2-dn b{unicode-bidi:plaintext}
+.schv2-dn i{direction:ltr;unicode-bidi:isolate}
+
+/* لمسات تخصّ المشرف وحده */
+.schv2-cell{cursor:pointer}
+.sched-pending{position:sticky;bottom:0;z-index:5;background:var(--surf);
+  border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  box-shadow:0 -6px 20px rgba(15,23,42,.06)}
+.sched-pending .n{background:var(--amber);color:#fff;border-radius:99px;
+  padding:2px 10px;font-weight:800;font-size:12px}
+.sched-pending .msg{flex:1;min-width:180px;font-size:12.5px;color:var(--muted)}
+.diff-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.diff-tbl th{background:#f8fafc;padding:7px 9px;text-align:start;font-size:11px;color:var(--muted)}
+.diff-tbl td{padding:7px 9px;border-top:1px solid var(--line)}
+.diff-old{color:var(--red);text-decoration:line-through;opacity:.75}
+.diff-new{color:var(--green);font-weight:700}
+
 </style>
 </head>
 <body>
@@ -138,7 +291,8 @@ tr:last-child td{border-bottom:0}
     <h2>نظام المشرف</h2>
     <div class="who" id="whoAmI">—</div>
   </div>
-  <button onclick="refreshAll()"><i class="ti ti-refresh"></i> تحديث</button>
+  <button class="ib" id="btnLang" onclick="toggleLang()" title="العربية / English">EN</button>
+      <button onclick="refreshAll()"><i class="ti ti-refresh"></i> تحديث</button>
   <button onclick="doLogout()">خروج</button>
 </div></header>
 
@@ -183,17 +337,61 @@ tr:last-child td{border-bottom:0}
 
   <!-- الجدول -->
   <section class="view" id="v-sched">
-    <div class="note warn">تعديل الجدول يحتاج موافقة الإدارة. اختر الأيام والشفتات
-      ثم أرسل الطلب — يصل للمالك فوراً ويُطبَّق فور موافقته.</div>
-    <div class="bar">
-      <input type="date" id="schFrom" onchange="loadSchedule()">
-      <span style="color:var(--muted);font-size:12.5px">إلى</span>
-      <input type="date" id="schTo" onchange="loadSchedule()">
-      <button class="btn gold" onclick="openSchedReq()"><i class="ti ti-calendar-plus"></i> طلب تعديل</button>
+    <div class="note warn">ابنِ الجدول زي ما إنت عايزه بالظبط — الشبكة دي نفس
+      اللي في ARK. ولما تخلّص اضغط <b>«إرسال للموافقة»</b>، فيوصل للمالك
+      بكل وردية اتغيّرت. <b>السائقون ما يشوفوش أي تعديل قبل ما يوافق.</b></div>
+
+    <div class="sch-nav">
+      <h3><i class="ti ti-calendar-week" style="color:var(--purple)"></i> جدول الدوامات والإجازات</h3>
+      <button class="btn g" onclick="prevWeek()"><i class="ti ti-chevron-right"></i></button>
+      <span id="sch-week-label" style="font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap"></span>
+      <button class="btn g" onclick="nextWeek()"><i class="ti ti-chevron-left"></i></button>
+      <button class="btn g" onclick="goToday()" style="font-size:11.5px">اليوم</button>
     </div>
-    <div class="card"><div class="card-h"><i class="ti ti-calendar"></i> الجدول</div>
-      <div style="overflow-x:auto"><table id="tSched"></table></div></div>
+    <div class="sch-fbar" id="sch-fbar"></div>
+    <div id="sch-kpis"></div>
+    <div id="sch-table"></div>
+
+    <!-- شريط الإرسال: بيفضل ظاهر تحت وبيعدّ التغييرات لحظة بلحظة -->
+    <div class="sched-pending" id="schPending">
+      <span class="n" id="schDiffN">0</span>
+      <span class="msg" id="schDiffMsg">مفيش تعديلات لسه</span>
+      <button class="btn g" onclick="schedDiscard()"><i class="ti ti-arrow-back-up"></i> تراجع عن الكل</button>
+      <button class="btn g" onclick="schedShowDiff()"><i class="ti ti-eye"></i> شوف التغييرات</button>
+      <button class="btn g" onclick="exportSchedExcel()"><i class="ti ti-table-export"></i> Excel</button>
+      <button class="btn gold" id="btnSubmitSched" onclick="submitScheduleReq()">
+        <i class="ti ti-send"></i> إرسال للموافقة</button>
+    </div>
   </section>
+
+  <!-- نافذة توقيت الوردية — منقولة من ARK -->
+  <div class="sheet-bg hide" id="timeModal" onclick="if(event.target===this)closeModal('timeModal')">
+    <div class="sheet" style="max-width:420px">
+      <div class="sheet-h"><h3 id="tm-title">تحديد الوردية</h3>
+        <button class="sheet-x" onclick="closeModal('timeModal')">×</button></div>
+      <div class="sheet-b">
+        <div id="tm-driver-name" style="font-weight:700;margin-bottom:10px"></div>
+        <div class="fld"><label>نوع الوردية</label>
+          <div id="tm-types" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>
+        <div style="display:flex;gap:9px">
+          <div class="fld" style="flex:1"><label>من</label>
+            <input type="time" id="tm-start" value="07:00" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+          <div class="fld" style="flex:1"><label>إلى</label>
+            <input type="time" id="tm-end" value="19:00" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn g" onclick="setQuickShift('morning','07:00','19:00')">🌅 صباحي 7←7</button>
+          <button class="btn g" onclick="setQuickShift('evening','19:00','07:00')">🌙 مسائي 7←7</button>
+          <button class="btn g" onclick="setQuickShift('off')">🔴 إجازة</button>
+          <button class="btn g" onclick="setQuickShift('holiday')">🌴 عطلة</button>
+        </div>
+      </div>
+      <div class="sheet-f">
+        <button class="btn g" onclick="clearCell()">مسح الخانة</button>
+        <button class="btn p" onclick="applyTimeShift()">حفظ</button>
+      </div>
+    </div>
+  </div>
 
   <!-- الرسائل -->
   <section class="view" id="v-msg">
@@ -255,7 +453,7 @@ const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
 });
 
 let ME = null;               // {id, email, name, role}
-let DRIVERS = [], ATT = [], SCHED = [], REQS = [];
+let DRIVERS = [], ATT = [], REQS = [];   /* SCHED معرّفة مع وحدة الجدول تحت */
 let VIEW = 'home';
 
 /* ── توقيت الكويت ── */
@@ -291,8 +489,12 @@ function esc(s){
     c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function toast(m, err){
+  /* ARK بينادي toast(msg,'s') للنجاح و toast(msg,'e') للخطأ، والمشرف
+     بينادي toast(msg,true) للخطأ. لو سِبناها زي ما هي، كل رسالة نجاح
+     جاية من شاشة الجدول هتطلع حمرا لأن 's' قيمة صادقة. */
+  const bad = (err === true || err === 'e');
   const t = document.getElementById('toast');
-  t.textContent = m; t.className = 'toast on' + (err?' err':'');
+  t.textContent = m; t.className = 'toast on' + (bad?' err':'');
   clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('on'), 3200);
 }
 
@@ -466,14 +668,7 @@ async function loadAttendance(){
   if(VIEW==='att') renderAtt();
   if(VIEW==='home') renderHome();
 }
-async function loadSchedule(){
-  const f = document.getElementById('schFrom').value || kwToday();
-  const t = document.getElementById('schTo').value   || addDays(kwToday(), 6);
-  document.getElementById('schFrom').value = f;
-  document.getElementById('schTo').value   = t;
-  SCHED = await api('schedules?date=gte.'+f+'&date=lte.'+t+'&order=date.asc&limit=1000') || [];
-  if(VIEW==='sched') renderSched();
-}
+
 async function loadRequests(){
   REQS = await api('change_requests?select=*&order=requested_at.desc&limit=100') || [];
   /* المالك بيشوف طلبات الكل (سياسة cr_read_admin)، والمشرف بيشوف
@@ -490,11 +685,7 @@ async function loadRequests(){
     a.textContent = n; a.classList.toggle('hide', !n);
   }
 }
-function addDays(ymd, n){
-  const d = new Date(ymd + 'T12:00:00Z');
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0,10);
-}
+
 function fillFilters(){
   const sel = document.getElementById('drvPartner');
   const cur = sel.value;
@@ -551,7 +742,7 @@ function renderDrivers(){
   document.getElementById('tDrivers').innerHTML =
     '<thead><tr><th>الكود</th><th>الاسم</th><th>التليفون</th><th>الشريك</th>'+
     '<th>السيارة</th><th>الشفت</th><th>الحالة</th><th></th></tr></thead><tbody>' +
-    (list.length ? list.map(d => `<tr>
+    (list.length ? list.map(d => `<tr class="clk" onclick="openDriverCard('${esc(d.id)}')">
       <td class="mono" dir="ltr">${esc(d.id)}</td>
       <td style="font-weight:800">${esc(d.name)}</td>
       <td class="mono" dir="ltr">${esc(d.sim || d.phone || '—')}</td>
@@ -559,7 +750,7 @@ function renderDrivers(){
       <td class="mono" dir="ltr">${esc(d.car||'—')}</td>
       <td class="mono" dir="ltr">${esc((d.shift_start||'—')+(d.shift_end?' → '+d.shift_end:''))}</td>
       <td><span class="st ${(d.status||'active')==='active'?'g':'r'}">${(d.status||'active')==='active'?'نشط':'موقوف'}</span></td>
-      <td><button class="btn g" onclick="openEditDriver('${esc(d.id)}')">طلب تعديل</button></td>
+      <td><button class="btn g" onclick="event.stopPropagation();openEditDriver('${esc(d.id)}')">طلب تعديل</button></td>
     </tr>`).join('') : '<tr><td colspan="8" class="empty">لا نتائج</td></tr>') + '</tbody>';
 }
 
@@ -610,78 +801,11 @@ async function doClock(){
 }
 
 /* ═══════════ الجدول ═══════════ */
-function renderSched(){
-  const byDate = {};
-  SCHED.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
-  const dates = Object.keys(byDate).sort();
-  document.getElementById('tSched').innerHTML =
-    '<thead><tr><th>التاريخ</th><th>السائق</th><th>النوع</th><th>من</th><th>إلى</th></tr></thead><tbody>' +
-    (dates.length ? dates.flatMap(d => byDate[d].map(s => `<tr>
-      <td class="mono" dir="ltr">${fmtD(s.date)}</td>
-      <td>${esc(drvName(s.driver_id))}</td>
-      <td>${shiftLabel(s.shift_type)}</td>
-      <td class="mono" dir="ltr">${esc(s.shift_start||'—')}</td>
-      <td class="mono" dir="ltr">${esc(s.shift_end||'—')}</td></tr>`)).join('')
-     : '<tr><td colspan="5" class="empty">لا يوجد جدول في هذه الفترة</td></tr>') + '</tbody>';
-}
-function shiftLabel(t){
-  const m = {off:['إجازة','r'], holiday:['عطلة','a'], day:['نهاري','b'],
-             night:['ليلي','n'], morning:['صباحي','b'], evening:['مسائي','n']};
-  const x = m[t] || [t||'—','n'];
-  return `<span class="st ${x[1]}">${esc(x[0])}</span>`;
-}
 
-function openSchedReq(){
-  sheet('طلب تعديل الجدول', `
-    <div class="note warn">الطلب يصل للمالك ولا يُطبَّق إلا بموافقته.</div>
-    <div class="fld"><label>السائق</label>
-      <select id="sqDrv" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
-        ${DRIVERS.map(d=>`<option value="${esc(d.id)}">${esc(d.id)} — ${esc(d.name)}</option>`).join('')}
-      </select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-      <div class="fld"><label>من تاريخ</label><input type="date" id="sqFrom" value="${kwToday()}" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
-      <div class="fld"><label>إلى تاريخ</label><input type="date" id="sqTo" value="${kwToday()}" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
-    </div>
-    <div class="fld"><label>نوع الشفت</label>
-      <select id="sqType" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
-        <option value="day">نهاري</option><option value="night">ليلي</option>
-        <option value="off">إجازة</option><option value="holiday">عطلة رسمية</option>
-      </select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-      <div class="fld"><label>البداية</label><input type="time" id="sqS" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
-      <div class="fld"><label>النهاية</label><input type="time" id="sqE" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px"></div>
-    </div>
-    <div class="fld"><label>سبب الطلب</label>
-      <textarea id="sqNote" rows="2" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px" placeholder="يساعد المالك يقرّر بسرعة"></textarea></div>`,
-    'إرسال الطلب', submitSchedReq);
-}
-async function submitSchedReq(){
-  const drv = document.getElementById('sqDrv').value;
-  const f   = document.getElementById('sqFrom').value;
-  const t   = document.getElementById('sqTo').value;
-  const ty  = document.getElementById('sqType').value;
-  const s   = document.getElementById('sqS').value;
-  const e   = document.getElementById('sqE').value;
-  const note= document.getElementById('sqNote').value.trim();
-  if(!f || !t){ toast('حدّد التاريخين', true); return; }
-  if(t < f){ toast('تاريخ النهاية قبل البداية', true); return; }
 
-  const rows = [];
-  for(let d = f; d <= t; d = addDays(d,1)){
-    rows.push({ driver_id:drv, date:d, shift_type:ty, shift_start:s, shift_end:e });
-    if(rows.length > 120){ toast('الفترة طويلة جداً', true); return; }
-  }
-  try{
-    await api('change_requests', { method:'POST',
-      headers:{'Prefer':'return=minimal'},
-      body: JSON.stringify({
-        kind:'schedule',
-        title:'تعديل جدول ' + drvName(drv) + ' — ' + rows.length + ' يوم',
-        payload:{ rows }, note: note || null })});
-    closeSheet(); toast('اتبعت للمالك — هتلاقيه في «طلباتي»');
-    await loadRequests(); if(VIEW==='req') renderReq();
-  }catch(err){ toast('تعذّر الإرسال: ' + err.message, true); }
-}
+
+
+
 
 /* ═══════════ السائق: إضافة وتعديل ═══════════ */
 function openAddDriver(){
@@ -856,13 +980,35 @@ function payloadView(r){
   const p = r.payload || {};
   if(r.kind === 'schedule'){
     const rows = p.rows || [];
-    return '<table style="font-size:12px"><thead><tr><th>التاريخ</th><th>السائق</th>'
+    const sm   = p.summary || {};
+    /* shiftLabel اتشالت لما نقلنا شبكة ARK — بنستعمل SHIFT_TYPES
+       بتاعتها عشان الاسم والأيقونة يبقوا زي اللي المشرف شافه بالظبط */
+    const lbl = t => {
+      if(t === '__delete__') return '<span style="color:var(--red)">🗑 تُمسح</span>';
+      const st = (typeof getST === 'function') ? getST(t) : null;
+      return st ? (st.icon + ' ' + st.labelAr) : esc(t || '—');
+    };
+    const dels = rows.filter(x => x.shift_type === '__delete__').length;
+    let head = '';
+    if(sm.count){
+      head = '<div style="font-size:12px;background:#f8fafc;border-radius:8px;'
+           + 'padding:8px 10px;margin-bottom:7px;line-height:1.9">'
+           + '<b>' + esc(String(sm.count)) + ' وردية</b>'
+           + (sm.from ? ' · من <span dir="ltr" class="mono">' + esc(sm.from) + '</span>'
+                      + ' إلى <span dir="ltr" class="mono">' + esc(sm.to) + '</span>' : '')
+           + (dels ? ' · <span style="color:var(--red)">' + dels + ' تُمسح</span>' : '')
+           + (sm.drivers && sm.drivers.length
+               ? '<br><span style="color:var(--muted)">' + esc(sm.drivers.join('، ')) + '</span>' : '')
+           + '</div>';
+    }
+    return head
+      + '<table style="font-size:12px"><thead><tr><th>التاريخ</th><th>السائق</th>'
       + '<th>الشفت</th><th>من</th><th>إلى</th></tr></thead><tbody>'
-      + rows.slice(0,30).map(x => `<tr><td class="mono" dir="ltr">${esc(x.date)}</td>
-          <td>${esc(drvName(x.driver_id))}</td><td>${shiftLabel(x.shift_type)}</td>
+      + rows.slice(0,40).map(x => `<tr><td class="mono" dir="ltr">${esc(x.date)}</td>
+          <td>${esc(drvName(x.driver_id))}</td><td>${lbl(x.shift_type)}</td>
           <td class="mono" dir="ltr">${esc(x.shift_start||'—')}</td>
           <td class="mono" dir="ltr">${esc(x.shift_end||'—')}</td></tr>`).join('')
-      + (rows.length>30 ? `<tr><td colspan="5" style="color:var(--muted)">و${rows.length-30} يوم آخر…</td></tr>` : '')
+      + (rows.length>40 ? `<tr><td colspan="5" style="color:var(--muted)">و${rows.length-40} وردية أخرى…</td></tr>` : '')
       + '</tbody></table>';
   }
   const LBL = {id:'الكود', name:'الاسم', phone:'التليفون', sim:'التليفون',
@@ -919,14 +1065,1393 @@ async function sheetOk(){
 /* ═══════════ التشغيل ═══════════ */
 (async function boot(){
   document.getElementById('attDate').value  = kwToday();
-  document.getElementById('schFrom').value  = kwToday();
-  document.getElementById('schTo').value    = addDays(kwToday(), 6);
+  
+  
   document.getElementById('gPass').addEventListener('keydown', e => {
     if(e.key === 'Enter') doLogin();
   });
   const { data:{ session } } = await sb.auth.getSession();
   if(session) { try{ await afterAuth(); }catch(e){ console.warn(e); } }
 })();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   شبكة الجدول — منقولة من ARK (السلاسل_نظام_ادارة_السائقين_28)
+   بلا تعديل في منطقها. اللي اتشال منها: كل دالة بتكتب في
+   Supabase مباشرة، وأزرار الواتساب — لأن بثّ جدول لسه ما
+   اتوافقش عليه للسائقين بيلغي الموافقة من أساسها.
+   ═══════════════════════════════════════════════════════════════ */
+const DAYS_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* SCHED بتتعرّف في طبقة الجسر تحت مع SCHED_BASE — مش هنا */
+
+// === مرونة الجدول: إعدادات قابلة للتعديل ===
+let SHIFT_HOURS = parseInt(localStorage.getItem('sv_shift_hours')||'12');
+let MAX_OFF_WEEK = parseInt(localStorage.getItem('sv_max_off')||'2');
+function setShiftHours(v){ SHIFT_HOURS = Math.max(1, Math.min(24, parseInt(v)||12)); localStorage.setItem('sv_shift_hours', SHIFT_HOURS); renderSchedTable(); }
+function setMaxOff(v){ MAX_OFF_WEEK = Math.max(0, Math.min(7, parseInt(v)||2)); localStorage.setItem('sv_max_off', MAX_OFF_WEEK); renderSchedTable(); }
+function weekOffCount(drvId, weekStart){
+  let off = 0;
+  for(let i=0;i<7;i++){
+    const d = addDays(weekStart, i);
+    const e = SCHED[drvId + '_' + fmtDate(d)];
+    if(e && (e.type==='off' || e.type==='holiday')) off++;
+  }
+  return off;
+}
+
+function monthOffCount(drvId, year, month){
+  // year is full year (e.g. 2026), month is 1-12
+  const ym = year + '-' + String(month).padStart(2,'0');
+  let off = 0;
+  for(const key in SCHED){
+    if(!key.startsWith(drvId + '_')) continue;
+    const datePart = key.split('_')[1] || '';
+    if(!datePart.startsWith(ym)) continue;
+    const e = SCHED[key];
+    if(e && (e.type==='off' || e.type==='holiday')) off++;
+  }
+  return off;
+}
+function weekWorkStats(drvId, weekStart){
+  let work=0, off=0, holiday=0;
+  for(let i=0;i<7;i++){
+    const d = addDays(weekStart, i);
+    const e = SCHED[drvId + '_' + fmtDate(d)];
+    if(!e) continue;
+    if(e.type==='off') off++;
+    else if(e.type==='holiday') holiday++;
+    else work++;
+  }
+  return {work, off, holiday, total: work*SHIFT_HOURS};
+}
+/* حُذف تحميل sl_sched2: ده تخزين ARK على جهاز المالك. المشرف بيحمّل من القاعدة. */
+function saveSched(){ schedPersist(); }
+
+const SHIFT_TYPES = [
+  {id:'work',    labelAr:'يعمل',        labelEn:'Working',  color:'#10b981', icon:'✅'},
+  {id:'morning', labelAr:'صباحي',       labelEn:'Morning',  color:'#3b82f6', icon:'🌅'},
+  {id:'evening', labelAr:'مسائي',       labelEn:'Evening',  color:'#a855f7', icon:'🌙'},
+  {id:'off',     labelAr:'إجازة',       labelEn:'Day Off',  color:'#ef4444', icon:'🔴'},
+  {id:'holiday', labelAr:'عطلة رسمية', labelEn:'Holiday',  color:'#f59e0b', icon:'🌴'},
+];
+function getST(id){ return SHIFT_TYPES.find(s=>s.id===id)||null; }
+
+let schedWeekStart = getMonday(new Date());
+let schedFilt = 'all';
+
+function getMonday(d){ /* now: returns Saturday of current week (Egypt/Kuwait week starts Sat) */ const dt=new Date(d); const day=dt.getDay(); const offset=(day+1)%7; dt.setDate(dt.getDate()-offset); dt.setHours(0,0,0,0); return dt; }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDate(d){ const dt=new Date(d); const y=dt.getFullYear(); const m=String(dt.getMonth()+1).padStart(2,'0'); const da=String(dt.getDate()).padStart(2,'0'); return y+'-'+m+'-'+da; }
+function fmtDAr(d){ return d.getDate()+' '+MONTHS_AR[d.getMonth()]; }
+
+
+
+function renderSchedFbar(){
+  const el=document.getElementById('sch-fbar'); if(!el) return;
+  el.innerHTML='<span class="sch-ftab'+(schedFilt==='all'?' on':'')+'" onclick="setSchedFilt(\'all\')">الكل</span>'
+    +PARTNERS.map(p=>'<span class="sch-ftab'+(schedFilt===p.id?' on':'')+'" onclick="setSchedFilt(\''+p.id+'\')" style="'+(schedFilt===p.id?'background:'+p.color+';border-color:'+p.color+';color:#fff':'')+'">'
+      +p.name+'</span>').join('');
+}
+function setSchedFilt(f){ schedFilt=f; renderSchedFbar(); renderSchedTable(); }
+function prevWeek(){ schedWeekStart=addDays(schedWeekStart,-7); renderSchedTable(); }
+function nextWeek(){ schedWeekStart=addDays(schedWeekStart,7);  renderSchedTable(); }
+function goToday(){  schedWeekStart=getMonday(new Date());       renderSchedTable(); }
+
+/* ══════════════════════════════════════════════════════════════
+   جدول الدوامات — النسخة التفاعلية
+   مؤشرات حية · رسم التغطية اليومية · بحث وفرز · وضع التلوين · تراجع
+   ══════════════════════════════════════════════════════════════ */
+
+let schedSearch   = '';
+let schedSort     = 'name';                                  // name | hours | off | gaps
+let schedPaint    = null;                                    // null = وضع النقر العادي
+let MIN_COVER     = parseInt(localStorage.getItem('sv_min_cover') || '4');
+const SCHED_UNDO  = [];
+
+function setMinCover(v){
+  MIN_COVER = Math.max(0, Math.min(99, parseInt(v) || 0));
+  try{ localStorage.setItem('sv_min_cover', MIN_COVER); }catch(e){}
+  renderSchedTable();
+}
+function setSchedSearch(v){ schedSearch = (v||'').trim().toLowerCase(); renderSchedTable(true); }
+function setSchedSort(v){ schedSort = v; renderSchedTable(); }
+
+function setPaint(id){
+  schedPaint = (schedPaint === id) ? null : id;
+  renderSchedTable();
+  if(schedPaint){
+    const st = getST(schedPaint);
+    toast('وضع التلوين: ' + (st ? st.labelAr : 'مسح') + ' — دوس على أي خانة', 's');
+  }
+}
+
+/* ─── تراجع ─── */
+function schedSnapshot(){
+  try{ SCHED_UNDO.push(JSON.stringify(SCHED)); }catch(e){}
+  if(SCHED_UNDO.length > 25) SCHED_UNDO.shift();
+}
+function schedUndo(){
+  if(!SCHED_UNDO.length){ toast('مفيش خطوة أرجعها','e'); return; }
+  try{
+    SCHED = JSON.parse(SCHED_UNDO.pop());
+    schedPersist();
+    renderSchedTable();
+    toast('تم التراجع ↩','s');
+  }catch(e){ toast('مقدرتش أتراجع','e'); }
+}
+
+/* ─── قائمة السائقين المعروضة بعد الفلترة والفرز ─── */
+function schedDrivers(){
+  let list = schedFilt === 'all' ? DRIVERS.slice() : DRIVERS.filter(d => d.partner === schedFilt);
+  if(typeof isAdminStaff === 'function') list = list.filter(d => !isAdminStaff(d));
+  if(schedSearch){
+    list = list.filter(d =>
+      (d.name||'').toLowerCase().includes(schedSearch) ||
+      (d.id||'').toLowerCase().includes(schedSearch));
+  }
+  const gaps = d => {
+    let g = 0;
+    for(let i=0;i<7;i++) if(!SCHED[d.id + '_' + fmtDate(addDays(schedWeekStart,i))]) g++;
+    return g;
+  };
+  if(schedSort === 'hours') list.sort((a,b) => weekWorkStats(b.id,schedWeekStart).total - weekWorkStats(a.id,schedWeekStart).total);
+  else if(schedSort === 'off') list.sort((a,b) => weekWorkStats(b.id,schedWeekStart).off - weekWorkStats(a.id,schedWeekStart).off);
+  else if(schedSort === 'gaps') list.sort((a,b) => gaps(b) - gaps(a));
+  else list.sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ar'));
+  return list;
+}
+
+/* ─── تطبيق وردية على خانة (بدون فتح المودال) ─── */
+function paintCell(drvId, dateStr){
+  const key = drvId + '_' + dateStr;
+  schedSnapshot();
+  if(schedPaint === 'clear'){
+    delete SCHED[key];
+      /* لا كتابة مباشرة — التغيير محلي لحد الموافقة */
+  }else{
+    const st = getST(schedPaint); if(!st) return;
+    const isOff = (st.id === 'off' || st.id === 'holiday');
+    const shift = isOff ? '' : (st.id === 'morning' ? '07:00-19:00' : st.id === 'evening' ? '19:00-07:00' : '07:00-19:00');
+    SCHED[key] = { type: st.id, shift };
+    const p = shift.split('-');
+      /* لا كتابة مباشرة — التغيير محلي لحد الموافقة */
+  }
+  schedPersist();
+  renderSchedTable();
+}
+
+/* ─── تعبئة أو مسح أسبوع سائق كامل ─── */
+function fillRow(drvId){
+  const st = getST(schedPaint) || getST('work');
+  if(!confirm('تعبئة الأسبوع كله لهذا السائق بـ«' + st.labelAr + '»؟')) return;
+  schedSnapshot();
+  const isOff = (st.id === 'off' || st.id === 'holiday');
+  const shift = isOff ? '' : (st.id === 'evening' ? '19:00-07:00' : '07:00-19:00');
+  for(let i=0;i<7;i++){
+    const ds = fmtDate(addDays(schedWeekStart, i));
+    SCHED[drvId + '_' + ds] = { type: st.id, shift };
+    const p = shift.split('-');
+      /* لا كتابة مباشرة — التغيير محلي لحد الموافقة */
+  }
+  schedPersist();
+  renderSchedTable(); toast('اتعبّى الأسبوع ✅','s');
+}
+function clearRow(drvId){
+  if(!confirm('مسح جدول الأسبوع كله لهذا السائق؟')) return;
+  schedSnapshot();
+  for(let i=0;i<7;i++){
+    const ds = fmtDate(addDays(schedWeekStart, i));
+    delete SCHED[drvId + '_' + ds];
+      /* لا كتابة مباشرة — التغيير محلي لحد الموافقة */
+  }
+  schedPersist();
+  renderSchedTable(); toast('اتمسح الأسبوع','s');
+}
+
+/* ─── إحصاءات الأسبوع المعروض ─── */
+function schedWeekAgg(list, days){
+  const byDay = days.map(() => ({work:0, morning:0, evening:0, off:0, holiday:0, none:0}));
+  let hours = 0, gaps = 0, overOff = 0, workDays = 0;
+  list.forEach(drv => {
+    const s = weekWorkStats(drv.id, schedWeekStart);
+    hours += s.total; workDays += s.work;
+    const monthOff = monthOffCount(drv.id, schedWeekStart.getFullYear(), schedWeekStart.getMonth()+1);
+    if(monthOff > MAX_OFF_WEEK) overOff++;
+    days.forEach((d, i) => {
+      const e = SCHED[drv.id + '_' + fmtDate(d)];
+      if(!e){ byDay[i].none++; gaps++; }
+      else if(byDay[i][e.type] !== undefined) byDay[i][e.type]++;
+      else byDay[i].work++;
+    });
+  });
+  const cover = byDay.map(b => b.work + b.morning + b.evening);
+  return {byDay, cover, hours, gaps, overOff, workDays};
+}
+
+/* ══════════════════════════════════════════════════════════════
+   العرض
+   ══════════════════════════════════════════════════════════════ */
+function renderSchedTable(keepFocus){
+  const el = document.getElementById('sch-table'); if(!el) return;
+  const today = fmtDate(new Date());
+  const days  = Array.from({length:7}, (_,i) => addDays(schedWeekStart, i));
+  const lbl   = document.getElementById('sch-week-label');
+  if(lbl) lbl.textContent = fmtDAr(days[0]) + ' — ' + fmtDAr(days[6]) + '  ' + days[0].getFullYear();
+
+  const list  = schedDrivers();
+  const agg   = schedWeekAgg(list, days);
+  const cells = list.length * 7;
+  const isPeak = d => (d.getDay() === 4 || d.getDay() === 5);   // الخميس والجمعة — ذروة الطلبات
+
+  /* ── شريط الأدوات ── */
+  let tb = '<div class="schv2-bar">';
+  tb += '<div class="schv2-search"><i class="ti ti-search"></i>'
+      + '<input id="schSearchInp" type="search" placeholder="دوّر على سائق…" value="' + _esc(schedSearch) + '" oninput="setSchedSearch(this.value)"></div>';
+  tb += '<label class="schv2-fld"><span>ترتيب</span><select onchange="setSchedSort(this.value)">'
+      + ['name:الاسم','hours:الساعات ↓','off:الإجازات ↓','gaps:غير مجدول ↓']
+        .map(o => { const [v,t] = o.split(':'); return '<option value="'+v+'"'+(schedSort===v?' selected':'')+'>'+t+'</option>'; }).join('')
+      + '</select></label>';
+  tb += '<label class="schv2-fld"><span>ساعات الشيفت</span><input type="number" min="1" max="24" value="' + SHIFT_HOURS + '" onchange="setShiftHours(this.value)"></label>';
+  tb += '<label class="schv2-fld"><span>أقصى إجازات/شهر</span><input type="number" min="0" max="31" value="' + MAX_OFF_WEEK + '" onchange="setMaxOff(this.value)"></label>';
+  tb += '<label class="schv2-fld"><span>أقل تغطية مطلوبة</span><input type="number" min="0" max="99" value="' + MIN_COVER + '" onchange="setMinCover(this.value)"></label>';
+  tb += '<div class="schv2-spacer"></div>';
+  tb += '<button class="schv2-btn" onclick="schedUndo()"' + (SCHED_UNDO.length ? '' : ' disabled') + '><i class="ti ti-arrow-back-up"></i> تراجع</button>';
+  tb += '<button class="schv2-btn" onclick="copyWeekToNext()"><i class="ti ti-copy"></i> نسخ للأسبوع الجاي</button>';
+  tb += '</div>';
+
+  /* ── لوحة التلوين ── */
+  let pal = '<div class="schv2-pal"><span class="schv2-pal-lbl"><i class="ti ti-brush"></i> وضع التلوين</span>';
+  SHIFT_TYPES.forEach(st => {
+    const on = schedPaint === st.id;
+    pal += '<button class="schv2-chip' + (on ? ' on' : '') + '" onclick="setPaint(\'' + st.id + '\')"'
+        + ' style="' + (on ? 'background:' + st.color + ';border-color:' + st.color + ';color:#fff' : 'border-color:' + st.color + '55;color:' + st.color) + '">'
+        + st.icon + ' ' + st.labelAr + '</button>';
+  });
+  pal += '<button class="schv2-chip' + (schedPaint === 'clear' ? ' on' : '') + '" onclick="setPaint(\'clear\')"'
+      + (schedPaint === 'clear' ? ' style="background:#64748b;border-color:#64748b;color:#fff"' : '') + '><i class="ti ti-eraser"></i> مسح</button>';
+  pal += '<span class="schv2-hint">' + (schedPaint ? 'دوس على أي خانة تتلوّن على طول' : 'اختار وردية علشان تلوّن بسرعة — أو دوس خانة لفتح التوقيت') + '</span>';
+  pal += '</div>';
+
+  /* ── المؤشرات ── */
+  const gapPc   = cells ? Math.round(agg.gaps / cells * 100) : 0;
+  const minIdx  = agg.cover.indexOf(Math.min.apply(null, agg.cover));
+  const avgDays = list.length ? (agg.workDays / list.length).toFixed(1) : '0';
+  const kpi = (v, l, c, ic, sub) =>
+    '<div class="schv2-kpi"><div class="schv2-kpi-t"><i class="ti ' + ic + '" style="color:' + c + '"></i>' + l + '</div>'
+    + '<div class="schv2-kpi-v" style="color:' + c + '">' + v + '</div>'
+    + (sub ? '<div class="schv2-kpi-s">' + sub + '</div>' : '') + '</div>';
+  let kpis = '<div class="schv2-kpis">';
+  kpis += kpi(list.length, 'سائقين معروضين', 'var(--accent)', 'ti-users', schedFilt === 'all' ? 'كل الشركاء' : (getPartner(schedFilt) ? getPartner(schedFilt).name : ''));
+  kpis += kpi(agg.hours.toLocaleString('en'), 'ساعة في الأسبوع', 'var(--green)', 'ti-clock-hour-4', agg.workDays + ' يوم عمل');
+  kpis += kpi(avgDays, 'متوسط أيام العمل', 'var(--accent)', 'ti-calendar-stats', 'للسائق الواحد');
+  kpis += kpi(agg.gaps, 'خانة غير مجدولة', gapPc > 15 ? 'var(--red)' : (agg.gaps ? 'var(--amber)' : 'var(--green)'), 'ti-help-circle', gapPc + '% من الجدول');
+  kpis += kpi(agg.overOff, 'تجاوزوا حد الإجازات', agg.overOff ? 'var(--red)' : 'var(--green)', 'ti-alert-triangle', 'الحد ' + MAX_OFF_WEEK + ' في الشهر');
+  kpis += kpi(agg.cover[minIdx] || 0, 'أقل تغطية', (agg.cover[minIdx] || 0) < MIN_COVER ? 'var(--red)' : 'var(--green)', 'ti-shield-half',
+              DAYS_AR[days[minIdx].getDay()] + ' · المطلوب ' + MIN_COVER);
+  kpis += '</div>';
+
+  /* ── رسم التغطية اليومية ── */
+  const maxCov = Math.max(MIN_COVER, Math.max.apply(null, agg.cover), 1);
+  let cov = '<div class="schv2-cover"><div class="schv2-cover-h">'
+          + '<b><i class="ti ti-chart-bar"></i> التغطية اليومية</b>'
+          + '<span class="schv2-cover-lg">'
+          + SHIFT_TYPES.filter(s => s.id !== 'off' && s.id !== 'holiday')
+              .map(s => '<i style="background:' + s.color + '"></i>' + s.labelAr).join('')
+          + '<i style="background:transparent;border:1px dashed var(--red)"></i>الحد الأدنى</span></div>';
+  cov += '<div class="schv2-cover-b">';
+  cov += '<div class="schv2-target" style="bottom:' + (14 + (MIN_COVER / maxCov) * 96) + 'px"><span>' + MIN_COVER + '</span></div>';
+  days.forEach((d, i) => {
+    const b = agg.byDay[i], c = agg.cover[i];
+    const short = c < MIN_COVER;
+    cov += '<div class="schv2-col' + (isPeak(d) ? ' peak' : '') + (fmtDate(d) === today ? ' today' : '') + '">';
+    cov += '<div class="schv2-num" style="color:' + (short ? 'var(--red)' : 'var(--text)') + '">' + c + (short ? ' <i class="ti ti-alert-triangle"></i>' : '') + '</div>';
+    cov += '<div class="schv2-bar-wrap">';
+    [['work','#10b981'],['morning','#3b82f6'],['evening','#a855f7']].forEach(([k, color]) => {
+      if(!b[k]) return;
+      cov += '<div class="schv2-seg" title="' + k + ': ' + b[k] + '" style="height:' + (b[k] / maxCov * 96) + 'px;background:' + color + '"></div>';
+    });
+    cov += '</div>';
+    cov += '<div class="schv2-day">' + DAYS_AR[d.getDay()] + (isPeak(d) ? ' <b>·ذروة</b>' : '') + '<span>' + d.getDate() + '/' + (d.getMonth()+1) + '</span></div>';
+    cov += '</div>';
+  });
+  cov += '</div></div>';
+
+  /* ── الجدول ── */
+  const GRID = 'grid-template-columns:188px repeat(7,minmax(88px,1fr)) 104px 96px;';
+  let html = '<div class="schv2-scroll"><div class="schv2-grid">';
+
+  html += '<div class="schv2-head" style="' + GRID + '">';
+  html += '<div class="schv2-hc schv2-sticky">السائق</div>';
+  days.forEach(d => {
+    const isT = fmtDate(d) === today;
+    html += '<div class="schv2-hc c' + (isT ? ' today' : '') + (isPeak(d) ? ' peak' : '') + '">'
+         + DAYS_AR[d.getDay()] + '<span>' + d.getDate() + '/' + (d.getMonth()+1) + '</span></div>';
+  });
+  html += '<div class="schv2-hc c">إجمالي الأسبوع</div><div class="schv2-hc c">إجازات الشهر</div>';
+  html += '</div>';
+
+  if(!list.length){
+    html += '<div class="schv2-empty"><i class="ti ti-user-search"></i><p>مفيش سائقين مطابقين للبحث أو الفلتر.</p></div>';
+  }
+
+  list.forEach(drv => {
+    const pc = pColor(drv.partner);
+    const s  = weekWorkStats(drv.id, schedWeekStart);
+    const monthOff = monthOffCount(drv.id, schedWeekStart.getFullYear(), schedWeekStart.getMonth()+1);
+    const overM = monthOff > MAX_OFF_WEEK, atM = monthOff === MAX_OFF_WEEK;
+
+    html += '<div class="schv2-row' + (overM ? ' warn' : '') + '" style="' + GRID + '">';
+    html += '<div class="schv2-drv schv2-sticky" title="' + _esc(drv.name) + '">'
+         +   '<span class="schv2-dot" style="background:' + pc + '"></span>'
+         +   '<span class="schv2-dn"><b>' + _esc(drv.name) + '</b><i>' + _esc(drv.id) + '</i></span>'
+         +   '<span class="schv2-acts">'
+         +     '<button title="تعبئة الأسبوع" onclick="event.stopPropagation();fillRow(\'' + drv.id + '\')"><i class="ti ti-layout-rows"></i></button>'
+         +     '<button title="مسح الأسبوع" onclick="event.stopPropagation();clearRow(\'' + drv.id + '\')"><i class="ti ti-eraser"></i></button>'
+         +   '</span></div>';
+
+    days.forEach(d => {
+      const ds = fmtDate(d), e = SCHED[drv.id + '_' + ds], st = e ? getST(e.type) : null;
+      const click = schedPaint ? 'paintCell' : 'toggleCell';
+      const style = st ? 'border-color:' + st.color + '66;background:' + st.color + '14;color:' + st.color : '';
+      html += '<div class="schv2-cell' + (st ? '' : ' gap') + (isPeak(d) ? ' peak' : '') + '" style="' + style + '"'
+           +  ' onclick="' + click + '(\'' + drv.id + '\',\'' + ds + '\')">';
+      if(st){
+        const p = e.shift ? e.shift.split('-') : [];
+        html += '<b>' + st.icon + ' ' + st.labelAr + '</b>';
+        if(p.length === 2) html += '<i>' + p[0] + ' → ' + p[1] + '</i>';
+      }else html += '<span class="schv2-gap">+</span>';
+      html += '</div>';
+    });
+
+    html += '<div class="schv2-tot"><b>' + s.total + '</b><i>ساعة · ' + s.work + ' عمل</i></div>';
+    html += '<div class="schv2-tot ' + (overM ? 'bad' : (atM ? 'warn' : '')) + '"><b>' + monthOff + '/' + MAX_OFF_WEEK + '</b><i>إجازات' + (overM ? ' ⚠' : '') + '</i></div>';
+    html += '</div>';
+  });
+
+  /* صف التغطية أسفل الجدول */
+  if(list.length){
+    html += '<div class="schv2-foot" style="' + GRID + '">';
+    html += '<div class="schv2-fc schv2-sticky">التغطية</div>';
+    days.forEach((d, i) => {
+      const c = agg.cover[i], short = c < MIN_COVER;
+      html += '<div class="schv2-fc c' + (short ? ' bad' : '') + '">' + c + '<span>/' + MIN_COVER + '</span></div>';
+    });
+    html += '<div class="schv2-fc c">' + agg.hours + '</div><div class="schv2-fc c">' + agg.overOff + ' ⚠</div>';
+    html += '</div>';
+  }
+
+  html += '</div></div>';
+
+  const kbox = document.getElementById('sch-kpis');
+  if(kbox) kbox.innerHTML = tb + pal + kpis + cov;
+  el.innerHTML = html;
+
+  if(keepFocus){
+    const inp = document.getElementById('schSearchInp');
+    if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+}
+
+// === نسخ جدول الأسبوع الحالي للي بعده ===
+function copyWeekToNext(){
+  if(!confirm('سيتم نسخ جدول الأسبوع الحالي للأسبوع اللي بعده. متأكد؟')) return;
+  let copied = 0;
+  const drvList = schedFilt==='all' ? DRIVERS : DRIVERS.filter(d=>d.partner===schedFilt);
+  drvList.forEach(drv => {
+    for(let i=0;i<7;i++){
+      const srcDate = addDays(schedWeekStart, i);
+      const dstDate = addDays(srcDate, 7);
+      const srcKey = drv.id + '_' + fmtDate(srcDate);
+      const dstKey = drv.id + '_' + fmtDate(dstDate);
+      const entry = SCHED[srcKey];
+      if(!entry) continue;
+      SCHED[dstKey] = JSON.parse(JSON.stringify(entry));
+      /* لا كتابة مباشرة — التغيير محلي لحد الموافقة */
+      copied++;
+    }
+  });
+  saveSched();
+  toast('تم نسخ '+copied+' مناوبة للأسبوع القادم ✅','s');
+}
+
+
+
+
+
+
+
+
+
+function exportSchedExcel(){
+  const days=Array.from({length:7},(_,i)=>addDays(schedWeekStart,i));
+  const drvList=schedFilt==='all'?DRIVERS:DRIVERS.filter(d=>d.partner===schedFilt);
+  /* الملف المنزَّل بيتبع اللغة المختارة — svT بتترجم خارج الـDOM */
+  const L = (s) => (typeof svT === 'function' ? svT(s) : s);
+  const hdr=['"'+L('الكود')+'"','"'+L('الاسم')+'"','"'+L('الشريك')+'"']
+    .concat(days.map(d=>'"'+L(DAYS_AR[d.getDay()])+' '+d.getDate()+'/'+(d.getMonth()+1)+'"')).join(',');
+  const rows=drvList.map(d=>{
+    const par=(PARTNERS.find(p=>p.id===d.partner)||{name:'—'}).name;
+    const cells=days.map(day=>{
+      const key=d.id+'_'+fmtDate(day);
+      const entry=SCHED[key]; const st=entry?getST(entry.type):null;
+      return '"'+(st?L(st.labelAr)+(entry&&entry.shift?' ('+entry.shift+')':''):'—')+'"';
+    });
+    return ['"'+d.id+'"','"'+d.name+'"','"'+par+'"'].concat(cells).join(',');
+  });
+  const wAr=fmtDAr(days[0])+' — '+fmtDAr(days[6])+' '+days[0].getFullYear();
+  const csv='\uFEFF"شركة السلاسل — جدول الأسبوع: '+wAr+'"\n\n'+hdr+'\n'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='جدول_'+fmtDate(days[0])+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('تم تصدير الجدول','s');
+}
+
+
+
+
+// ==========================================
+// UPDATED SCHEDULE - TIME PICKER + PNG EXPORT
+// ==========================================
+
+// Time picker state
+let tmDriverId = null;
+let tmDateStr  = null;
+let tmShiftId  = 'work';
+
+// Override toggleCell to open time picker on click
+function toggleCell(drvId, dateStr){
+  tmDriverId = drvId;
+  tmDateStr  = dateStr;
+  const key  = drvId + '_' + dateStr;
+  const cur  = SCHED[key];
+
+  if (cur) {
+    tmShiftId = cur.type;
+    const parts = (cur.shift||'').split('-');
+    document.getElementById('tm-start').value = parts[0] || '07:00';
+    document.getElementById('tm-end').value   = parts[1] || '19:00';
+  } else {
+    tmShiftId = 'work';
+    document.getElementById('tm-start').value = '07:00';
+    document.getElementById('tm-end').value   = '19:00';
+  }
+
+  const drv = DRIVERS.find(x=>x.id===drvId);
+  const day = new Date(dateStr);
+  document.getElementById('tm-title').innerHTML =
+    '<i class="ti ti-clock" style="color:var(--accent)"></i> تحديد الوردية — ' +
+    DAYS_AR[day.getDay()] + ' ' + fmtDAr(day);
+  document.getElementById('tm-driver-name').textContent =
+    drv ? '👤 ' + drv.name : '';
+
+  document.getElementById('timeModal').classList.add('on');
+}
+
+function setQuickShift(type, start, end){
+  tmShiftId = type;
+  if(start) document.getElementById('tm-start').value = start;
+  if(end)   document.getElementById('tm-end').value   = end;
+
+  // if off/holiday apply immediately
+  if(type === 'off' || type === 'holiday'){
+    applyTimeShift();
+  }
+}
+
+function applyTimeShift(){
+  if(!tmDriverId || !tmDateStr) return;
+  const key   = tmDriverId + '_' + tmDateStr;
+  const start = document.getElementById('tm-start').value;
+  const end   = document.getElementById('tm-end').value;
+  const st    = getST(tmShiftId);
+
+  // قاعدة: لا تتجاوز MAX_OFF_WEEK (يُستخدم كحد شهري الآن) أيام إجازة في الشهر
+  if(st && (st.id==='off' || st.id==='holiday')){
+    const cellDate = new Date(tmDateStr);
+    const yr = cellDate.getFullYear();
+    const mo = cellDate.getMonth() + 1;
+    const ym = yr + '-' + String(mo).padStart(2,'0');
+    let currentOff = 0;
+    for(const k in SCHED){
+      if(k === key) continue; // exclude the cell we're editing
+      if(!k.startsWith(tmDriverId + '_')) continue;
+      const dPart = k.split('_')[1] || '';
+      if(!dPart.startsWith(ym)) continue;
+      const e = SCHED[k];
+      if(e && (e.type==='off' || e.type==='holiday')) currentOff++;
+    }
+    if(currentOff >= MAX_OFF_WEEK){
+      if(!confirm('هذا السائق وصل للحد الأقصى ('+MAX_OFF_WEEK+' أيام) من الإجازات هذا الشهر. هل تريد التجاوز فعلاً؟')) {
+        return;
+      }
+    }
+  }
+
+  if(!st){
+    delete SCHED[key];
+    /* لا كتابة مباشرة — التغيير محلي لحد الموافقة */
+  }
+  else {
+    const shift = (st.id==='off'||st.id==='holiday') ? '' : (start && end ? start+'-'+end : '');
+    SCHED[key] = { type: st.id, shift };
+    /* لا كتابة مباشرة — التغيير محلي لحد الموافقة */
+  }
+
+  saveSched();
+  closeModal('timeModal');
+  renderSchedTable();
+}
+
+
+
+// ============================================================
+// EXPORT SCHEDULE AS PNG IMAGE
+// ============================================================
+function exportScheduleImage(){
+  const days = Array.from({length:7}, (_,i) => addDays(schedWeekStart, i));
+  const drvList = schedFilt==='all' ? DRV : DRV.filter(d=>d.partner===schedFilt);
+  const wAr = fmtDAr(days[0]) + ' — ' + fmtDAr(days[6]) + '  ' + days[0].getFullYear();
+  const wEn = MONTHS_EN[days[0].getMonth()]+' '+days[0].getDate()+' — '+MONTHS_EN[days[6].getMonth()]+' '+days[6].getDate()+', '+days[6].getFullYear();
+
+  // Build a clean HTML table for export
+  const COL_W = 110;
+  const ROW_H = 44;
+  const NAME_W = 160;
+  const W = NAME_W + COL_W * 7 + 40;
+  const H = (drvList.length + 2) * ROW_H + 100;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Arial,sans-serif">`;
+
+  // Background
+  svg += `<rect width="${W}" height="${H}" fill="#0d1117" rx="12"/>`;
+
+  // Header
+  svg += `<rect x="0" y="0" width="${W}" height="56" fill="#161b22" rx="12"/>`;
+  svg += `<rect x="0" y="44" width="${W}" height="12" fill="#161b22"/>`;
+  svg += `<text x="${W/2}" y="22" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="bold">Al-Salasil Co. — Weekly Schedule</text>`;
+  svg += `<text x="${W/2}" y="42" text-anchor="middle" fill="#7d8590" font-size="11">${wEn}</text>`;
+
+  // Day headers
+  const dayColors = ['#7d8590','#7d8590','#7d8590','#7d8590','#10b981','#ef4444','#7d8590'];
+  days.forEach((d,i)=>{
+    const x = NAME_W + 20 + i*COL_W + COL_W/2;
+    const y = 68;
+    const isToday = fmtDate(d) === fmtDate(new Date());
+    svg += `<rect x="${NAME_W+20+i*COL_W+2}" y="58" width="${COL_W-4}" height="26" fill="${isToday?'rgba(59,130,246,0.3)':'rgba(255,255,255,0.05)'}" rx="6"/>`;
+    svg += `<text x="${x}" y="${y+4}" text-anchor="middle" fill="${isToday?'#60a5fa':dayColors[d.getDay()]}" font-size="11" font-weight="bold">${DAYS_EN[d.getDay()]}</text>`;
+    svg += `<text x="${x}" y="${y+16}" text-anchor="middle" fill="${isToday?'#60a5fa':'#7d8590'}" font-size="9">${d.getDate()}/${d.getMonth()+1}</text>`;
+  });
+
+  // Driver rows
+  drvList.forEach((drv,ri)=>{
+    const y = 92 + ri * ROW_H;
+    const bg = ri%2===0 ? '#161b22' : '#1a2030';
+    svg += `<rect x="10" y="${y+2}" width="${W-20}" height="${ROW_H-4}" fill="${bg}" rx="7"/>`;
+
+    // Driver name
+    const pc = pColor(drv.partner);
+    const shortName = drv.name.split(' ').slice(0,2).join(' ');
+    svg += `<text x="25" y="${y+18}" fill="${pc}" font-size="11" font-weight="bold">${shortName}</text>`;
+    svg += `<text x="25" y="${y+32}" fill="#7d8590" font-size="9">${drv.id}</text>`;
+
+    // Day cells
+    days.forEach((d,i)=>{
+      const key = drv.id+'_'+fmtDate(d);
+      const entry = SCHED[key];
+      const st = entry ? getST(entry.type) : null;
+      const cx = NAME_W + 20 + i*COL_W + 4;
+      const cy = y + 4;
+      const cw = COL_W - 8;
+      const ch = ROW_H - 8;
+
+      if(st){
+        svg += `<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" fill="${st.color}22" stroke="${st.color}66" stroke-width="1" rx="5"/>`;
+        // Icon + type
+        svg += `<text x="${cx+cw/2}" y="${cy+14}" text-anchor="middle" fill="${st.color}" font-size="12">${st.icon}</text>`;
+        svg += `<text x="${cx+cw/2}" y="${cy+24}" text-anchor="middle" fill="${st.color}" font-size="9" font-weight="bold">${st.labelEn}</text>`;
+        // Time
+        if(entry.shift){
+          svg += `<text x="${cx+cw/2}" y="${cy+34}" text-anchor="middle" fill="${st.color}" font-size="8" opacity="0.9">${entry.shift}</text>`;
+        }
+      } else {
+        svg += `<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1" rx="5"/>`;
+        svg += `<text x="${cx+cw/2}" y="${cy+ch/2+4}" text-anchor="middle" fill="#7d8590" font-size="10">—</text>`;
+      }
+    });
+  });
+
+  // Footer
+  const fy = 96 + drvList.length * ROW_H;
+  svg += `<rect x="10" y="${fy+4}" width="${W-20}" height="28" fill="rgba(239,68,68,0.1)" stroke="rgba(239,68,68,0.3)" stroke-width="1" rx="7"/>`;
+  svg += `<text x="${W/2}" y="${fy+22}" text-anchor="middle" fill="#f87171" font-size="10" font-weight="bold">⚠ Any delay of 15 minutes or more = Automatic half-day deduction</text>`;
+
+  svg += `</svg>`;
+
+  // Convert SVG to PNG via canvas
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
+  img.onload = function(){
+    const canvas = document.getElementById('sch-export-canvas');
+    canvas.width  = W * 2;
+    canvas.height = H * 2;
+    canvas.style.display = 'none';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+
+    canvas.toBlob(function(pngBlob){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(pngBlob);
+      const now = new Date();
+      a.download = 'Schedule_' + wEn.replace(/[, ]+/g,'_') + '.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('تم تصدير الجدول كصورة PNG ✅','s');
+    }, 'image/png');
+  };
+  img.src = url;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   شاشة الجدول — الجسر بين شبكة ARK وطابور الموافقات
+   ───────────────────────────────────────────────────────────────
+   الشبكة نفسها منقولة من ARK حرفياً تحت، بلا تعديل في منطقها،
+   عشان أي تحسين يحصل هناك يتنقل هنا بنسخ ولصق.
+
+   الفرق الوحيد — وهو الفرق كله: في ARK كل ضغطة بتتكتب في القاعدة
+   على طول. هنا مفيش ولا كتابة واحدة. التعديلات بتتجمّع محلياً،
+   وزر «إرسال للموافقة» بيحسب الفرق بين اللي المشرف بناه واللي
+   منشور فعلاً، ويبعت الفرق ده كطلب. السائق ما يشوفش حرف قبل ما
+   المالك يوافق.
+
+   والحماية مش في إننا شِلنا دوال الكتابة من الملف: القاعدة نفسها
+   بترفض أي كتابة في schedules من دور authenticated غير الأدمن.
+   شيل الزر ده تنظيم شاشة، والرفض بييجي من التريجر.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── مرادفات لأسماء ARK ─── */
+function _esc(s){ return esc(s); }
+/* MONTHS_EN جاية مع وحدة ARK فوق */
+
+/* الشركاء مشتقّون من السائقين — مفيش جدول شركاء عند المشرف.
+   اللون ثابت لكل شريك عشان ما يتغيّرش كل تحميل. */
+const PARTNER_COLORS = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626',
+                        '#0891b2','#c026d3','#65a30d'];
+let PARTNERS = [];
+function rebuildPartners(){
+  const names = [...new Set(DRIVERS.map(d => d.partner).filter(Boolean))].sort();
+  PARTNERS = names.map((n,i) => ({ id:n, name:n, color:PARTNER_COLORS[i % PARTNER_COLORS.length] }));
+}
+function getPartner(id){ return PARTNERS.find(p => p.id === id); }
+function pColor(id){ const p = getPartner(id); return p ? p.color : '#94a3b8'; }
+
+/* v_drivers_ops ما فيهاش staff_type، فكل من في المنظور سائق تشغيلي */
+function isAdminStaff(d){ return !!d && d.staff_type === 'admin'; }
+
+function closeModal(id){
+  const el = document.getElementById(id);
+  if(el) el.classList.add('hide');
+}
+
+/* ─── حالة الجدول ─── */
+let SCHED      = {};   /* اللي المشرف شغّال عليه — مفتاح: driverId_YYYY-MM-DD */
+let SCHED_BASE = {};   /* اللي منشور فعلاً في القاعدة — مرجع المقارنة */
+const DRAFT_KEY = 'sv_sched_draft';
+
+function schedKey(drv, date){ return drv + '_' + date; }
+
+function rowsToSched(rows){
+  const o = {};
+  (rows || []).forEach(r => {
+    const s = (r.shift_start || '').slice(0,5), e = (r.shift_end || '').slice(0,5);
+    o[schedKey(r.driver_id, r.date)] = {
+      type:  r.shift_type || 'work',
+      shift: (s && e) ? (s + '-' + e) : ''
+    };
+  });
+  return o;
+}
+
+function schedPersist(){
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(SCHED)); }catch(e){}
+  updateDiffBar();
+}
+
+/* نحمّل نافذة واسعة: ٣ أسابيع للخلف و٨ للأمام. المشرف بيتنقّل
+   بين الأسابيع بلا انتظار شبكة في كل ضغطة. */
+async function loadSchedule(){
+  const from = addDaysYMD(kwToday(), -21);
+  const to   = addDaysYMD(kwToday(),  56);
+  const rows = await api('schedules?date=gte.' + from + '&date=lte.' + to
+                       + '&order=date.asc&limit=5000') || [];
+  SCHED_BASE = rowsToSched(rows);
+  SCHED = JSON.parse(JSON.stringify(SCHED_BASE));
+
+  /* مسوّدة محفوظة من جلسة سابقة: بنرجّعها فوق المنشور، عشان
+     المشرف ما يضيّعش شغل ساعة لأن الصفحة اتقفلت. */
+  try{
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if(d && typeof d === 'object') Object.assign(SCHED, d);
+  }catch(e){}
+
+  rebuildPartners();
+  if(VIEW === 'sched') renderSched();
+}
+
+function addDaysYMD(ymd, n){
+  const d = new Date(ymd + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0,10);
+}
+
+/* ─── الفرق بين المبنيّ والمنشور ─── */
+function schedDiff(){
+  const out = [], seen = {};
+  const cmp = k => {
+    if(seen[k]) return; seen[k] = 1;
+    const a = SCHED_BASE[k], b = SCHED[k];
+    const sa = a ? (a.type + '|' + (a.shift || '')) : '';
+    const sb = b ? (b.type + '|' + (b.shift || '')) : '';
+    if(sa === sb) return;
+    const i = k.lastIndexOf('_');
+    const driver_id = k.slice(0, i), date = k.slice(i + 1);
+    if(!b){
+      out.push({ driver_id, date, shift_type:'__delete__', shift_start:null, shift_end:null,
+                 _old:a, _new:null });
+    }else{
+      const p = (b.shift || '').split('-');
+      out.push({ driver_id, date, shift_type:b.type,
+                 shift_start:p[0] || null, shift_end:p[1] || null,
+                 _old:a || null, _new:b });
+    }
+  };
+  Object.keys(SCHED).forEach(cmp);
+  Object.keys(SCHED_BASE).forEach(cmp);
+  return out.sort((x,y) => x.date.localeCompare(y.date) ||
+                           String(drvName(x.driver_id)).localeCompare(String(drvName(y.driver_id))));
+}
+
+function updateDiffBar(){
+  const d = schedDiff();
+  const n = document.getElementById('schDiffN');
+  const m = document.getElementById('schDiffMsg');
+  const b = document.getElementById('btnSubmitSched');
+  if(!n) return;
+  n.textContent = d.length;
+  n.style.background = d.length ? 'var(--amber)' : '#94a3b8';
+  m.textContent = d.length
+    ? d.length + ' وردية اتغيّرت ولسه ما اتبعتتش — السائقون شايفين القديم'
+    : 'مفيش تعديلات لسه — اللي ظاهر هو المنشور عند السائقين';
+  if(b) b.disabled = !d.length;
+}
+
+function schedDiscard(){
+  const d = schedDiff();
+  if(!d.length) return toast('مفيش تعديلات أصلاً');
+  if(!confirm('هترجع كل التعديلات (' + d.length + ' وردية) للمنشور حالياً. متأكد؟')) return;
+  SCHED = JSON.parse(JSON.stringify(SCHED_BASE));
+  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+  renderSchedTable(); updateDiffBar();
+  toast('رجّعنا كل حاجة زي ما كانت');
+}
+
+function diffCellTxt(e){
+  if(!e) return '<span style="color:var(--muted)">فاضية</span>';
+  const st = getST(e.type);
+  return (st ? st.icon + ' ' + st.labelAr : e.type) + (e.shift ? ' <span dir="ltr">' + esc(e.shift) + '</span>' : '');
+}
+
+function schedShowDiff(){
+  const d = schedDiff();
+  if(!d.length) return toast('مفيش تعديلات');
+  const rows = d.map(r => '<tr><td>' + esc(r.date) + '</td><td>' + esc(drvName(r.driver_id)) + '</td>'
+    + '<td class="diff-old">' + diffCellTxt(r._old) + '</td>'
+    + '<td class="diff-new">' + diffCellTxt(r._new) + '</td></tr>').join('');
+  sheet('التغييرات اللي هتتبعت (' + d.length + ')',
+    '<table class="diff-tbl"><thead><tr><th>التاريخ</th><th>السائق</th>'
+    + '<th>قبل</th><th>بعد</th></tr></thead><tbody>' + rows + '</tbody></table>',
+    'إرسال للموافقة',
+    async () => { closeSheet(); await submitScheduleReq(); });
+}
+
+async function submitScheduleReq(){
+  const d = schedDiff();
+  if(!d.length) return toast('مفيش تعديلات تتبعت', true);
+  const why = prompt('اكتب سبب التعديل — المالك هيقراه قبل ما يوافق:', '');
+  if(why === null) return;
+  if(!why.trim()) return toast('السبب مطلوب', true);
+
+  const btn = document.getElementById('btnSubmitSched');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> جارٍ الإرسال…'; }
+  try{
+    /* requested_by بيتحطّ من الخادم (DEFAULT auth.uid()) لا من هنا،
+       فمحدش يقدر يقدّم طلباً باسم غيره. */
+    await api('change_requests', {
+      method:'POST',
+      headers:{ 'Prefer':'return=minimal' },
+      body: JSON.stringify({
+        kind:'schedule',
+        reason: why.trim(),
+        payload: {
+          rows: d.map(r => ({ driver_id:r.driver_id, date:r.date, shift_type:r.shift_type,
+                              shift_start:r.shift_start, shift_end:r.shift_end })),
+          summary: {
+            count: d.length,
+            from:  d[0].date,
+            to:    d[d.length-1].date,
+            drivers: [...new Set(d.map(r => drvName(r.driver_id)))].slice(0,40)
+          }
+        }
+      })
+    });
+    try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+    toast('اتبعت للمالك — ' + d.length + ' وردية في انتظار الموافقة');
+    await loadRequests();
+    updateDiffBar();
+  }catch(e){
+    toast(e.message || 'تعذّر الإرسال', true);
+  }finally{
+    if(btn){ btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> إرسال للموافقة'; }
+  }
+}
+
+/* ─── نافذة توقيت الوردية ─── */
+function renderTmTypes(){
+  const el = document.getElementById('tm-types'); if(!el) return;
+  el.innerHTML = SHIFT_TYPES.map(st =>
+    '<button class="schv2-chip' + (tmShiftId === st.id ? ' on' : '') + '"'
+    + ' onclick="tmShiftId=\'' + st.id + '\';renderTmTypes()"'
+    + ' style="' + (tmShiftId === st.id
+        ? 'background:' + st.color + ';border-color:' + st.color + ';color:#fff'
+        : 'border-color:' + st.color + '55;color:' + st.color) + '">'
+    + st.icon + ' ' + st.labelAr + '</button>').join('');
+}
+function clearCell(){
+  if(!tmDriverId || !tmDateStr) return;
+  schedSnapshot();
+  delete SCHED[schedKey(tmDriverId, tmDateStr)];
+  schedPersist();
+  closeModal('timeModal');
+  renderSchedTable();
+}
+
+/* toggleCell في ARK بيفتح نافذة بـclassList.add('on') — عندنا 'hide' */
+const _arkToggleCell = toggleCell;
+toggleCell = function(drvId, dateStr){
+  _arkToggleCell(drvId, dateStr);
+  const m = document.getElementById('timeModal');
+  if(m){ m.classList.remove('hide'); m.classList.remove('on'); }
+  renderTmTypes();
+};
+
+/* ─── نقطة الدخول للتبويب ─── */
+function renderSched(){
+  if(!PARTNERS.length) rebuildPartners();
+  renderSchedFbar();
+  renderSchedTable();
+  updateDiffBar();
+}
+
+
+/* ═══════════ بطاقة السائق ═══════════
+   بتعرض كل حقل موجود فعلاً في v_drivers_ops بدل قائمة ثابتة —
+   فلو المنظور اتوسّع بعدين، الحقل الجديد يظهر لوحده. وفيه فلتر
+   احتياطي بيمنع أي حقل اسمه فيه مرتب أو بنك من الظهور، حتى لو
+   اتسرّب للمنظور بالغلط يوماً ما. الحماية الحقيقية في القاعدة،
+   ودي حزام زيادة. */
+const DRV_LBL = {
+  id:'الكود', name:'الاسم', name_en:'الاسم بالإنجليزي', phone:'التليفون',
+  sim:'رقم الشريحة', partner:'الشريك', car:'السيارة', plate:'رقم اللوحة',
+  status:'الحالة', nationality:'الجنسية', license:'رخصة القيادة',
+  residency:'الإقامة', join_date:'تاريخ الالتحاق', birth_date:'تاريخ الميلاد',
+  shift_type:'نوع الوردية', shift_start:'بداية الوردية', shift_end:'نهاية الوردية',
+  notes:'ملاحظات', email:'الإيميل'
+};
+const DRV_HIDE = /salary|iban|bank|wage|pay|account|رات|بنك|حساب/i;
+
+function openDriverCard(id){
+  const d = DRIVERS.find(x => String(x.id) === String(id));
+  if(!d) return;
+
+  const skip = ['id','name'];
+  const rows = Object.keys(d)
+    .filter(k => !skip.includes(k) && !DRV_HIDE.test(k))
+    .filter(k => d[k] !== null && d[k] !== undefined && d[k] !== '')
+    .map(k => {
+      let v = String(d[k]);
+      if(k === 'status') v = v === 'active' ? 'نشط' : 'موقوف';
+      const ltr = /^[\d\s:+\-\/]+$/.test(v);
+      return `<tr><th style="width:130px">${esc(DRV_LBL[k] || k)}</th>
+        <td${ltr ? ' class="mono" dir="ltr"' : ''}>${esc(v)}</td></tr>`;
+    }).join('');
+
+  /* أسبوعه من الجدول المنشور — نفس المصدر اللي السائق بيشوفه */
+  let wk = '';
+  if(typeof SCHED_BASE === 'object'){
+    const start = (typeof schedWeekStart !== 'undefined') ? schedWeekStart : new Date();
+    const cells = [];
+    for(let i=0;i<7;i++){
+      const dt = addDays(start, i), ds = fmtDate(dt);
+      const e  = SCHED_BASE[id + '_' + ds];
+      const st = e ? getST(e.type) : null;
+      cells.push(`<div style="text-align:center;padding:7px 3px;border-radius:8px;
+        background:${st ? st.color+'14' : 'var(--bg)'};border:1px solid ${st ? st.color+'44' : 'var(--line)'}">
+        <div style="font-size:10px;color:var(--muted)">${DAYS_AR[dt.getDay()]}</div>
+        <div style="font-size:11px;font-weight:700;color:${st ? st.color : 'var(--muted)'}">
+          ${st ? st.icon : '—'}</div></div>`);
+    }
+    wk = `<div style="margin-top:12px"><div style="font-size:12px;font-weight:800;margin-bottom:6px">
+      أسبوعه المنشور</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells.join('')}</div></div>`;
+  }
+
+  sheet(esc(d.name), '<table style="font-size:12.5px;width:100%"><tbody>' + rows + '</tbody></table>' + wk,
+    'طلب تعديل', async () => { closeSheet(); openEditDriver(id); });
+}
+</script>
+
+<script>
+window.__SV_EN = {
+"السلاسل — نظام المشرف": "Al-Salasil — Supervisor",
+"نظام المشرف": "Supervisor",
+"شركة السلاسل لتوصيل الطلبات الاستهلاكية": "Al-Salasil Consumer Delivery Co.",
+"الرئيسية": "Home",
+"السائقون": "Drivers",
+"الحضور": "Attendance",
+"الجدول": "Schedule",
+"الرسائل": "Messages",
+"طلباتي": "My requests",
+"الموافقات": "Approvals",
+"تحديث": "Refresh",
+"تسجيل الخروج؟": "Sign out?",
+"البريد الإلكتروني": "Email",
+"كلمة المرور": "Password",
+"دخول": "Clock in",
+"جاري الدخول…": "Signing in…",
+"اكتب البريد وكلمة المرور": "Enter your email and password",
+"البريد أو كلمة المرور غير صحيحة": "Wrong email or password",
+"تعذّر الدخول": "Could not sign in",
+"هذا الحساب غير مسجّل في النظام.": "This account is not registered in the system.",
+"كلّم الإدارة.": "Contact the office.",
+"الحساب موقوف.": "This account is suspended.",
+"صلاحيتك (": "Your role (",
+") لا تسمح بدخول هذه الشاشة.": ") cannot open this screen.",
+"انتهت الجلسة": "Session expired",
+"انتهت الجلسة — سجّل الدخول من جديد": "Session expired — please sign in again",
+"مدير النظام": "Administrator",
+"مشرف": "Supervisor",
+"عمليات": "Operations",
+"موارد بشرية": "HR",
+"محاسب": "Accountant",
+"شغّال الآن": "On shift now",
+"سجّل حضور اليوم": "Clocked in today",
+"إجمالي السائقين": "Total drivers",
+"طلباتي قيد الانتظار": "My pending requests",
+"آخر تسجيل": "Latest activity",
+"اليوم": "Today",
+"حضور اليوم": "Today's attendance",
+"لا يوجد حضور مسجّل اليوم": "No attendance recorded today",
+"بحث بالاسم أو الكود…": "Search by name or code…",
+"كل الشركاء": "All partners",
+"كل الحالات": "All statuses",
+"الكود": "Code",
+"الاسم": "Name",
+"التليفون": "Phone",
+"الشريك": "Partner",
+"السيارة": "Vehicle",
+"الشفت": "Shift",
+"الحالة": "Status",
+"نشط": "Active",
+"موقوف": "Suspended",
+"لا نتائج": "No matches",
+"طلب إضافة سائق": "Request a new driver",
+"طلب تعديل": "Request a change",
+"إضافة سائق": "Add driver",
+"إضافة سائق:": "Add driver:",
+"تعديل بيانات": "Edit details",
+"تعديل بيانات سائق": "Edit driver details",
+"تعديل بيانات:": "Edit details:",
+"طلب تعديل بيانات —": "Change request —",
+"كود السائق": "Driver code",
+"الاسم الكامل": "Full name",
+"الاسم بالإنجليزي": "Name in English",
+"رقم التليفون": "Phone number",
+"رقم الشريحة": "SIM number",
+"رقم السيارة": "Vehicle number",
+"رقم اللوحة": "Plate number",
+"الجنسية": "Nationality",
+"رخصة القيادة": "Driving licence",
+"الإقامة": "Residency",
+"تاريخ الالتحاق": "Joined on",
+"تاريخ الميلاد": "Date of birth",
+"بداية الوردية": "Shift start",
+"نهاية الوردية": "Shift end",
+"نوع الوردية": "Shift type",
+"ملاحظات": "Notes",
+"الإيميل": "Email",
+"مثال: SA1099": "e.g. SA1099",
+"الكود والاسم مطلوبين": "Code and name are required",
+"الكود ده مستخدم بالفعل": "That code is already in use",
+"السائق ما يتضافش إلا بموافقة المالك. الراتب والبيانات البنكية يحطّهم المالك بعد الموافقة — مش جزء من الطلب.": "A driver is only added once the owner approves. Salary and bank details are set by the owner afterwards — they are not part of this request.",
+"أسبوعه المنشور": "Published week",
+"تسجيل حضور يدوي": "Log attendance manually",
+"تسجيلات اليوم": "Today's records",
+"سجل اليوم": "Today's log",
+"الوقت": "Time",
+"السائق": "Driver",
+"الإجراء": "Action",
+"خروج": "Clock out",
+"تسجيل": "Save",
+"لا تسجيلات في هذا اليوم": "No records for this day",
+"تم التسجيل": "Recorded",
+"تعذّر التسجيل:": "Could not record:",
+"جدول الدوامات والإجازات": "Shifts & days off",
+"وضع التلوين": "Paint mode",
+"وضع التلوين:": "Paint mode:",
+"ترتيب": "Sort",
+"ساعات الشيفت": "Shift hours",
+"أقصى إجازات/شهر": "Max days off / month",
+"أقل تغطية مطلوبة": "Minimum coverage",
+"تراجع": "Undo",
+"نسخ للأسبوع الجاي": "Copy to next week",
+"سائقين معروضين": "Drivers shown",
+"ساعة في الأسبوع": "Hours this week",
+"متوسط أيام العمل": "Avg. working days",
+"خانة غير مجدولة": "Unscheduled cells",
+"تجاوزوا حد الإجازات": "Over the days-off limit",
+"أقل تغطية": "Lowest coverage",
+"التغطية اليومية": "Daily coverage",
+"الحد الأدنى": "Minimum",
+"الحد": "Limit",
+"التغطية": "Coverage",
+"إجمالي الأسبوع": "Week total",
+"إجازات الشهر": "Days off this month",
+"للسائق الواحد": "per driver",
+"يوم عمل": "working days",
+"في الشهر": "per month",
+"· المطلوب": "· required",
+"·ذروة": "· peak",
+"عمل": "working",
+"إجازات": "days off",
+"وردية": "shift",
+"الكل": "All",
+"مفيش سائقين مطابقين للبحث أو الفلتر.": "No drivers match the search or filter.",
+"دوس على أي خانة تتلوّن على طول": "Tap any cell to paint it instantly",
+"اختار وردية علشان تلوّن بسرعة — أو دوس خانة لفتح التوقيت": "Pick a shift to paint quickly — or tap a cell to set its hours",
+"— دوس على أي خانة": "— tap any cell",
+"يعمل": "Working",
+"صباحي": "Morning",
+"مسائي": "Evening",
+"إجازة": "Day off",
+"عطلة رسمية": "Public holiday",
+"مسح": "Clear",
+"تحديد الوردية": "Set the shift",
+"تحديد الوردية —": "Set the shift —",
+"من": "From",
+"إلى": "To",
+"مسح الخانة": "Clear cell",
+"حفظ": "Save",
+"🌅 صباحي 7←7": "🌅 Morning 7→7",
+"🌙 مسائي 7←7": "🌙 Evening 7→7",
+"🌴 عطلة": "🌴 Holiday",
+"🔴 إجازة": "🔴 Day off",
+"اتعبّى الأسبوع ✅": "Week filled ✅",
+"اتمسح الأسبوع": "Week cleared",
+"تم التراجع ↩": "Undone ↩",
+"مفيش خطوة أرجعها": "Nothing to undo",
+"مقدرتش أتراجع": "Could not undo",
+"سيتم نسخ جدول الأسبوع الحالي للأسبوع اللي بعده. متأكد؟": "This week's schedule will be copied to next week. Continue?",
+"مسح جدول الأسبوع كله لهذا السائق؟": "Clear this driver's whole week?",
+"تعبئة الأسبوع كله لهذا السائق بـ«": "Fill this driver's whole week with «",
+"»؟": "»?",
+"هذا السائق وصل للحد الأقصى (": "This driver has reached the limit (",
+"أيام) من الإجازات هذا الشهر. هل تريد التجاوز فعلاً؟": " days) of days off this month. Override anyway?",
+"تم تصدير الجدول": "Schedule exported",
+"تم تصدير الجدول كصورة PNG ✅": "Schedule exported as PNG ✅",
+"ابنِ الجدول زي ما إنت عايزه بالظبط — الشبكة دي نفس اللي في ARK. ولما تخلّص اضغط": "Build the schedule exactly as you want — this is the same grid as in ARK. When you are done press",
+"«إرسال للموافقة»": "«Send for approval»",
+"، فيوصل للمالك بكل وردية اتغيّرت.": ", and every changed shift goes to the owner.",
+"السائقون ما يشوفوش أي تعديل قبل ما يوافق.": "Drivers see nothing until the owner approves.",
+"إرسال للموافقة": "Send for approval",
+"شوف التغييرات": "See the changes",
+"تراجع عن الكل": "Discard all",
+"مفيش تعديلات لسه — اللي ظاهر هو المنشور عند السائقين": "No changes yet — what you see is what drivers have",
+"مفيش تعديلات لسه": "No changes yet",
+"مفيش تعديلات": "No changes",
+"مفيش تعديلات أصلاً": "There are no changes",
+"مفيش تعديلات تتبعت": "No changes to send",
+"التغييرات اللي هتتبعت (": "Changes to be sent (",
+"اكتب سبب التعديل — المالك هيقراه قبل ما يوافق:": "Write the reason — the owner reads it before approving:",
+"السبب مطلوب": "A reason is required",
+"جارٍ الإرسال…": "Sending…",
+"رجّعنا كل حاجة زي ما كانت": "Everything is back as it was",
+"تعذّر الإرسال": "Could not send",
+"تعذّر الإرسال:": "Could not send:",
+"قبل": "Before",
+"بعد": "After",
+"التاريخ": "Date",
+"فاضية": "empty",
+"تُمسح": "to be removed",
+"🗑 تُمسح": "🗑 To be removed",
+"إرسال رسالة للسائقين": "Message the drivers",
+"المستلم": "Recipient",
+"العنوان": "Subject",
+"نص الرسالة": "Message",
+"إرسال": "Send",
+"📢 كل السائقين": "📢 All drivers",
+"مثال: تنبيه بخصوص الشفت": "e.g. Note about the shift",
+"اكتب نص الرسالة": "Write the message",
+"رسالة من الإدارة": "Message from the office",
+"اتبعت": "Sent",
+"يُسجَّل باسمك في السجل، ويظهر للسائق في تطبيقه.": "It is logged under your name and appears in the driver's app.",
+"الطلب": "Request",
+"النوع": "Type",
+"القرار": "Decision",
+"الملاحظة": "Note",
+"سبب الطلب": "Reason",
+"سبب التعديل": "Reason for the change",
+"رد الإدارة": "Office reply",
+"تفاصيل التغيير": "What changes",
+"قيد الانتظار": "Pending",
+"تمت الموافقة": "Approved",
+"مرفوض": "Rejected",
+"لم يُطبَّق": "Not applied",
+"لا شيء منتظر": "Nothing pending",
+"لم تقدّم أي طلب بعد": "You have not made any request yet",
+"اللي اتبتّ فيه": "Decided",
+"لا شيء بعد": "Nothing yet",
+"طلبات في الانتظار": "Pending requests",
+"مفيش طلبات منتظرة": "No pending requests",
+"مفيش طلبات في الانتظار": "Nothing waiting",
+"موافقة": "Approve",
+"رفض": "Reject",
+"طلب": "request",
+"ملاحظة للموافقة (اختياري):": "Note with the approval (optional):",
+"سبب الرفض — هيشوفه صاحب الطلب:": "Reason for rejection — the requester will see it:",
+"اكتب سبب الرفض": "Write the reason for rejection",
+"تمت الموافقة والتغيير اتطبّق": "Approved and applied",
+"اتوافق عليه بس محتاج تطبيق يدوي": "Approved, but needs applying by hand",
+"اترفض": "Rejected",
+"الطلبات دي جاية من المشرفين. الموافقة بتطبّق التغيير على طول في النظام، والرفض بيتسجّل مع سببه ويشوفه صاحب الطلب.": "These come from supervisors. Approving applies the change immediately; rejecting is logged with its reason and shown to the requester.",
+"التعديل يحتاج موافقة المالك.": "Changes need the owner's approval.",
+"اتبعت للمالك": "Sent to the owner",
+"تعديل جدول": "Schedule change",
+"إلغاء": "Cancel",
+"جاري…": "Working…",
+"تعذّر التحميل": "Could not load",
+"تعذّر التنفيذ:": "Could not do that:",
+"أخرى": "Other",
+"الأحد": "Sunday",
+"الاثنين": "Monday",
+"الثلاثاء": "Tuesday",
+"الأربعاء": "Wednesday",
+"الخميس": "Thursday",
+"الجمعة": "Friday",
+"السبت": "Saturday",
+"يناير": "January",
+"فبراير": "February",
+"مارس": "March",
+"أبريل": "April",
+"مايو": "May",
+"يونيو": "June",
+"يوليو": "July",
+"أغسطس": "August",
+"سبتمبر": "September",
+"أكتوبر": "October",
+"نوفمبر": "November",
+"ديسمبر": "December",
+"{n} وردية اتغيّرت ولسه ما اتبعتتش — السائقون شايفين القديم": "{n} shifts changed and not sent yet — drivers still see the old ones",
+"اتبعت للمالك — {n} وردية في انتظار الموافقة": "Sent to the owner — {n} shifts awaiting approval",
+"هترجع كل التعديلات ({n} وردية) للمنشور حالياً. متأكد؟": "All {n} changed shifts will go back to what is published. Continue?",
+"تم نسخ {n} مناوبة للأسبوع القادم ✅": "{n} shifts copied to next week ✅",
+"و{n} وردية أخرى…": "and {n} more shifts…",
+"التغييرات اللي هتتبعت ({n})": "Changes to be sent ({n})",
+"{n} طلب": "{n} requests",
+"{n} من {n}": "{n} of {n}",
+"{n} سائق سجّل": "{n} drivers recorded",
+"{n}% من الجدول": "{n}% of the grid",
+"{n} ساعة · {n} عمل": "{n}h · {n} working",
+"{n}/{n}": "{n}/{n}",
+"الساعات ↓": "Hours ↓",
+"الإجازات ↓": "Days off ↓",
+"غير مجدول ↓": "Unscheduled ↓",
+"إرسال الطلب": "Send the request",
+"ساعة · {n} عمل": "h · {n} working",
+"· من": "· from",
+"إجازات ⚠": "days off ⚠",
+"{n}/{n} إجازات": "{n}/{n} days off",
+"العربية / English": "العربية / English"
+};
+</script>
+<script>
+
+/* ═══════════════════════════════════════════════════════════════
+   عربي / إنجليزي — نظام المشرف
+   ───────────────────────────────────────────────────────────────
+   المنهج: القاموس مفتاحه النص العربي نفسه، ومراقب DOM بيترجم أي
+   نص يظهر على الشاشة بعد ما يترسم.
+
+   ليه كده ومش t() في كل نداء؟ لأن شبكة الجدول منقولة من ARK
+   حرفياً، ولو لففنا نصوصها هتبقى نسخة مختلفة وأي تحسين في ARK
+   ما يبقاش ينفع ينتقل بنسخ ولصق. وكمان ٣٤٦ موضع نداء = ٣٤٦ فرصة
+   لخطأ مطبعي صامت.
+
+   تلات نتائج:
+   ١) شبكة ARK تفضل زي أصلها بالحرف.
+   ٢) نص مش في القاموس يفضل عربي — ناقص، مش مكسور.
+   ٣) الأرقام بتتشال من المفتاح ({n}) فالجملة ليها ترجمة واحدة
+      مهما اتغيّر الرقم جوّاها.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+
+const EN = window.__SV_EN || {};
+delete window.__SV_EN;
+
+let LANG = 'ar';
+try{ LANG = localStorage.getItem('sv_lang') || 'ar'; }catch(e){}
+const NUM = /[0-9٠-٩]+/g;
+
+function lookup(t){
+  if(EN[t] !== undefined) return EN[t];
+  const norm = t.replace(NUM, '{n}');
+  const hit  = EN[norm];
+  if(hit !== undefined){
+    const nums = t.match(NUM) || [];
+    let i = 0;
+    return hit.replace(/\{n\}/g, () => { const v = nums[i]; i++; return v === undefined ? '' : v; });
+  }
+  return null;
+}
+
+/* بنخزّن الأصل على العقدة نفسها. الرجوع للعربي بيبقى استرجاع
+   لا ترجمة عكسية — والترجمة العكسية مش مضمونة أصلاً. */
+function trNode(n){
+  if(n.__ar === undefined) n.__ar = n.nodeValue;
+  const src = n.__ar;
+  if(src === null || src === undefined) return;
+  const t = String(src).trim();
+  if(!t) return;
+  if(LANG === 'ar'){ if(n.nodeValue !== src) n.nodeValue = src; return; }
+  const out = lookup(t);
+  if(out !== null){
+    const want = String(src).replace(t, out);
+    if(n.nodeValue !== want) n.nodeValue = want;
+  }
+}
+
+function trAttr(el, a){
+  const k = '__ar_' + a;
+  if(el[k] === undefined){
+    const v = el.getAttribute(a);
+    if(v === null) return;
+    el[k] = v;
+  }
+  const src = el[k], t = String(src).trim();
+  if(!t) return;
+  if(LANG === 'ar'){ el.setAttribute(a, src); return; }
+  const out = lookup(t);
+  if(out !== null) el.setAttribute(a, String(src).replace(t, out));
+}
+
+const SKIP = { SCRIPT:1, STYLE:1, NOSCRIPT:1 };
+const ATTRS = ['placeholder','title','aria-label'];
+
+function trEl(el){
+  if(!el || !el.hasAttribute) return;
+  ATTRS.forEach(a => { if(el.hasAttribute(a)) trAttr(el, a); });
+}
+
+function walk(root){
+  if(!root) return;
+  if(root.nodeType === 3){ trNode(root); return; }
+  if(root.nodeType !== 1 || SKIP[root.tagName]) return;
+  trEl(root);
+  const it = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.parentNode && SKIP[n.parentNode.tagName])
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+  });
+  let n; while((n = it.nextNode())) trNode(n);
+  if(root.querySelectorAll)
+    root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(trEl);
+}
+
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.documentElement.dir  = (LANG === 'ar') ? 'rtl' : 'ltr';
+  walk(document.body);
+  const b = document.getElementById('btnLang');
+  if(b) b.textContent = (LANG === 'ar') ? 'EN' : 'ع';
+}
+
+window.toggleLang = function(){
+  LANG = (LANG === 'ar') ? 'en' : 'ar';
+  try{ localStorage.setItem('sv_lang', LANG); }catch(e){}
+  applyLang();
+};
+window.svLang  = function(){ return LANG; };
+window.svApply = applyLang;
+/* للنصوص اللي ما بتوصلش الـDOM — زي عناوين ملف الإكسل المنزَّل */
+window.svT = function(s){
+  if(LANG === 'ar' || s == null) return s;
+  const out = lookup(String(s).trim());
+  return out === null ? s : out;
+};
+
+/* confirm و prompt نصوصهم مش في الـDOM، فالمراقب مش بيشوفهم.
+   بنلفّهم مرة واحدة هنا بدل ما نلفّ كل نداء على حدة.
+   الجملة الواحدة ممكن تبقى متجمّعة من قطع (نص + رقم + نص)،
+   فبنترجم كل قطعة معروفة جوّه الرسالة لو الرسالة كلها مش في
+   القاموس. */
+function trMsg(s){
+  if(LANG === 'ar' || s == null) return s;
+  const full = lookup(String(s).trim());
+  if(full !== null) return full;
+  let out = String(s);
+  Object.keys(EN).sort((a,b) => b.length - a.length).forEach(k => {
+    if(k.indexOf('{n}') >= 0) return;
+    if(out.indexOf(k) >= 0) out = out.split(k).join(EN[k]);
+  });
+  return out;
+}
+const _confirm = window.confirm.bind(window);
+const _prompt  = window.prompt.bind(window);
+const _alert   = window.alert.bind(window);
+window.confirm = m => _confirm(trMsg(m));
+window.prompt  = (m, d) => _prompt(trMsg(m), d);
+window.alert   = m => _alert(trMsg(m));
+
+/* أي حاجة تترسم بعد كده تتترجم لوحدها. من غير ده، كل شاشة بتتبني
+   بالـJS كانت هترجع عربي بعد تبديل اللغة. */
+function observe(){
+  if(!document.body || !window.MutationObserver) return;
+  new MutationObserver(function(muts){
+    if(LANG === 'ar') return;
+    for(let i=0;i<muts.length;i++){
+      const m = muts[i];
+      if(m.type === 'characterData'){ trNode(m.target); continue; }
+      const added = m.addedNodes;
+      for(let j=0;j<added.length;j++){
+        const n = added[j];
+        if(n.nodeType === 1 || n.nodeType === 3) walk(n);
+      }
+    }
+  }).observe(document.body, { childList:true, subtree:true, characterData:true });
+}
+
+if(document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', function(){ observe(); applyLang(); });
+else { observe(); applyLang(); }
+
+})();
+
 </script>
 </body>
 </html>

@@ -7851,6 +7851,98 @@ function sendWhatsAppQuick(driverId){
   window.open('https://wa.me/' + fp, '_blank');
 }
 
+
+/* ═══════════════════════════════════════════════════════════════
+   سحب الجدول من Supabase — الربط الكامل مع نظام المشرف
+   ───────────────────────────────────────────────────────────────
+   المشكلة اللي بيحلّها:
+
+   ARK كان بيكتب الجدول في القاعدة وعمره ما بيقرا منها. مصدره
+   الوحيد نسخة localStorage على جهاز المالك. ولما المشرف يعدّل
+   والمالك يوافق، التعديل بيتكتب في القاعدة ويوصل السائقين —
+   لكن ARK يفضل شايف نسخته القديمة. وأول ما يضغط «إرسال للتطبيق»
+   يدهس موافقة كان هو نفسه اللي وافق عليها، بلا ما ياخد باله.
+
+   الحل: نسحب قبل ما نعدّل. الخادم هو الحقيقة لأنه اللي السائق
+   بيشوفه. وقبل الدمج بناخد لقطة في SCHED_UNDO، فزر «تراجع»
+   بيرجّع النسخة المحلية لو حصل أي لبس.
+
+   بنسحب نافذة ١٤ يوم للخلف و٥٦ للأمام — نفس نافذة الإرسال،
+   فما نمسحش أيام قديمة مش محمّلة.
+   ═══════════════════════════════════════════════════════════════ */
+let SCHED_LAST_PULL = null;
+
+async function pullScheduleFromSupabase(opts){
+  opts = opts || {};
+  try{
+    const today = new Date(); today.setHours(0,0,0,0);
+    const from  = new Date(today); from.setDate(from.getDate() - 14);
+    const to    = new Date(today); to.setDate(to.getDate() + 56);
+    const fromS = fmtDate(from), toS = fmtDate(to);
+
+    const res = await fetch(SUPA_URL + '/rest/v1/schedules?select=driver_id,date,shift_type,shift_start,shift_end'
+      + '&date=gte.' + fromS + '&date=lte.' + toS + '&order=date.asc&limit=5000', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      console.error('pullSchedule HTTP', res.status, t);
+      if(!opts.silent) toast('تعذّر سحب الجدول من السحابة — شغّال على النسخة المحلية','e');
+      return { ok:false };
+    }
+    const rows = await res.json();
+
+    /* بنبني نسخة الخادم للنافذة دي */
+    const srv = {};
+    rows.forEach(r => {
+      const s = (r.shift_start||'').slice(0,5), e = (r.shift_end||'').slice(0,5);
+      srv[r.driver_id + '_' + r.date] = {
+        type:  r.shift_type || 'work',
+        shift: (s && e) ? (s + '-' + e) : ''
+      };
+    });
+
+    /* الفرق: بس جوّه النافذة. أي مفتاح برّاها ما بنلمسهوش. */
+    const inWin = k => { const d = (k.split('_')[1]||''); return d >= fromS && d <= toS; };
+    const sig   = v => v ? (v.type + '|' + (v.shift||'')) : '';
+    const diff  = [];
+    const seen  = {};
+    Object.keys(srv).forEach(k => { seen[k]=1; if(sig(srv[k]) !== sig(SCHED[k])) diff.push(k); });
+    Object.keys(SCHED).forEach(k => {
+      if(seen[k] || !inWin(k)) return;
+      diff.push(k);                      /* موجود محلياً ومش عند الخادم = اتمسح هناك */
+    });
+
+    if(!diff.length){
+      SCHED_LAST_PULL = new Date();
+      if(!opts.silent) toast('الجدول متطابق مع السحابة ✅','s');
+      return { ok:true, changed:0 };
+    }
+
+    /* لقطة قبل الدمج — «تراجع» بيرجّعها */
+    if(typeof schedSnapshot === 'function') schedSnapshot();
+
+    diff.forEach(k => {
+      if(srv[k]) SCHED[k] = srv[k];
+      else       delete SCHED[k];
+    });
+    try{ localStorage.setItem('sl_sched2', JSON.stringify(SCHED)); }catch(e){}
+    SCHED_LAST_PULL = new Date();
+
+    if(typeof renderSchedTable === 'function' &&
+       document.getElementById('sch-table')) renderSchedTable();
+
+    if(!opts.silent)
+      toast('اتحدّث ' + diff.length + ' وردية من السحابة (موافقات المشرف) — «تراجع» يرجّعها','s');
+
+    return { ok:true, changed: diff.length };
+  }catch(e){
+    console.error('pullSchedule', e);
+    if(!opts.silent) toast('تعذّر سحب الجدول — شغّال على النسخة المحلية','e');
+    return { ok:false };
+  }
+}
+
 async function syncScheduleToSupabase(driverId, dateStr, shiftType, shiftStart, shiftEnd) {
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/schedules?on_conflict=driver_id,date', {
@@ -8088,12 +8180,15 @@ function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; 
 function fmtDate(d){ const dt=new Date(d); const y=dt.getFullYear(); const m=String(dt.getMonth()+1).padStart(2,'0'); const da=String(dt.getDate()).padStart(2,'0'); return y+'-'+m+'-'+da; }
 function fmtDAr(d){ return d.getDate()+' '+MONTHS_AR[d.getMonth()]; }
 
-function openScheduleModal(){
+async function openScheduleModal(){
   schedFilt='all';
   schedWeekStart=getMonday(new Date());
   renderSchedFbar();
   renderSchedTable();
   document.getElementById('schedModal').classList.add('on');
+  /* اسحب أول ما تفتح: لو المشرف عدّل والمالك وافق، الشاشة تفتح
+     على الحقيقة مش على نسخة قديمة. صامت لو مفيش فرق. */
+  await pullScheduleFromSupabase();
 }
 
 function renderSchedFbar(){
@@ -10649,6 +10744,7 @@ function openAppDetails(id){
     </div>
     <div class="modal-actions" style="margin-top:10px">
       <button class="btn btn-cancel" onclick="closeModal('schedModal')">إغلاق</button>
+      <button class="btn btn-cancel" onclick="pullScheduleFromSupabase()" title="اسحب آخر نسخة من السحابة — بتشمل موافقاتك على طلبات المشرف"><i class="ti ti-cloud-download"></i> سحب من السحابة</button>
       <button class="btn btn-cancel" onclick="exportSchedExcel()"><i class="ti ti-table-export"></i> Excel</button>
       <button class="btn btn-cancel" onclick="openLateSettings()" title="مهلة التأخير ونسبة الخصم"><i class="ti ti-settings"></i> إعدادات التأخير</button>
       <button class="btn btn-save" onclick="pushScheduleToApp()" id="btnPushSched" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="ti ti-cloud-upload"></i> 📲 إرسال للتطبيق</button>
@@ -13597,6 +13693,20 @@ async function pushScheduleToApp(){
   var old = btn ? btn.innerHTML : '';
   try{
     if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span> جاري الإرسال...'; }
+
+    /* اسحب قبل ما ترفع. من غير كده لو المشرف عدّل والمالك وافق،
+       الإرسال ده هيدهس الموافقة بنسخة ARK القديمة في صمت. */
+    var pulled = await pullScheduleFromSupabase({ silent:true });
+    if(pulled && pulled.changed){
+      if(!confirm('⚠️ فيه ' + pulled.changed + ' وردية اتغيّرت في السحابة من موافقاتك على '
+        + 'طلبات المشرف، وكانت مش ظاهرة في نسختك.\n\n'
+        + 'سحبناها ودمجناها دلوقتي. راجع الجدول قبل الإرسال.\n\n'
+        + 'تكمّل الإرسال بالنسخة المدموجة؟')){
+        toast('اتلغى الإرسال — راجع الجدول','e');
+        if(btn){ btn.disabled=false; btn.innerHTML=old; }
+        return;
+      }
+    }
 
     // ارفع 60 يوم: 14 يوم للخلف + 46 للأمام (يغطي الأسابيع الجاية)
     var today = new Date(); today.setHours(0,0,0,0);
