@@ -1780,9 +1780,48 @@ function rowsToSched(rows){
   return o;
 }
 
+/* المسوّدة بتتخزّن كـ«فرق» لا كجدول كامل.
+   ───────────────────────────────────────────────────────────────
+   العطل اللي ده بيصلّحه: كانت بتتخزّن كاملة، فلو المشرف فتح
+   الشاشة وعدّل خانة واحدة، اتخزّنت نسخة كاملة من الجدول. وبعدين
+   لما المالك ينشر جدولاً جديداً، النسخة القديمة دي كانت بتتحطّ
+   فوق المنشور وتغطّيه — فالمشرف يشوف جدول قديم وناقص ويفتكره
+   هو اللي موجود.
+
+   دلوقتي بنخزّن الخانات المتغيّرة بس، ومعاها توقيع الحالة اللي
+   كانت منشورة وقت التعديل. ولو الإدارة غيّرت نفس الخانة بعد
+   كده، نسخة المشرف تتسقط لأن الأحدث أولى، ويتقاله كام خانة
+   اتسقطت — بلا صمت. */
+function schedSig(v){ return v ? (v.type + '|' + (v.shift || '')) : ''; }
+
 function schedPersist(){
-  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(SCHED)); }catch(e){}
+  try{
+    const draft = {};
+    const keys = new Set([...Object.keys(SCHED), ...Object.keys(SCHED_BASE)]);
+    keys.forEach(k => {
+      if(schedSig(SCHED[k]) === schedSig(SCHED_BASE[k])) return;
+      draft[k] = { v: SCHED[k] || null, was: schedSig(SCHED_BASE[k]) };
+    });
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }catch(e){}
   updateDiffBar();
+}
+
+/* بترجّع المسوّدة فوق المنشور وبترجّع عدد الخانات المتجاهَلة */
+function schedApplyDraft(){
+  let dropped = 0;
+  try{
+    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if(!draft || typeof draft !== 'object') return 0;
+    Object.keys(draft).forEach(k => {
+      const d = draft[k];
+      /* شكل قديم من المسوّدة (جدول كامل) — نتجاهله كله */
+      if(!d || typeof d !== 'object' || !('was' in d)) { dropped++; return; }
+      if(d.was !== schedSig(SCHED_BASE[k])) { dropped++; return; }
+      if(d.v) SCHED[k] = d.v; else delete SCHED[k];
+    });
+  }catch(e){}
+  return dropped;
 }
 
 /* نحمّل نافذة واسعة: ٣ أسابيع للخلف و٨ للأمام. المشرف بيتنقّل
@@ -1795,12 +1834,14 @@ async function loadSchedule(){
   SCHED_BASE = rowsToSched(rows);
   SCHED = JSON.parse(JSON.stringify(SCHED_BASE));
 
-  /* مسوّدة محفوظة من جلسة سابقة: بنرجّعها فوق المنشور، عشان
-     المشرف ما يضيّعش شغل ساعة لأن الصفحة اتقفلت. */
-  try{
-    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if(d && typeof d === 'object') Object.assign(SCHED, d);
-  }catch(e){}
+  /* مسوّدة محفوظة من جلسة سابقة — بترجع فوق المنشور عشان المشرف
+     ما يضيّعش شغل ساعة لأن الصفحة اتقفلت. وأي خانة الإدارة غيّرتها
+     بعد ما هو عدّلها بتتسقط لصالح المنشور. */
+  const dropped = schedApplyDraft();
+  if(dropped){
+    schedPersist();
+    setTimeout(() => toast('اتسقطت ' + dropped + ' خانة من مسوّدتك — الإدارة نشرت فيها جديد', true), 600);
+  }
 
   rebuildPartners();
   if(VIEW === 'sched') renderSched();
