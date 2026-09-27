@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{
@@ -23,7 +24,7 @@
   }
   body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-  .topbar{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+  .topbar{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
   .brand{display:flex;align-items:center;gap:12px}
   .brand-logo{background:var(--gold);color:var(--navy);width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
   .topbar h1{font-size:19px;font-weight:900;line-height:1.2}
@@ -34,19 +35,38 @@
   .btn-ghost{background:rgba(255,255,255,0.15);color:#fff}.btn-ghost:hover{background:rgba(255,255,255,0.25)}
   .btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#047857}
   .btn-red{background:var(--red);color:#fff}
+  .btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:#1d4ed8}
+  .btn-soft{background:#e2e8f0;color:#334155}
   .cloud-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,0.12);border-radius:20px;font-size:11px;font-weight:800}
   .cloud-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+  .queue-badge{display:none;padding:6px 12px;background:#fef3c7;color:#92400e;border-radius:20px;font-size:11px;font-weight:900}
+  .queue-badge.show{display:inline-flex}
 
-  .container{padding:20px 24px;max-width:1700px;margin:0 auto}
+  .container{padding:20px 24px;max-width:1800px;margin:0 auto}
+
+  .banner{display:none;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:13px;font-weight:800;line-height:1.7}
+  .banner.show{display:block}
 
   /* KPIs */
-  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
-  .kpi{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);border-right:5px solid var(--c);cursor:pointer;transition:all 0.2s}
+  .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+  .kpi{background:#fff;border-radius:12px;padding:14px 16px;border:1px solid var(--border);border-right:5px solid var(--c);cursor:pointer;transition:all 0.2s}
   .kpi:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.1)}
   .kpi.active{background:var(--cream);box-shadow:0 4px 14px rgba(194,148,73,0.25)}
+  .kpi.static{cursor:default}.kpi.static:hover{transform:none;box-shadow:none}
   .kpi-label{font-size:11px;color:var(--muted);font-weight:800;margin-bottom:6px}
   .kpi-value{font-size:28px;font-weight:900;color:var(--c);line-height:1}
   .kpi-sub{font-size:10px;color:var(--muted);font-weight:700;margin-top:4px}
+
+  /* Alerts */
+  .alerts{background:#fff;border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+  .alerts-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--light);border-bottom:1px solid var(--border);font-weight:900;font-size:13px;color:var(--navy);cursor:pointer}
+  .alerts-body{padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px}
+  .alerts.collapsed .alerts-body{display:none}
+  .al{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;border:1px solid transparent}
+  .al:hover{filter:brightness(0.96)}
+  .al-late{background:var(--red-bg);color:#991b1b;border-color:#fecaca}
+  .al-today{background:var(--amber-bg);color:#92400e;border-color:#fde68a}
+  .al-soon{background:var(--blue-bg);color:#1e40af;border-color:#bfdbfe}
 
   /* Toolbar */
   .toolbar{background:#fff;padding:12px 16px;border-radius:12px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--border)}
@@ -55,18 +75,27 @@
   .search input:focus{outline:none;border-color:var(--gold);background:#fff}
   .search i{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted)}
   .toolbar select{padding:9px 14px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:13px;background:var(--light)}
+  .count-label{margin-right:auto;font-size:11px;color:var(--muted);font-weight:700}
+  .drag-hint{font-size:11px;font-weight:800;color:var(--amber)}
 
   /* Table */
   .table-wrap{background:#fff;border-radius:14px;border:1px solid var(--border);overflow-x:auto;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
-  table{width:100%;border-collapse:collapse;font-size:12px;min-width:1300px}
-  thead th{background:var(--navy);color:#fff;padding:12px 10px;text-align:center;font-weight:800;font-size:11px;position:sticky;top:0;white-space:nowrap}
-  tbody td{padding:9px 8px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;vertical-align:middle}
-  tbody tr{transition:all 0.15s;cursor:pointer}
+  table{width:100%;border-collapse:collapse;font-size:12px;min-width:1450px}
+  thead th{background:var(--navy);color:#fff;padding:12px 8px;text-align:center;font-weight:800;font-size:11px;position:sticky;top:0;white-space:nowrap}
+  tbody td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;vertical-align:middle}
+  tbody tr{transition:background 0.15s;cursor:pointer;background:#fff}
   tbody tr:hover{background:var(--cream)}
   tbody tr:nth-child(even){background:var(--light)}
   tbody tr:nth-child(even):hover{background:var(--cream)}
-  .name-cell{text-align:right;font-weight:900;color:var(--navy);white-space:nowrap;padding-right:14px}
-  .seq-badge{background:var(--navy);color:#fff;width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:11px}
+  tbody tr.row-imported{opacity:.62}
+  .name-cell{text-align:right;font-weight:900;color:var(--navy);white-space:nowrap;padding-right:10px}
+  .name-sub{font-size:10px;color:var(--muted);font-weight:700;margin-top:2px}
+  .seq-badge{background:var(--navy);color:#fff;min-width:24px;height:24px;padding:0 4px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:11px}
+  .handle{cursor:grab;color:#94a3b8;font-size:18px;padding:4px 6px;border-radius:6px;display:inline-flex;touch-action:none}
+  .handle:hover{background:var(--border);color:var(--navy)}
+  .handle.off{cursor:not-allowed;opacity:.3}
+  .sortable-ghost{background:#fde68a !important;opacity:.7}
+  .sortable-chosen{box-shadow:0 6px 18px rgba(0,0,0,.15)}
 
   /* Status badges */
   .st{display:inline-block;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:800;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
@@ -75,41 +104,72 @@
   .st-red{background:var(--red-bg);color:var(--red)}
   .st-blue{background:var(--blue-bg);color:var(--blue)}
   .st-gray{background:var(--gray-bg);color:var(--gray)}
+  .due{display:block;font-size:10px;font-weight:800;margin-top:3px;color:var(--muted)}
+  .due.late{color:var(--red)}
+  .due.today{color:var(--amber)}
+  .due.soon{color:var(--blue)}
   .type-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:900}
   .type-car{background:#dbeafe;color:#1e40af}
   .type-bike{background:#fef3c7;color:#b45309}
 
   /* Progress */
   .prog-wrap{display:flex;align-items:center;gap:8px;justify-content:center}
-  .prog-bar{width:70px;height:8px;background:var(--border);border-radius:20px;overflow:hidden}
+  .prog-bar{width:64px;height:8px;background:var(--border);border-radius:20px;overflow:hidden}
   .prog-fill{height:100%;border-radius:20px;transition:width 0.4s}
   .prog-txt{font-size:11px;font-weight:900;min-width:34px}
 
   /* Modal */
   .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;padding:16px}
   .modal-bg.show{display:flex}
-  .modal{background:#fff;border-radius:16px;padding:0;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:92vh;overflow:hidden;display:flex;flex-direction:column}
-  .modal-head{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold)}
+  .modal{background:#fff;border-radius:16px;padding:0;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:92vh;overflow:hidden;display:flex;flex-direction:column}
+  .modal-head{background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--gold)}
   .modal-head h2{font-size:17px;font-weight:900}
   .modal-x{background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px}
-  .modal-body{padding:20px 22px;overflow-y:auto}
+  .tabs{display:flex;gap:4px;padding:10px 22px 0;border-bottom:1px solid var(--border);background:var(--light)}
+  .tab{padding:8px 16px;border:none;background:none;font-family:'Cairo';font-weight:800;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+  .tab.on{color:var(--navy);border-bottom-color:var(--gold)}
+  .modal-body{padding:18px 22px;overflow-y:auto}
   .fg{margin-bottom:14px}
   .fg label{display:block;font-size:12px;font-weight:800;color:var(--navy);margin-bottom:6px}
-  .fg input, .fg select{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:13px;background:var(--light)}
+  .fg input, .fg select, .fg textarea{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:9px;font-family:'Cairo';font-weight:700;font-size:13px;background:var(--light)}
   .fg input:focus, .fg select:focus{outline:none;border-color:var(--gold);background:#fff}
   .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between}
-  .status-input-wrap{display:flex;gap:6px}
-  .status-input-wrap select{flex:1}
+  .fg-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .sec-title{font-size:12px;font-weight:900;color:var(--gold);margin:6px 0 10px;border-bottom:1px dashed var(--border);padding-bottom:6px}
+  .stage-row{display:grid;grid-template-columns:130px 1fr 1fr 140px;gap:8px;align-items:center;margin-bottom:8px}
+  .stage-row .lbl{font-size:12px;font-weight:900;color:var(--navy)}
+  .stage-row select,.stage-row input{width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-family:'Cairo';font-weight:700;font-size:12px;background:var(--light)}
+  .stage-row input:focus,.stage-row select:focus{outline:none;border-color:var(--gold);background:#fff}
+  .stage-head{font-size:10px;color:var(--muted);font-weight:800}
+  .modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap}
+  .ark-box{border-radius:10px;padding:12px 14px;font-size:12px;font-weight:800;margin-bottom:14px;line-height:1.7}
+  .ark-box.ready{background:var(--blue-bg);color:#1e3a8a}
+  .ark-box.imported{background:var(--green-bg);color:#065f46}
+
+  /* Log */
+  .log-list{display:flex;flex-direction:column;gap:6px}
+  .log-item{border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:12px;line-height:1.7;background:var(--light)}
+  .log-meta{font-size:10.5px;color:var(--muted);font-weight:700}
+  .log-old{color:var(--red);text-decoration:line-through;font-weight:700}
+  .log-new{color:var(--green);font-weight:900}
+  .empty{padding:30px;text-align:center;color:var(--muted);font-weight:700}
 
   /* Toast */
-  .toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:13px 22px;border-radius:10px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:3000;display:none}
+  .toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:13px 22px;border-radius:10px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:3000;display:none;max-width:90vw;text-align:center}
   .toast.show{display:block;animation:sd 0.3s}
   .toast.err{background:var(--red)}
+  .toast.warn{background:var(--amber)}
   @keyframes sd{from{transform:translate(-50%,-20px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 
-  @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:600px){.kpi-grid{grid-template-columns:1fr}.fg-row{grid-template-columns:1fr}}
+  @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:700px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .fg-row,.fg-row3{grid-template-columns:1fr}
+    .stage-row{grid-template-columns:1fr 1fr}
+    .stage-row .lbl{grid-column:1/-1}
+    .container{padding:14px 12px}
+    .topbar{padding:12px 14px}
+  }
 </style>
 </head>
 <body>
@@ -123,7 +183,9 @@
     </div>
   </div>
   <div class="actions">
+    <span class="queue-badge" id="queueBadge"></span>
     <span class="cloud-badge"><span class="cloud-dot" id="cloudDot"></span><span id="cloudText">جاري الاتصال...</span></span>
+    <button class="btn btn-ghost" onclick="openGlobalLog()"><i class="ti ti-history"></i> السجل</button>
     <button class="btn btn-ghost" onclick="openSettings()"><i class="ti ti-settings"></i> إعدادات</button>
     <button class="btn btn-gold" onclick="exportExcel()"><i class="ti ti-download"></i> Excel</button>
     <button class="btn btn-green" onclick="openAdd()"><i class="ti ti-user-plus"></i> إضافة سائق</button>
@@ -132,10 +194,20 @@
 
 <div class="container">
 
-  <!-- KPIs -->
+  <div class="banner" id="legacyBanner">
+    ⚠️ ملف الترقية <code>كشف_السائقين_ترقية_v2.sql</code> لسه ما اتشغّلش في Supabase — الكشف شغّال عادي، بس
+    المواعيد وتاريخ الوصول والتحويل لـ ARK وسجل التعديلات مش هيتحفظوا على السحابة لحد ما تشغّله.
+  </div>
+
   <div class="kpi-grid" id="kpiGrid"></div>
 
-  <!-- Toolbar -->
+  <div class="alerts" id="alertsBox" style="display:none">
+    <div class="alerts-head" onclick="this.parentElement.classList.toggle('collapsed')">
+      <span id="alertsTitle">⏰ تنبيهات المواعيد</span><i class="ti ti-chevron-down"></i>
+    </div>
+    <div class="alerts-body" id="alertsBody"></div>
+  </div>
+
   <div class="toolbar">
     <div class="search">
       <i class="ti ti-search"></i>
@@ -147,23 +219,25 @@
       <option value="سياره">🚗 سيارة</option>
       <option value="سيكل">🏍️ سيكل</option>
     </select>
-    <select id="filterProg" onchange="render()">
+    <select id="filterProg" onchange="activeKpi='';render()">
       <option value="">كل الحالات</option>
       <option value="done">✅ مكتمل (100%)</option>
       <option value="progress">🟡 قيد الإجراء</option>
       <option value="stuck">🔴 متوقف/مشكلة</option>
+      <option value="late">⏰ عنده موعد متأخر</option>
+      <option value="ark">📤 اتحوّل لـ ARK</option>
     </select>
-    <span style="margin-right:auto;font-size:11px;color:var(--muted);font-weight:700" id="countLabel"></span>
+    <span class="drag-hint" id="dragHint"></span>
+    <span class="count-label" id="countLabel"></span>
   </div>
 
-  <!-- Table -->
   <div class="table-wrap">
     <table>
       <thead><tr>
-        <th>م</th><th>الاسم</th><th>الجنسية</th>
+        <th title="اسحب لتغيير الترتيب">⇅</th><th>م</th><th>الاسم</th><th>الجنسية</th><th>✈️ الوصول</th>
         <th>🩺 الفحص الطبي</th><th>🏛️ توثيق السفارة</th><th>📋 إذن العمل</th>
         <th>🪪 الإقامة</th><th>🆔 المدنية</th><th>🚦 حالة الرخصة</th>
-        <th>نوع الرخصة</th><th>🏦 كارت البنك</th><th>التقدم</th>
+        <th>نوع الرخصة</th><th>🏦 كارت البنك</th><th>التقدم</th><th>ARK</th>
       </tr></thead>
       <tbody id="tbody"></tbody>
     </table>
@@ -178,79 +252,94 @@
       <h2 id="modalTitle">إضافة سائق</h2>
       <button class="modal-x" onclick="closeModal()">×</button>
     </div>
-    <div class="modal-body">
+    <div class="tabs" id="modalTabs">
+      <button class="tab on" data-tab="data" onclick="switchTab('data')">📝 البيانات</button>
+      <button class="tab" data-tab="log" onclick="switchTab('log')">📜 سجل التعديلات</button>
+    </div>
+    <div class="modal-body" id="tab-data">
       <input type="hidden" id="f-id">
+      <div id="arkBox"></div>
       <div class="fg-row">
         <div class="fg"><label>👤 اسم السائق *</label><input type="text" id="f-name" placeholder="الاسم الكامل"></div>
         <div class="fg"><label>🌍 الجنسية</label><input type="text" id="f-nat" placeholder="مثال: مصر" list="natList"><datalist id="natList"></datalist></div>
       </div>
-      <div class="fg"><label>🩺 الفحص الطبي</label>
-        <div class="status-input-wrap">
-          <select id="f-medical-sel" onchange="applyPreset('f-medical', this.value)"></select>
-        </div>
-        <input type="text" id="f-medical" placeholder="أو اكتب حالة مخصصة" style="margin-top:6px">
+      <div class="fg-row3">
+        <div class="fg"><label>✈️ تاريخ الوصول</label><input type="date" id="f-arrival"></div>
+        <div class="fg"><label>📱 رقم الهاتف</label><input type="text" id="f-phone" placeholder="9XXXXXXX" inputmode="tel"></div>
+        <div class="fg"><label>🆔 الرقم المدني</label><input type="text" id="f-civilno" placeholder="بعد ما يطلع" inputmode="numeric"></div>
       </div>
-      <div class="fg"><label>🏛️ توثيق السفارة</label>
-        <div class="status-input-wrap"><select id="f-embassy-sel" onchange="applyPreset('f-embassy', this.value)"></select></div>
-        <input type="text" id="f-embassy" placeholder="أو اكتب حالة مخصصة" style="margin-top:6px">
+
+      <div class="sec-title">مراحل التوظيف — الحالة + الموعد</div>
+      <div class="stage-row">
+        <span></span><span class="stage-head">اختر حالة جاهزة</span><span class="stage-head">أو اكتب حالة</span><span class="stage-head">📅 الموعد</span>
       </div>
-      <div class="fg-row">
-        <div class="fg"><label>📋 إذن العمل</label>
-          <select id="f-work-sel" onchange="applyPreset('f-work', this.value)"></select>
-          <input type="text" id="f-work" placeholder="حالة مخصصة" style="margin-top:6px">
-        </div>
-        <div class="fg"><label>🪪 الإقامة</label>
-          <select id="f-residency-sel" onchange="applyPreset('f-residency', this.value)"></select>
-          <input type="text" id="f-residency" placeholder="حالة مخصصة" style="margin-top:6px">
-        </div>
-      </div>
-      <div class="fg-row">
-        <div class="fg"><label>🆔 المدنية</label>
-          <select id="f-civil-sel" onchange="applyPreset('f-civil', this.value)"></select>
-          <input type="text" id="f-civil" placeholder="حالة مخصصة" style="margin-top:6px">
-        </div>
-        <div class="fg"><label>🚦 حالة الرخصة</label>
-          <select id="f-license-sel" onchange="applyPreset('f-license', this.value)"></select>
-          <input type="text" id="f-license" placeholder="أو موعد: 26/07/2026" style="margin-top:6px">
-        </div>
-      </div>
-      <div class="fg-row">
+      <div id="stageRows"></div>
+
+      <div class="fg-row" style="margin-top:12px">
         <div class="fg"><label>🚗 نوع الرخصة</label>
           <select id="f-type"><option value="سياره">🚗 سيارة</option><option value="سيكل">🏍️ سيكل</option></select>
         </div>
-        <div class="fg"><label>🏦 كارت البنك</label>
-          <select id="f-bank-sel" onchange="applyPreset('f-bank', this.value)"></select>
-          <input type="text" id="f-bank" placeholder="حالة مخصصة" style="margin-top:6px">
-        </div>
+        <div class="fg"><label>📝 ملاحظات</label><input type="text" id="f-notes" placeholder="أي ملاحظات..."></div>
       </div>
-      <div class="fg"><label>📝 ملاحظات</label><input type="text" id="f-notes" placeholder="أي ملاحظات..."></div>
+    </div>
+    <div class="modal-body" id="tab-log" style="display:none">
+      <div class="log-list" id="driverLog"></div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-red" id="delBtn" onclick="deleteDriver()" style="display:none"><i class="ti ti-trash"></i> حذف</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-red" id="delBtn" onclick="deleteDriver()" style="display:none"><i class="ti ti-trash"></i> حذف</button>
+        <button class="btn btn-blue" id="arkBtn" onclick="toggleArk()" style="display:none"></button>
+      </div>
       <div style="display:flex;gap:10px;margin-right:auto">
-        <button class="btn btn-ghost" style="background:#e2e8f0;color:#334155" onclick="closeModal()">إلغاء</button>
-        <button class="btn btn-green" onclick="saveDriver()"><i class="ti ti-device-floppy"></i> حفظ</button>
+        <button class="btn btn-soft" onclick="closeModal()">إلغاء</button>
+        <button class="btn btn-green" id="saveBtn" onclick="saveDriver()"><i class="ti ti-device-floppy"></i> حفظ</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Global log modal -->
+<div class="modal-bg" id="logModal">
+  <div class="modal">
+    <div class="modal-head"><h2>📜 سجل التعديلات — آخر 300 حركة</h2><button class="modal-x" onclick="document.getElementById('logModal').classList.remove('show')">×</button></div>
+    <div class="modal-body">
+      <div class="fg"><input type="text" id="logSearch" placeholder="ابحث باسم سائق أو اسم اللي عدّل..." oninput="renderGlobalLog()"></div>
+      <div class="log-list" id="globalLog"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Actor modal -->
+<div class="modal-bg" id="actorModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h2>👋 اسمك إيه؟</h2></div>
+    <div class="modal-body">
+      <p style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px;line-height:1.7">
+        الاسم ده بيتكتب في سجل التعديلات جنب أي تغيير تعمله، عشان يبقى معروف مين غيّر إيه. بيتسأل مرة واحدة بس على الجهاز ده.
+      </p>
+      <div class="fg"><input type="text" id="actorInput" placeholder="مثال: علي شعبان" onkeydown="if(event.key==='Enter')saveActor()"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-green" style="margin-right:auto" onclick="saveActor()">حفظ</button></div>
   </div>
 </div>
 
 <!-- Settings Modal -->
 <div class="modal-bg" id="settingsModal">
   <div class="modal" style="max-width:520px">
-    <div class="modal-head"><h2>⚙️ إعدادات المزامنة</h2><button class="modal-x" onclick="closeSettings()">×</button></div>
+    <div class="modal-head"><h2>⚙️ الإعدادات</h2><button class="modal-x" onclick="closeSettings()">×</button></div>
     <div class="modal-body">
+      <div class="fg"><label>👤 اسمك (بيظهر في سجل التعديلات)</label><input type="text" id="s-actor"></div>
       <div style="background:var(--cream);padding:14px;border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.7">
         💡 النظام مربوط تلقائياً بـSupabase. لو حبيت تغيّر الحساب:<br>
-        1. شغّل <code>كشف_السائقين_supabase.sql</code> في Supabase<br>
+        1. شغّل <code>كشف_السائقين_supabase.sql</code> ثم <code>كشف_السائقين_ترقية_v2.sql</code><br>
         2. الصق الـURL والـKey هنا
       </div>
       <div class="fg"><label>🔗 Supabase URL</label><input type="text" id="s-url" placeholder="https://xxx.supabase.co"></div>
-      <div class="fg"><label>🔑 Anon Key</label><textarea id="s-key" rows="3" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:9px;font-family:monospace;font-size:11px"></textarea></div>
+      <div class="fg"><label>🔑 Anon Key</label><textarea id="s-key" rows="3" style="font-family:monospace;font-size:11px"></textarea></div>
       <div id="s-status" style="font-size:12px;color:var(--muted);font-weight:700"></div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-green" onclick="saveSettings()" style="margin-right:auto"><i class="ti ti-cloud-check"></i> حفظ واتصال</button>
+      <button class="btn btn-green" onclick="saveSettings()" style="margin-right:auto"><i class="ti ti-cloud-check"></i> حفظ</button>
     </div>
   </div>
 </div>
@@ -265,11 +354,26 @@ const DEFAULT_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
 const CONFIG_KEY = 'salasil_onboard_config';
 const CACHE_KEY  = 'salasil_onboard_cache';
+const QUEUE_KEY  = 'salasil_onboard_queue';   // تعديلات اتعملت والنت فاصل — بتترفع لما يرجع
+const ACTOR_KEY  = 'salasil_onboard_actor';
+const TABLE = 'drivers_onboarding';
+const LOG_TABLE = 'drivers_onboarding_log';
 
-// حقول المراحل (لحساب التقدم)
-const STAGES = ['medical','embassy','work_permit','residency','civil_id','license_status','bank_card'];
+// المراحل — الترتيب هنا هو ترتيب الأعمدة
+const STAGE_META = [
+  {k:'medical',        label:'🩺 الفحص الطبي'},
+  {k:'embassy',        label:'🏛️ توثيق السفارة'},
+  {k:'work_permit',    label:'📋 إذن العمل'},
+  {k:'residency',      label:'🪪 الإقامة'},
+  {k:'civil_id',       label:'🆔 المدنية'},
+  {k:'license_status', label:'🚦 حالة الرخصة'},
+  {k:'bank_card',      label:'🏦 كارت البنك'},
+];
+const STAGES = STAGE_META.map(s=>s.k);
 
-// خيارات جاهزة (presets) لكل عمود
+// الأعمدة اللي جت مع ترقية v2 — لو الترقية مش متشغّلة بنشيلها قبل الحفظ
+const V2_FIELDS = ['arrival_date','stage_dates','phone','civil_no','ark_status','ark_id','ark_moved_at','updated_by'];
+
 const PRESETS = {
   medical:    ['تم الفحص','لائق','بانتظار ظهور نتيجة الفحص','اعاده الفحص الطبى','يوم الاحد سيتم اخذ عينه اخرى','غير لائق'],
   embassy:    ['تم','لم يتم الانتهاء من التوثيق غدا موعد التوثيق','ليس لديها توثيق الرخصه ( سيكل )','قيد التوثيق'],
@@ -280,280 +384,638 @@ const PRESETS = {
   bank_card:  ['تم الاصدار','جاري الاصدار','لم يبدأ'],
 };
 
-// تصنيف لون الحالة تلقائياً (ذكاء)
+const FIELD_LABELS = Object.assign({
+  name:'الاسم', nationality:'الجنسية', license_type:'نوع الرخصة', notes:'الملاحظات',
+  arrival_date:'تاريخ الوصول', stage_dates:'المواعيد', phone:'الهاتف', civil_no:'الرقم المدني',
+  ark_status:'حالة التحويل لـ ARK', ark_id:'كود ARK', ark_moved_at:'وقت النقل لـ ARK'
+}, Object.fromEntries(STAGE_META.map(s=>[s.k, s.label.replace(/^\S+\s/,'')])));
+
+// ═══════════════════════════════════════════════════════════════════
+// تصنيف الحالة (لون + مكتمل ولا لأ)
+// ═══════════════════════════════════════════════════════════════════
 function statusClass(txt){
   const t = String(txt||'').trim();
   if(!t) return 'st-gray';
-  const s = t.toLowerCase();
   // أخضر: مكتمل
-  if(/تم الفحص|لائق|تم الاصدار|^تم$|مكتمل|جاهز|ناجح/.test(t) && !/لم|غير|جاري/.test(t)) return 'st-green';
-  if(/^تم /.test(t) || t==='تم') return 'st-green';
+  if(/تم الفحص|لائق|تم الاصدار|تم الإصدار|^تم$|مكتمل|جاهز|ناجح/.test(t) && !/لم|غير|جاري/.test(t)) return 'st-green';
+  if(/^تم /.test(t)) return 'st-green';
   // أزرق: له موعد
   if(/موعد|\d{1,2}\/\d{1,2}/.test(t)) return 'st-blue';
+  // أصفر: لسه ما بدأش أو قيد الإجراء — «لم يبدأ» مش مشكلة، ده طبيعي لسواق جديد
+  if(/لم يبدأ|لم يبدا|جاري|بانتظار|قيد|غدا|سيتم/.test(t)) return 'st-amber';
   // أحمر: مشكلة/متوقف
-  if(/لم |ليس |غير لائق|مرفوض|منتهي|اعاده|إعاده|لا /.test(t)) return 'st-red';
-  // أصفر: قيد الإجراء
-  if(/جاري|بانتظار|قيد|غدا|سيتم|لم يبدأ/.test(t)) return 'st-amber';
+  if(/لم |ليس |غير لائق|مرفوض|منتهي|اعاده|إعاده|إعادة|اعادة|لا /.test(t)) return 'st-red';
   return 'st-gray';
 }
-// هل المرحلة مكتملة؟ (للتقدم)
-function stageDone(txt){
-  const t = String(txt||'').trim();
-  if(!t) return false;
-  return statusClass(t) === 'st-green';
+function stageDone(txt){ return statusClass(txt) === 'st-green'; }
+
+// ═══════════════════════════════════════════════════════════════════
+// أدوات
+// ═══════════════════════════════════════════════════════════════════
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayStr(){ return new Date().toLocaleDateString('en-CA'); } // YYYY-MM-DD بالتوقيت المحلي
+function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000); }
+function fmtDate(d){ if(!d) return ''; const [y,m,dd]=String(d).slice(0,10).split('-'); return dd+'/'+m+(y!==String(new Date().getFullYear())?'/'+y:''); }
+function fmtDateTime(ts){ try{ return new Date(ts).toLocaleString('ar-KW',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ts; } }
+function stageDates(d){ const x=d.stage_dates; if(!x) return {}; if(typeof x==='string'){ try{return JSON.parse(x)||{};}catch(e){return {};} } return x; }
+
+// حالة موعد مرحلة: late | today | soon | set | none
+function dueState(d, k){
+  const due = stageDates(d)[k];
+  if(!due) return 'none';
+  if(stageDone(d[k])) return 'set';
+  const diff = daysBetween(todayStr(), due);
+  if(diff < 0) return 'late';
+  if(diff === 0) return 'today';
+  if(diff <= 2) return 'soon';
+  return 'set';
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // STATE + STORAGE
 // ═══════════════════════════════════════════════════════════════════
 let DRIVERS = [];
-let sb = null, cloudReady = false, realtimeCh = null;
+let sb = null, online = false, realtimeCh = null;
 let activeKpi = '';
+let LEGACY = false;          // true = ترقية v2 مش متشغّلة
+let sortable = null;
+let pendingAfterActor = null;
+let GLOBAL_LOG = [];
 
 function getConfig(){
   try{
     const c = JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}');
-    if(!c.url && DEFAULT_URL) c.url = DEFAULT_URL;
-    if(!c.key && DEFAULT_KEY) c.key = DEFAULT_KEY;
+    if(!c.url) c.url = DEFAULT_URL;
+    if(!c.key) c.key = DEFAULT_KEY;
     return c;
-  }catch{ return {url:DEFAULT_URL, key:DEFAULT_KEY}; }
+  }catch(e){ return {url:DEFAULT_URL, key:DEFAULT_KEY}; }
 }
-function loadCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY)||'[]'); }catch{ return []; } }
-function saveCache(d){ localStorage.setItem(CACHE_KEY, JSON.stringify(d)); }
+function lsGet(k, def){ try{ const v=localStorage.getItem(k); return v==null?def:JSON.parse(v); }catch(e){ return def; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ console.error('localStorage',e); return false; } }
+function loadCache(){ return lsGet(CACHE_KEY, []); }
+function saveCache(){ lsSet(CACHE_KEY, DRIVERS); }
+function getQueue(){ return lsGet(QUEUE_KEY, []); }
+function setQueue(q){ lsSet(QUEUE_KEY, q); paintQueue(); }
+function getActor(){ try{ return localStorage.getItem(ACTOR_KEY)||''; }catch(e){ return ''; } }
 
 function setCloud(state, txt){
   const dot=document.getElementById('cloudDot'), lbl=document.getElementById('cloudText');
-  const col={connecting:'#94a3b8',connected:'#22c55e',syncing:'#eab308',error:'#ef4444',offline:'#94a3b8'};
+  const col={connecting:'#94a3b8',connected:'#22c55e',syncing:'#eab308',error:'#ef4444',offline:'#f97316'};
   dot.style.background=col[state]||'#94a3b8';
   dot.style.boxShadow = state==='connected'?'0 0 8px '+col[state]:'none';
   lbl.textContent=txt;
 }
+function paintQueue(){
+  const n=getQueue().length, b=document.getElementById('queueBadge');
+  b.textContent='⏳ '+n+' تعديل مستني النت';
+  b.classList.toggle('show', n>0);
+}
 
-function toast(msg, err){
+function toast(msg, kind){
   const t=document.getElementById('toast');
-  t.textContent=msg; t.className='toast show'+(err?' err':'');
-  setTimeout(()=>t.classList.remove('show'), 2800);
+  t.textContent=msg; t.className='toast show'+(kind===true||kind==='err'?' err':kind==='warn'?' warn':'');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SUPABASE
+// SUPABASE — مع حفظ على الجهاز لو النت فاصل
 // ═══════════════════════════════════════════════════════════════════
 async function initCloud(){
   const cfg=getConfig();
-  if(!cfg.url||!cfg.key){ setCloud('offline','محلي فقط'); DRIVERS=loadCache(); render(); return; }
+  if(!cfg.url||!cfg.key){ setCloud('offline','محلي فقط'); return; }
   setCloud('connecting','جاري الاتصال...');
   try{
-    sb=supabase.createClient(cfg.url,cfg.key);
+    if(!sb) sb=supabase.createClient(cfg.url,cfg.key);
+    await detectSchema();
+    await flushQueue();
     await pull();
-    setCloud('connected','☁️ متصل — لحظي');
+    online=true;
+    setCloud('connected','☁️ متصل — '+DRIVERS.length+' سائق');
     subscribe();
   }catch(e){
-    console.error(e); setCloud('error','خطأ اتصال');
-    DRIVERS=loadCache(); render();
+    console.error(e); online=false;
+    setCloud('offline','📴 غير متصل — الحفظ على الجهاز');
   }
 }
 
+async function detectSchema(){
+  const {error}=await sb.from(TABLE).select('ark_status').limit(1);
+  if(error){
+    if(/column|does not exist|schema cache/i.test(error.message||'')){ LEGACY=true; }
+    else throw error;
+  } else LEGACY=false;
+  document.getElementById('legacyBanner').classList.toggle('show', LEGACY);
+}
+
 async function pull(){
-  const {data,error}=await sb.from('drivers_onboarding').select('*').order('seq');
+  // لو في تعديلات لسه ما اترفعتش، مانمسحهاش ببيانات السحابة القديمة
+  if(getQueue().length) return;
+  const {data,error}=await sb.from(TABLE).select('*').order('seq');
   if(error) throw error;
   DRIVERS=data||[];
-  saveCache(DRIVERS);
+  saveCache();
   render();
 }
 
 function subscribe(){
   if(realtimeCh) sb.removeChannel(realtimeCh);
   realtimeCh=sb.channel('onboard_ch')
-    .on('postgres_changes',{event:'*',schema:'public',table:'drivers_onboarding'},()=>{
-      clearTimeout(window._rt); window._rt=setTimeout(pull,400);
-      setCloud('connected','☁️ تحديث لحظي ✅');
-      setTimeout(()=>setCloud('connected','☁️ متصل — '+DRIVERS.length+' سائق'),1500);
+    .on('postgres_changes',{event:'*',schema:'public',table:TABLE},()=>{
+      clearTimeout(window._rt); window._rt=setTimeout(()=>pull().catch(()=>{}),500);
     }).subscribe();
 }
 
-async function upsert(rec){
-  if(!cloudReady && !sb){ // local fallback
-    const i=DRIVERS.findIndex(d=>d.id===rec.id);
-    if(i>=0) DRIVERS[i]=rec; else DRIVERS.push(rec);
-    saveCache(DRIVERS); render(); return true;
-  }
-  try{
-    setCloud('syncing','⬆️ حفظ...');
-    const {error}=await sb.from('drivers_onboarding').upsert(rec,{onConflict:'id'});
-    if(error) throw error;
-    setCloud('connected','☁️ محفوظ ✅');
-    return true;
-  }catch(e){ console.error(e); toast('خطأ في الحفظ: '+e.message,true); return false; }
+function cloudRow(rec){
+  const r=Object.assign({}, rec);
+  if(LEGACY) V2_FIELDS.forEach(k=>delete r[k]);
+  if(!LEGACY){ if(r.arrival_date==='') r.arrival_date=null; if(!r.stage_dates) r.stage_dates={}; }
+  delete r.created_at; delete r.updated_at;
+  return r;
 }
 
-async function removeDriver(id){
+// عملية واحدة على السحابة — بترمي error لو فشلت
+async function cloudOp(op){
+  if(!sb) throw new Error('no client');
+  if(op.type==='upsert'){
+    const {error}=await sb.from(TABLE).upsert(op.recs.map(cloudRow),{onConflict:'id'});
+    if(error) throw error;
+  } else if(op.type==='delete'){
+    const {error}=await sb.from(TABLE).delete().eq('id',op.id);
+    if(error) throw error;
+  } else if(op.type==='log'){
+    if(LEGACY) return;
+    const {error}=await sb.from(LOG_TABLE).insert(op.row);
+    if(error) throw error;
+  }
+}
+
+function isNetErr(e){ return !navigator.onLine || /fetch|network|Failed to fetch|timeout|NetworkError/i.test(String(e&&e.message||e)); }
+
+// بتنفّذ العملية؛ لو النت فاصل بتحطها في الطابور
+async function run(op){
+  const q=getQueue();
+  if(q.length || !sb){ q.push(op); setQueue(q); if(sb && online) setTimeout(flushQueue, 50); return 'queued'; }
   try{
-    if(sb){ const {error}=await sb.from('drivers_onboarding').delete().eq('id',id); if(error) throw error; }
-    else { DRIVERS=DRIVERS.filter(d=>d.id!==id); saveCache(DRIVERS); render(); }
-    return true;
-  }catch(e){ toast('خطأ الحذف: '+e.message,true); return false; }
+    setCloud('syncing','⬆️ حفظ...');
+    await cloudOp(op);
+    online=true; setCloud('connected','☁️ محفوظ ✅');
+    return 'ok';
+  }catch(e){
+    if(isNetErr(e)){
+      q.push(op); setQueue(q); online=false;
+      setCloud('offline','📴 غير متصل — الحفظ على الجهاز');
+      return 'queued';
+    }
+    console.error(e);
+    setCloud('error','خطأ في الحفظ');
+    toast('خطأ في الحفظ: '+(e.message||e), true);
+    return 'error';
+  }
+}
+
+let flushing=false;
+async function flushQueue(){
+  if(flushing || !sb) return;
+  let q=getQueue(); if(!q.length) return;
+  flushing=true;
+  try{
+    while(q.length){
+      try{ await cloudOp(q[0]); }
+      catch(e){
+        if(isNetErr(e)) break;           // النت لسه فاصل — نستنى
+        console.error('queue op dropped', q[0], e);
+        toast('تعديل ما اترفعش واتشال من الطابور: '+(e.message||e), true);
+      }
+      q.shift(); setQueue(q);
+    }
+    if(!q.length){ toast('✅ التعديلات اللي اتعملت من غير نت اترفعت'); online=true; setCloud('connected','☁️ متصل — '+DRIVERS.length+' سائق'); }
+  } finally { flushing=false; }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RENDER
+// الحسابات
 // ═══════════════════════════════════════════════════════════════════
 function progress(d){
   const done = STAGES.filter(s=>stageDone(d[s])).length;
   return Math.round(done/STAGES.length*100);
 }
 function progColor(p){ return p>=100?'#059669':p>=50?'#d97706':p>0?'#2563eb':'#94a3b8'; }
-
 function driverState(d){
-  const p=progress(d);
-  if(p>=100) return 'done';
-  const hasStuck = STAGES.some(s=>statusClass(d[s])==='st-red');
-  if(hasStuck) return 'stuck';
+  if(progress(d)>=100) return 'done';
+  if(STAGES.some(s=>statusClass(d[s])==='st-red')) return 'stuck';
   return 'progress';
 }
-
-function renderKPIs(){
-  const total=DRIVERS.length;
-  const done=DRIVERS.filter(d=>driverState(d)==='done').length;
-  const prog=DRIVERS.filter(d=>driverState(d)==='progress').length;
-  const stuck=DRIVERS.filter(d=>driverState(d)==='stuck').length;
-  const avgProg = total? Math.round(DRIVERS.reduce((s,d)=>s+progress(d),0)/total) : 0;
-  const kpis=[
-    {k:'',label:'إجمالي السائقين',val:total,sub:'كل الكشف',c:'var(--navy)'},
-    {k:'done',label:'مكتمل ✅',val:done,sub:'جاهز 100%',c:'var(--green)'},
-    {k:'progress',label:'قيد الإجراء 🟡',val:prog,sub:'تحت المتابعة',c:'var(--amber)'},
-    {k:'stuck',label:'متوقف/مشكلة 🔴',val:stuck,sub:'يحتاج تدخّل',c:'var(--red)'},
-    {k:'',label:'متوسط الإنجاز',val:avgProg+'%',sub:'كل المراحل',c:'var(--gold)'},
-  ];
-  document.getElementById('kpiGrid').innerHTML=kpis.map(x=>
-    `<div class="kpi ${activeKpi===x.k&&x.k?'active':''}" style="--c:${x.c}" onclick="toggleKpi('${x.k}')">
-      <div class="kpi-label">${x.label}</div><div class="kpi-value">${x.val}</div><div class="kpi-sub">${x.sub}</div>
-    </div>`).join('');
+function lateStages(d){ return STAGES.filter(k=>dueState(d,k)==='late'); }
+function matchesKey(d,k){
+  if(k==='late') return lateStages(d).length>0;
+  if(k==='ark') return !!d.ark_status;
+  return driverState(d)===k;
 }
 
-function toggleKpi(k){ activeKpi = (activeKpi===k)?'':k; if(k) document.getElementById('filterProg').value=''; render(); }
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+function renderKPIs(){
+  const total=DRIVERS.length;
+  const cnt=k=>DRIVERS.filter(d=>matchesKey(d,k)).length;
+  const avgProg = total? Math.round(DRIVERS.reduce((s,d)=>s+progress(d),0)/total) : 0;
+  const arkReady=DRIVERS.filter(d=>d.ark_status==='ready').length;
+  const arkDone=DRIVERS.filter(d=>d.ark_status==='imported').length;
+  const kpis=[
+    {k:'',label:'إجمالي السائقين',val:total,sub:'متوسط الإنجاز '+avgProg+'%',c:'var(--navy)',st:true},
+    {k:'done',label:'مكتمل ✅',val:cnt('done'),sub:'جاهز 100%',c:'var(--green)'},
+    {k:'progress',label:'قيد الإجراء 🟡',val:cnt('progress'),sub:'تحت المتابعة',c:'var(--amber)'},
+    {k:'stuck',label:'متوقف/مشكلة 🔴',val:cnt('stuck'),sub:'يحتاج تدخّل',c:'var(--red)'},
+    {k:'late',label:'مواعيد متأخرة ⏰',val:cnt('late'),sub:'سائق عنده مرحلة فات موعدها',c:'#b91c1c'},
+    {k:'ark',label:'اتحوّلوا لـ ARK 📤',val:arkReady+arkDone,sub:arkDone+' اتضافوا · '+arkReady+' مستنيين',c:'var(--blue)'},
+  ];
+  document.getElementById('kpiGrid').innerHTML=kpis.map(x=>
+    `<div class="kpi ${x.st?'static':''} ${activeKpi===x.k&&x.k?'active':''}" style="--c:${x.c}" ${x.st?'':`onclick="toggleKpi('${x.k}')"`}>
+      <div class="kpi-label">${x.label}</div><div class="kpi-value">${x.val}</div><div class="kpi-sub">${esc(x.sub)}</div>
+    </div>`).join('');
+}
+function toggleKpi(k){ activeKpi = (activeKpi===k)?'':k; document.getElementById('filterProg').value=''; render(); }
 
-function stCell(txt){
-  const t=String(txt||'').trim();
-  return t ? `<span class="st ${statusClass(t)}" title="${t.replace(/"/g,'&quot;')}">${t}</span>` : '<span class="st st-gray">—</span>';
+function renderAlerts(){
+  const today=todayStr(), items=[];
+  DRIVERS.forEach(d=>{
+    if(d.ark_status==='imported') return;
+    const sd=stageDates(d);
+    STAGE_META.forEach(s=>{
+      const st=dueState(d,s.k); if(st==='none'||st==='set') return;
+      const diff=daysBetween(today, sd[s.k]);
+      items.push({d, s, st, diff});
+    });
+  });
+  const box=document.getElementById('alertsBox');
+  if(!items.length){ box.style.display='none'; return; }
+  box.style.display='';
+  items.sort((a,b)=>a.diff-b.diff);
+  const late=items.filter(i=>i.st==='late').length;
+  document.getElementById('alertsTitle').textContent='⏰ تنبيهات المواعيد — '+(late?late+' متأخر · ':'')+(items.length-late)+' قريب';
+  document.getElementById('alertsBody').innerHTML=items.map(i=>{
+    const when = i.st==='late' ? 'متأخر '+(-i.diff)+' يوم' : i.st==='today' ? 'النهارده' : (i.diff===1?'بكرة':'بعد '+i.diff+' يوم');
+    const cls = i.st==='late'?'al-late':i.st==='today'?'al-today':'al-soon';
+    const icon = i.st==='late'?'⏰':'📅';
+    return `<span class="al ${cls}" onclick="openEdit('${esc(i.d.id)}')">${icon} ${esc(i.d.name)} — ${esc(FIELD_LABELS[i.s.k])} · ${when} (${fmtDate(stageDates(i.d)[i.s.k])})</span>`;
+  }).join('');
+}
+
+function stCell(d, k){
+  const t=String(d[k]||'').trim();
+  const badge = t ? `<span class="st ${statusClass(t)}" title="${esc(t)}">${esc(t)}</span>` : '<span class="st st-gray">—</span>';
+  const due=stageDates(d)[k];
+  if(!due) return badge;
+  const st=dueState(d,k);
+  const cls = st==='late'?'late':st==='today'?'today':st==='soon'?'soon':'';
+  const pre = st==='late'?'⏰ فات ':st==='today'?'📅 النهارده ':'📅 ';
+  return badge + `<span class="due ${cls}">${pre}${fmtDate(due)}</span>`;
+}
+
+function arkCell(d){
+  if(d.ark_status==='imported') return `<span class="st st-green" title="اتضاف في ARK">✅ ${esc(d.ark_id||'اتضاف')}</span>`;
+  if(d.ark_status==='ready') return '<span class="st st-blue">📤 مستني ARK</span>';
+  return '<span style="color:#cbd5e1">—</span>';
+}
+
+function filtersActive(){
+  return !!(document.getElementById('searchInput').value.trim() || document.getElementById('filterNat').value ||
+    document.getElementById('filterType').value || document.getElementById('filterProg').value || activeKpi);
 }
 
 function render(){
   renderKPIs();
+  renderAlerts();
   const q=document.getElementById('searchInput').value.trim();
   const fNat=document.getElementById('filterNat').value;
   const fType=document.getElementById('filterType').value;
   const fProg=document.getElementById('filterProg').value;
 
   let list=DRIVERS.slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
-  if(q) list=list.filter(d=>String(d.name||'').includes(q));
+  if(q) list=list.filter(d=>String(d.name||'').toLowerCase().includes(q.toLowerCase()));
   if(fNat) list=list.filter(d=>d.nationality===fNat);
   if(fType) list=list.filter(d=>d.license_type===fType);
-  if(fProg) list=list.filter(d=>driverState(d)===fProg);
-  if(activeKpi) list=list.filter(d=>driverState(d)===activeKpi);
+  if(fProg) list=list.filter(d=>matchesKey(d,fProg));
+  if(activeKpi) list=list.filter(d=>matchesKey(d,activeKpi));
 
+  const canDrag = !filtersActive();
+  const today=todayStr();
   const tb=document.getElementById('tbody');
-  if(list.length===0){ tb.innerHTML='<tr><td colspan="12" style="padding:40px;color:var(--muted)">لا يوجد سائقين مطابقين</td></tr>'; }
+  if(list.length===0){ tb.innerHTML='<tr><td colspan="15" style="padding:40px;color:var(--muted)">لا يوجد سائقين مطابقين</td></tr>'; }
   else tb.innerHTML=list.map(d=>{
     const p=progress(d);
     const tp=d.license_type==='سيكل'?'<span class="type-badge type-bike">🏍️ سيكل</span>':'<span class="type-badge type-car">🚗 سيارة</span>';
-    return `<tr onclick="openEdit('${d.id}')">
+    let arr='<span style="color:#cbd5e1">—</span>';
+    if(d.arrival_date){
+      const since=daysBetween(d.arrival_date, today);
+      arr = since>=0 ? `${fmtDate(d.arrival_date)}<div class="name-sub">من ${since} يوم</div>` : `${fmtDate(d.arrival_date)}<div class="name-sub" style="color:var(--blue)">بعد ${-since} يوم</div>`;
+    }
+    const late=lateStages(d).length;
+    return `<tr data-id="${esc(d.id)}" class="${d.ark_status==='imported'?'row-imported':''}" onclick="rowClick(event,'${esc(d.id)}')">
+      <td><span class="handle ${canDrag?'':'off'}" title="${canDrag?'اسحب لتغيير الترتيب':'امسح البحث والفلاتر عشان ترتّب'}"><i class="ti ti-grip-vertical"></i></span></td>
       <td><span class="seq-badge">${d.seq||''}</span></td>
-      <td class="name-cell">${d.name||''}</td>
-      <td>${d.nationality||'—'}</td>
-      <td>${stCell(d.medical)}</td>
-      <td>${stCell(d.embassy)}</td>
-      <td>${stCell(d.work_permit)}</td>
-      <td>${stCell(d.residency)}</td>
-      <td>${stCell(d.civil_id)}</td>
-      <td>${stCell(d.license_status)}</td>
+      <td class="name-cell">${esc(d.name)}${late?` <span title="${late} مرحلة فات موعدها" style="color:var(--red)">⏰</span>`:''}${d.notes?`<div class="name-sub" title="${esc(d.notes)}">📝 ${esc(String(d.notes).slice(0,30))}</div>`:''}</td>
+      <td>${esc(d.nationality)||'—'}</td>
+      <td>${arr}</td>
+      ${STAGES.slice(0,6).map(k=>`<td>${stCell(d,k)}</td>`).join('')}
       <td>${tp}</td>
-      <td>${stCell(d.bank_card)}</td>
+      <td>${stCell(d,'bank_card')}</td>
       <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${p}%;background:${progColor(p)}"></div></div><span class="prog-txt" style="color:${progColor(p)}">${p}%</span></div></td>
+      <td>${arkCell(d)}</td>
     </tr>`;
   }).join('');
 
   document.getElementById('countLabel').textContent='عرض '+list.length+' من '+DRIVERS.length+' سائق';
+  document.getElementById('dragHint').textContent = canDrag ? '' : '⇅ الترتيب بالسحب متاح لما تمسح البحث والفلاتر';
+  if(sortable) sortable.option('disabled', !canDrag || list.length<2);
 
-  // fill nationality filter
   const nats=[...new Set(DRIVERS.map(d=>d.nationality).filter(Boolean))].sort();
   const sel=document.getElementById('filterNat'), cur=sel.value;
-  sel.innerHTML='<option value="">كل الجنسيات</option>'+nats.map(n=>`<option value="${n}">${n}</option>`).join('');
+  sel.innerHTML='<option value="">كل الجنسيات</option>'+nats.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   sel.value=cur;
-  document.getElementById('natList').innerHTML=nats.map(n=>`<option value="${n}">`).join('');
+  document.getElementById('natList').innerHTML=nats.map(n=>`<option value="${esc(n)}">`).join('');
+}
+
+function rowClick(ev, id){
+  if(ev.target.closest('.handle')) return;
+  openEdit(id);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// الترتيب بالسحب والإفلات
+// ═══════════════════════════════════════════════════════════════════
+function initSortable(){
+  if(typeof Sortable==='undefined'){ console.warn('SortableJS not loaded'); return; }
+  sortable = Sortable.create(document.getElementById('tbody'), {
+    handle:'.handle', animation:160, ghostClass:'sortable-ghost', chosenClass:'sortable-chosen',
+    filter:'.handle.off', preventOnFilter:false,
+    onEnd: async (evt)=>{
+      if(evt.oldIndex===evt.newIndex) return;
+      if(!(await ensureActor())){ render(); return; }
+      const ids=[...document.querySelectorAll('#tbody tr[data-id]')].map(tr=>tr.dataset.id);
+      const moved=DRIVERS.find(d=>d.id===evt.item.dataset.id);
+      await applyOrder(ids, moved ? {name:moved.name, id:moved.id, from:evt.oldIndex+1, to:evt.newIndex+1} : null);
+    }
+  });
+}
+
+// بيدّي أرقام 1..n بالترتيب الجديد وبيحفظ اللي اتغيّر بس
+async function applyOrder(ids, moveInfo){
+  const actor=getActor();
+  const changed=[];
+  ids.forEach((id,i)=>{
+    const d=DRIVERS.find(x=>x.id===id); if(!d) return;
+    if(d.seq!==i+1){ d.seq=i+1; d.updated_by=actor; changed.push(Object.assign({},d)); }
+  });
+  render(); saveCache();
+  if(!changed.length) return;
+  const res=await run({type:'upsert', recs:changed});
+  if(moveInfo) await run({type:'log', row:{driver_id:moveInfo.id, driver_name:moveInfo.name, action:'reorder', field:'seq', old_value:String(moveInfo.from), new_value:String(moveInfo.to), actor}});
+  if(res==='ok') toast('✅ الترتيب اتحفظ');
+  else if(res==='queued') toast('📴 الترتيب اتحفظ على الجهاز — هيترفع لما النت يرجع','warn');
+}
+
+async function renumberAll(){
+  const ids=DRIVERS.slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(d=>d.id);
+  await applyOrder(ids, null);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// اسم المستخدم (للسجل)
+// ═══════════════════════════════════════════════════════════════════
+function ensureActor(){
+  if(getActor()) return Promise.resolve(true);
+  return new Promise(res=>{
+    pendingAfterActor=res;
+    document.getElementById('actorInput').value='';
+    document.getElementById('actorModal').classList.add('show');
+    setTimeout(()=>document.getElementById('actorInput').focus(),50);
+  });
+}
+function saveActor(){
+  const v=document.getElementById('actorInput').value.trim();
+  if(!v){ toast('اكتب اسمك',true); return; }
+  try{ localStorage.setItem(ACTOR_KEY, v); }catch(e){}
+  document.getElementById('actorModal').classList.remove('show');
+  if(pendingAfterActor){ const r=pendingAfterActor; pendingAfterActor=null; r(true); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // MODAL — Add/Edit
 // ═══════════════════════════════════════════════════════════════════
-function fillPresets(){
-  const map={medical:'f-medical-sel',embassy:'f-embassy-sel',work_permit:'f-work-sel',residency:'f-residency-sel',civil_id:'f-civil-sel',license_status:'f-license-sel',bank_card:'f-bank-sel'};
-  Object.keys(map).forEach(k=>{
-    const sel=document.getElementById(map[k]);
-    sel.innerHTML='<option value="">— اختر حالة جاهزة —</option>'+PRESETS[k].map(o=>`<option value="${o}">${o}</option>`).join('');
-  });
+function buildStageRows(){
+  document.getElementById('stageRows').innerHTML=STAGE_META.map(s=>`
+    <div class="stage-row">
+      <span class="lbl">${s.label}</span>
+      <select id="sel-${s.k}" onchange="if(this.value)document.getElementById('f-${s.k}').value=this.value">
+        <option value="">— اختر —</option>${PRESETS[s.k].map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}
+      </select>
+      <input type="text" id="f-${s.k}" placeholder="حالة مخصصة">
+      <input type="date" id="d-${s.k}" title="موعد المرحلة — لو فات والمرحلة ما خلصتش هيطلع تنبيه">
+    </div>`).join('');
 }
-function applyPreset(inputId,val){ if(val) document.getElementById(inputId).value=val; }
+
+function switchTab(t){
+  document.querySelectorAll('#modalTabs .tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
+  document.getElementById('tab-data').style.display = t==='data'?'':'none';
+  document.getElementById('tab-log').style.display = t==='log'?'':'none';
+  document.getElementById('saveBtn').style.display = t==='data'?'':'none';
+  if(t==='log') loadDriverLog(document.getElementById('f-id').value);
+}
 
 function openAdd(){
   document.getElementById('modalTitle').textContent='➕ إضافة سائق جديد';
   document.getElementById('delBtn').style.display='none';
-  ['f-name','f-nat','f-medical','f-embassy','f-work','f-residency','f-civil','f-license','f-bank','f-notes'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('arkBtn').style.display='none';
+  document.getElementById('arkBox').innerHTML='';
+  document.getElementById('modalTabs').style.display='none';
+  ['f-name','f-nat','f-arrival','f-phone','f-civilno','f-notes'].forEach(i=>document.getElementById(i).value='');
+  STAGES.forEach(k=>{ document.getElementById('f-'+k).value=''; document.getElementById('d-'+k).value=''; document.getElementById('sel-'+k).value=''; });
   document.getElementById('f-id').value='';
   document.getElementById('f-type').value='سياره';
+  switchTab('data');
   document.getElementById('modal').classList.add('show');
 }
 
 function openEdit(id){
   const d=DRIVERS.find(x=>x.id===id); if(!d) return;
-  document.getElementById('modalTitle').textContent='✏️ تعديل: '+d.name;
+  document.getElementById('modalTitle').textContent='✏️ '+d.name;
   document.getElementById('delBtn').style.display='inline-flex';
+  document.getElementById('modalTabs').style.display='';
   document.getElementById('f-id').value=d.id;
   document.getElementById('f-name').value=d.name||'';
   document.getElementById('f-nat').value=d.nationality||'';
-  document.getElementById('f-medical').value=d.medical||'';
-  document.getElementById('f-embassy').value=d.embassy||'';
-  document.getElementById('f-work').value=d.work_permit||'';
-  document.getElementById('f-residency').value=d.residency||'';
-  document.getElementById('f-civil').value=d.civil_id||'';
-  document.getElementById('f-license').value=d.license_status||'';
+  document.getElementById('f-arrival').value=(d.arrival_date||'').slice(0,10);
+  document.getElementById('f-phone').value=d.phone||'';
+  document.getElementById('f-civilno').value=d.civil_no||'';
+  const sd=stageDates(d);
+  STAGES.forEach(k=>{
+    document.getElementById('f-'+k).value=d[k]||'';
+    document.getElementById('d-'+k).value=sd[k]||'';
+    document.getElementById('sel-'+k).value='';
+  });
   document.getElementById('f-type').value=d.license_type||'سياره';
-  document.getElementById('f-bank').value=d.bank_card||'';
   document.getElementById('f-notes').value=d.notes||'';
+  paintArk(d);
+  switchTab('data');
   document.getElementById('modal').classList.add('show');
+}
+
+function paintArk(d){
+  const box=document.getElementById('arkBox'), btn=document.getElementById('arkBtn');
+  if(d.ark_status==='imported'){
+    box.innerHTML=`<div class="ark-box imported">✅ السائق ده اتضاف في ARK بكود <b>${esc(d.ark_id||'—')}</b>${d.ark_moved_at?' يوم '+fmtDateTime(d.ark_moved_at):''}.</div>`;
+    btn.style.display='none';
+  } else if(d.ark_status==='ready'){
+    box.innerHTML=`<div class="ark-box ready">📤 متحوّل لـ ARK ومستني الإضافة — افتح ARK وهتلاقي زرار «سائقين جاهزين من كشف التوظيف».</div>`;
+    btn.style.display='inline-flex'; btn.innerHTML='<i class="ti ti-arrow-back-up"></i> إلغاء التحويل'; btn.className='btn btn-soft';
+  } else {
+    box.innerHTML='';
+    btn.style.display = LEGACY ? 'none' : 'inline-flex';
+    btn.innerHTML='<i class="ti ti-send"></i> تحويل لـ ARK'; btn.className='btn btn-blue';
+  }
 }
 
 function closeModal(){ document.getElementById('modal').classList.remove('show'); }
 
+function readForm(){
+  const sd={};
+  STAGES.forEach(k=>{ const v=document.getElementById('d-'+k).value; if(v) sd[k]=v; });
+  const r={
+    name:document.getElementById('f-name').value.trim(),
+    nationality:document.getElementById('f-nat').value.trim(),
+    arrival_date:document.getElementById('f-arrival').value||null,
+    phone:document.getElementById('f-phone').value.trim(),
+    civil_no:document.getElementById('f-civilno').value.trim(),
+    license_type:document.getElementById('f-type').value,
+    notes:document.getElementById('f-notes').value.trim(),
+    stage_dates:sd,
+  };
+  STAGES.forEach(k=>r[k]=document.getElementById('f-'+k).value.trim());
+  return r;
+}
+
 async function saveDriver(){
-  const name=document.getElementById('f-name').value.trim();
-  if(!name){ toast('اكتب اسم السائق',true); return; }
+  const form=readForm();
+  if(!form.name){ toast('اكتب اسم السائق',true); return; }
+  if(!(await ensureActor())) return;
   let id=document.getElementById('f-id').value;
   const isNew=!id;
   if(isNew) id='drv_'+Date.now()+Math.random().toString(36).slice(2,6);
-  const seq = isNew ? (Math.max(0,...DRIVERS.map(d=>d.seq||0))+1) : (DRIVERS.find(d=>d.id===id)?.seq||0);
-  const rec={
-    id, seq, name,
-    nationality:document.getElementById('f-nat').value.trim(),
-    medical:document.getElementById('f-medical').value.trim(),
-    embassy:document.getElementById('f-embassy').value.trim(),
-    work_permit:document.getElementById('f-work').value.trim(),
-    residency:document.getElementById('f-residency').value.trim(),
-    civil_id:document.getElementById('f-civil').value.trim(),
-    license_status:document.getElementById('f-license').value.trim(),
-    license_type:document.getElementById('f-type').value,
-    bank_card:document.getElementById('f-bank').value.trim(),
-    notes:document.getElementById('f-notes').value.trim(),
-  };
-  const ok=await upsert(rec);
-  if(ok){ toast(isNew?'✅ تم إضافة السائق':'✅ تم حفظ التعديلات'); closeModal(); if(!sb){render();} }
+  const old = DRIVERS.find(d=>d.id===id) || {};
+  const seq = isNew ? (Math.max(0,...DRIVERS.map(d=>d.seq||0))+1) : (old.seq||0);
+  const rec=Object.assign({}, old, form, {id, seq, updated_by:getActor()});
+  if(isNew){ rec.ark_status=''; rec.ark_id=''; }
+  // محلياً فوراً
+  const i=DRIVERS.findIndex(d=>d.id===id);
+  if(i>=0) DRIVERS[i]=rec; else DRIVERS.push(rec);
+  saveCache(); render(); closeModal();
+  const res=await run({type:'upsert', recs:[rec]});
+  if(res==='ok') toast(isNew?'✅ تم إضافة السائق':'✅ تم حفظ التعديلات');
+  else if(res==='queued') toast('📴 اتحفظ على الجهاز — هيترفع لما النت يرجع','warn');
+  // لو السائق وصل 100% ولسه ما اتحوّلش — نفكّره
+  if(!isNew && !LEGACY && progress(rec)>=100 && progress(old)<100 && !rec.ark_status){
+    setTimeout(()=>toast('🎉 '+rec.name+' خلّص كل المراحل — افتحه ودوس «تحويل لـ ARK»'), 3400);
+  }
 }
 
 async function deleteDriver(){
   const id=document.getElementById('f-id').value;
   const d=DRIVERS.find(x=>x.id===id);
   if(!confirm('حذف السائق "'+(d?.name||'')+'" نهائياً؟')) return;
-  const ok=await removeDriver(id);
-  if(ok){ toast('تم الحذف'); closeModal(); }
+  if(!(await ensureActor())) return;
+  // نكتب اسم اللي مسح قبل الحذف عشان الـ trigger يسجّله
+  if(d && !LEGACY){ d.updated_by=getActor(); await run({type:'upsert', recs:[Object.assign({},d)]}); }
+  DRIVERS=DRIVERS.filter(x=>x.id!==id);
+  saveCache(); closeModal();
+  const res=await run({type:'delete', id});
+  toast(res==='queued'?'📴 اتمسح على الجهاز — هيتمسح من السحابة لما النت يرجع':'تم الحذف', res==='queued'?'warn':undefined);
+  await renumberAll();   // الأرقام تتلم من 1 من غير فراغات
+}
+
+async function toggleArk(){
+  const id=document.getElementById('f-id').value;
+  const d=DRIVERS.find(x=>x.id===id); if(!d) return;
+  if(!(await ensureActor())) return;
+  if(d.ark_status==='ready'){
+    if(!confirm('إلغاء تحويل "'+d.name+'" لـ ARK؟')) return;
+    d.ark_status='';
+  } else {
+    // نحفظ أي تعديلات في الفورم الأول
+    Object.assign(d, readForm());
+    const p=progress(d);
+    if(p<100 && !confirm(d.name+' لسه مخلّصش كل المراحل ('+p+'%).\nتحوّله لـ ARK برضه؟')) return;
+    d.ark_status='ready';
+  }
+  d.updated_by=getActor();
+  saveCache(); render(); paintArk(d);
+  const res=await run({type:'upsert', recs:[Object.assign({},d)]});
+  if(res==='error') return;
+  toast(d.ark_status==='ready' ? '📤 اتحوّل — افتح ARK وضيفه من «سائقين جاهزين من كشف التوظيف»' : 'اتلغى التحويل');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// سجل التعديلات
+// ═══════════════════════════════════════════════════════════════════
+function fmtVal(field, v){
+  if(v==null || v==='') return '<i>فاضي</i>';
+  if(field==='stage_dates'){
+    try{ const o=typeof v==='string'?JSON.parse(v):v; const ks=Object.keys(o||{}); if(!ks.length) return '<i>فاضي</i>';
+      return ks.map(k=>esc(FIELD_LABELS[k]||k)+': '+fmtDate(o[k])).join('، '); }catch(e){}
+  }
+  if(field==='ark_status') return v==='ready'?'مستني ARK':v==='imported'?'اتضاف':esc(v);
+  if(field==='arrival_date') return fmtDate(v);
+  return esc(v);
+}
+function logLine(r, showName){
+  const who = r.actor ? esc(r.actor) : 'غير معروف';
+  const nm = showName ? `<b style="color:var(--navy)">${esc(r.driver_name||'')}</b> — ` : '';
+  let body='';
+  switch(r.action){
+    case 'create': body='➕ اتضاف للكشف'; break;
+    case 'delete': body='🗑️ اتمسح من الكشف'; break;
+    case 'reorder': body=`⇅ اتنقل من رقم ${esc(r.old_value)} لرقم ${esc(r.new_value)}`; break;
+    case 'ark_ready': body='📤 اتحوّل لـ ARK'; break;
+    case 'ark_imported': body='✅ اتضاف في ARK'; break;
+    default:
+      body=`✏️ ${esc(FIELD_LABELS[r.field]||r.field)}: <span class="log-old">${fmtVal(r.field,r.old_value)}</span> ← <span class="log-new">${fmtVal(r.field,r.new_value)}</span>`;
+  }
+  return `<div class="log-item">${nm}${body}<div class="log-meta">👤 ${who} · 🕒 ${fmtDateTime(r.created_at)}</div></div>`;
+}
+
+async function fetchLog(driverId){
+  if(LEGACY) throw new Error('legacy');
+  if(!sb) throw new Error('offline');
+  let q=sb.from(LOG_TABLE).select('*').order('created_at',{ascending:false}).limit(300);
+  if(driverId) q=q.eq('driver_id', driverId);
+  const {data,error}=await q;
+  if(error) throw error;
+  return data||[];
+}
+function logErrMsg(e){
+  if(String(e.message)==='legacy') return 'السجل محتاج تشغيل ملف الترقية <code>كشف_السائقين_ترقية_v2.sql</code> في Supabase.';
+  if(String(e.message)==='offline' || isNetErr(e)) return '📴 السجل محتاج نت.';
+  return 'تعذّر تحميل السجل: '+esc(e.message||e);
+}
+async function loadDriverLog(id){
+  const el=document.getElementById('driverLog');
+  el.innerHTML='<div class="empty">جاري التحميل...</div>';
+  try{
+    const rows=await fetchLog(id);
+    el.innerHTML = rows.length ? rows.map(r=>logLine(r,false)).join('') : '<div class="empty">مفيش تعديلات مسجّلة للسائق ده لسه</div>';
+  }catch(e){ el.innerHTML='<div class="empty">'+logErrMsg(e)+'</div>'; }
+}
+async function openGlobalLog(){
+  document.getElementById('logModal').classList.add('show');
+  const el=document.getElementById('globalLog');
+  el.innerHTML='<div class="empty">جاري التحميل...</div>';
+  try{ GLOBAL_LOG=await fetchLog(null); renderGlobalLog(); }
+  catch(e){ el.innerHTML='<div class="empty">'+logErrMsg(e)+'</div>'; }
+}
+function renderGlobalLog(){
+  const q=document.getElementById('logSearch').value.trim().toLowerCase();
+  const rows=GLOBAL_LOG.filter(r=>!q || String(r.driver_name||'').toLowerCase().includes(q) || String(r.actor||'').toLowerCase().includes(q));
+  document.getElementById('globalLog').innerHTML = rows.length ? rows.map(r=>logLine(r,true)).join('') : '<div class="empty">مفيش نتايج</div>';
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -561,19 +1023,27 @@ async function deleteDriver(){
 // ═══════════════════════════════════════════════════════════════════
 function openSettings(){
   const c=getConfig();
+  document.getElementById('s-actor').value=getActor();
   document.getElementById('s-url').value=c.url||'';
   document.getElementById('s-key').value=c.key||'';
-  document.getElementById('s-status').innerHTML='الحالة: '+(cloudReady?'✅ متصل':'⚠️ غير متصل')+' · '+DRIVERS.length+' سائق';
+  document.getElementById('s-status').innerHTML='الحالة: '+(online?'✅ متصل':'⚠️ غير متصل')+' · '+DRIVERS.length+' سائق'+(LEGACY?' · ⚠️ ترقية v2 مش متشغّلة':' · ترقية v2 ✅');
   document.getElementById('settingsModal').classList.add('show');
 }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
 function saveSettings(){
+  const actor=document.getElementById('s-actor').value.trim();
+  try{ if(actor) localStorage.setItem(ACTOR_KEY, actor); }catch(e){}
   const url=document.getElementById('s-url').value.trim();
   const key=document.getElementById('s-key').value.trim();
-  if(!url||!key){ toast('املأ الحقلين',true); return; }
-  localStorage.setItem(CONFIG_KEY,JSON.stringify({url,key}));
-  closeSettings(); toast('جاري الاتصال...');
-  setTimeout(()=>initCloud().then(()=>{cloudReady=true;}),400);
+  if(!url||!key){ toast('املأ الـURL والـKey',true); return; }
+  const cur=getConfig();
+  closeSettings();
+  if(url!==cur.url || key!==cur.key){
+    lsSet(CONFIG_KEY,{url,key});
+    if(realtimeCh && sb) sb.removeChannel(realtimeCh);
+    sb=null; toast('جاري الاتصال...');
+    initCloud();
+  } else toast('✅ اتحفظ');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -581,17 +1051,19 @@ function saveSettings(){
 // ═══════════════════════════════════════════════════════════════════
 function exportExcel(){
   if(!DRIVERS.length){ toast('لا يوجد بيانات',true); return; }
-  const rows=DRIVERS.slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(d=>({
-    'م':d.seq,'الاسم':d.name,'الجنسية':d.nationality,
-    'الفحص الطبي':d.medical,'توثيق السفارة':d.embassy,'إذن العمل':d.work_permit,
-    'الإقامة':d.residency,'المدنية':d.civil_id,'حالة الرخصة':d.license_status,
-    'نوع الرخصة':d.license_type,'كارت البنك':d.bank_card,'التقدم %':progress(d),'ملاحظات':d.notes
-  }));
+  const rows=DRIVERS.slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(d=>{
+    const sd=stageDates(d), r={'م':d.seq,'الاسم':d.name,'الجنسية':d.nationality,'تاريخ الوصول':d.arrival_date||'','الهاتف':d.phone||''};
+    STAGE_META.forEach(s=>{ r[FIELD_LABELS[s.k]]=d[s.k]||''; r['موعد '+FIELD_LABELS[s.k]]=sd[s.k]||''; });
+    r['نوع الرخصة']=d.license_type; r['التقدم %']=progress(d);
+    r['ARK']=d.ark_status==='imported'?('اتضاف '+(d.ark_id||'')):d.ark_status==='ready'?'مستني':'';
+    r['ملاحظات']=d.notes||'';
+    return r;
+  });
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.json_to_sheet(rows);
   ws['!views']=[{RTL:true}];
   XLSX.utils.book_append_sheet(wb,ws,'كشف السائقين');
-  XLSX.writeFile(wb,'كشف_السائقين_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  XLSX.writeFile(wb,'كشف_السائقين_'+todayStr()+'.xlsx');
   toast('✅ تم التصدير');
 }
 
@@ -599,12 +1071,18 @@ function exportExcel(){
 // INIT
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',async ()=>{
-  fillPresets();
-  DRIVERS=loadCache(); render();
+  buildStageRows();
+  DRIVERS=loadCache(); paintQueue(); render();
+  initSortable(); render();
   await initCloud();
-  cloudReady = !!sb;
 });
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden && sb) pull(); });
+window.addEventListener('online', ()=>{ if(sb && online) flushQueue().then(()=>pull().catch(()=>{})); else initCloud(); });
+window.addEventListener('offline', ()=>{ online=false; setCloud('offline','📴 غير متصل — الحفظ على الجهاز'); });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && sb) flushQueue().then(()=>pull().catch(()=>{})); });
+// محاولة كل 30 ثانية لو في حاجة مستنية أو الاتصال واقع
+setInterval(()=>{ if(!online) initCloud(); else if(getQueue().length) flushQueue(); }, 30000);
+// التنبيهات بتتحدث لو الصفحة مفتوحة من امبارح
+setInterval(()=>{ if(!document.querySelector('.modal-bg.show')) render(); }, 10*60*1000);
 </script>
 </body>
 </html>
