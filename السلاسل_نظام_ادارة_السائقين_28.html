@@ -7880,17 +7880,31 @@ async function pullScheduleFromSupabase(opts){
     const to    = new Date(today); to.setDate(to.getDate() + 56);
     const fromS = fmtDate(from), toS = fmtDate(to);
 
-    const res = await fetch(SUPA_URL + '/rest/v1/schedules?select=driver_id,date,shift_type,shift_start,shift_end'
-      + '&date=gte.' + fromS + '&date=lte.' + toS + '&order=date.asc&limit=5000', {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
-    });
-    if(!res.ok){
-      const t = await res.text().catch(()=> '');
-      console.error('pullSchedule HTTP', res.status, t);
-      if(!opts.silent) toast('تعذّر سحب الجدول من السحابة — شغّال على النسخة المحلية','e');
-      return { ok:false };
+    /* على دفعات لا طلب واحد: PostgREST عنده سقف أقصى للصفوف
+       بيتجاهل أي limit أكبر منه، فالرد بيترجع مقصوصاً في صمت —
+       والمقصوص بيبقى آخر الأيام لأن الترتيب تصاعدي. */
+    const PAGE = 900, MAXR = 20000;
+    let rows = [], off = 0;
+    while(off < MAXR){
+      const res = await fetch(SUPA_URL + '/rest/v1/schedules'
+        + '?select=driver_id,date,shift_type,shift_start,shift_end'
+        + '&date=gte.' + fromS + '&date=lte.' + toS
+        + '&order=date.asc,driver_id.asc&limit=' + PAGE + '&offset=' + off, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      });
+      if(!res.ok){
+        const t = await res.text().catch(()=> '');
+        console.error('pullSchedule HTTP', res.status, t);
+        if(!opts.silent) toast('تعذّر سحب الجدول من السحابة — شغّال على النسخة المحلية','e');
+        return { ok:false };
+      }
+      const page = await res.json();
+      rows = rows.concat(page);
+      /* نقف على الفاضي لا على الناقص: لو سقف الخادم أصغر من
+         دفعتنا، كل دفعة هترجع ناقصة والوقوف عليها بيسيب صفوف. */
+      if(page.length === 0) break;
+      off += page.length;
     }
-    const rows = await res.json();
 
     /* بنبني نسخة الخادم للنافذة دي */
     const srv = {};
@@ -19956,6 +19970,158 @@ window.arkDiagCopy = function(){
     document.body.removeChild(ta);
   }
 };
+})();
+
+</script>
+
+<!-- ══ جسر كشف التوظيف → ARK (27 سبتمبر 2026) ══ -->
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   جسر «كشف التوظيف → ARK»
+   - بيقرا السائقين اللي اتحوّلوا من كشف التوظيف (ark_status = ready)
+   - بيظهر زرار عائم «🆕 سائقين جاهزين من كشف التوظيف (n)»
+   - «إضافة» بتفتح فورم إضافة السائق العادي في ARK متعبّي بالبيانات
+     → نفس التحقق ونفس الكود التسلسلي SA10xx، وARK يفضل هو المصدر
+   - بعد الإضافة بيعلّم السطر في الكشف imported + كود ARK
+   ══════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  var OB = { rows: [], pending: null, err: null };
+
+  function hdr(extra){
+    var h = { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+    for (var k in (extra || {})) h[k] = extra[k];
+    return h;
+  }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function allowed(){ try { return typeof canEdit !== 'function' || canEdit('drivers'); } catch(e){ return true; } }
+
+  function load(){
+    if (typeof SUPA_URL === 'undefined' || !SUPA_URL) return;
+    fetch(SUPA_URL + '/rest/v1/drivers_onboarding?ark_status=eq.ready&select=*&order=seq', { headers: hdr() })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(rows){ OB.rows = rows || []; OB.err = null; paint(); })
+      .catch(function(e){ OB.err = String(e.message || e); paint(); });
+  }
+
+  function paint(){
+    var pill = document.getElementById('obPill');
+    if (!pill){
+      pill = document.createElement('button');
+      pill.id = 'obPill';
+      pill.type = 'button';
+      pill.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:9000;display:none;align-items:center;gap:8px;' +
+        'padding:11px 18px;border:none;border-radius:999px;background:#2563eb;color:#fff;font-family:Cairo,sans-serif;' +
+        'font-weight:900;font-size:13px;box-shadow:0 8px 24px rgba(37,99,235,.4);cursor:pointer';
+      pill.onclick = openList;
+      document.body.appendChild(pill);
+    }
+    var n = OB.rows.length;
+    pill.style.display = (n && allowed()) ? 'inline-flex' : 'none';
+    pill.innerHTML = '🆕 سائقين جاهزين من كشف التوظيف <span style="background:#fff;color:#2563eb;border-radius:999px;padding:1px 9px">' + n + '</span>';
+    var list = document.getElementById('obList');
+    if (list) renderList();
+  }
+
+  function openList(){
+    var ov = document.getElementById('obOv');
+    if (!ov){
+      ov = document.createElement('div');
+      ov.id = 'obOv';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px';
+      ov.onclick = function(e){ if (e.target === ov) ov.remove(); };
+      ov.innerHTML =
+        '<div style="background:#fff;color:#0f172a;border-radius:16px;max-width:560px;width:100%;max-height:85vh;overflow:auto;font-family:Cairo,sans-serif;direction:rtl">' +
+          '<div style="padding:16px 20px;background:linear-gradient(135deg,#0f3a52,#1c5878);color:#fff;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #c29449">' +
+            '<b style="font-size:16px">🆕 سائقين جاهزين من كشف التوظيف</b>' +
+            '<button type="button" onclick="document.getElementById(\'obOv\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:18px">×</button>' +
+          '</div>' +
+          '<div id="obList" style="padding:14px 18px"></div>' +
+        '</div>';
+      document.body.appendChild(ov);
+    }
+    renderList();
+  }
+
+  function renderList(){
+    var el = document.getElementById('obList'); if (!el) return;
+    if (!OB.rows.length){ el.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-weight:700">مفيش سائقين مستنيين ✅</div>'; return; }
+    el.innerHTML = OB.rows.map(function(r){
+      var meta = [r.nationality, r.phone, r.civil_no ? 'مدني ' + r.civil_no : '', r.license_type].filter(Boolean).map(esc).join(' · ');
+      return '<div style="display:flex;align-items:center;gap:10px;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px">' +
+        '<div style="flex:1"><div style="font-weight:900;color:#0f3a52">' + esc(r.name) + '</div>' +
+        '<div style="font-size:11px;color:#64748b;font-weight:700">' + (meta || '—') + '</div></div>' +
+        '<button type="button" data-ob="' + esc(r.id) + '" style="padding:8px 14px;border:none;border-radius:8px;background:#059669;color:#fff;font-family:Cairo;font-weight:800;cursor:pointer">➕ إضافة</button>' +
+      '</div>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('[data-ob]'), function(b){
+      b.onclick = function(){ startImport(b.getAttribute('data-ob')); };
+    });
+  }
+
+  function setVal(id, v){ var e = document.getElementById(id); if (e && v != null && v !== '') e.value = v; }
+
+  function startImport(id){
+    var r = OB.rows.filter(function(x){ return x.id === id; })[0]; if (!r) return;
+    if (!allowed()){ alert('مش عندك صلاحية إضافة سائقين'); return; }
+    var ov = document.getElementById('obOv'); if (ov) ov.remove();
+    OB.pending = { id: r.id, name: r.name };
+    openAddModal();
+    var drv = document.querySelector('input[name="a_stype"][value="driver"]');
+    if (drv && !drv.checked){ drv.checked = true; try { onStaffTypeChange(); } catch(e){} }
+    setVal('a_name', r.name);
+    setVal('a_nat', r.nationality);
+    setVal('a_sim', r.phone);
+    setVal('a_civil', r.civil_no);
+    setVal('a_start', new Date().toLocaleDateString('en-CA'));
+    if (typeof toast === 'function') toast('راجع البيانات وكمّل السيارة والشريك وكارت البنزين، وبعدين احفظ', 's');
+  }
+
+  function markImported(obId, arkId){
+    var actor = 'ARK';
+    try { if (typeof ARK_USER !== 'undefined' && ARK_USER) actor = 'ARK · ' + (ARK_USER.full_name || ARK_USER.name || ARK_USER.email || ''); } catch(e){}
+    return fetch(SUPA_URL + '/rest/v1/drivers_onboarding?id=eq.' + encodeURIComponent(obId), {
+      method: 'PATCH',
+      headers: hdr({ Prefer: 'return=minimal' }),
+      body: JSON.stringify({ ark_status: 'imported', ark_id: arkId, ark_moved_at: new Date().toISOString(), updated_by: actor })
+    }).then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      OB.rows = OB.rows.filter(function(x){ return x.id !== obId; });
+      paint();
+    }).catch(function(e){
+      if (typeof toast === 'function') toast('السائق اتضاف في ARK، بس ما قدرتش أعلّمه في كشف التوظيف: ' + (e.message || e), 'e');
+    });
+  }
+
+  // نلف دالة الإضافة الأصلية: لو الإضافة نجحت والسائق جاي من الكشف، نعلّمه
+  if (typeof addDriver === 'function'){
+    var _origAdd = addDriver;
+    window.addDriver = function(){
+      var p = OB.pending;
+      var before = DRV.length;
+      var ret = _origAdd.apply(this, arguments);
+      if (p && DRV.length > before){
+        var nd = DRV[DRV.length - 1];
+        OB.pending = null;
+        markImported(p.id, nd.id);
+      }
+      return ret;
+    };
+  }
+  // لو قفل الفورم من غير ما يحفظ، ننسى السائق المعلّق
+  if (typeof closeModal === 'function'){
+    var _origClose = closeModal;
+    window.closeModal = function(id){
+      var r = _origClose.apply(this, arguments);
+      if (id === 'addModal') setTimeout(function(){ OB.pending = null; }, 0);
+      return r;
+    };
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(load, 1500); });
+  else setTimeout(load, 1500);
+  setInterval(load, 120000);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) load(); });
 })();
 
 </script>
