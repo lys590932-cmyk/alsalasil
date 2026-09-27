@@ -1824,13 +1824,39 @@ function schedApplyDraft(){
   return dropped;
 }
 
-/* نحمّل نافذة واسعة: ٣ أسابيع للخلف و٨ للأمام. المشرف بيتنقّل
-   بين الأسابيع بلا انتظار شبكة في كل ضغطة. */
+/* جلب الجدول على دفعات — لا طلب واحد.
+   ───────────────────────────────────────────────────────────────
+   العطل اللي ده بيصلّحه: كان طلباً واحداً بـ limit=5000، وPostgREST
+   عنده سقف أقصى للصفوف في الرد بيتجاهل أي رقم أكبر منه. فالرد
+   كان بيترجع مقصوصاً، وبما إن الترتيب بالتاريخ تصاعدياً، الأيام
+   القديمة كانت بتاكل السقف والأسبوع الحالي يتقطع في نُصّه.
+
+   والنتيجة كانت مرعبة في هدوئها: الشاشة تفتح، مفيش أي رسالة خطأ،
+   والسبت كامل والأحد ناقص وباقي الأسبوع صفر. حاجة تخلّي المشرف
+   يفتكر إن الجدول مش متعمل.
+
+   دلوقتي بنجيب دفعة ورا دفعة لحد ما الدفعة ترجع أقل من حجمها،
+   ودي علامة إننا خلصنا. وبنحدّ العدد بسقف أمان عشان لو حصل خطأ
+   في الترقيم ما ندخلش حلقة لا نهائية. */
+const SCHED_PAGE = 900;      /* أقل من أي سقف معقول للخادم */
+const SCHED_MAX  = 20000;    /* سقف أمان مطلق */
+
 async function loadSchedule(){
   const from = addDaysYMD(kwToday(), -21);
   const to   = addDaysYMD(kwToday(),  56);
-  const rows = await api('schedules?date=gte.' + from + '&date=lte.' + to
-                       + '&order=date.asc&limit=5000') || [];
+
+  let rows = [], offset = 0;
+  while(offset < SCHED_MAX){
+    const page = await api('schedules?date=gte.' + from + '&date=lte.' + to
+                         + '&order=date.asc,driver_id.asc'
+                         + '&limit=' + SCHED_PAGE + '&offset=' + offset) || [];
+    rows = rows.concat(page);
+    /* الشرط «دفعة ناقصة = خلصنا» بيكسر لو سقف الخادم أصغر من
+       دفعتنا — ساعتها كل دفعة بترجع ناقصة والحلقة تقف بدري
+       وتسيب صفوف. فالوقوف على الفاضي، والزحف بعدد اللي جه فعلاً. */
+    if(page.length === 0) break;
+    offset += page.length;
+  }
   SCHED_BASE = rowsToSched(rows);
   SCHED = JSON.parse(JSON.stringify(SCHED_BASE));
 
@@ -1940,7 +1966,11 @@ async function submitScheduleReq(){
       headers:{ 'Prefer':'return=minimal' },
       body: JSON.stringify({
         kind:'schedule',
-        reason: why.trim(),
+        /* title و note هما أعمدة الجدول الفعلية — title إجباري (NOT NULL)
+           ومفيش عمود اسمه reason، فالإرسال كان بيترفض من الخادم. */
+        title: 'تعديل الجدول: ' + d.length + ' وردية (' + d[0].date
+               + (d.length>1 ? ' → ' + d[d.length-1].date : '') + ')',
+        note: why.trim(),
         payload: {
           rows: d.map(r => ({ driver_id:r.driver_id, date:r.date, shift_type:r.shift_type,
                               shift_start:r.shift_start, shift_end:r.shift_end })),
