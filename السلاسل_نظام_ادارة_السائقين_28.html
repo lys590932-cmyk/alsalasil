@@ -9825,7 +9825,6 @@ function renderAccounting(){
       '<select onchange="setAccYear(this.value)" style="padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-weight:700">'+yOpts+'</select>'+
       '<button class="tbtn" onclick="exportAccCsv()" style="color:var(--green)"><i class="ti ti-file-spreadsheet"></i> CSV</button>'+
       '<button class="tbtn" onclick="exportPLWorkbook()" style="color:#1c5878;border-color:rgba(28,88,120,.45)"><i class="ti ti-report-money"></i> قائمة الدخل — Excel (5 أوراق)</button>'+
-      '<button class="tbtn" onclick="loadApril2025Manual()" style="color:#a78bfa" title="تحميل بيانات أبريل 2025"><i class="ti ti-database-import"></i> بيانات أبريل</button>'+
       '<button class="tbtn" onclick="generateAccPdfReport()" style="color:#dc2626;border-color:rgba(220,38,38,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير PDF (EN)</button>'+
       '<button class="tbtn" onclick="generateAccArabicReport()" style="color:#059669;border-color:rgba(5,150,105,0.4)"><i class="ti ti-file-type-pdf"></i> تقرير كل الشهور (عربي/EN)</button>'+
       '<button class="tbtn" onclick="generatePptxReport()" style="color:#f59e0b"><i class="ti ti-presentation"></i> تقرير PowerPoint</button>'+
@@ -10080,44 +10079,11 @@ function renderAccounting(){
   } catch(e){ console.error('restore error', e); }
 })();
 
-function loadApril2025(force){
-  try {
-    if(!force){
-      const hasI = INCOMES.some(x=>x.date && x.date.startsWith('2025-04'));
-      const hasE = EXPENSES.some(x=>x.date && x.date.startsWith('2025-04'));
-      if(hasI && hasE){
-        console.log('[seed] April 2025 data already exists - skip');
-        return false;
-      }
-    }
-    INCOMES  = INCOMES.filter(x=>!(x.date && x.date.startsWith('2025-04')));
-    EXPENSES = EXPENSES.filter(x=>!(x.date && x.date.startsWith('2025-04')));
-    const date = '2025-04-30';
-    const ts = Date.now();
-    INCOMES.push({id:'I_APR_K_'+ts, date, amount:4205, source:'keeta',   driverId:'', note:'إيرادات شهر أبريل من كيتا (13 سائق)'});
-    INCOMES.push({id:'I_APR_C_'+ts, date, amount:3100, source:'caboria', driverId:'', note:'إيرادات شهر أبريل من كابوريا (7 سائقين)'});
-    INCOMES.push({id:'I_APR_H_'+ts, date, amount:3550, source:'homy',    driverId:'', note:'إيرادات شهر أبريل من هومي (13 سائق)'});
-    EXPENSES.push({id:'E_APR_SAL_'+ts, date, amount:4573, category:'salaries',   driverId:'', note:'مرتبات السائقين والموظفين (67.4%)'});
-    EXPENSES.push({id:'E_APR_FUE_'+ts, date, amount:1630, category:'fuel',       driverId:'', note:'~35 سيارة × 47 د.ك'});
-    EXPENSES.push({id:'E_APR_MNT_'+ts, date, amount:357,  category:'maintenance',driverId:'', note:'تكاليف الإصلاح'});
-    EXPENSES.push({id:'E_APR_VIO_'+ts, date, amount:145,  category:'violations', driverId:'', note:'يستلزم المتابعة'});
-    EXPENSES.push({id:'E_APR_ADM_'+ts, date, amount:80,   category:'admin',      driverId:'', note:'تشغيل منخفض'});
-    saveInc(); saveExp();
-    console.log('[seed] April 2025 data loaded');
-    return true;
-  } catch(e){ console.error('seed error', e); return false; }
-}
-
-function loadApril2025Manual(){
-  loadApril2025(true);
-  accMonth = 4;
-  accYear  = 2025;
-  toast('تم تحميل بيانات أبريل 2025 ✅','s');
-  renderAccounting();
-}
-
-// Auto-load April data if missing
-loadApril2025(false);
+/* أُزيل في أكتوبر 2026: كانت بتزرع «أبريل 2025» تلقائياً مع كل فتحة، وهو
+   نسخة مكرّرة من أبريل 2026 بتاريخ غلط (الشركة ما كانتش موجودة في 2025).
+   القيود اللي قبل بداية الشركة بتتعزل تلقائياً — شوف ARK-LEDGER. */
+function loadApril2025(){ return false; }
+function loadApril2025Manual(){ toast('بيانات أبريل 2025 اتشالت — الشركة بدأت ديسمبر 2025','e'); }
 
 // ============================================================
 //  مولّد تقرير PowerPoint
@@ -10390,10 +10356,25 @@ function initLiveMap(){
       console.error('Leaflet not loaded');
       return;
     }
-    liveMap = L.map('livemap', { zoomControl: true, attributionControl: false }).setView(KUWAIT_CENTER, 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: 'OpenStreetMap'
-    }).addTo(liveMap);
+    liveMap = L.map('livemap', { zoomControl: true, attributionControl: true }).setView(KUWAIT_CENTER, 11);
+    liveMap.attributionControl.setPrefix(false);
+    /* خرايط CARTO بدل سيرفرات OpenStreetMap المباشرة — OSM بقى بيرفض
+       (403 Access blocked) الطلبات اللي مش ماشية على سياسة الاستخدام بتاعته.
+       لو CARTO وقع أكتر من 8 مرات، بنرجع لـ OSM كاحتياطي. */
+    (function(){
+      var ATTR = '&copy; OpenStreetMap &copy; CARTO';
+      var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19, subdomains: 'abcd', attribution: ATTR
+      });
+      var fails = 0;
+      carto.on('tileerror', function(){
+        if(++fails === 8){
+          liveMap.removeLayer(carto);
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(liveMap);
+        }
+      });
+      carto.addTo(liveMap);
+    })();
   }
   refreshLiveMap();
   stopLiveMapRefresh();
@@ -20126,5 +20107,1788 @@ window.arkDiagCopy = function(){
 
 </script>
 
+
+<!-- ═══ ARK-LEDGER — نظام المحاسبة المالية (أكتوبر 2026) ═══ -->
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK-LEDGER — نظام المحاسبة المالية المتكامل للسلاسل
+   ──────────────────────────────────────────────────────────────────────────
+   القيد المزدوج · دليل حسابات مرقّم · قائمة دخل مقارنة · ميزانية عمومية ·
+   تدفقات نقدية (مباشرة وغير مباشرة) · ميزان مراجعة · دفتر أستاذ · ربحية
+   الشركاء · الموازنة والتوقعات · كشف الشذوذ · إقفال الفترات · سجل تدقيق.
+
+   القواعد الحاكمة:
+   1) monthlyPL(m,y) يظل المصدر الوحيد لأرقام قائمة الدخل. القيود تتولد من
+      نفس المدخلات، وكل شهر بيتطابق مع monthlyPL — والفرق بيظهر لو حصل.
+   2) لا قيد قبل تاريخ بداية الشركة. أي قيد أقدم بيتعزل (مش بيتمسح) ويتشال
+      من السحابة، ويقدر يرجع من الإعدادات.
+   3) كل البيانات الجديدة في مفاتيح sl_acc_* فبتدخل النسخ الاحتياطي تلقائياً.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+const L = window.ARKL = window.ARKL || {};
+const MA = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const ME = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+L.MA = MA; L.ME = ME;
+
+/* ── أدوات عامة ─────────────────────────────────────────────────────── */
+const r3 = v => Math.round((+v || 0) * 1000) / 1000;
+const num = v => parseFloat(v) || 0;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (v, d) => { const n = +v || 0; const s = Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:d==null?3:d,maximumFractionDigits:d==null?3:d}); return n < -0.0005 ? '(' + s + ')' : s; };
+const fmt0 = v => fmt(v, 0);
+const pct = (v, d) => '\u2066' + (isFinite(v) ? (v*100).toFixed(d==null?1:d) : '0.0') + '%\u2069';
+L.r3 = r3; L.esc = esc; L.fmt = fmt; L.fmt0 = fmt0; L.pct = pct;
+
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }
+             catch(e){ if(typeof toast==='function') toast('تعذّر الحفظ — مساحة المتصفح ممتلئة. صدّر نسخة احتياطية ثم امسح بيانات قديمة','e'); return false; } }
+};
+L.LS = LS;
+
+/* ── الشهور ─────────────────────────────────────────────────────────── */
+const ymOf   = d => String(d || '').slice(0, 7);
+const ymMake = (y, m) => y + '-' + String(m).padStart(2, '0');
+const ymY    = ym => +ym.slice(0, 4);
+const ymM    = ym => +ym.slice(5, 7);
+const ymAdd  = (ym, n) => { const i = ymY(ym)*12 + ymM(ym) - 1 + n; return ymMake(Math.floor(i/12), i%12 + 1); };
+const ymDiff = (a, b) => (ymY(b)*12 + ymM(b)) - (ymY(a)*12 + ymM(a));
+const ymRange = (a, b) => { const out = []; if(!a || !b || a > b) return out; let c = a; while(c <= b && out.length < 600){ out.push(c); c = ymAdd(c, 1); } return out; };
+const ymEnd  = ym => { const y = ymY(ym), m = ymM(ym); return ym + '-' + String(new Date(y, m, 0).getDate()).padStart(2,'0'); };
+const ymLbl  = (ym, en) => (en ? ME : MA)[ymM(ym)-1] + ' ' + ymY(ym);
+const ymShort= (ym, en) => (en ? ME[ymM(ym)-1].slice(0,3) : MA[ymM(ym)-1]) + (en ? ' ' + String(ymY(ym)).slice(2) : '');
+const nowYm  = () => { const d = new Date(); return ymMake(d.getFullYear(), d.getMonth()+1); };
+Object.assign(L, {ymOf, ymMake, ymAdd, ymDiff, ymRange, ymEnd, ymLbl, ymShort, nowYm, ymY, ymM});
+
+/* ── الإعدادات ──────────────────────────────────────────────────────── */
+const CFG_KEY = 'sl_acc_cfg';
+const CFG_DEF = {
+  companyStart: '2025-12-01',   // تاريخ بداية نشاط الشركة — لا قيد قبله
+  booksStart:   '',             // أول شهر في الدفاتر — فاضي = أول شهر فيه بيانات
+  openingCash:  0,              // رصيد النقدية الافتتاحي
+  salariesPaid: true,           // اعتبر رواتب الشهور المنتهية مدفوعة في آخر الشهر
+  overheadBasis:'revenue',      // توزيع التكاليف العامة على الشركاء: revenue | drivers
+  spikePct:     40              // نسبة القفزة اللي تعتبر شذوذ
+};
+L.cfg = () => Object.assign({}, CFG_DEF, LS.get(CFG_KEY, {}));
+L.setCfg = patch => { LS.set(CFG_KEY, Object.assign(L.cfg(), patch)); L.invalidate(); };
+
+/* ── سجل التدقيق ────────────────────────────────────────────────────── */
+L.audit = function(act, detail){
+  const log = LS.get('sl_acc_audit', []);
+  log.unshift({ t: new Date().toISOString(), act, by: (window.ARK_USER && window.ARK_USER.name) || '—', ...detail });
+  if(log.length > 2000) log.length = 2000;
+  LS.set('sl_acc_audit', log);
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   1) عزل القيود اللي قبل بداية الشركة (أبريل 2025 وأي تاريخ مشابه)
+   ══════════════════════════════════════════════════════════════════════ */
+L.quarantine = function(opts){
+  opts = opts || {};
+  if(typeof INCOMES === 'undefined') return 0;
+  const start = L.cfg().companyStart;
+  const moved = [];
+  [['inc', INCOMES], ['exp', EXPENSES]].forEach(([kind, arr]) => {
+    for(let i = arr.length - 1; i >= 0; i--){
+      const x = arr[i];
+      if(x && x.date && String(x.date).slice(0,10) < start){ moved.push({kind, row:x, at:new Date().toISOString()}); arr.splice(i, 1); }
+    }
+  });
+  if(!moved.length) return 0;
+  const q = LS.get('sl_acc_quarantine', []);
+  moved.forEach(mv => { if(!q.some(z => z.row && z.row.id === mv.row.id)) q.push(mv); });
+  LS.set('sl_acc_quarantine', q);
+  /* يتشال من جدول المزامنة الأول، والرفع التالي (prune) بيشيله من الجدول التاني */
+  moved.forEach(mv => { try{ if(typeof finDelete === 'function') finDelete(mv.kind, mv.row.id); }catch(e){} });
+  L.audit('quarantine', { count: moved.length, ids: moved.map(m => m.row.id).slice(0, 30), note:'قيود قبل ' + start });
+  if(!opts.noSave){ try{ L._rawSaveInc(); L._rawSaveExp(); }catch(e){} try{ if(window.ARKFIN && ARKFIN.schedule) ARKFIN.schedule(); }catch(e){} }
+  L.invalidate();
+  return moved.length;
+};
+L.restoreQuarantined = function(id){
+  const q = LS.get('sl_acc_quarantine', []);
+  const i = q.findIndex(z => z.row && z.row.id === id);
+  if(i < 0) return;
+  const it = q[i];
+  if(String(it.row.date).slice(0,10) < L.cfg().companyStart){
+    toast('تاريخ القيد ' + it.row.date + ' قبل بداية الشركة — عدّل تاريخ البداية من الإعدادات الأول','e'); return;
+  }
+  (it.kind === 'inc' ? INCOMES : EXPENSES).push(it.row);
+  q.splice(i, 1); LS.set('sl_acc_quarantine', q);
+  saveInc(); saveExp(); L.audit('restore', { id }); L.invalidate(); L.render();
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   2) دليل الحسابات
+   ══════════════════════════════════════════════════════════════════════ */
+const BASE_COA = [
+  {code:'1100', ar:'النقدية والبنوك',              en:'Cash and bank balances',         type:'asset',  grp:'ca'},
+  {code:'1500', ar:'أسطول المركبات — التكلفة',      en:'Fleet vehicles — cost',          type:'asset',  grp:'nca'},
+  {code:'1590', ar:'مجمع إهلاك الأسطول',            en:'Accumulated depreciation',       type:'asset',  grp:'nca', contra:true},
+  {code:'2100', ar:'رواتب مستحقة الدفع',            en:'Salaries payable',               type:'liab',   grp:'cl'},
+  {code:'2200', ar:'قرض الساير',                    en:'Al-Sayer fleet loan',            type:'liab',   grp:'loan'},
+  {code:'3100', ar:'رأس المال وجاري الشركاء',        en:"Owners' capital and current account", type:'equity', grp:'eq'},
+  {code:'5100', ar:'رواتب السائقين',                en:'Driver salaries',                type:'exp',    grp:'cor', key:'driverSalaries'},
+  {code:'5200', ar:'وقود',                          en:'Fuel',                           type:'exp',    grp:'cor', key:'fuel'},
+  {code:'5300', ar:'صيانة المركبات',                en:'Vehicle maintenance',            type:'exp',    grp:'cor', key:'maintenance'},
+  {code:'5400', ar:'مخالفات مرورية',                en:'Traffic fines',                  type:'exp',    grp:'cor', key:'violations'},
+  {code:'5500', ar:'إقامات ورخص',                   en:'Residencies and licences',       type:'exp',    grp:'cor', key:'residency'},
+  {code:'6100', ar:'رواتب الإدارة',                 en:'Administrative salaries',        type:'exp',    grp:'opex', key:'adminSalaries'},
+  {code:'6200', ar:'إيجارات',                       en:'Rent',                           type:'exp',    grp:'opex', key:'rent'},
+  {code:'6300', ar:'تأمين',                         en:'Insurance',                      type:'exp',    grp:'opex', key:'insurance'},
+  {code:'6400', ar:'مصاريف إدارية وعمومية',          en:'General and administrative',     type:'exp',    grp:'opex', key:'admin'},
+  {code:'6900', ar:'مصروفات أخرى',                  en:'Other expenses',                 type:'exp',    grp:'opex', key:'other'},
+  {code:'6800', ar:'إهلاك الأسطول',                 en:'Depreciation',                   type:'exp',    grp:'dep',  key:'_dep'},
+  {code:'7100', ar:'تكلفة التمويل',                 en:'Finance costs',                  type:'exp',    grp:'fin',  key:'_int'}
+];
+const CAT_ACC = {fuel:'5200', maintenance:'5300', violations:'5400', residency:'5500', rent:'6200', insurance:'6300', admin:'6400', other:'6900', salaries:'5100'};
+const REV_FIXED = {keeta:'4110', homy:'4120', caboria:'4130', imile:'4140', other:'4900'};
+
+L.partners = () => (typeof PARTNERS !== 'undefined' && Array.isArray(PARTNERS)) ? PARTNERS : [];
+L.revAcc = function(src){
+  src = src || 'other';
+  if(REV_FIXED[src]) return REV_FIXED[src];
+  const ids = L.partners().map(p => p.id).filter(id => !REV_FIXED[id]).sort();
+  const i = ids.indexOf(src);
+  return i >= 0 ? String(4150 + i*10) : '4900';
+};
+L.coa = function(){
+  const rev = {};
+  L.partners().forEach(p => { rev[L.revAcc(p.id)] = {code:L.revAcc(p.id), ar:'إيرادات ' + p.name, en:(p.nameEn || p.name) + ' revenue', type:'rev', grp:'rev', partner:p.id}; });
+  (typeof INCOMES !== 'undefined' ? INCOMES : []).forEach(i => { const c = L.revAcc(i.source); if(!rev[c]) rev[c] = {code:c, ar: c==='4900' ? 'إيرادات أخرى' : 'إيرادات ' + i.source, en: c==='4900' ? 'Other revenue' : i.source + ' revenue', type:'rev', grp:'rev', partner: c==='4900' ? 'other' : i.source}; });
+  if(!rev['4900']) rev['4900'] = {code:'4900', ar:'إيرادات أخرى', en:'Other revenue', type:'rev', grp:'rev', partner:'other'};
+  const all = BASE_COA.concat(Object.values(rev));
+  all.sort((a,b) => a.code.localeCompare(b.code));
+  const map = {}; all.forEach(a => map[a.code] = a);
+  return { list: all, map };
+};
+L.catAcc = c => CAT_ACC[c] || '6900';
+const DEBIT_NORMAL = t => t === 'asset' || t === 'exp';
+
+/* ══════════════════════════════════════════════════════════════════════
+   3) محرك القيود — يولّد دفتر اليومية الكامل
+   ══════════════════════════════════════════════════════════════════════ */
+let CACHE = null;
+L.invalidate = () => { CACHE = null; };
+const sig = () => {
+  const s = a => a.reduce((t,x) => t + num(x.amount), 0).toFixed(3);
+  const je = LS.get('sl_acc_je', []);
+  let pr = ''; try{ pr = (typeof PAY_RUNS !== 'undefined' ? PAY_RUNS.map(r => r.id + r.status).join() : ''); }catch(e){}
+  return [INCOMES.length, s(INCOMES), EXPENSES.length, s(EXPENSES), je.length, JSON.stringify(L.cfg()), pr,
+          (typeof DRV !== 'undefined' ? DRV.length : 0), nowYm()].join('|');
+};
+
+L.dataMonths = function(){
+  const st = ymOf(L.cfg().companyStart), set = new Set();
+  INCOMES.forEach(x => { const y = ymOf(x.date); if(/^\d{4}-\d{2}$/.test(y) && y >= st) set.add(y); });
+  EXPENSES.forEach(x => { const y = ymOf(x.date); if(/^\d{4}-\d{2}$/.test(y) && y >= st) set.add(y); });
+  LS.get('sl_acc_je', []).forEach(j => { const y = ymOf(j.date); if(y >= st) set.add(y); });
+  return Array.from(set).sort();
+};
+L.booksStart = function(){
+  const c = L.cfg(), st = ymOf(c.companyStart);
+  if(c.booksStart && /^\d{4}-\d{2}$/.test(c.booksStart)) return c.booksStart < st ? st : c.booksStart;
+  const dm = L.dataMonths();
+  return dm.length ? dm[0] : nowYm();
+};
+L.lastMonth = function(){
+  const dm = L.dataMonths(), n = nowYm();
+  const last = dm.length ? dm[dm.length-1] : n;
+  return last > n ? last : n;
+};
+L.months = () => ymRange(L.booksStart(), L.lastMonth());
+
+const PLC = {};
+L.pl = function(ym){
+  if(CACHE && PLC[ym]) return PLC[ym];
+  const P = monthlyPL(ymM(ym), ymY(ym));
+  PLC[ym] = P; return P;
+};
+
+function salariesPaidFor(ym){
+  try{
+    if(typeof payGetRun === 'function'){
+      const r = payGetRun(ymM(ym), ymY(ym));
+      if(r && r.status === 'paid') return { paid:true, date: String(r.paid_at || ymEnd(ym)).slice(0,10) };
+    }
+  }catch(e){}
+  if(L.cfg().salariesPaid && ym < nowYm()) return { paid:true, date: ymEnd(ym), assumed:true };
+  return { paid:false };
+}
+
+L.build = function(){
+  if(CACHE && CACHE.sig === sig()) return CACHE;
+  Object.keys(PLC).forEach(k => delete PLC[k]);
+  CACHE = { sig: sig() };
+  const cfg = L.cfg(), C = L.coa();
+  const months = L.months(), first = months[0];
+  const J = [];
+  const add = (date, memo, lines, src, ref) => {
+    const ls = lines.filter(l => Math.abs(l.dr || 0) > 0.0004 || Math.abs(l.cr || 0) > 0.0004).map(l => ({acct:l.acct, dr:r3(l.dr), cr:r3(l.cr)}));
+    if(!ls.length) return;
+    J.push({ id: 'J' + (J.length + 1), date: String(date).slice(0,10), ym: ymOf(date), memo, lines: ls, src, ref: ref || '' });
+  };
+
+  /* ── القيد الافتتاحي: أرصدة الأسطول والقرض قبل أول شهر في الدفاتر ── */
+  if(first){
+    const lines = [];
+    const a = FIN.asset, lo = FIN.loan;
+    const inSvc = ymMake(a.inService.y, a.inService.m);
+    let depBefore = 0, prinBefore = 0;
+    ymRange(inSvc, ymAdd(first, -1)).forEach(ym => { depBefore += _monthlyDepreciation(ymM(ym), ymY(ym)); prinBefore += _loanForMonth(ymM(ym), ymY(ym)).principal; });
+    const loanStart = ymMake(lo.firstPayment.y, lo.firstPayment.m);
+    if(inSvc < first){ lines.push({acct:'1500', dr:a.cost}); lines.push({acct:'1590', cr:depBefore}); }
+    if(ymAdd(loanStart, -1) < first && inSvc < first){ lines.push({acct:'2200', cr: lo.principal - prinBefore}); }
+    if(num(cfg.openingCash)) lines.push(num(cfg.openingCash) > 0 ? {acct:'1100', dr:num(cfg.openingCash)} : {acct:'1100', cr:-num(cfg.openingCash)});
+    const bal = lines.reduce((s,l) => s + (l.dr||0) - (l.cr||0), 0);
+    if(Math.abs(bal) > 0.0004) lines.push(bal > 0 ? {acct:'3100', cr:bal} : {acct:'3100', dr:-bal});
+    add(first + '-01', 'القيد الافتتاحي — أرصدة الأسطول والقرض والنقدية', lines, 'open');
+  }
+
+  const inRange = d => { const y = ymOf(d); return y >= first; };
+  const start = cfg.companyStart;
+
+  /* ── الإيرادات ── */
+  INCOMES.forEach(x => {
+    if(!x || !x.date || String(x.date) < start || !inRange(x.date)) return;
+    const p = L.partners().find(pp => pp.id === x.source);
+    add(x.date, 'إيراد ' + (p ? p.name : (x.source === 'other' ? 'أخرى' : x.source)) + (x.note ? ' — ' + x.note : ''),
+        [{acct:'1100', dr:num(x.amount)}, {acct:L.revAcc(x.source), cr:num(x.amount)}], 'inc', x.id);
+  });
+  /* ── المصروفات (بند «مرتبات» اليدوي بيدخل من خلال استحقاق الرواتب) ── */
+  EXPENSES.forEach(x => {
+    if(!x || !x.date || String(x.date) < start || !inRange(x.date) || x.category === 'salaries') return;
+    const c = (typeof EXP_CATS !== 'undefined' && EXP_CATS[x.category]) || {name:x.category};
+    add(x.date, c.name + (x.note ? ' — ' + x.note : ''), [{acct:L.catAcc(x.category), dr:num(x.amount)}, {acct:'1100', cr:num(x.amount)}], 'exp', x.id);
+  });
+  /* ── قيود آخر الشهر: الرواتب، الإهلاك، قسط القرض ── */
+  months.forEach(ym => {
+    if(ym > nowYm() && !L.dataMonths().includes(ym)) return;
+    const P = L.pl(ym), end = ymEnd(ym);
+    if(P.driverSal > 0 || P.adminSal > 0){
+      add(end, 'استحقاق رواتب ' + ymLbl(ym), [{acct:'5100', dr:P.driverSal}, {acct:'6100', dr:P.adminSal}, {acct:'2100', cr:P.driverSal + P.adminSal}], 'payroll', ym);
+      const pd = salariesPaidFor(ym);
+      if(pd.paid) add(pd.date, 'صرف رواتب ' + ymLbl(ym) + (pd.assumed ? ' (افتراض: صُرفت آخر الشهر)' : ''),
+                      [{acct:'2100', dr:P.driverSal + P.adminSal}, {acct:'1100', cr:P.driverSal + P.adminSal}], 'paypay', ym);
+    }
+    if(P.dep > 0) add(end, 'إهلاك الأسطول — ' + ymLbl(ym), [{acct:'6800', dr:P.dep}, {acct:'1590', cr:P.dep}], 'dep', ym);
+    if(P.loan && P.loan.active) add(ym + '-05', 'قسط الساير رقم ' + P.loan.n + ' من ' + FIN.loan.months,
+      [{acct:'2200', dr:P.loan.principal}, {acct:'7100', dr:P.loan.interest}, {acct:'1100', cr:P.loan.installment}], 'loan', ym);
+    const inSvc = ymMake(FIN.asset.inService.y, FIN.asset.inService.m);
+    if(ym === inSvc && ym !== first && inSvc >= first) add(ym + '-01', 'استلام الأسطول الممول من الساير', [{acct:'1500', dr:FIN.asset.cost}, {acct:'2200', cr:FIN.loan.principal}, {acct:'3100', cr:FIN.asset.cost - FIN.loan.principal}], 'asset', ym);
+  });
+  /* ── القيود اليدوية ── */
+  LS.get('sl_acc_je', []).forEach(j => { if(String(j.date) >= start) add(j.date, j.memo || 'قيد يدوي', j.lines, 'manual', j.id); });
+
+  J.sort((a,b) => a.date.localeCompare(b.date) || (a.src === 'open' ? -1 : b.src === 'open' ? 1 : 0));
+  J.forEach((j, i) => { j.no = 'JV-' + j.date.slice(0,7).replace('-','') + '-' + String(i+1).padStart(4,'0'); });
+
+  /* أرصدة لكل حساب × شهر (حركة) */
+  const mov = {};
+  J.forEach(j => j.lines.forEach(l => {
+    const k = l.acct + '|' + j.ym; const o = mov[k] || (mov[k] = {dr:0, cr:0}); o.dr += l.dr || 0; o.cr += l.cr || 0;
+  }));
+  Object.assign(CACHE, { J, mov, months, first, C });
+  return CACHE;
+};
+
+/* رصيد حساب (مدين موجب) من بداية الدفاتر حتى نهاية الشهر */
+L.balance = function(acct, uptoYm, fromYm){
+  const B = L.build(); let s = 0;
+  B.months.forEach(ym => { if(ym > uptoYm || (fromYm && ym < fromYm)) return; const o = B.mov[acct + '|' + ym]; if(o) s += o.dr - o.cr; });
+  return r3(s);
+};
+/* حركة فترة [a..b] لحساب: {dr, cr} */
+L.movement = function(acct, a, b){
+  const B = L.build(); let dr = 0, cr = 0;
+  B.months.forEach(ym => { if(ym < a || ym > b) return; const o = B.mov[acct + '|' + ym]; if(o){ dr += o.dr; cr += o.cr; } });
+  return {dr:r3(dr), cr:r3(cr)};
+};
+L.accounts = () => L.build().C.list;
+
+/* ══════════════════════════════════════════════════════════════════════
+   4) القوائم المالية
+   ══════════════════════════════════════════════════════════════════════ */
+/* قائمة الدخل لفترة [a..b] من الدفتر — مصنّفة وظيفياً */
+L.incomeStatement = function(a, b){
+  const B = L.build(), C = B.C;
+  const val = acct => { const m = L.movement(acct, a, b); const t = C.map[acct] ? C.map[acct].type : 'exp'; return t === 'rev' ? m.cr - m.dr : m.dr - m.cr; };
+  const grp = g => C.list.filter(x => x.grp === g).map(x => ({code:x.code, ar:x.ar, en:x.en, v:r3(val(x.code))})).filter(x => Math.abs(x.v) > 0.0004);
+  const sum = arr => r3(arr.reduce((s,x) => s + x.v, 0));
+  const rev = grp('rev'), cor = grp('cor'), opex = grp('opex'), dep = grp('dep'), fin = grp('fin');
+  const R = sum(rev), COR = sum(cor), GP = r3(R - COR), OPX = sum(opex), EBITDA = r3(GP - OPX), DEP = sum(dep), EBIT = r3(EBITDA - DEP), FINC = sum(fin), NET = r3(EBIT - FINC);
+  return {a, b, rev, cor, opex, dep, fin, R, COR, GP, OPX, EBITDA, DEP, EBIT, FINC, NET,
+    gm: R ? GP/R : 0, em: R ? EBITDA/R : 0, nm: R ? NET/R : 0};
+};
+
+/* الميزانية العمومية في نهاية شهر */
+L.balanceSheet = function(ym){
+  const C = L.build().C;
+  const bal = c => L.balance(c, ym);
+  const cash = bal('1100'), fleet = bal('1500'), accDep = -bal('1590');
+  const salPay = -bal('2100'), loan = -bal('2200');
+  /* الجزء المتداول من القرض = أصل الأقساط الـ 12 الجاية */
+  let loanCur = 0;
+  for(let i = 1; i <= 12; i++){ const n = ymAdd(ym, i); loanCur += _loanForMonth(ymM(n), ymY(n)).principal; }
+  loanCur = Math.min(loanCur, loan);
+  const capital = -bal('3100');
+  /* الأرباح المتراكمة = مجموع حسابات الإيرادات والمصروفات حتى الشهر */
+  let re = 0; C.list.forEach(x => { if(x.type === 'rev' || x.type === 'exp') re -= bal(x.code); });
+  const nca = r3(fleet - accDep), ca = r3(cash);
+  const assets = r3(ca + nca);
+  const curLiab = r3(salPay + loanCur), nonCurLiab = r3(loan - loanCur), liab = r3(curLiab + nonCurLiab);
+  const equity = r3(capital + re);
+  return {ym, cash, fleet, accDep, nca, ca, assets, salPay, loan, loanCur, loanNon:r3(loan - loanCur), curLiab, nonCurLiab, liab, capital, re:r3(re), equity,
+    check: r3(assets - liab - equity)};
+};
+
+/* قائمة التدفقات النقدية لفترة — مباشرة (من حركة النقدية) + غير مباشرة (تسوية) */
+L.cashFlow = function(a, b){
+  const B = L.build(), C = B.C;
+  const sec = {rec:0, emp:0, sup:0, int:0, inv:0, loan:0, own:0};
+  const det = {};
+  B.J.forEach(j => {
+    if(j.ym < a || j.ym > b) return;
+    const hasCash = j.lines.some(l => l.acct === '1100');
+    if(!hasCash || j.src === 'open') return;
+    j.lines.forEach(l => {
+      if(l.acct === '1100') return;
+      const v = -(l.dr - l.cr); const acc = C.map[l.acct] || {type:'exp', grp:'opex'};
+      let k;
+      if(acc.type === 'rev') k = 'rec';
+      else if(l.acct === '5100' || l.acct === '6100' || l.acct === '2100') k = 'emp';
+      else if(l.acct === '7100') k = 'int';
+      else if(acc.type === 'exp') k = 'sup';
+      else if(l.acct.startsWith('15')) k = 'inv';
+      else if(l.acct === '2200') k = 'loan';
+      else if(acc.type === 'equity') k = 'own';
+      else k = 'sup';
+      sec[k] += v;
+      if(k === 'rec'){ det[l.acct] = (det[l.acct] || 0) + v; }
+    });
+  });
+  Object.keys(sec).forEach(k => sec[k] = r3(sec[k]));
+  const cfo = r3(sec.rec + sec.emp + sec.sup + sec.int), cfi = sec.inv, cff = r3(sec.loan + sec.own);
+  /* الرصيد الافتتاحي الحقيقي = رصيد النقدية قبل أول حركة في الفترة */
+  let open = 0; B.J.forEach(j => { if(j.ym < a || (j.src === 'open' && j.ym === a && a === B.first)) j.lines.forEach(l => { if(l.acct === '1100') open += l.dr - l.cr; }); });
+  open = r3(open);
+  const closing = r3(open + cfo + cfi + cff);
+  /* غير المباشرة */
+  const IS = L.incomeStatement(a, b);
+  const dep = IS.DEP;
+  const salMov = L.movement('2100', a, b); const dSal = r3(salMov.cr - salMov.dr);
+  return {a, b, sec, det, cfo, cfi, cff, opening:open, closing, net:r3(cfo + cfi + cff),
+    indirect:{net:IS.NET, dep, dSal, cfo: r3(IS.NET + dep + dSal), diff: r3(cfo - (IS.NET + dep + dSal))},
+    bsCash: L.balance('1100', b)};
+};
+
+/* ميزان المراجعة لفترة */
+L.trialBalance = function(a, b){
+  const B = L.build();
+  const rows = B.C.list.map(x => {
+    const ob = L.balance(x.code, ymAdd(a, -1));
+    const mv = L.movement(x.code, a, b);
+    const cb = r3(ob + mv.dr - mv.cr);
+    return {code:x.code, ar:x.ar, en:x.en, type:x.type, ob, dr:mv.dr, cr:mv.cr, cb};
+  }).filter(r => Math.abs(r.ob) > 0.0004 || r.dr || r.cr || Math.abs(r.cb) > 0.0004);
+  const tot = rows.reduce((t,r) => { t.dr += r.dr; t.cr += r.cr; t.cbDr += r.cb > 0 ? r.cb : 0; t.cbCr += r.cb < 0 ? -r.cb : 0; return t; }, {dr:0, cr:0, cbDr:0, cbCr:0});
+  Object.keys(tot).forEach(k => tot[k] = r3(tot[k]));
+  return {rows, tot, balanced: Math.abs(tot.dr - tot.cr) < 0.01 && Math.abs(tot.cbDr - tot.cbCr) < 0.01};
+};
+
+/* دفتر الأستاذ لحساب */
+L.ledger = function(acct, a, b){
+  const B = L.build(); const acc = B.C.map[acct] || {type:'exp'};
+  let run = L.balance(acct, ymAdd(a, -1)); const open = run;
+  const rows = [];
+  B.J.forEach(j => { if(j.ym < a || j.ym > b) return; j.lines.forEach(l => { if(l.acct !== acct) return; run = r3(run + l.dr - l.cr); rows.push({date:j.date, no:j.no, memo:j.memo, src:j.src, ref:j.ref, dr:l.dr, cr:l.cr, bal:run}); }); });
+  return {acct, acc, open, rows, close: run, debitNormal: DEBIT_NORMAL(acc.type)};
+};
+
+/* مطابقة الدفتر مع محرك قائمة الدخل لكل شهر */
+L.reconcile = function(){
+  const B = L.build(); const out = [];
+  B.months.forEach(ym => {
+    if(ym > nowYm() && !L.dataMonths().includes(ym)) return;
+    const P = L.pl(ym), IS = L.incomeStatement(ym, ym);
+    let manual = 0; B.J.forEach(j => { if(j.src !== 'manual' || j.ym !== ym) return; j.lines.forEach(l => { const t = (B.C.map[l.acct] || {}).type; if(t === 'rev') manual += l.cr - l.dr; else if(t === 'exp') manual -= l.dr - l.cr; }); });
+    const diff = r3(IS.NET - P.net - manual);
+    out.push({ym, gl:IS.NET, pl:P.net, manual:r3(manual), diff, ok: Math.abs(diff) < 0.01});
+  });
+  return out;
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   5) ربحية الشركاء (تقارير القطاعات)
+   ══════════════════════════════════════════════════════════════════════ */
+L.segments = function(a, b){
+  const cfg = L.cfg();
+  const P = L.partners();
+  const seg = {};
+  const mk = (id, name, color) => seg[id] || (seg[id] = {id, name, color, rev:0, sal:0, direct:0, alloc:0, overhead:0, drivers:new Set(), driverMonths:0});
+  P.forEach(p => mk(p.id, p.name, p.color));
+  mk('_none', 'غير موزّع', '#94a3b8');
+  const drvPartner = id => { const d = (typeof DRV !== 'undefined' ? DRV : []).find(x => x.id === id); return d && seg[d.partner] ? d.partner : '_none'; };
+  ymRange(a, b).forEach(ym => {
+    const m = ymM(ym), y = ymY(ym), PL = L.pl(ym);
+    INCOMES.forEach(i => { if(ymOf(i.date) === ym) mk(seg[i.source] ? i.source : '_none').rev += num(i.amount); });
+    /* رواتب السائقين حسب الشريك — بنفس إجمالي المحرك بالضبط */
+    const per = {}; let tot = 0; const hc = {};
+    try{
+      reportableDrivers().forEach(d => { const r = driverSalaryForMonth(d, m, y); if(r.days > 0 || r.net){ const k = seg[d.partner] ? d.partner : '_none'; per[k] = (per[k]||0) + r.net; tot += r.net; hc[k] = (hc[k]||0) + 1; mk(k).drivers.add(d.id); } });
+    }catch(e){}
+    Object.keys(per).forEach(k => { mk(k).sal += tot ? PL.driverSal * per[k] / tot : 0; });
+    Object.keys(hc).forEach(k => mk(k).driverMonths += hc[k]);
+    const hcTot = Object.values(hc).reduce((s,v) => s+v, 0);
+    /* المصروفات المباشرة */
+    let pool = 0;
+    EXPENSES.forEach(e => {
+      if(ymOf(e.date) !== ym || e.category === 'salaries') return;
+      const direct = ['fuel','maintenance','violations','residency'].includes(e.category);
+      if(!direct) return;
+      if(e.driverId){ mk(drvPartner(e.driverId)).direct += num(e.amount); }
+      else pool += num(e.amount);
+    });
+    Object.keys(hc).forEach(k => { mk(k).alloc += hcTot ? pool * hc[k] / hcTot : 0; });
+    if(!hcTot && pool) mk('_none').alloc += pool;
+    /* التكاليف العامة */
+    const overhead = PL.adminSal + PL.dep + PL.loan.interest + EXPENSES.filter(e => ymOf(e.date) === ym && !['fuel','maintenance','violations','residency','salaries'].includes(e.category)).reduce((s,e) => s + num(e.amount), 0);
+    const basis = {};
+    if(cfg.overheadBasis === 'drivers'){ Object.keys(hc).forEach(k => basis[k] = hc[k]); }
+    else { INCOMES.forEach(i => { if(ymOf(i.date) === ym){ const k = seg[i.source] ? i.source : '_none'; basis[k] = (basis[k]||0) + num(i.amount); } }); }
+    const bt = Object.values(basis).reduce((s,v) => s+v, 0);
+    if(bt) Object.keys(basis).forEach(k => mk(k).overhead += overhead * basis[k] / bt); else mk('_none').overhead += overhead;
+  });
+  const rows = Object.values(seg).map(s => {
+    const directAll = s.sal + s.direct + s.alloc;
+    const contrib = s.rev - directAll, net = contrib - s.overhead;
+    const dm = s.driverMonths || 0;
+    return Object.assign(s, {sal:r3(s.sal), direct:r3(s.direct), alloc:r3(s.alloc), overhead:r3(s.overhead), rev:r3(s.rev),
+      directAll:r3(directAll), contrib:r3(contrib), net:r3(net), cm: s.rev ? contrib/s.rev : 0, nm: s.rev ? net/s.rev : 0,
+      nDrivers: s.drivers.size, revPerDriver: dm ? s.rev/dm : 0, costPerDriver: dm ? directAll/dm : 0});
+  }).filter(s => s.rev || s.directAll || s.overhead);
+  rows.sort((x,y) => y.rev - x.rev);
+  const totNet = r3(rows.reduce((s,r) => s + r.net, 0));
+  let plNet = 0; ymRange(a, b).forEach(ym => plNet += L.pl(ym).net);
+  return {rows, totNet, plNet:r3(plNet), diff:r3(totNet - plNet)};
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   6) الموازنة والتوقعات
+   ══════════════════════════════════════════════════════════════════════ */
+L.budgetLines = function(){
+  const out = [{key:'_rev', ar:'الإيرادات', en:'Revenue', kind:'rev'}];
+  BASE_COA.filter(x => x.type === 'exp').forEach(x => out.push({key:x.key, ar:x.ar, en:x.en, code:x.code, kind:'exp'}));
+  return out;
+};
+L.actualByKey = function(ym){
+  const P = L.pl(ym), o = {_rev:P.revenue, driverSalaries:P.driverSal, adminSalaries:P.adminSal, _dep:P.dep, _int:P.loan.interest};
+  P.lines.forEach(l => { if(l.key !== 'driverSalaries' && l.key !== 'adminSalaries') o[l.key] = (o[l.key]||0) + l.amount; });
+  /* أي بند غير معروف يروح «أخرى» زي الدفتر */
+  Object.keys(o).forEach(k => { if(!['_rev','driverSalaries','adminSalaries','_dep','_int'].includes(k) && !BASE_COA.some(x => x.key === k)){ o.other = (o.other||0) + o[k]; delete o[k]; } });
+  return o;
+};
+L.budget = () => LS.get('sl_acc_budget', {base:{}, months:{}});
+L.budgetFor = function(ym){ const b = L.budget(); return Object.assign({}, b.base || {}, (b.months || {})[ym] || {}); };
+L.suggestBudget = function(ym){
+  const prev = L.dataMonths().filter(x => x < ym).slice(-3);
+  const s = {};
+  prev.forEach(p => { const a = L.actualByKey(p); Object.keys(a).forEach(k => s[k] = (s[k]||0) + a[k] / prev.length); });
+  Object.keys(s).forEach(k => s[k] = Math.round(s[k]));
+  return s;
+};
+/* انحدار خطي بسيط مع حد أدنى صفر */
+function linfit(ys){
+  const n = ys.length; if(!n) return {a:0, b:0};
+  if(n === 1) return {a:ys[0], b:0};
+  const xs = ys.map((_,i) => i), mx = (n-1)/2, my = ys.reduce((s,v) => s+v, 0)/n;
+  let sxy = 0, sxx = 0; xs.forEach((x,i) => { sxy += (x-mx)*(ys[i]-my); sxx += (x-mx)*(x-mx); });
+  const b = sxx ? sxy/sxx : 0; return {a: my - b*mx, b};
+}
+L.forecast = function(k){
+  /* شهور مكتملة فقط: قبل الشهر الجاري وفيها إيراد مسجّل */
+  const dm = L.dataMonths().filter(x => x < nowYm() && L.pl(x).revenue > 0).slice(-6);
+  const hist = dm.map(ym => { const P = L.pl(ym); return {ym, rev:P.revenue, cost:P.opex + P.dep + P.loan.interest, net:P.net}; });
+  const fr = linfit(hist.map(h => h.rev)), fc = linfit(hist.map(h => h.cost));
+  const out = []; const last = dm.length ? dm[dm.length-1] : nowYm();
+  for(let i = 1; i <= (k||3); i++){
+    const x = hist.length - 1 + i;
+    const rev = Math.max(0, fr.a + fr.b*x), cost = Math.max(0, fc.a + fc.b*x);
+    out.push({ym: ymAdd(last, i), rev:r3(rev), cost:r3(cost), net:r3(rev - cost), forecast:true});
+  }
+  return {hist, out, revSlope:fr.b, costSlope:fc.b};
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   7) المحلل الذكي — تنبيهات وشذوذ ومؤشر صحة
+   ══════════════════════════════════════════════════════════════════════ */
+L.anomalies = function(ym){
+  const out = [];
+  const cfg = L.cfg();
+  const monthExp = EXPENSES.filter(e => ymOf(e.date) === ym);
+  /* تكرار محتمل */
+  const seen = {};
+  monthExp.forEach(e => { const k = e.date + '|' + num(e.amount) + '|' + e.category + '|' + (e.driverId||''); (seen[k] = seen[k] || []).push(e); });
+  Object.values(seen).forEach(g => { if(g.length > 1) out.push({sev:'warn', type:'dup', title:'قيد مكرر محتمل', body:g.length + ' مصروفات بنفس التاريخ والمبلغ والبند: ' + fmt(g[0].amount) + ' د.ك · ' + ((EXP_CATS[g[0].category]||{}).name||g[0].category) + ' · ' + g[0].date, ids:g.map(x => x.id)}); });
+  const seenI = {};
+  INCOMES.filter(i => ymOf(i.date) === ym).forEach(i => { const k = i.date + '|' + num(i.amount) + '|' + i.source; (seenI[k] = seenI[k] || []).push(i); });
+  Object.values(seenI).forEach(g => { if(g.length > 1) out.push({sev:'bad', type:'dup', title:'إيراد مكرر محتمل', body:g.length + ' إيرادات بنفس التاريخ والمبلغ: ' + fmt(g[0].amount) + ' د.ك · ' + g[0].source, ids:g.map(x => x.id)}); });
+  /* قفزات البنود مقارنة بمتوسط 3 شهور */
+  const prev = L.dataMonths().filter(x => x < ym).slice(-3);
+  if(prev.length){
+    const cur = L.actualByKey(ym); const avg = {};
+    prev.forEach(p => { const a = L.actualByKey(p); Object.keys(a).forEach(k => avg[k] = (avg[k]||0) + a[k]/prev.length); });
+    L.budgetLines().forEach(bl => {
+      const c = cur[bl.key] || 0, v = avg[bl.key] || 0;
+      if(bl.kind === 'exp' && v > 20 && c > v * (1 + cfg.spikePct/100) && c - v > 50)
+        out.push({sev:'warn', type:'spike', title:bl.ar + ' أعلى من المعتاد', body:fmt(c) + ' د.ك مقابل متوسط ' + fmt(v) + ' د.ك آخر ' + prev.length + ' شهور (+' + pct(c/v - 1, 0) + ')', key:bl.key});
+      if(bl.kind === 'rev' && v > 0 && c < v * 0.75 && L.dataMonths().includes(ym))
+        out.push({sev:'bad', type:'drop', title:'الإيرادات أقل بوضوح من المعتاد', body:fmt(c) + ' د.ك مقابل متوسط ' + fmt(v) + ' د.ك (' + pct(c/v - 1, 0) + ')', key:'_rev'});
+    });
+  }
+  /* شريك له سائقين ومفيش إيراد مسجّل */
+  if(ym < nowYm()){
+    L.partners().forEach(p => {
+      const hasDrv = (typeof DRV !== 'undefined' ? DRV : []).some(d => d.partner === p.id && typeof wasEmployedInMonth === 'function' && wasEmployedInMonth(d, ymM(ym), ymY(ym)));
+      const hasInc = INCOMES.some(i => i.source === p.id && ymOf(i.date) === ym);
+      if(hasDrv && !hasInc) out.push({sev:'warn', type:'missing', title:'إيراد ' + p.name + ' مش متسجّل', body:'فيه سائقين شغالين مع ' + p.name + ' في ' + ymLbl(ym) + ' ومفيش إيراد مسجّل ليهم.'});
+    });
+    if(L.dataMonths().includes(ym) && !monthExp.some(e => e.category === 'fuel'))
+      out.push({sev:'info', type:'missing', title:'مفيش بنزين متسجّل', body:'الشهر ده مفيهوش ولا مصروف وقود — غالباً لسه ما اتسجّلش.'});
+  }
+  /* مبالغ كبيرة بلا ملاحظة */
+  monthExp.filter(e => num(e.amount) >= 250 && !String(e.note||'').trim()).forEach(e => out.push({sev:'info', type:'note', title:'مصروف كبير بلا وصف', body:fmt(e.amount) + ' د.ك · ' + ((EXP_CATS[e.category]||{}).name||e.category) + ' · ' + e.date, ids:[e.id]}));
+  /* تواريخ مستقبلية */
+  const today = new Date().toISOString().slice(0,10);
+  INCOMES.concat(EXPENSES).filter(x => ymOf(x.date) === ym && String(x.date) > today).forEach(x => out.push({sev:'warn', type:'future', title:'قيد بتاريخ مستقبلي', body:fmt(x.amount) + ' د.ك بتاريخ ' + x.date, ids:[x.id]}));
+  /* المعزول */
+  const q = LS.get('sl_acc_quarantine', []);
+  if(q.length) out.push({sev:'info', type:'quar', title:q.length + ' قيد معزول قبل بداية الشركة', body:'اتشالوا من الحسابات ومحفوظين في الإعدادات لو احتجت ترجّع حاجة.'});
+  return out;
+};
+
+L.insights = function(ym){
+  const out = [];
+  const P = L.pl(ym), prevYm = L.dataMonths().filter(x => x < ym).slice(-1)[0];
+  const Pp = prevYm ? L.pl(prevYm) : null;
+  const R = P.revenue;
+  if(!P.hasData){ out.push({sev:'info', title:'مفيش بيانات للشهر ده لسه', body:'سجّل الإيرادات والمصروفات عشان التحليل يشتغل.'}); return out; }
+  /* الربحية */
+  if(P.net >= 0) out.push({sev:'good', title:'الشهر رابح', body:'صافي ربح ' + fmt(P.net) + ' د.ك بهامش ' + pct(P.margins.net) + '.'});
+  else out.push({sev:'bad', title:'الشهر خسران', body:'صافي خسارة ' + fmt(-P.net) + ' د.ك. الإيراد محتاج يزيد ' + fmt(Math.max(0, P.breakEven - R)) + ' د.ك عشان نوصل لنقطة التعادل (' + fmt(P.breakEven) + ' د.ك).'});
+  if(Pp){
+    const dr = Pp.revenue ? R/Pp.revenue - 1 : 0, dc = (Pp.opex + Pp.dep) ? (P.opex + P.dep)/(Pp.opex + Pp.dep) - 1 : 0;
+    if(Math.abs(dr) >= 0.03) out.push({sev: dr > 0 ? 'good' : 'warn', title:'الإيرادات ' + (dr > 0 ? 'زادت' : 'قلّت') + ' ' + pct(Math.abs(dr)), body:'من ' + fmt(Pp.revenue) + ' إلى ' + fmt(R) + ' د.ك مقارنة بـ ' + ymLbl(prevYm) + '.'});
+    if(dc > dr + 0.05) out.push({sev:'warn', title:'التكاليف بتجري أسرع من الإيرادات', body:'التكاليف ' + (dc>=0?'زادت ':'قلّت ') + pct(Math.abs(dc)) + ' والإيرادات ' + (dr>=0?'زادت ':'قلّت ') + pct(Math.abs(dr)) + '.'});
+    if(P.net > Pp.net + 1) out.push({sev:'good', title:'تحسّن في صافي الربح', body:'أحسن من الشهر اللي فات بـ ' + fmt(P.net - Pp.net) + ' د.ك.'});
+  }
+  const salRatio = R ? (P.driverSal + P.adminSal)/R : 0;
+  if(salRatio > 0.65) out.push({sev:'warn', title:'الرواتب ' + pct(salRatio, 0) + ' من الإيراد', body:'النسبة الصحية لشركة توصيل حوالي 55–60%. كل سائق محتاج يجيب إيراد أكتر أو التكلفة تتراجع.'});
+  const nDrv = P.driverCount || 0;
+  if(nDrv) out.push({sev:'info', title:'إيراد السائق ' + fmt(R/nDrv, 0) + ' د.ك في الشهر', body:'تكلفة السائق الكاملة (راتب + بنزين + صيانة + مخالفات + إقامة) حوالي ' + fmt((P.driverSal + (P.lines.filter(l => ['fuel','maintenance','violations','residency'].includes(l.key)).reduce((s,l)=>s+l.amount,0)))/nDrv, 0) + ' د.ك.'});
+  try{
+    const S = L.segments(ym, ym);
+    S.rows.filter(r => r.id !== '_none' && r.rev > 0).forEach(r => {
+      if(r.contrib < 0) out.push({sev:'bad', title:r.name + ' مش مغطّي تكلفته المباشرة', body:'الإيراد ' + fmt(r.rev) + ' د.ك والتكلفة المباشرة ' + fmt(r.directAll) + ' د.ك — خسارة قبل المصاريف العامة ' + fmt(-r.contrib) + ' د.ك.'});
+      else if(r.net < 0) out.push({sev:'warn', title:r.name + ' بيغطي تكلفته المباشرة بس', body:'هامش مساهمة ' + pct(r.cm) + '، لكن بعد نصيبه من المصاريف العامة بيخسر ' + fmt(-r.net) + ' د.ك.'});
+      else out.push({sev:'good', title:r.name + ' رابح', body:'صافي ' + fmt(r.net) + ' د.ك بهامش ' + pct(r.nm) + '.'});
+    });
+  }catch(e){}
+  const BS = L.balanceSheet(ym);
+  if(BS.cash < 0) out.push({sev:'warn', title:'النقدية المحسوبة بالسالب (' + fmt(BS.cash) + ' د.ك)', body:'معناها إن الشركاء موّلوا العجز ده من بره الدفاتر. سجّل قيد «تمويل من الشركاء» عشان الميزانية تعكس الواقع.', action:'fund'});
+  return out;
+};
+
+L.health = function(ym){
+  const P = L.pl(ym); if(!P.hasData) return null;
+  const dm = L.dataMonths().filter(x => x <= ym).slice(-3);
+  const nets = dm.map(x => L.pl(x).net);
+  const trend = nets.length > 1 ? nets[nets.length-1] - nets[0] : 0;
+  const parts = [];
+  const nm = P.margins.net;
+  parts.push({k:'الربحية', w:35, s: Math.max(0, Math.min(1, (nm + 0.30) / 0.45))});
+  parts.push({k:'الاتجاه', w:20, s: trend > 0 ? 1 : trend > -200 ? 0.6 : 0.25});
+  parts.push({k:'تغطية التكاليف', w:20, s: P.breakEven ? Math.max(0, Math.min(1, P.revenue / P.breakEven)) : 1});
+  const an = L.anomalies(ym).filter(a => a.sev !== 'info').length;
+  parts.push({k:'جودة البيانات', w:15, s: Math.max(0, 1 - an * 0.2)});
+  const cash = L.balanceSheet(ym).cash;
+  parts.push({k:'السيولة', w:10, s: cash >= 0 ? 1 : 0.3});
+  const score = Math.round(parts.reduce((s,p) => s + p.w * p.s, 0));
+  return {score, parts, label: score >= 75 ? 'قوي' : score >= 55 ? 'مقبول' : score >= 35 ? 'تحت الضغط' : 'حرج'};
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   8) إقفال الفترات
+   ══════════════════════════════════════════════════════════════════════ */
+L.locks = () => LS.get('sl_acc_locks', {});
+L.isLocked = ym => !!L.locks()[ym];
+L.lock = function(ym){
+  const rc = L.reconcile().find(r => r.ym === ym);
+  const k = L.locks(); k[ym] = {at:new Date().toISOString(), by:(window.ARK_USER && window.ARK_USER.name) || '—',
+    net: L.pl(ym).net, rev: L.pl(ym).revenue, ok: rc ? rc.ok : true};
+  LS.set('sl_acc_locks', k); L.audit('lock', {ym}); toast('اتقفل ' + ymLbl(ym) + ' 🔒 — مفيش تعديل على قيوده','s'); L.render();
+};
+L.unlock = function(ym){
+  const reason = prompt('سبب فتح ' + ymLbl(ym) + ' (هيتسجّل في سجل التدقيق):');
+  if(!reason || !reason.trim()) return;
+  const k = L.locks(); delete k[ym]; LS.set('sl_acc_locks', k); L.audit('unlock', {ym, reason}); toast('اتفتح ' + ymLbl(ym),'s'); L.render();
+};
+
+/* القيود اليدوية */
+L.saveJE = function(je){
+  const dr = je.lines.reduce((s,l) => s + num(l.dr), 0), cr = je.lines.reduce((s,l) => s + num(l.cr), 0);
+  if(Math.abs(dr - cr) > 0.0005) return 'القيد مش متوازن — المدين ' + fmt(dr) + ' والدائن ' + fmt(cr);
+  if(!je.date) return 'اختار التاريخ';
+  if(String(je.date) < L.cfg().companyStart) return 'التاريخ قبل بداية الشركة';
+  if(L.isLocked(ymOf(je.date))) return ymLbl(ymOf(je.date)) + ' مقفول';
+  if(dr <= 0) return 'أدخل مبالغ';
+  const all = LS.get('sl_acc_je', []);
+  je.id = je.id || ('MJ' + Date.now()); je.createdAt = new Date().toISOString();
+  const i = all.findIndex(x => x.id === je.id); if(i >= 0) all[i] = je; else all.push(je);
+  LS.set('sl_acc_je', all); L.audit('je', {id:je.id, date:je.date, amount:r3(dr), memo:je.memo}); L.invalidate();
+  return null;
+};
+L.deleteJE = function(id){
+  const all = LS.get('sl_acc_je', []); const j = all.find(x => x.id === id); if(!j) return;
+  if(L.isLocked(ymOf(j.date))){ toast('الفترة مقفولة','e'); return; }
+  if(!confirm('حذف القيد اليدوي «' + (j.memo || id) + '»؟')) return;
+  LS.set('sl_acc_je', all.filter(x => x.id !== id)); L.audit('je_delete', {id, memo:j.memo}); L.invalidate(); L.render();
+};
+
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK-LEDGER — الواجهة
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+const L = window.ARKL;
+const {r3, esc, fmt, fmt0, pct, ymOf, ymMake, ymAdd, ymRange, ymEnd, ymLbl, ymShort, nowYm, ymY, ymM} = L;
+const num = v => parseFloat(v) || 0;
+
+L.tab   = L.tab || 'dash';
+L.rangeN = L.rangeN || 6;
+L.isView = L.isView || 'func';
+L.glAcct = L.glAcct || '1100';
+L.f = L.f || {q:'', kind:'all', cat:'', src:'', scope:'month', ids:null};
+L.segScope = L.segScope || 'month';
+
+/* ── الأنماط ─────────────────────────────────────────────────────────── */
+const CSS = `
+.lg{--lg-pos:var(--green);--lg-neg:var(--red);--lg-ink:var(--text);--lg-rule:var(--br);font-variant-numeric:tabular-nums}
+.lg *{box-sizing:border-box}
+.lg-top{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.lg-title{font-size:23px;font-weight:900;letter-spacing:-.2px;color:var(--text);display:flex;align-items:center;gap:10px}
+.lg-title .lg-badge{font-size:10.5px}
+.lg-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.lg-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lg-sel{padding:8px 12px;background:var(--s1);border:1px solid var(--br);border-radius:10px;color:var(--text);font-weight:800;font-family:inherit;font-size:12.5px}
+.lg-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:10px;border:1px solid var(--br);background:var(--s1);color:var(--text);font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.lg-btn:hover{border-color:var(--blue);color:var(--blue);box-shadow:var(--shadow-sm)}
+.lg-btn:focus-visible,.lg-tab:focus-visible,.lg-sel:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.lg-btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.lg-btn.pri:hover{background:#164a66;color:#fff}
+.lg-btn.ok{color:var(--green);border-color:rgba(5,150,105,.35)}
+.lg-btn.bad{color:var(--red);border-color:rgba(185,28,28,.35)}
+.lg-btn.sm{padding:5px 9px;font-size:11px;border-radius:8px}
+.lg-btn i{font-size:15px}
+.lg-tabs{display:flex;gap:4px;overflow-x:auto;padding:4px;background:var(--s1);border:1px solid var(--br);border-radius:14px;margin-bottom:16px;scrollbar-width:thin}
+.lg-tab{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;border:0;background:none;color:var(--muted);font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.lg-tab:hover{background:var(--s3);color:var(--text)}
+.lg-tab.on{background:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(28,88,120,.25)}
+.lg-tab i{font-size:15px}
+.lg-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+.lg-badge.ok{background:rgba(5,150,105,.1);color:var(--green)}
+.lg-badge.bad{background:rgba(185,28,28,.1);color:var(--red)}
+.lg-badge.warn{background:rgba(217,119,6,.12);color:var(--amber)}
+.lg-badge.info{background:var(--blue-soft);color:var(--blue)}
+.lg-grid{display:grid;gap:14px}
+.lg-g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr))}
+.lg-g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.lg-card{background:var(--s1);border:1px solid var(--br);border-radius:16px;padding:18px;box-shadow:var(--shadow-xs);min-width:0}
+.lg-card h3{font-size:14px;font-weight:900;margin:0 0 3px;display:flex;align-items:center;gap:7px;color:var(--text)}
+.lg-card h3 i{color:var(--blue);font-size:17px}
+.lg-card .lg-cs{font-size:11.5px;color:var(--muted);margin-bottom:14px}
+.lg-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.lg-kpi{background:var(--s1);border:1px solid var(--br);border-radius:16px;padding:14px 15px 10px;position:relative;overflow:hidden;min-width:0}
+.lg-kpi .k-l{font-size:11.5px;color:var(--muted);font-weight:800;display:flex;justify-content:space-between;gap:6px;align-items:center}
+.lg-kpi .k-v{font-size:22px;font-weight:900;margin:6px 0 2px;font-family:'JetBrains Mono',monospace;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lg-kpi .k-v small{font-size:11px;color:var(--muted);font-family:'Cairo',sans-serif;font-weight:700;margin-inline-start:4px}
+.lg-kpi .k-d{font-size:11px;font-weight:800}
+.lg-kpi svg{display:block;width:100%;height:30px;margin-top:6px}
+.lg-up{color:var(--green)}.lg-dn{color:var(--red)}.lg-mut{color:var(--muted)}
+.lg-tbl-wrap{overflow-x:auto;border:1px solid var(--br);border-radius:12px}
+table.lg-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px}
+table.lg-t th{background:var(--s2);color:var(--muted);font-weight:900;font-size:11px;text-align:start;padding:9px 11px;border-bottom:1px solid var(--br);white-space:nowrap;position:sticky;top:0}
+table.lg-t td{padding:8px 11px;border-bottom:1px solid var(--br);vertical-align:middle}
+table.lg-t td.n,table.lg-t th.n{text-align:left;direction:ltr;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+table.lg-t tr:last-child td{border-bottom:0}
+table.lg-t tbody tr:hover td{background:var(--s2)}
+table.lg-t tr.clk{cursor:pointer}
+table.lg-st td{border-bottom:0;padding:6px 11px}
+table.lg-st tr.h td{font-weight:900;color:var(--blue);font-size:11.5px;padding-top:14px;letter-spacing:.2px}
+table.lg-st tr.l td:first-child{padding-inline-start:26px}
+table.lg-st tr.s td{font-weight:900;border-top:1px solid var(--text)}
+table.lg-st tr.t td{font-weight:900;font-size:13.5px;border-top:1px solid var(--text);border-bottom:3px double var(--text);background:var(--blue-soft)}
+table.lg-st tr.k td{font-size:11px;color:var(--muted);font-style:italic}
+table.lg-st .en{display:block;font-size:10px;color:var(--muted2);font-weight:600}
+.lg-neg{color:var(--red)}
+.lg-ins{display:flex;flex-direction:column;gap:9px}
+.lg-in{display:flex;gap:11px;align-items:flex-start;padding:11px 12px;border-radius:12px;border:1px solid var(--br);background:var(--s2)}
+.lg-in .ic{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:16px}
+.lg-in.good .ic{background:rgba(5,150,105,.12);color:var(--green)}
+.lg-in.bad .ic{background:rgba(185,28,28,.12);color:var(--red)}
+.lg-in.warn .ic{background:rgba(217,119,6,.14);color:var(--amber)}
+.lg-in.info .ic{background:var(--blue-soft);color:var(--blue)}
+.lg-in b{display:block;font-size:12.5px;margin-bottom:2px}
+.lg-in p{margin:0;font-size:11.8px;color:var(--muted);line-height:1.7}
+.lg-chart{width:100%;display:block}
+.lg-chart text{font-family:'Cairo',sans-serif;fill:var(--muted);font-size:10px}
+.lg-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:8px}
+.lg-legend span{display:inline-flex;align-items:center;gap:5px}
+.lg-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.lg-bar{height:8px;border-radius:99px;background:var(--s3);overflow:hidden}
+.lg-bar>i{display:block;height:100%;border-radius:inherit}
+.lg-gauge{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.lg-score{font-size:46px;font-weight:900;font-family:'JetBrains Mono',monospace;line-height:1}
+.lg-lock{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);color:var(--violet);font-weight:800;font-size:12.5px;margin-bottom:14px}
+.lg-f{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.lg-f input,.lg-f select{padding:8px 11px;border:1px solid var(--br);border-radius:10px;background:var(--s1);color:var(--text);font-family:inherit;font-size:12.5px;min-width:0}
+.lg-f input{flex:1 1 200px}
+.lg-pill{display:inline-block;padding:2px 8px;border-radius:7px;font-size:10.5px;font-weight:800;background:var(--s3);color:var(--muted)}
+.lg-empty{padding:34px 14px;text-align:center;color:var(--muted);font-size:12.5px}
+.lg-empty i{font-size:30px;display:block;margin-bottom:8px;color:var(--muted2)}
+.lg-je-lines{display:grid;gap:7px}
+.lg-je-row{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:7px}
+.lg-je-row select,.lg-je-row input{padding:8px;border:1px solid var(--br);border-radius:9px;background:var(--s1);color:var(--text);font-family:inherit;font-size:12px;min-width:0;width:100%}
+.lg-note{font-size:11.5px;color:var(--muted);line-height:1.8}
+.lg-ai{width:100%;min-height:74px;padding:11px;border:1px solid var(--br);border-radius:12px;background:var(--s2);color:var(--text);font-family:inherit;font-size:13px;resize:vertical}
+.lg-ai-out{white-space:pre-wrap;line-height:1.95;font-size:13px;padding:14px;border-radius:12px;background:var(--s2);border:1px solid var(--br);margin-top:10px}
+.lg-chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.lg-chip{padding:6px 10px;border-radius:999px;border:1px solid var(--br);background:var(--s1);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--text)}
+.lg-chip:hover{border-color:var(--violet);color:var(--violet)}
+.lg-fade{animation:lgIn .35s ease both}
+@keyframes lgIn{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.lg-fade{animation:none}}
+@media (max-width:640px){.lg-title{font-size:19px}.lg-kpi .k-v{font-size:19px}}
+`;
+function ensureCSS(){ if(document.getElementById('lg-css')) return; const s = document.createElement('style'); s.id = 'lg-css'; s.textContent = CSS; document.head.appendChild(s); }
+
+/* ── رسومات SVG ─────────────────────────────────────────────────────── */
+const COL = {rev:'#1c5878', cost:'#d97706', net:'#059669', neg:'#b91c1c', sal:'#0d9488', grey:'#94a3b8', vio:'#7c3aed'};
+function spark(vals, color){
+  if(!vals.length) return '';
+  const w = 160, h = 30, mn = Math.min(...vals, 0), mx = Math.max(...vals, 0.0001), rg = mx - mn || 1;
+  const pts = vals.map((v,i) => [vals.length === 1 ? w/2 : i*(w/(vals.length-1)), h - 3 - (v - mn)/rg*(h-6)]);
+  const d = pts.map((p,i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const last = pts[pts.length-1];
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true"><path d="' + d + ' L' + last[0] + ' ' + h + ' L' + pts[0][0] + ' ' + h + 'Z" fill="' + color + '" opacity=".10"/><path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.8" vector-effect="non-scaling-stroke"/><circle cx="' + last[0] + '" cy="' + last[1] + '" r="2.6" fill="' + color + '"/></svg>';
+}
+function niceMax(v){ if(v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v/p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+/* أعمدة إيراد/تكلفة + خط صافي الربح */
+function comboChart(rows){
+  const W = 720, H = 250, pl = 46, pr = 10, pt = 14, pb = 34;
+  const iw = W - pl - pr, ih = H - pt - pb;
+  const mxv = niceMax(Math.max(1, ...rows.map(r => Math.max(r.rev, r.cost))));
+  const mnv = Math.min(0, ...rows.map(r => r.net));
+  const mn = mnv < 0 ? -niceMax(-mnv) : 0;
+  const y = v => pt + ih - (v - mn)/(mxv - mn)*ih;
+  const bw = iw / rows.length;
+  let g = '';
+  for(let i = 0; i <= 4; i++){ const v = mn + (mxv - mn)*i/4; const yy = y(v); g += '<line x1="' + pl + '" x2="' + (W-pr) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--br)" stroke-width="1"/><text x="' + (pl-6) + '" y="' + (yy+3) + '" text-anchor="end">' + fmt0(v) + '</text>'; }
+  g += '<line x1="' + pl + '" x2="' + (W-pr) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="var(--muted2)" stroke-width="1"/>';
+  rows.forEach((r,i) => {
+    const x0 = pl + i*bw + bw*0.16, b = bw*0.32;
+    const op = r.forecast ? ' opacity=".45" stroke-dasharray="3 2"' : '';
+    g += '<rect x="' + x0 + '" y="' + y(r.rev) + '" width="' + b + '" height="' + Math.max(0, y(0) - y(r.rev)) + '" rx="3" fill="' + COL.rev + '"' + op + '><title>' + esc(r.label) + ' — إيرادات ' + fmt(r.rev) + '</title></rect>';
+    g += '<rect x="' + (x0+b+2) + '" y="' + y(r.cost) + '" width="' + b + '" height="' + Math.max(0, y(0) - y(r.cost)) + '" rx="3" fill="' + COL.cost + '"' + op + '><title>' + esc(r.label) + ' — تكاليف ' + fmt(r.cost) + '</title></rect>';
+    g += '<text x="' + (pl + i*bw + bw/2) + '" y="' + (H-12) + '" text-anchor="middle">' + esc(r.label) + '</text>';
+  });
+  const pts = rows.map((r,i) => [pl + i*bw + bw/2, y(r.net)]);
+  g += '<path d="' + pts.map((p,i) => (i?'L':'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ') + '" fill="none" stroke="' + COL.net + '" stroke-width="2.4"/>';
+  pts.forEach((p,i) => { const r = rows[i]; g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4" fill="var(--s1)" stroke="' + (r.net >= 0 ? COL.net : COL.neg) + '" stroke-width="2.2"><title>' + esc(r.label) + ' — صافي ' + fmt(r.net) + '</title></circle>'; });
+  return '<svg class="lg-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="الإيرادات والتكاليف وصافي الربح">' + g + '</svg>' +
+    '<div class="lg-legend"><span><i style="background:' + COL.rev + '"></i>الإيرادات</span><span><i style="background:' + COL.cost + '"></i>التكاليف الكلية</span><span><i style="background:' + COL.net + ';height:3px"></i>صافي الربح</span></div>';
+}
+/* جسر الأرباح: من الإيراد لصافي الربح */
+function waterfall(IS){
+  const steps = [{l:'الإيرادات', v:IS.R, t:'tot'}];
+  IS.cor.forEach(x => steps.push({l:x.ar, v:-x.v}));
+  steps.push({l:'مجمل الربح', v:IS.GP, t:'sub'});
+  IS.opex.forEach(x => steps.push({l:x.ar, v:-x.v}));
+  if(IS.DEP) steps.push({l:'الإهلاك', v:-IS.DEP});
+  if(IS.FINC) steps.push({l:'التمويل', v:-IS.FINC});
+  steps.push({l:'صافي الربح', v:IS.NET, t:'tot'});
+  const W = 720, H = 260, pl = 46, pr = 8, pt = 14, pb = 62;
+  const iw = W - pl - pr, ih = H - pt - pb;
+  let run = 0; const bars = steps.map(s => { if(s.t){ const b = {s, a:0, b:s.v}; run = s.v; return b; } const a = run; run += s.v; return {s, a, b:run}; });
+  const mx = niceMax(Math.max(1, ...bars.map(b => Math.max(b.a, b.b)))), mnr = Math.min(0, ...bars.map(b => Math.min(b.a, b.b)));
+  const mn = mnr < 0 ? -niceMax(-mnr) : 0;
+  const y = v => pt + ih - (v - mn)/(mx - mn)*ih; const bw = iw/bars.length;
+  let g = '';
+  for(let i = 0; i <= 4; i++){ const v = mn + (mx-mn)*i/4, yy = y(v); g += '<line x1="' + pl + '" x2="' + (W-pr) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--br)"/><text x="' + (pl-6) + '" y="' + (yy+3) + '" text-anchor="end">' + fmt0(v) + '</text>'; }
+  bars.forEach((b,i) => {
+    const x = pl + i*bw + bw*0.14, w = bw*0.72, top = y(Math.max(b.a, b.b)), h = Math.max(1.5, Math.abs(y(b.a) - y(b.b)));
+    const c = b.s.t ? (b.s.v >= 0 ? COL.rev : COL.neg) : (b.s.v >= 0 ? COL.net : COL.cost);
+    g += '<rect x="' + x + '" y="' + top + '" width="' + w + '" height="' + h + '" rx="3" fill="' + c + '"><title>' + esc(b.s.l) + ': ' + fmt(b.s.v) + '</title></rect>';
+    g += '<text x="' + (x + w/2) + '" y="' + (top - 4) + '" text-anchor="middle" style="font-weight:800;fill:var(--text)">' + fmt0(Math.abs(b.s.v)) + '</text>';
+    g += '<text transform="translate(' + (x + w/2) + ' ' + (H - pb + 14) + ') rotate(-35)" text-anchor="end">' + esc(b.s.l.length > 14 ? b.s.l.slice(0,13) + '…' : b.s.l) + '</text>';
+  });
+  return '<svg class="lg-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="جسر الأرباح">' + g + '</svg>';
+}
+function donut(parts, center){
+  const tot = parts.reduce((s,p) => s + Math.max(0, p.v), 0) || 1;
+  let a = -Math.PI/2; const R = 62, r = 40, cx = 80, cy = 80; let g = '';
+  parts.forEach(p => {
+    const f = Math.max(0, p.v)/tot; if(f <= 0) return;
+    const a2 = a + f*Math.PI*2 - (f >= 1 ? 0.0001 : 0); const lg = f > 0.5 ? 1 : 0;
+    const P = (rr, aa) => (cx + rr*Math.cos(aa)).toFixed(2) + ' ' + (cy + rr*Math.sin(aa)).toFixed(2);
+    g += '<path d="M' + P(R,a) + ' A' + R + ' ' + R + ' 0 ' + lg + ' 1 ' + P(R,a2) + ' L' + P(r,a2) + ' A' + r + ' ' + r + ' 0 ' + lg + ' 0 ' + P(r,a) + 'Z" fill="' + p.c + '"><title>' + esc(p.l) + ': ' + fmt(p.v) + ' (' + pct(f) + ')</title></path>';
+    a = a2;
+  });
+  return '<svg viewBox="0 0 160 160" style="width:150px;height:150px;flex:none" role="img" aria-label="توزيع">' + g +
+    '<text x="80" y="76" text-anchor="middle" style="font-size:9px;fill:var(--muted)">' + esc(center[0]) + '</text><text x="80" y="94" text-anchor="middle" style="font-size:14px;font-weight:900;fill:var(--text);font-family:JetBrains Mono,monospace">' + esc(center[1]) + '</text></svg>';
+}
+const PALETTE = ['#1c5878','#d97706','#0d9488','#7c3aed','#b91c1c','#3a7da3','#059669','#db2777','#64748b','#ca8a04','#0891b2','#9333ea'];
+
+/* ── أدوات عرض ──────────────────────────────────────────────────────── */
+const n = (v, cls) => '<td class="n' + (v < -0.0005 ? ' lg-neg' : '') + (cls ? ' ' + cls : '') + '">' + fmt(v) + '</td>';
+const lbl = (ar, en) => '<td>' + esc(ar) + (en ? '<span class="en">' + esc(en) + '</span>' : '') + '</td>';
+const delta = (cur, prev, invert) => {
+  if(!prev) return '<span class="lg-mut">—</span>';
+  const d = (cur - prev)/Math.abs(prev); const good = invert ? d < 0 : d > 0;
+  return '<span class="' + (Math.abs(d) < 0.005 ? 'lg-mut' : good ? 'lg-up' : 'lg-dn') + '">' + (d > 0 ? '▲ ' : d < 0 ? '▼ ' : '') + pct(Math.abs(d)) + '</span>';
+};
+const card = (icon, title, sub, body, extra) => '<div class="lg-card lg-fade"' + (extra||'') + '><h3><i class="ti ' + icon + '"></i>' + title + '</h3>' + (sub ? '<div class="lg-cs">' + sub + '</div>' : '') + body + '</div>';
+const sevIcon = {good:'ti-circle-check', bad:'ti-alert-octagon', warn:'ti-alert-triangle', info:'ti-info-circle'};
+const insightHTML = list => '<div class="lg-ins">' + list.map(x => '<div class="lg-in ' + x.sev + '"><div class="ic"><i class="ti ' + sevIcon[x.sev] + '"></i></div><div style="flex:1;min-width:0"><b>' + esc(x.title) + '</b><p>' + esc(x.body) + '</p>' +
+  (x.action === 'fund' ? '<button class="lg-btn sm" style="margin-top:7px" onclick="ARKL.fundShortfall()"><i class="ti ti-building-bank"></i> سجّل تمويل الشركاء</button>' : '') +
+  (x.ids ? '<button class="lg-btn sm" style="margin-top:7px" onclick=\'ARKL.showIds(' + JSON.stringify(x.ids) + ')\'><i class="ti ti-list-search"></i> افتح القيود</button>' : '') + '</div></div>').join('') + '</div>';
+
+L.selYm = () => ymMake(accYear, accMonth);
+L.rangeMonths = function(){
+  const sel = L.selYm(), bs = L.booksStart();
+  let a;
+  if(L.rangeN === 'ytd') a = ymY(sel) + '-01';
+  else if(L.rangeN === 'all') a = bs;
+  else a = ymAdd(sel, -(+L.rangeN - 1));
+  if(a < bs) a = bs;
+  return ymRange(a, sel);
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   العرض الرئيسي
+   ══════════════════════════════════════════════════════════════════════ */
+const TABS = [
+  ['dash','ti-layout-dashboard','نظرة عامة'], ['entries','ti-list-details','القيود'],
+  ['is','ti-report-money','قائمة الدخل'], ['bs','ti-scale','الميزانية'], ['cf','ti-arrows-exchange','التدفقات النقدية'],
+  ['gl','ti-book-2','الأستاذ والميزان'], ['seg','ti-building-store','ربحية الشركاء'],
+  ['budget','ti-target-arrow','الموازنة والتوقعات'], ['ai','ti-sparkles','التحليل الذكي'],
+  ['reports','ti-file-analytics','التقارير'], ['settings','ti-settings-cog','الإعدادات والإقفال']
+];
+L.go = t => { L.tab = t; L.render(); try{ document.getElementById('acc-content').scrollIntoView({block:'start'}); }catch(e){} };
+L.setRange = v => { L.rangeN = v; L.render(); };
+L.setYm = v => { accYear = ymY(v); accMonth = ymM(v); L.render(); };
+
+L.render = function(){
+  const el = document.getElementById('acc-content'); if(!el) return;
+  ensureCSS();
+  /* أول فتحة: لو الشهر الجاري لسه مفيهوش إيراد، نفتح على آخر شهر مكتمل */
+  if(!L._opened){ L._opened = true;
+    try{ const cur = L.selYm(); if(cur === nowYm() && !INCOMES.some(i => ymOf(i.date) === cur)){ const last = L.dataMonths().filter(x => x < cur && INCOMES.some(i => ymOf(i.date) === x)).pop(); if(last){ accYear = ymY(last); accMonth = ymM(last); } } }catch(e){} }
+  let h;
+  try{
+    L.quarantine();
+    const sel = L.selYm(), months = L.months().slice().reverse();
+    if(!months.includes(sel)) months.unshift(sel);
+    const rec = L.reconcile(); const bad = rec.filter(r => !r.ok);
+    h = '<div class="lg">';
+    h += '<div class="lg-top"><div><div class="lg-title"><i class="ti ti-building-bank" style="color:var(--blue)"></i>المحاسبة المالية ' +
+      (bad.length ? '<span class="lg-badge bad"><i class="ti ti-alert-triangle"></i> فرق مطابقة في ' + bad.length + ' شهر</span>' : '<span class="lg-badge ok"><i class="ti ti-shield-check"></i> الدفاتر متوازنة ومطابقة</span>') +
+      '</div><div class="lg-sub">قيد مزدوج · دليل حسابات · قوائم مالية · تحليل الشركاء · من ' + ymLbl(L.booksStart()) + '</div></div>';
+    h += '<div class="lg-ctl"><select class="lg-sel" aria-label="الشهر" onchange="ARKL.setYm(this.value)">' + months.map(m => '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + ymLbl(m) + (L.isLocked(m) ? ' 🔒' : '') + '</option>').join('') + '</select>';
+    h += '<select class="lg-sel" aria-label="فترة المقارنة" onchange="ARKL.setRange(this.value)">' + [['3','آخر 3 شهور'],['6','آخر 6 شهور'],['12','آخر 12 شهر'],['ytd','من أول السنة'],['all','كل الفترة']].map(o => '<option value="' + o[0] + '"' + (String(L.rangeN) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select>';
+    h += '<button class="lg-btn ok" onclick="openIncomeModal()"><i class="ti ti-plus"></i> إيراد</button><button class="lg-btn bad" onclick="openExpenseModal()"><i class="ti ti-minus"></i> مصروف</button>' +
+      '<button class="lg-btn" onclick="ARKL.openJE()"><i class="ti ti-arrows-left-right"></i> قيد يومية</button>' +
+      '<button class="lg-btn pri" onclick="ARKL.printPack()"><i class="ti ti-printer"></i> القوائم المالية</button>' +
+      '<button class="lg-btn" onclick="ARKL.exportXlsx()"><i class="ti ti-file-spreadsheet"></i> Excel</button>' +
+      '<span id="finSyncState" style="font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:5px"></span></div></div>';
+    h += '<nav class="lg-tabs" role="tablist">' + TABS.map(t => '<button role="tab" aria-selected="' + (L.tab === t[0]) + '" class="lg-tab' + (L.tab === t[0] ? ' on' : '') + '" onclick="ARKL.go(\'' + t[0] + '\')"><i class="ti ' + t[1] + '"></i>' + t[2] + '</button>').join('') + '</nav>';
+    if(L.isLocked(sel)) h += '<div class="lg-lock"><i class="ti ti-lock"></i> ' + ymLbl(sel) + ' مقفول — القيود معروضة للقراءة فقط. الفتح من «الإعدادات والإقفال».</div>';
+    h += (VIEWS[L.tab] || VIEWS.dash)(sel);
+    h += '</div>';
+  }catch(e){
+    console.error('[ARKL]', e);
+    h = '<div class="lg-card"><h3><i class="ti ti-alert-triangle"></i>تعذّر عرض المحاسبة الجديدة</h3><div class="lg-note">' + esc(e.message) + '</div><button class="lg-btn" style="margin-top:10px" onclick="ARKL.classic()">افتح العرض القديم</button></div>';
+  }
+  el.innerHTML = h;
+  try{ if(typeof finPaint === 'function') finPaint(); }catch(e){}
+};
+L.classic = function(){ try{ L._classic(); }catch(e){} };
+
+/* ══════════════════════════════════════════════════════════════════════
+   الشاشات
+   ══════════════════════════════════════════════════════════════════════ */
+const VIEWS = {};
+
+/* ── نظرة عامة ── */
+VIEWS.dash = function(sel){
+  const P = L.pl(sel), IS = L.incomeStatement(sel, sel), BS = L.balanceSheet(sel);
+  const dm = L.dataMonths().filter(x => x <= sel);
+  const prev = dm.filter(x => x < sel).slice(-1)[0];
+  const Pp = prev ? L.pl(prev) : null, ISp = prev ? L.incomeStatement(prev, prev) : null;
+  const hist = L.rangeMonths().map(ym => ({ym, P:L.pl(ym), IS:L.incomeStatement(ym, ym)}));
+  const nDrv = P.driverCount || 0;
+  const k = (label, v, unit, d, sp, col, tip) => '<div class="lg-kpi" title="' + esc(tip||'') + '"><div class="k-l"><span>' + label + '</span>' + (d||'') + '</div><div class="k-v' + (v < 0 ? ' lg-neg' : '') + '">' + (unit === '%' ? pct(v) : fmt(v, unit === 'n' ? 0 : 3)) + (unit === 'kd' ? '<small>د.ك</small>' : '') + '</div>' + spark(sp, col) + '</div>';
+  let h = '<div class="lg-kpis">';
+  h += k('الإيرادات', IS.R, 'kd', Pp ? delta(IS.R, ISp.R) : '', hist.map(x => x.IS.R), COL.rev, 'كل إيرادات المنصات في الشهر');
+  h += k('مجمل الربح', IS.GP, 'kd', '<span class="lg-mut">' + pct(IS.gm) + '</span>', hist.map(x => x.IS.GP), COL.sal, 'الإيراد ناقص تكلفة الخدمة المباشرة (رواتب السائقين، وقود، صيانة، مخالفات، إقامات)');
+  h += k('EBITDA', IS.EBITDA, 'kd', '<span class="lg-mut">' + pct(IS.em) + '</span>', hist.map(x => x.IS.EBITDA), COL.vio, 'الربح التشغيلي قبل الإهلاك والتمويل');
+  h += k('صافي الربح', IS.NET, 'kd', Pp ? delta(IS.NET, ISp.NET) : '', hist.map(x => x.IS.NET), IS.NET >= 0 ? COL.net : COL.neg, 'بعد الإهلاك وتكلفة التمويل');
+  h += k('النقدية المحسوبة', BS.cash, 'kd', '', hist.map(x => L.balanceSheet(x.ym).cash), COL.rev, 'رصيد النقدية من الدفاتر في نهاية الشهر');
+  h += k('نقطة التعادل', P.breakEven, 'kd', '<span class="' + (IS.R >= P.breakEven ? 'lg-up' : 'lg-dn') + '">' + (P.breakEven ? pct(IS.R/P.breakEven, 0) : '—') + '</span>', hist.map(x => x.P.breakEven), COL.cost, 'الإيراد المطلوب لتغطية كل التكاليف');
+  h += '</div>';
+
+  const H = L.health(sel);
+  h += '<div class="lg-grid lg-g2" style="margin-bottom:14px">';
+  h += card('ti-chart-bar', 'الإيرادات والتكاليف وصافي الربح', hist.length + ' شهور حتى ' + ymLbl(sel) + (hist.length < 2 ? ' — اختار فترة أطول من فوق' : ''),
+    comboChart(hist.map(x => ({label:ymShort(x.ym), rev:x.IS.R, cost:r3(x.IS.R - x.IS.NET), net:x.IS.NET}))));
+  h += card('ti-stairs-down', 'جسر الأرباح — ' + ymLbl(sel), 'إزاي الإيراد بيتحول لصافي ربح بند ببند', IS.R || IS.NET ? waterfall(IS) : '<div class="lg-empty"><i class="ti ti-chart-bar-off"></i>مفيش بيانات</div>');
+  h += '</div>';
+
+  h += '<div class="lg-grid lg-g3">';
+  if(H){
+    const c = H.score >= 75 ? COL.net : H.score >= 55 ? COL.rev : H.score >= 35 ? COL.cost : COL.neg;
+    h += card('ti-heartbeat', 'مؤشر الصحة المالية', 'من 100 — ربحية واتجاه وتغطية وجودة بيانات وسيولة',
+      '<div class="lg-gauge"><div><div class="lg-score" style="color:' + c + '">' + H.score + '</div><div style="font-weight:900;color:' + c + ';margin-top:4px">' + H.label + '</div></div><div style="flex:1;min-width:170px;display:grid;gap:8px">' +
+      H.parts.map(p => '<div><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-bottom:3px"><span>' + p.k + '</span><span class="lg-mut">' + Math.round(p.s*100) + '%</span></div><div class="lg-bar"><i style="width:' + Math.round(p.s*100) + '%;background:' + c + '"></i></div></div>').join('') + '</div></div>');
+  }
+  const parts = IS.cor.concat(IS.opex).concat(IS.DEP ? [{ar:'الإهلاك', v:IS.DEP}] : []).concat(IS.FINC ? [{ar:'التمويل', v:IS.FINC}] : []).sort((a,b) => b.v - a.v);
+  const tot = parts.reduce((s,p) => s + p.v, 0);
+  h += card('ti-chart-donut', 'هيكل التكاليف', 'كل جنيه بيروح فين — ' + ymLbl(sel),
+    tot ? '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">' + donut(parts.map((p,i) => ({l:p.ar, v:p.v, c:PALETTE[i % PALETTE.length]})), ['التكاليف', fmt0(tot)]) +
+      '<div style="flex:1;min-width:150px;display:grid;gap:6px">' + parts.slice(0,7).map((p,i) => '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11.5px"><span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:' + PALETTE[i % PALETTE.length] + ';margin-inline-end:6px"></i>' + esc(p.ar) + '</span><b style="font-family:JetBrains Mono,monospace">' + pct(p.v/tot, 0) + '</b></div>').join('') + '</div></div>'
+      : '<div class="lg-empty"><i class="ti ti-chart-pie-off"></i>مفيش تكاليف</div>');
+  const ins = L.insights(sel);
+  h += card('ti-bulb', 'قراءة الشهر', 'ملاحظات المحلل المالي تلقائياً', insightHTML(ins.slice(0, 6)) + (ins.length > 6 ? '<button class="lg-btn sm" style="margin-top:9px" onclick="ARKL.go(\'ai\')">كل الملاحظات (' + ins.length + ')</button>' : ''));
+  h += '</div>';
+
+  /* مؤشرات وحدة التشغيل */
+  const directCost = IS.COR;
+  h += '<div class="lg-grid lg-g3" style="margin-top:14px">';
+  h += card('ti-steering-wheel', 'اقتصاديات السائق', nDrv + ' سائق محسوب عليهم راتب في ' + ymLbl(sel),
+    nDrv ? '<table class="lg-t" style="min-width:0"><tbody>' +
+      '<tr><td>إيراد السائق في الشهر</td>' + n(IS.R/nDrv) + '</tr>' +
+      '<tr><td>التكلفة المباشرة للسائق</td>' + n(directCost/nDrv) + '</tr>' +
+      '<tr><td>مساهمة السائق</td>' + n((IS.R - directCost)/nDrv) + '</tr>' +
+      '<tr><td>نصيبه من المصاريف العامة</td>' + n((IS.OPX + IS.DEP + IS.FINC)/nDrv) + '</tr>' +
+      '<tr><td><b>صافي ربح السائق</b></td>' + n(IS.NET/nDrv) + '</tr></tbody></table>' : '<div class="lg-empty">مفيش سائقين بمرتبات الشهر ده</div>');
+  const S = L.segments(sel, sel);
+  h += card('ti-building-store', 'الشركاء في سطر', 'صافي ربح كل شريك بعد نصيبه من المصاريف العامة',
+    S.rows.length ? '<div style="display:grid;gap:10px">' + S.rows.map(r => {
+      const mx = Math.max(...S.rows.map(x => Math.abs(x.net)), 1);
+      return '<div><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:4px"><span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:' + (r.color||'#94a3b8') + ';margin-inline-end:6px"></i>' + esc(r.name) + '</span><span class="' + (r.net >= 0 ? 'lg-up' : 'lg-dn') + '" style="font-family:JetBrains Mono,monospace">' + fmt(r.net) + '</span></div><div class="lg-bar"><i style="width:' + Math.abs(r.net)/mx*100 + '%;background:' + (r.net >= 0 ? COL.net : COL.neg) + '"></i></div></div>';
+    }).join('') + '<button class="lg-btn sm" onclick="ARKL.go(\'seg\')">التفاصيل</button></div>' : '<div class="lg-empty">مفيش بيانات</div>');
+  const F = L.forecast(3);
+  h += card('ti-crystal-ball', 'توقعات 3 شهور', 'اتجاه خطي من آخر ' + F.hist.length + ' شهور مكتملة — للاسترشاد',
+    F.hist.length >= 2 ? '<table class="lg-t" style="min-width:0"><thead><tr><th>الشهر</th><th class="n">إيراد</th><th class="n">صافي</th></tr></thead><tbody>' +
+      F.out.map(o => '<tr><td>' + ymLbl(o.ym) + '</td>' + n(o.rev) + n(o.net) + '</tr>').join('') + '</tbody></table>' : '<div class="lg-empty">محتاج شهرين مكتملين على الأقل</div>');
+  h += '</div>';
+  return h;
+};
+
+/* ── القيود ── */
+L.showIds = function(ids){ L.f = {q:'', kind:'all', cat:'', src:'', scope:'all', ids}; L.go('entries'); };
+L.setF = (k, v) => { L.f[k] = v; if(k !== 'ids') L.f.ids = null; L.render(); };
+VIEWS.entries = function(sel){
+  const f = L.f;
+  let rows = [];
+  INCOMES.forEach(x => rows.push({k:'inc', x}));
+  EXPENSES.forEach(x => rows.push({k:'exp', x}));
+  if(f.ids) rows = rows.filter(r => f.ids.includes(r.x.id));
+  else {
+    if(f.scope === 'month') rows = rows.filter(r => ymOf(r.x.date) === sel);
+    if(f.kind !== 'all') rows = rows.filter(r => r.k === f.kind);
+    if(f.cat) rows = rows.filter(r => r.k === 'exp' && r.x.category === f.cat);
+    if(f.src) rows = rows.filter(r => r.k === 'inc' && r.x.source === f.src);
+    if(f.q){ const q = f.q.toLowerCase(); rows = rows.filter(r => { const d = (typeof DRV !== 'undefined' ? DRV : []).find(z => z.id === r.x.driverId); return [r.x.note, r.x.date, r.x.amount, r.x.id, d && d.name, r.x.category, r.x.source].join(' ').toLowerCase().includes(q); }); }
+  }
+  rows.sort((a,b) => String(b.x.date).localeCompare(String(a.x.date)));
+  const ti = rows.filter(r => r.k === 'inc').reduce((s,r) => s + num(r.x.amount), 0), te = rows.filter(r => r.k === 'exp').reduce((s,r) => s + num(r.x.amount), 0);
+  let h = '<div class="lg-card lg-fade">';
+  h += '<div class="lg-f"><input type="search" aria-label="بحث" placeholder="بحث: ملاحظة، سائق، مبلغ، تاريخ…" value="' + esc(f.q) + '" onchange="ARKL.setF(\'q\',this.value)">' +
+    '<select aria-label="النطاق" onchange="ARKL.setF(\'scope\',this.value)"><option value="month"' + (f.scope === 'month' ? ' selected' : '') + '>' + ymLbl(sel) + '</option><option value="all"' + (f.scope === 'all' ? ' selected' : '') + '>كل الشهور</option></select>' +
+    '<select aria-label="النوع" onchange="ARKL.setF(\'kind\',this.value)"><option value="all">إيرادات ومصروفات</option><option value="inc"' + (f.kind === 'inc' ? ' selected' : '') + '>إيرادات</option><option value="exp"' + (f.kind === 'exp' ? ' selected' : '') + '>مصروفات</option></select>' +
+    '<select aria-label="البند" onchange="ARKL.setF(\'cat\',this.value)"><option value="">كل البنود</option>' + Object.keys(EXP_CATS).map(c => '<option value="' + c + '"' + (f.cat === c ? ' selected' : '') + '>' + EXP_CATS[c].name + '</option>').join('') + '</select>' +
+    '<select aria-label="الشريك" onchange="ARKL.setF(\'src\',this.value)"><option value="">كل المصادر</option>' + L.partners().map(p => '<option value="' + p.id + '"' + (f.src === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '<option value="other"' + (f.src === 'other' ? ' selected' : '') + '>أخرى</option></select>' +
+    (f.ids ? '<button class="lg-btn sm" onclick="ARKL.setF(\'scope\',\'month\')"><i class="ti ti-x"></i> إلغاء الفلتر</button>' : '') + '</div>';
+  h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><span class="lg-badge ok">إيرادات ' + fmt(ti) + ' د.ك</span><span class="lg-badge bad">مصروفات ' + fmt(te) + ' د.ك</span><span class="lg-badge info">' + rows.length + ' قيد</span><span class="lg-note">رواتب السائقين والإدارة والإهلاك والقرض بتتسجل تلقائياً كقيود آخر الشهر — شوفها في «الأستاذ والميزان».</span></div>';
+  if(!rows.length) h += '<div class="lg-empty"><i class="ti ti-receipt-off"></i>مفيش قيود بالفلتر ده</div>';
+  else {
+    h += '<div class="lg-tbl-wrap"><table class="lg-t"><thead><tr><th>التاريخ</th><th>النوع</th><th>البند / المصدر</th><th>الحساب</th><th>السائق</th><th>الوصف</th><th class="n">المبلغ</th><th></th></tr></thead><tbody>';
+    rows.slice(0, 600).forEach(r => {
+      const x = r.x, locked = L.isLocked(ymOf(x.date));
+      const d = x.driverId ? (typeof DRV !== 'undefined' ? DRV : []).find(z => z.id === x.driverId) : null;
+      let nm, acct;
+      if(r.k === 'inc'){ const p = L.partners().find(pp => pp.id === x.source); nm = p ? p.name : (x.source === 'other' ? 'أخرى' : x.source); acct = L.revAcc(x.source); }
+      else { nm = (EXP_CATS[x.category] || {name:x.category}).name; acct = x.category === 'salaries' ? '5100*' : L.catAcc(x.category); }
+      h += '<tr><td style="white-space:nowrap">' + esc(x.date) + '</td><td><span class="lg-badge ' + (r.k === 'inc' ? 'ok' : 'bad') + '">' + (r.k === 'inc' ? 'إيراد' : 'مصروف') + '</span></td><td>' + esc(nm) + '</td><td><span class="lg-pill">' + acct + '</span></td><td>' + (d ? esc(d.name.split(' ').slice(0,2).join(' ')) : '<span class="lg-mut">—</span>') + '</td><td style="max-width:260px">' + esc(x.note || '') + '</td>' +
+        '<td class="n ' + (r.k === 'inc' ? 'lg-up' : 'lg-dn') + '">' + (r.k === 'inc' ? '+' : '−') + fmt(x.amount) + '</td><td style="white-space:nowrap">' +
+        (locked ? '<i class="ti ti-lock lg-mut" title="الفترة مقفولة"></i>' : '<button class="lg-btn sm" onclick="ARKL.editEntry(\'' + r.k + '\',\'' + esc(x.id) + '\')" aria-label="تعديل"><i class="ti ti-pencil"></i></button> <button class="lg-btn sm bad" onclick="' + (r.k === 'inc' ? 'deleteIncome' : 'deleteExpense') + '(\'' + esc(x.id) + '\')" aria-label="حذف"><i class="ti ti-trash"></i></button>') + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    if(rows.length > 600) h += '<div class="lg-note" style="margin-top:8px">معروض أول 600 قيد — ضيّق الفلتر.</div>';
+    if(rows.some(r => r.k === 'exp' && r.x.category === 'salaries')) h += '<div class="lg-note" style="margin-top:8px">* بند «مرتبات» اليدوي بيحل محل الرواتب المحسوبة للشهر ده (منعاً للازدواج) وبيظهر ضمن قيد استحقاق الرواتب.</div>';
+  }
+  h += '</div>';
+  return h;
+};
+
+/* ── قائمة الدخل ── */
+L.setIsView = v => { L.isView = v; L.render(); };
+VIEWS.is = function(sel){
+  const ms = L.rangeMonths(); const a = ms[0], b = ms[ms.length-1];
+  const cols = ms.map(ym => ({ym, IS:L.incomeStatement(ym, ym), P:L.pl(ym)}));
+  const T = L.incomeStatement(a, b);
+  const showPrev = cols.length >= 2;
+  let h = '<div class="lg-card lg-fade"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><div><h3><i class="ti ti-report-money"></i>قائمة الدخل المقارنة · Statement of Profit or Loss</h3><div class="lg-cs" style="margin:0">' + ymLbl(a) + ' — ' + ymLbl(b) + ' · بالدينار الكويتي · الأرقام بين قوسين سالبة</div></div>' +
+    '<div class="lg-ctl"><button class="lg-btn' + (L.isView === 'func' ? ' pri' : '') + '" onclick="ARKL.setIsView(\'func\')">التصنيف الوظيفي</button><button class="lg-btn' + (L.isView === 'behav' ? ' pri' : '') + '" onclick="ARKL.setIsView(\'behav\')">سلوك التكلفة والتعادل</button></div></div>';
+  const head = '<thead><tr><th style="min-width:200px">البند</th>' + cols.map(c => '<th class="n">' + ymShort(c.ym) + '</th>').join('') + '<th class="n">الإجمالي</th><th class="n">% من الإيراد</th>' + (showPrev ? '<th class="n">تغير آخر شهر</th>' : '') + '</tr></thead>';
+  const last = cols[cols.length-1], prv = cols[cols.length-2];
+  let body = '';
+  if(L.isView === 'func'){
+    const line = (cls, ar, en, getter, tot, inv) => '<tr class="' + cls + '">' + lbl(ar, en) + cols.map(c => n(getter(c.IS))).join('') + n(tot) + '<td class="n lg-mut">' + (T.R ? pct(tot/T.R) : '—') + '</td>' + (showPrev ? '<td class="n">' + delta(getter(last.IS), getter(prv.IS), inv) + '</td>' : '') + '</tr>';
+    const acct = (x, inv) => line('l', x.code + ' · ' + x.ar, x.en, IS => { const arr = IS.rev.concat(IS.cor, IS.opex, IS.dep, IS.fin); const z = arr.find(q => q.code === x.code); return z ? z.v : 0; }, x.v, inv);
+    const hd = (ar, en) => '<tr class="h"><td colspan="' + (cols.length + 3 + (showPrev?1:0)) + '">' + ar + ' <span style="color:var(--muted2);font-weight:700">· ' + en + '</span></td></tr>';
+    body += hd('الإيرادات', 'Revenue'); T.rev.forEach(x => body += acct(x));
+    body += line('s', 'إجمالي الإيرادات', 'Total revenue', IS => IS.R, T.R);
+    body += hd('تكلفة الخدمة', 'Cost of service'); T.cor.forEach(x => body += acct(x, true));
+    body += line('s', 'إجمالي تكلفة الخدمة', 'Total cost of service', IS => IS.COR, T.COR, true);
+    body += line('t', 'مجمل الربح', 'Gross profit', IS => IS.GP, T.GP);
+    body += '<tr class="k"><td>هامش مجمل الربح</td>' + cols.map(c => '<td class="n">' + pct(c.IS.gm) + '</td>').join('') + '<td class="n">' + pct(T.gm) + '</td><td></td>' + (showPrev ? '<td></td>' : '') + '</tr>';
+    body += hd('المصروفات التشغيلية', 'Operating expenses'); T.opex.forEach(x => body += acct(x, true));
+    body += line('s', 'إجمالي المصروفات التشغيلية', 'Total operating expenses', IS => IS.OPX, T.OPX, true);
+    body += line('t', 'الربح قبل الإهلاك والتمويل (EBITDA)', 'EBITDA', IS => IS.EBITDA, T.EBITDA);
+    T.dep.forEach(x => body += acct(x, true));
+    body += line('s', 'الربح التشغيلي (EBIT)', 'Operating profit', IS => IS.EBIT, T.EBIT);
+    T.fin.forEach(x => body += acct(x, true));
+    if(!T.fin.length) body += line('l', '7100 · تكلفة التمويل', 'Finance costs', IS => IS.FINC, T.FINC, true);
+    body += line('t', 'صافي الربح (الخسارة)', 'Net profit (loss)', IS => IS.NET, T.NET);
+    body += '<tr class="k"><td>هامش صافي الربح</td>' + cols.map(c => '<td class="n">' + pct(c.IS.nm) + '</td>').join('') + '<td class="n">' + pct(T.nm) + '</td><td></td>' + (showPrev ? '<td></td>' : '') + '</tr>';
+  } else {
+    const sumP = k => cols.reduce((s,c) => s + (typeof k === 'function' ? k(c.P) : c.P[k]), 0);
+    const line = (cls, ar, en, g, inv) => { const tot = sumP(g); return '<tr class="' + cls + '">' + lbl(ar, en) + cols.map(c => n(g(c.P))).join('') + n(tot) + '<td class="n lg-mut">' + (T.R ? pct(tot/T.R) : '—') + '</td>' + (showPrev ? '<td class="n">' + delta(g(last.P), g(prv.P), inv) + '</td>' : '') + '</tr>'; };
+    const hd = (ar, en) => '<tr class="h"><td colspan="' + (cols.length + 3 + (showPrev?1:0)) + '">' + ar + ' <span style="color:var(--muted2);font-weight:700">· ' + en + '</span></td></tr>';
+    const keys = {}; cols.forEach(c => c.P.lines.forEach(l => keys[l.key] = l));
+    body += line('s', 'الإيرادات', 'Revenue', P => P.revenue);
+    ['variable','semi','fixed'].forEach(bh => {
+      const meta = BEHAVIOR_META[bh];
+      body += hd(meta.ar, meta.en);
+      Object.values(keys).filter(l => l.behavior === bh).forEach(l => body += line('l', l.ar, l.en, P => (P.lines.find(z => z.key === l.key) || {amount:0}).amount, true));
+      body += line('s', 'إجمالي ' + meta.ar, 'Total ' + meta.en.toLowerCase(), P => P[bh], true);
+      if(bh === 'variable') body += line('t', 'هامش المساهمة', 'Contribution margin', P => P.contribution);
+    });
+    body += line('t', 'EBITDA', 'EBITDA', P => P.ebitda);
+    body += line('l', 'الإهلاك', 'Depreciation', P => P.dep, true);
+    body += line('l', 'تكلفة التمويل', 'Finance costs', P => P.loan.interest, true);
+    body += line('t', 'صافي الربح', 'Net profit', P => P.net);
+    body += '<tr class="k"><td>نسبة هامش المساهمة</td>' + cols.map(c => '<td class="n">' + pct(c.P.cmRatio) + '</td>').join('') + '<td></td><td></td>' + (showPrev ? '<td></td>' : '') + '</tr>';
+    body += '<tr class="s"><td>نقطة التعادل (إيراد)<span class="en">Break-even revenue</span></td>' + cols.map(c => n(c.P.breakEven)).join('') + '<td></td><td></td>' + (showPrev ? '<td></td>' : '') + '</tr>';
+    body += '<tr class="k"><td>هامش الأمان</td>' + cols.map(c => '<td class="n ' + (c.P.revenue - c.P.breakEven < 0 ? 'lg-neg' : '') + '">' + (c.P.revenue ? pct((c.P.revenue - c.P.breakEven)/c.P.revenue) : '—') + '</td>').join('') + '<td></td><td></td>' + (showPrev ? '<td></td>' : '') + '</tr>';
+  }
+  h += '<div class="lg-tbl-wrap"><table class="lg-t lg-st">' + head + '<tbody>' + body + '</tbody></table></div>';
+  const rec = L.reconcile().filter(r => ms.includes(r.ym));
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">' + rec.map(r => '<span class="lg-badge ' + (r.ok ? 'ok' : 'bad') + '" title="الدفتر ' + fmt(r.gl) + ' · المحرك ' + fmt(r.pl) + (r.manual ? ' · قيود يدوية ' + fmt(r.manual) : '') + '"><i class="ti ' + (r.ok ? 'ti-check' : 'ti-x') + '"></i>' + ymShort(r.ym) + '</span>').join('') + '<span class="lg-note">مطابقة كل شهر بين دفتر الأستاذ ومحرك قائمة الدخل' + (rec.some(r => r.manual) ? ' (الفرق الظاهر = القيود اليدوية)' : '') + '</span></div>';
+  h += '</div>';
+  return h;
+};
+
+/* ── الميزانية العمومية ── */
+VIEWS.bs = function(sel){
+  const prev = ymAdd(sel, -1) >= L.booksStart() ? ymAdd(sel, -1) : null;
+  const B = L.balanceSheet(sel), Bp = prev ? L.balanceSheet(prev) : null;
+  const row = (cls, ar, en, k, sign) => { const v = (sign||1) * B[k], p = Bp ? (sign||1) * Bp[k] : null; return '<tr class="' + cls + '">' + lbl(ar, en) + n(v) + (Bp ? n(p) + n(v - p) : '') + '</tr>'; };
+  const hd = (ar, en) => '<tr class="h"><td colspan="' + (Bp ? 4 : 2) + '">' + ar + ' <span style="color:var(--muted2);font-weight:700">· ' + en + '</span></td></tr>';
+  let t = '<thead><tr><th style="min-width:230px">البند</th><th class="n">' + ymEnd(sel) + '</th>' + (Bp ? '<th class="n">' + ymEnd(prev) + '</th><th class="n">التغير</th>' : '') + '</tr></thead><tbody>';
+  t += hd('الأصول غير المتداولة', 'Non-current assets');
+  t += row('l', 'أسطول المركبات — التكلفة', 'Fleet vehicles at cost', 'fleet');
+  t += row('l', 'ناقص: مجمع الإهلاك', 'Less: accumulated depreciation', 'accDep', -1);
+  t += row('s', 'صافي القيمة الدفترية للأسطول', 'Net book value', 'nca');
+  t += hd('الأصول المتداولة', 'Current assets');
+  t += row('l', 'النقدية والبنوك', 'Cash and bank', 'cash');
+  t += row('s', 'إجمالي الأصول المتداولة', 'Total current assets', 'ca');
+  t += row('t', 'إجمالي الأصول', 'TOTAL ASSETS', 'assets');
+  t += hd('الالتزامات المتداولة', 'Current liabilities');
+  t += row('l', 'رواتب مستحقة الدفع', 'Salaries payable', 'salPay');
+  t += row('l', 'الجزء المتداول من قرض الساير (12 شهر)', 'Current portion of loan', 'loanCur');
+  t += row('s', 'إجمالي الالتزامات المتداولة', 'Total current liabilities', 'curLiab');
+  t += hd('الالتزامات غير المتداولة', 'Non-current liabilities');
+  t += row('l', 'قرض الساير — الجزء طويل الأجل', 'Loan — non-current portion', 'loanNon');
+  t += row('s', 'إجمالي الالتزامات', 'Total liabilities', 'liab');
+  t += hd('حقوق الملكية', 'Equity');
+  t += row('l', 'رأس المال وجاري الشركاء', "Owners' capital and current account", 'capital');
+  t += row('l', 'الأرباح (الخسائر) المتراكمة', 'Accumulated profit (loss)', 're');
+  t += row('s', 'إجمالي حقوق الملكية', 'Total equity', 'equity');
+  const tle = r3(B.liab + B.equity), tlep = Bp ? r3(Bp.liab + Bp.equity) : 0;
+  t += '<tr class="t">' + lbl('إجمالي الالتزامات وحقوق الملكية', 'TOTAL LIABILITIES AND EQUITY') + n(tle) + (Bp ? n(tlep) + n(tle - tlep) : '') + '</tr></tbody>';
+  let h = '<div class="lg-grid lg-g2"><div class="lg-card lg-fade" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-scale"></i>قائمة المركز المالي · Statement of Financial Position</h3><div class="lg-cs" style="margin:0">كما في ' + ymEnd(sel) + ' · بالدينار الكويتي</div></div>' +
+    (Math.abs(B.check) < 0.01 ? '<span class="lg-badge ok"><i class="ti ti-scale"></i> الأصول = الالتزامات + حقوق الملكية</span>' : '<span class="lg-badge bad">فرق توازن ' + fmt(B.check) + '</span>') + '</div>';
+  h += '<div class="lg-tbl-wrap"><table class="lg-t lg-st">' + t + '</table></div></div>';
+  const ratios = [
+    ['نسبة التداول', B.curLiab ? (B.ca / B.curLiab).toFixed(2) + 'x' : '—', 'الأصول المتداولة ÷ الالتزامات المتداولة — أقل من 1 يعني ضغط سيولة'],
+    ['نسبة المديونية', B.assets ? pct(B.liab / B.assets) : '—', 'الالتزامات ÷ الأصول'],
+    ['الدين إلى حقوق الملكية', B.equity > 0 ? (B.loan / B.equity).toFixed(2) + 'x' : 'حقوق ملكية سالبة', 'رصيد القرض ÷ حقوق الملكية'],
+    ['المتبقي من القرض', fmt(B.loan) + ' د.ك', Math.round((1 - B.loan / FIN.loan.principal) * 100) + '% اتسدد'],
+    ['عمر الأسطول المستهلك', pct(B.fleet ? B.accDep / (B.fleet * (1 - FIN.asset.salvagePct/100)) : 0), 'من القيمة القابلة للإهلاك على ' + FIN.asset.lifeYears + ' سنين']
+  ];
+  h += card('ti-gauge', 'نسب مالية', 'مؤشرات المركز المالي', '<table class="lg-t" style="min-width:0"><tbody>' + ratios.map(r => '<tr><td><b>' + r[0] + '</b><div class="lg-note">' + r[2] + '</div></td><td class="n" style="font-size:14px;font-weight:900">' + r[1] + '</td></tr>').join('') + '</tbody></table>');
+  h += card('ti-info-circle', 'إيضاحات', 'أسس الإعداد', '<div class="lg-note">• الأسطول مرسمل بتكلفة ' + fmt(FIN.asset.cost) + ' د.ك ويُهلك بالقسط الثابت على ' + FIN.asset.lifeYears + ' سنين بقيمة خردة ' + FIN.asset.salvagePct + '%.<br>• القرض مقسوم: الجزء المستحق خلال 12 شهر التزام متداول والباقي طويل الأجل.<br>• ' + esc(FIN.disclosure) + '<br>• النقدية محسوبة من الدفاتر (إيرادات − مدفوعات) مع الرصيد الافتتاحي من الإعدادات. لو مختلفة عن البنك، سجّل قيد تسوية أو تمويل شركاء.' +
+    (L.cfg().salariesPaid ? '<br>• رواتب الشهور المنتهية معتبرة مدفوعة في آخر الشهر إلا لو المسيّر متعلّم «مدفوع» بتاريخ.' : '') + '</div>' +
+    (B.cash < 0 ? '<button class="lg-btn" style="margin-top:10px" onclick="ARKL.fundShortfall()"><i class="ti ti-building-bank"></i> سجّل تمويل الشركاء بقيمة العجز</button>' : ''));
+  h += '</div>';
+  return h;
+};
+
+/* ── التدفقات النقدية ── */
+VIEWS.cf = function(sel){
+  const ms = L.rangeMonths(), a = ms[0], b = ms[ms.length-1];
+  const CF = L.cashFlow(a, b);
+  const r = (cls, ar, en, v) => '<tr class="' + cls + '">' + lbl(ar, en) + n(v) + '</tr>';
+  const hd = (ar, en) => '<tr class="h"><td colspan="2">' + ar + ' <span style="color:var(--muted2);font-weight:700">· ' + en + '</span></td></tr>';
+  const C = L.build().C;
+  let t = '<thead><tr><th style="min-width:250px">البند</th><th class="n">' + ymShort(a) + ' — ' + ymShort(b) + '</th></tr></thead><tbody>';
+  t += hd('التدفقات من الأنشطة التشغيلية', 'Operating activities');
+  Object.keys(CF.det).sort().forEach(k => t += r('l', 'مقبوضات من ' + ((C.map[k] || {}).ar || k).replace('إيرادات ', ''), 'Receipts — ' + ((C.map[k] || {}).en || k), CF.det[k]));
+  t += r('l', 'مدفوعات للموظفين (رواتب)', 'Paid to employees', CF.sec.emp);
+  t += r('l', 'مدفوعات للموردين ومصروفات التشغيل', 'Paid to suppliers and operating costs', CF.sec.sup);
+  if(CF.sec.int) t += r('l', 'فوائد مدفوعة', 'Interest paid', CF.sec.int);
+  t += r('s', 'صافي النقد من الأنشطة التشغيلية', 'Net cash from operating activities', CF.cfo);
+  t += hd('التدفقات من الأنشطة الاستثمارية', 'Investing activities');
+  t += r('l', 'شراء أصول ثابتة نقداً', 'Purchase of fixed assets', CF.sec.inv);
+  t += r('s', 'صافي النقد من الأنشطة الاستثمارية', 'Net cash from investing activities', CF.cfi);
+  t += hd('التدفقات من الأنشطة التمويلية', 'Financing activities');
+  t += r('l', 'سداد أصل قرض الساير', 'Repayment of loan principal', CF.sec.loan);
+  t += r('l', 'تمويل (سحوبات) الشركاء', 'Owners funding (drawings)', CF.sec.own);
+  t += r('s', 'صافي النقد من الأنشطة التمويلية', 'Net cash from financing activities', CF.cff);
+  t += r('s', 'صافي التغير في النقدية', 'Net change in cash', CF.net);
+  t += r('l', 'النقدية أول الفترة', 'Cash at beginning of period', CF.opening);
+  t += r('t', 'النقدية آخر الفترة', 'Cash at end of period', CF.closing);
+  t += '</tbody>';
+  const I = CF.indirect;
+  let t2 = '<tbody>' + r('l', 'صافي الربح (الخسارة)', 'Net profit (loss)', I.net) + r('l', 'يضاف: الإهلاك (غير نقدي)', 'Add: depreciation', I.dep) + r('l', 'التغير في الرواتب المستحقة', 'Change in salaries payable', I.dSal) +
+    (Math.abs(I.diff) > 0.005 ? r('l', 'بنود أخرى (قيود يدوية)', 'Other items', I.diff) : '') + r('t', 'صافي النقد من الأنشطة التشغيلية', 'Net cash from operating activities', CF.cfo) + '</tbody>';
+  const ok = Math.abs(CF.closing - CF.bsCash) < 0.01;
+  let h = '<div class="lg-grid lg-g2">';
+  h += '<div class="lg-card lg-fade"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-arrows-exchange"></i>قائمة التدفقات النقدية · Statement of Cash Flows</h3><div class="lg-cs" style="margin:0">الطريقة المباشرة · ' + ymLbl(a) + ' — ' + ymLbl(b) + '</div></div>' +
+    '<span class="lg-badge ' + (ok ? 'ok' : 'bad') + '">' + (ok ? 'مطابقة لرصيد الميزانية' : 'فرق مع الميزانية ' + fmt(CF.closing - CF.bsCash)) + '</span></div><div class="lg-tbl-wrap"><table class="lg-t lg-st">' + t + '</table></div></div>';
+  h += '<div style="display:grid;gap:14px;align-content:start">';
+  h += card('ti-math-function', 'تسوية الطريقة غير المباشرة', 'من صافي الربح لصافي النقد التشغيلي', '<div class="lg-tbl-wrap"><table class="lg-t lg-st" style="min-width:0">' + t2 + '</table></div>');
+  const burn = -CF.net / ms.length;
+  h += card('ti-hourglass', 'معدل حرق النقدية', 'متوسط شهري للفترة', '<div class="lg-score" style="font-size:30px;color:' + (burn > 0 ? 'var(--red)' : 'var(--green)') + '">' + fmt(Math.abs(burn)) + '<small style="font-size:12px;color:var(--muted)"> د.ك/شهر</small></div><div class="lg-note" style="margin-top:6px">' + (burn > 0 ? 'الشركة بتصرف نقدية أكتر مما بتجيب بالمتوسط ده — بما فيها أقساط القرض (' + fmt(FIN.loan.installment) + ' د.ك/شهر) اللي مش مصروف بس بتطلع كاش.' : 'الشركة بتولّد نقدية موجبة في الفترة دي.') + '</div>');
+  h += '</div></div>';
+  return h;
+};
+
+/* ── الأستاذ والميزان ── */
+L.setGl = c => { L.glAcct = c; L.render(); setTimeout(() => { const e = document.getElementById('lg-gl'); if(e) e.scrollIntoView({behavior:'smooth', block:'start'}); }, 30); };
+VIEWS.gl = function(sel){
+  const ms = L.rangeMonths(), a = ms[0], b = ms[ms.length-1];
+  const TB = L.trialBalance(a, b);
+  let h = '<div class="lg-card lg-fade" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-scale-outline"></i>ميزان المراجعة · Trial Balance</h3><div class="lg-cs" style="margin:0">' + ymLbl(a) + ' — ' + ymLbl(b) + ' · اضغط على أي حساب يفتح دفتر الأستاذ</div></div><span class="lg-badge ' + (TB.balanced ? 'ok' : 'bad') + '">' + (TB.balanced ? 'متوازن — المدين = الدائن' : 'غير متوازن') + '</span></div>';
+  h += '<div class="lg-tbl-wrap"><table class="lg-t"><thead><tr><th>الحساب</th><th class="n">رصيد أول المدة</th><th class="n">مدين</th><th class="n">دائن</th><th class="n">رصيد مدين</th><th class="n">رصيد دائن</th></tr></thead><tbody>';
+  TB.rows.forEach(r => h += '<tr class="clk" onclick="ARKL.setGl(\'' + r.code + '\')"><td><span class="lg-pill">' + r.code + '</span> ' + esc(r.ar) + '</td>' + n(r.ob) + n(r.dr) + n(r.cr) + '<td class="n">' + (r.cb > 0.0004 ? fmt(r.cb) : '') + '</td><td class="n">' + (r.cb < -0.0004 ? fmt(-r.cb) : '') + '</td></tr>');
+  h += '<tr class="t" style="font-weight:900;background:var(--s2)"><td>الإجمالي</td><td></td>' + n(TB.tot.dr) + n(TB.tot.cr) + n(TB.tot.cbDr) + n(TB.tot.cbCr) + '</tr></tbody></table></div></div>';
+  const G = L.ledger(L.glAcct, a, b);
+  const accs = L.accounts();
+  h += '<div class="lg-card lg-fade" id="lg-gl" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-book-2"></i>دفتر الأستاذ · General Ledger</h3><div class="lg-cs" style="margin:0">' + G.rows.length + ' حركة · رصيد أول ' + fmt(G.open) + ' · رصيد آخر ' + fmt(G.close) + ' (موجب = مدين)</div></div>' +
+    '<select class="lg-sel" aria-label="الحساب" onchange="ARKL.setGl(this.value)">' + accs.map(x => '<option value="' + x.code + '"' + (x.code === L.glAcct ? ' selected' : '') + '>' + x.code + ' · ' + esc(x.ar) + '</option>').join('') + '</select></div>';
+  if(!G.rows.length) h += '<div class="lg-empty"><i class="ti ti-book-off"></i>مفيش حركة على الحساب ده في الفترة</div>';
+  else {
+    h += '<div class="lg-tbl-wrap" style="max-height:480px;overflow:auto"><table class="lg-t"><thead><tr><th>التاريخ</th><th>رقم القيد</th><th>البيان</th><th class="n">مدين</th><th class="n">دائن</th><th class="n">الرصيد</th></tr></thead><tbody>';
+    h += '<tr><td colspan="5" class="lg-mut">رصيد أول المدة</td>' + n(G.open) + '</tr>';
+    G.rows.forEach(r => h += '<tr><td style="white-space:nowrap">' + r.date + '</td><td><span class="lg-pill">' + r.no + '</span></td><td>' + esc(r.memo) + '</td><td class="n">' + (r.dr ? fmt(r.dr) : '') + '</td><td class="n">' + (r.cr ? fmt(r.cr) : '') + '</td>' + n(r.bal) + '</tr>');
+    h += '</tbody></table></div>';
+  }
+  h += '</div>';
+  /* دفتر اليومية للشهر */
+  const J = L.build().J.filter(j => j.ym === sel);
+  const C = L.build().C;
+  h += '<div class="lg-card lg-fade"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-notebook"></i>دفتر اليومية · ' + ymLbl(sel) + '</h3><div class="lg-cs" style="margin:0">' + J.length + ' قيد — الإيرادات والمصروفات من شاشة القيود، والرواتب والإهلاك والقرض تلقائية</div></div><button class="lg-btn pri" onclick="ARKL.openJE()"><i class="ti ti-plus"></i> قيد يومية يدوي</button></div>';
+  if(!J.length) h += '<div class="lg-empty"><i class="ti ti-notebook-off"></i>مفيش قيود في الشهر ده</div>';
+  else {
+    const srcName = {open:'افتتاحي', inc:'إيراد', exp:'مصروف', payroll:'رواتب', paypay:'صرف رواتب', dep:'إهلاك', loan:'قرض', asset:'أصل', manual:'يدوي'};
+    h += '<div class="lg-tbl-wrap" style="max-height:560px;overflow:auto"><table class="lg-t"><thead><tr><th>القيد</th><th>الحساب</th><th class="n">مدين</th><th class="n">دائن</th></tr></thead><tbody>';
+    J.forEach(j => {
+      h += '<tr style="background:var(--s2)"><td colspan="4"><b>' + j.no + '</b> · ' + j.date + ' · <span class="lg-pill">' + (srcName[j.src] || j.src) + '</span> ' + esc(j.memo) + (j.src === 'manual' && !L.isLocked(j.ym) ? ' <button class="lg-btn sm bad" style="margin-inline-start:6px" onclick="ARKL.deleteJE(\'' + esc(j.ref) + '\')"><i class="ti ti-trash"></i></button>' : '') + '</td></tr>';
+      j.lines.forEach(l => h += '<tr><td></td><td style="' + (l.cr ? 'padding-inline-start:32px' : '') + '"><span class="lg-pill">' + l.acct + '</span> ' + esc((C.map[l.acct] || {}).ar || l.acct) + '</td><td class="n">' + (l.dr ? fmt(l.dr) : '') + '</td><td class="n">' + (l.cr ? fmt(l.cr) : '') + '</td></tr>');
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '</div>';
+  return h;
+};
+
+/* ── ربحية الشركاء ── */
+L.setSegScope = v => { L.segScope = v; L.render(); };
+L.setBasis = v => { L.setCfg({overheadBasis:v}); L.render(); };
+VIEWS.seg = function(sel){
+  const ms = L.segScope === 'month' ? [sel] : L.rangeMonths();
+  const a = ms[0], b = ms[ms.length-1];
+  const S = L.segments(a, b);
+  const basis = L.cfg().overheadBasis;
+  let h = '<div class="lg-card lg-fade" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-building-store"></i>ربحية الشركاء · Segment reporting</h3><div class="lg-cs" style="margin:0">' + (ms.length === 1 ? ymLbl(a) : ymLbl(a) + ' — ' + ymLbl(b)) + ' · المجموع مطابق لصافي الربح ' + (Math.abs(S.diff) < 0.01 ? '✓' : '(فرق ' + fmt(S.diff) + ')') + '</div></div>' +
+    '<div class="lg-ctl"><select class="lg-sel" aria-label="الفترة" onchange="ARKL.setSegScope(this.value)"><option value="month"' + (L.segScope === 'month' ? ' selected' : '') + '>الشهر المختار</option><option value="range"' + (L.segScope === 'range' ? ' selected' : '') + '>فترة المقارنة</option></select>' +
+    '<select class="lg-sel" aria-label="أساس التوزيع" onchange="ARKL.setBasis(this.value)"><option value="revenue"' + (basis === 'revenue' ? ' selected' : '') + '>توزيع العام بالإيراد</option><option value="drivers"' + (basis === 'drivers' ? ' selected' : '') + '>توزيع العام بعدد السائقين</option></select></div></div>';
+  if(!S.rows.length){ h += '<div class="lg-empty">مفيش بيانات</div></div>'; return h; }
+  h += '<div class="lg-tbl-wrap"><table class="lg-t"><thead><tr><th>الشريك</th><th class="n">الإيراد</th><th class="n">رواتب السائقين</th><th class="n">مباشر مسجّل على سائق</th><th class="n">مباشر موزّع</th><th class="n">هامش المساهمة</th><th class="n">%</th><th class="n">نصيب العام</th><th class="n">صافي الربح</th><th class="n">%</th><th class="n">سائقين</th><th class="n">إيراد/سائق/شهر</th></tr></thead><tbody>';
+  const T = {rev:0, sal:0, direct:0, alloc:0, contrib:0, overhead:0, net:0};
+  S.rows.forEach(r => { Object.keys(T).forEach(k => T[k] += r[k]);
+    h += '<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + (r.color||'#94a3b8') + ';margin-inline-end:7px"></i><b>' + esc(r.name) + '</b></td>' + n(r.rev) + n(-r.sal) + n(-r.direct) + n(-r.alloc) + n(r.contrib) + '<td class="n">' + (r.rev ? pct(r.cm) : '—') + '</td>' + n(-r.overhead) + n(r.net) + '<td class="n ' + (r.net < 0 ? 'lg-neg' : 'lg-up') + '">' + (r.rev ? pct(r.nm) : '—') + '</td><td class="n">' + r.nDrivers + '</td>' + n(r.revPerDriver) + '</tr>'; });
+  h += '<tr style="font-weight:900;background:var(--s2)"><td>الإجمالي</td>' + n(T.rev) + n(-T.sal) + n(-T.direct) + n(-T.alloc) + n(T.contrib) + '<td class="n">' + (T.rev ? pct(T.contrib/T.rev) : '') + '</td>' + n(-T.overhead) + n(T.net) + '<td class="n">' + (T.rev ? pct(T.net/T.rev) : '') + '</td><td></td><td></td></tr></tbody></table></div>';
+  h += '<div class="lg-note" style="margin-top:10px">طريقة الحساب: رواتب كل سائق على الشريك المسجّل عليه · البنزين والصيانة والمخالفات والإقامات المسجّلة على سائق بتروح لشريكه، والمش مسجّلة على سائق بتتوزع بعدد السائقين · المصاريف العامة (رواتب الإدارة، إيجار، تأمين، إدارية، إهلاك، تمويل) بتتوزع ' + (basis === 'revenue' ? 'بنسبة الإيراد' : 'بعدد السائقين') + '.</div></div>';
+  /* رسم */
+  const mx = niceMax(Math.max(...S.rows.map(r => Math.max(r.rev, r.directAll + r.overhead)), 1));
+  h += '<div class="lg-grid lg-g3">';
+  S.rows.forEach(r => {
+    const w = v => Math.max(0, v/mx*100).toFixed(1) + '%';
+    h += '<div class="lg-card lg-fade"><h3><i class="ti ti-building-store" style="color:' + (r.color||'#94a3b8') + '"></i>' + esc(r.name) + ' <span class="lg-badge ' + (r.net >= 0 ? 'ok' : 'bad') + '" style="margin-inline-start:auto">' + (r.net >= 0 ? 'رابح' : 'خاسر') + ' ' + fmt(r.net) + '</span></h3><div class="lg-cs">' + r.nDrivers + ' سائق · هامش مساهمة ' + pct(r.cm) + '</div>' +
+      '<div style="display:grid;gap:8px;font-size:11.5px"><div><div style="display:flex;justify-content:space-between"><span>الإيراد</span><b>' + fmt(r.rev) + '</b></div><div class="lg-bar"><i style="width:' + w(r.rev) + ';background:' + COL.rev + '"></i></div></div>' +
+      '<div><div style="display:flex;justify-content:space-between"><span>تكلفة مباشرة</span><b>' + fmt(r.directAll) + '</b></div><div class="lg-bar"><i style="width:' + w(r.directAll) + ';background:' + COL.cost + '"></i></div></div>' +
+      '<div><div style="display:flex;justify-content:space-between"><span>نصيب المصاريف العامة</span><b>' + fmt(r.overhead) + '</b></div><div class="lg-bar"><i style="width:' + w(r.overhead) + ';background:' + COL.grey + '"></i></div></div>' +
+      '<div class="lg-note">إيراد السائق ' + fmt0(r.revPerDriver) + ' د.ك/شهر مقابل تكلفته المباشرة ' + fmt0(r.costPerDriver) + ' د.ك' + (r.revPerDriver && r.costPerDriver > r.revPerDriver ? ' — <b style="color:var(--red)">السائق بيكلّف أكتر من اللي بيجيبه</b>' : '') + '.</div></div></div>';
+  });
+  h += '</div>';
+  return h;
+};
+
+/* ── الموازنة والتوقعات ── */
+L.saveBudget = function(scope){
+  const sel = L.selYm(), b = L.budget(); const vals = {};
+  document.querySelectorAll('[data-bud]').forEach(i => { const v = parseFloat(i.value); if(isFinite(v) && v >= 0) vals[i.dataset.bud] = v; });
+  if(scope === 'base') b.base = vals; else { b.months = b.months || {}; b.months[sel] = vals; }
+  L.LS.set('sl_acc_budget', b); L.audit('budget', {scope, ym:sel}); toast('اتحفظت الموازنة ✅','s'); L.render();
+};
+L.fillSuggest = function(){
+  const s = L.suggestBudget(L.selYm());
+  document.querySelectorAll('[data-bud]').forEach(i => { if(s[i.dataset.bud] != null) i.value = s[i.dataset.bud]; });
+  toast('اتملت من متوسط آخر 3 شهور — راجعها واحفظ','s');
+};
+VIEWS.budget = function(sel){
+  const bud = L.budgetFor(sel), act = L.actualByKey(sel), lines = L.budgetLines();
+  const hasBud = Object.keys(bud).length > 0;
+  let h = '<div class="lg-card lg-fade" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-target-arrow"></i>الموازنة مقابل الفعلي · ' + ymLbl(sel) + '</h3><div class="lg-cs" style="margin:0">' + (hasBud ? 'الأخضر أحسن من الموازنة، والأحمر أسوأ' : 'لسه مفيش موازنة — اضغط «اقترح» وبعدين احفظ') + '</div></div>' +
+    '<div class="lg-ctl"><button class="lg-btn" onclick="ARKL.fillSuggest()"><i class="ti ti-wand"></i> اقترح من متوسط 3 شهور</button><button class="lg-btn pri" onclick="ARKL.saveBudget(\'base\')"><i class="ti ti-device-floppy"></i> احفظ لكل الشهور</button><button class="lg-btn" onclick="ARKL.saveBudget(\'month\')">للشهر ده بس</button></div></div>';
+  h += '<div class="lg-tbl-wrap"><table class="lg-t"><thead><tr><th>البند</th><th class="n" style="min-width:120px">الموازنة</th><th class="n">الفعلي</th><th class="n">الانحراف</th><th class="n">%</th><th style="min-width:140px">الاستهلاك</th></tr></thead><tbody>';
+  let tb = 0, ta = 0, tbr = 0, tar = 0;
+  lines.forEach(l => {
+    const bv = num(bud[l.key]), av = num(act[l.key]);
+    if(!bv && !av && l.kind === 'exp') return;
+    if(l.kind === 'exp'){ tb += bv; ta += av; } else { tbr = bv; tar = av; }
+    const varr = l.kind === 'rev' ? av - bv : bv - av; const good = varr >= 0;
+    const use = bv ? av/bv : 0;
+    h += '<tr><td>' + (l.code ? '<span class="lg-pill">' + l.code + '</span> ' : '') + '<b>' + esc(l.ar) + '</b></td><td class="n"><input data-bud="' + l.key + '" type="number" min="0" step="1" value="' + (bud[l.key] != null ? bud[l.key] : '') + '" aria-label="موازنة ' + esc(l.ar) + '" style="width:110px;padding:6px 8px;border:1px solid var(--br);border-radius:8px;background:var(--s1);color:var(--text);font-family:JetBrains Mono,monospace;text-align:end"></td>' + n(av) +
+      '<td class="n ' + (bv ? (good ? 'lg-up' : 'lg-dn') : 'lg-mut') + '">' + (bv ? fmt(varr) : '—') + '</td><td class="n lg-mut">' + (bv ? pct(varr/bv) : '—') + '</td><td>' + (bv ? '<div class="lg-bar"><i style="width:' + Math.min(100, use*100) + '%;background:' + (l.kind === 'rev' ? (use >= 1 ? COL.net : COL.cost) : (use > 1 ? COL.neg : use > 0.9 ? COL.cost : COL.net)) + '"></i></div>' : '') + '</td></tr>';
+  });
+  h += '<tr style="font-weight:900;background:var(--s2)"><td>إجمالي التكاليف</td>' + n(tb) + n(ta) + '<td class="n ' + (tb - ta >= 0 ? 'lg-up' : 'lg-dn') + '">' + (tb ? fmt(tb - ta) : '—') + '</td><td></td><td></td></tr>';
+  h += '<tr style="font-weight:900;background:var(--blue-soft)"><td>صافي الربح</td>' + n(tbr - tb) + n(tar - ta) + '<td class="n">' + (tb || tbr ? fmt((tar - ta) - (tbr - tb)) : '—') + '</td><td></td><td></td></tr></tbody></table></div></div>';
+  const F = L.forecast(3);
+  const rows = F.hist.map(x => ({label:ymShort(x.ym), rev:x.rev, cost:x.cost, net:x.net})).concat(F.out.map(o => ({label:ymShort(o.ym) + '*', rev:o.rev, cost:o.cost, net:o.net, forecast:true})));
+  h += '<div class="lg-grid lg-g2">';
+  h += card('ti-crystal-ball', 'التوقعات — 3 شهور قدام', 'الأعمدة الباهتة متوقعة (*) — اتجاه خطي من آخر الشهور المكتملة', F.hist.length >= 2 ? comboChart(rows) : '<div class="lg-empty">محتاج شهرين مكتملين على الأقل</div>');
+  const P = L.pl(sel);
+  const need = Math.max(0, P.breakEven - P.revenue);
+  const S = L.segments(sel, sel).rows.filter(r => r.id !== '_none' && r.nDrivers);
+  const revPerDrv = P.driverCount ? P.revenue / P.driverCount : 0;
+  h += card('ti-calculator', 'سيناريوهات سريعة', 'ماذا لو… — محسوبة على أرقام ' + ymLbl(sel),
+    '<div class="lg-ins">' +
+    '<div class="lg-in info"><div class="ic"><i class="ti ti-target"></i></div><div><b>للوصول للتعادل</b><p>' + (need ? 'محتاجين ' + fmt(need) + ' د.ك إيراد إضافي — يعني حوالي ' + (revPerDrv ? Math.ceil(need / revPerDrv) + ' سائق بنفس متوسط الإيراد، أو زيادة إيراد كل سائق ' + fmt0(need / (P.driverCount||1)) + ' د.ك' : '—') + '.' : 'الشهر ده فوق نقطة التعادل بـ ' + fmt(P.revenue - P.breakEven) + ' د.ك.') + '</p></div></div>' +
+    '<div class="lg-in info"><div class="ic"><i class="ti ti-gas-station"></i></div><div><b>لو البنزين قلّ 10%</b><p>صافي الربح يتحسن ' + fmt(((P.lines.find(l => l.key === 'fuel') || {amount:0}).amount) * 0.1) + ' د.ك في الشهر.</p></div></div>' +
+    '<div class="lg-in info"><div class="ic"><i class="ti ti-trending-up"></i></div><div><b>لو الإيراد زاد 10%</b><p>صافي الربح يتحسن ' + fmt(P.revenue * 0.1 * P.cmRatio) + ' د.ك (بعد التكاليف المتغيرة اللي بتزيد معاه).</p></div></div>' +
+    S.filter(r => r.net < 0).map(r => '<div class="lg-in warn"><div class="ic"><i class="ti ti-building-store"></i></div><div><b>لو ' + esc(r.name) + ' اتسعّر صح</b><p>محتاج إيراد إضافي ' + fmt(-r.net) + ' د.ك في الشهر (' + fmt0(-r.net / r.nDrivers) + ' د.ك لكل سائق) عشان يغطي نصيبه كامل.</p></div></div>').join('') + '</div>');
+  h += '</div>';
+  return h;
+};
+
+/* ── التحليل الذكي ── */
+VIEWS.ai = function(sel){
+  const ins = L.insights(sel), an = L.anomalies(sel);
+  /* نجمع «مصروف كبير بلا وصف» في بند واحد */
+  const noteItems = an.filter(a => a.type === 'note');
+  const an2 = an.filter(a => a.type !== 'note');
+  if(noteItems.length) an2.push({sev:'info', type:'note', title:noteItems.length + ' مصروف كبير (250+ د.ك) بلا وصف', body:'الوصف بيفرق جداً في المراجعة والتدقيق — ' + noteItems.slice(0,3).map(x => x.body).join(' · ') + (noteItems.length > 3 ? ' …' : ''), ids:[].concat(...noteItems.map(x => x.ids || []))});
+  let h = '<div class="lg-grid lg-g2" style="margin-bottom:14px">';
+  h += card('ti-bulb', 'قراءة المحلل المالي — ' + ymLbl(sel), ins.length + ' ملاحظة مبنية على الدفاتر', insightHTML(ins));
+  h += card('ti-radar', 'كشف الشذوذ وجودة البيانات', an2.length ? an2.length + ' نقطة محتاجة نظرة' : 'كل حاجة سليمة', an2.length ? insightHTML(an2) : '<div class="lg-empty"><i class="ti ti-circle-check" style="color:var(--green)"></i>مفيش تكرار ولا قفزات غريبة ولا قيود ناقصة</div>');
+  h += '</div>';
+  const has = typeof aiKey === 'function' && aiKey();
+  const presets = ['ليه صافي الربح اتغير الشهر ده؟', 'إيه أكتر 3 حاجات أعملها عشان أرجع للربح؟', 'أنهي شريك محتاج إعادة تسعير وبكام؟', 'اكتبلي ملخص تنفيذي للإدارة في 5 نقاط', 'قيّم المركز المالي والسيولة'];
+  h += card('ti-sparkles', 'المحاسب الذكي', 'اسأل بالعربي — بيقرأ القوائم المالية وربحية الشركاء والتنبيهات',
+    (has ? '<div class="lg-chips">' + presets.map(p => '<button class="lg-chip" onclick="ARKL.ask(\'' + p + '\')">' + p + '</button>').join('') + '</div>' +
+      '<textarea id="lg-q" class="lg-ai" placeholder="مثلاً: لو زودنا 5 سواقين على كيتا هيحصل إيه؟"></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="lg-btn pri" onclick="ARKL.ask()"><i class="ti ti-send"></i> اسأل</button></div><div id="lg-ans"></div>'
+      : '<div class="lg-note">المحاسب الذكي محتاج مفتاح Claude API — نفس المفتاح بتاع «المساعد الذكي».</div><button class="lg-btn" style="margin-top:10px" onclick="openAISettings()"><i class="ti ti-key"></i> إضافة المفتاح</button>'));
+  return h;
+};
+L.snapshot = function(){
+  const sel = L.selYm(), ms = L.rangeMonths();
+  const IS = ms.map(ym => { const x = L.incomeStatement(ym, ym); return {month:ym, revenue:x.R, costOfService:x.COR, grossProfit:x.GP, opex:x.OPX, ebitda:x.EBITDA, depreciation:x.DEP, finance:x.FINC, net:x.NET}; });
+  const cur = L.incomeStatement(sel, sel);
+  return {company:'Al-Salasil Consumer Delivery (Kuwait) — fleet/driver services to delivery platforms, per-order model', currency:'KWD', selectedMonth:sel,
+    incomeStatementByMonth:IS, currentLines:cur.rev.concat(cur.cor, cur.opex).map(x => ({account:x.ar, amount:x.v})),
+    behaviour:(() => { const P = L.pl(sel); return {variable:P.variable, semi:P.semi, fixed:P.fixed, contributionMargin:P.cmRatio, breakEvenRevenue:P.breakEven, drivers:P.driverCount}; })(),
+    balanceSheet:L.balanceSheet(sel), cashFlowPeriod:(() => { const c = L.cashFlow(ms[0], sel); return {operating:c.cfo, investing:c.cfi, financing:c.cff, closing:c.closing}; })(),
+    partners:L.segments(sel, sel).rows.map(r => ({partner:r.name, revenue:r.rev, directCost:r.directAll, contribution:r.contrib, overhead:r.overhead, net:r.net, drivers:r.nDrivers})),
+    loan:{lender:FIN.loan.lender, installment:FIN.loan.installment, months:FIN.loan.months},
+    insights:L.insights(sel).map(x => x.title + ': ' + x.body), anomalies:L.anomalies(sel).map(x => x.title + ': ' + x.body), forecast:L.forecast(3).out};
+};
+L.ask = async function(q){
+  const box = document.getElementById('lg-ans'); const ta = document.getElementById('lg-q');
+  q = (q || (ta && ta.value) || '').trim(); if(!q || !box) return;
+  box.innerHTML = '<div class="lg-ai-out"><span class="lg-mut">بيحلل الدفاتر…</span></div>';
+  try{
+    const sys = 'أنت مدير مالي (CFO) خبير في شركات التوصيل بالكويت. ترد بالعربي المصري المهني المختصر، بأرقام دقيقة من البيانات المرفقة فقط بالدينار الكويتي (3 خانات عشرية عند الحاجة). لا تخترع أرقام. ابدأ بالإجابة المباشرة ثم السبب ثم توصية عملية واحدة أو اتنين. لو البيانات مش كفاية قول ده صراحة.';
+    const ans = await aiCall(sys, 'بيانات الدفاتر:\n```json\n' + JSON.stringify(L.snapshot()) + '\n```\n\nالسؤال: ' + q, []);
+    box.innerHTML = '<div class="lg-ai-out">' + esc(ans || '(رد فارغ)') + '</div>';
+  }catch(e){ box.innerHTML = '<div class="lg-ai-out" style="color:var(--red)">' + esc(e.message === 'NO_KEY' ? 'مفيش مفتاح API' : e.message) + '</div>'; }
+};
+
+/* ── التقارير ── */
+VIEWS.reports = function(sel){
+  const ms = L.rangeMonths();
+  const rc = (icon, color, title, body, btns) => '<div class="lg-card lg-fade"><div style="display:flex;gap:12px;align-items:flex-start"><div style="flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:' + color + '1a;color:' + color + ';font-size:22px"><i class="ti ' + icon + '"></i></div><div style="flex:1;min-width:0"><h3 style="margin-bottom:4px">' + title + '</h3><div class="lg-note">' + body + '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">' + btns + '</div></div></div></div>';
+  let h = '<div class="lg-grid lg-g2">';
+  h += rc('ti-file-certificate', '#1c5878', 'حزمة القوائم المالية', 'غلاف + ملخص تنفيذي + قائمة الدخل المقارنة + المركز المالي + التدفقات النقدية + ربحية الشركاء + ميزان المراجعة + الإيضاحات. عربي وإنجليزي، جاهزة للطباعة أو الحفظ PDF. الفترة: ' + ymLbl(ms[0]) + ' — ' + ymLbl(ms[ms.length-1]) + '.',
+    '<button class="lg-btn pri" onclick="ARKL.printPack()"><i class="ti ti-printer"></i> افتح للطباعة / PDF</button>');
+  h += rc('ti-presentation-analytics', '#7c3aed', 'تقرير الإدارة الشهري', 'صفحة واحدة لـ ' + ymLbl(sel) + ': المؤشرات، جسر الأرباح، ملاحظات المحلل، الشركاء، الموازنة. مناسب للاجتماع الشهري.',
+    '<button class="lg-btn pri" style="background:#7c3aed;border-color:#7c3aed" onclick="ARKL.printMgmt()"><i class="ti ti-printer"></i> افتح التقرير</button>');
+  h += rc('ti-file-spreadsheet', '#059669', 'ملف Excel شامل', 'أوراق منفصلة: الملخص، قائمة الدخل المقارنة، المركز المالي، التدفقات النقدية، ميزان المراجعة، دفتر الأستاذ، دفتر اليومية، الشركاء، الموازنة، كل القيود، دليل الحسابات.',
+    '<button class="lg-btn ok" onclick="ARKL.exportXlsx()"><i class="ti ti-download"></i> نزّل Excel</button>');
+  h += rc('ti-history', '#d97706', 'التقارير السابقة', 'نفس التقارير القديمة لسه موجودة لو محتاجها — كلها بتقرأ من نفس محرك قائمة الدخل.',
+    '<button class="lg-btn" onclick="exportPLWorkbook()">قائمة الدخل Excel (5 أوراق)</button><button class="lg-btn" onclick="generateAccPdfReport()">PDF (EN)</button><button class="lg-btn" onclick="generateAccArabicReport()">كل الشهور (عربي/EN)</button><button class="lg-btn" onclick="generatePptxReport()">PowerPoint</button><button class="lg-btn" onclick="exportAccCsv()">CSV</button><button class="lg-btn" onclick="ARKL.classic()">العرض القديم</button>');
+  h += '</div>';
+  return h;
+};
+
+/* ── الإعدادات والإقفال ── */
+L.saveCfg = function(){
+  const g = id => document.getElementById(id);
+  const patch = {companyStart:g('lgc-start').value || '2025-12-01', booksStart:g('lgc-books').value || '', openingCash:parseFloat(g('lgc-cash').value) || 0,
+    salariesPaid:g('lgc-sal').checked, spikePct:parseInt(g('lgc-spike').value, 10) || 40};
+  const old = L.cfg();
+  L.setCfg(patch); L.audit('settings', {from:old, to:patch});
+  const q = L.quarantine();
+  toast('اتحفظت الإعدادات' + (q ? ' — اتعزل ' + q + ' قيد قبل تاريخ البداية' : '') + ' ✅','s'); L.render();
+};
+VIEWS.settings = function(sel){
+  const c = L.cfg();
+  let h = '<div class="lg-grid lg-g2" style="margin-bottom:14px">';
+  const fld = (id, label, input, hint) => '<div style="display:grid;gap:5px"><label for="' + id + '" style="font-size:12px;font-weight:800">' + label + '</label>' + input + (hint ? '<div class="lg-note">' + hint + '</div>' : '') + '</div>';
+  const inp = 'style="padding:9px 11px;border:1px solid var(--br);border-radius:10px;background:var(--s1);color:var(--text);font-family:inherit"';
+  h += card('ti-adjustments', 'إعدادات الدفاتر', 'أي تغيير بيتسجّل في سجل التدقيق', '<div style="display:grid;gap:13px">' +
+    fld('lgc-start', 'تاريخ بداية نشاط الشركة', '<input id="lgc-start" type="date" value="' + esc(c.companyStart) + '" ' + inp + '>', 'أي قيد قبل التاريخ ده بيتعزل تلقائياً ومش بيدخل الحسابات (ده اللي شال أبريل 2025).') +
+    fld('lgc-books', 'أول شهر في الدفاتر', '<input id="lgc-books" type="month" value="' + esc(c.booksStart) + '" ' + inp + '>', 'فاضي = أول شهر فيه بيانات (' + ymLbl(L.booksStart()) + '). أرصدة الأسطول والقرض قبله بتدخل في القيد الافتتاحي.') +
+    fld('lgc-cash', 'رصيد النقدية الافتتاحي (د.ك)', '<input id="lgc-cash" type="number" step="0.001" value="' + esc(c.openingCash) + '" ' + inp + '>', 'رصيد البنك والخزنة في أول يوم في الدفاتر.') +
+    fld('lgc-spike', 'حد التنبيه على قفزة بند (%)', '<input id="lgc-spike" type="number" min="10" max="300" value="' + esc(c.spikePct) + '" ' + inp + '>', '') +
+    '<label style="display:flex;gap:8px;align-items:center;font-size:12px;font-weight:800"><input id="lgc-sal" type="checkbox"' + (c.salariesPaid ? ' checked' : '') + '> اعتبر رواتب الشهور المنتهية مدفوعة في آخر الشهر</label>' +
+    '<button class="lg-btn pri" onclick="ARKL.saveCfg()"><i class="ti ti-device-floppy"></i> احفظ</button></div>');
+  /* الإقفال */
+  const rec = L.reconcile(), locks = L.locks();
+  h += card('ti-lock', 'إقفال الفترات', 'الشهر المقفول مينفعش يتضاف له أو يتمسح منه قيد — زي الشركات الكبيرة بالظبط',
+    '<div class="lg-tbl-wrap"><table class="lg-t" style="min-width:0"><thead><tr><th>الشهر</th><th>المطابقة</th><th class="n">صافي الربح</th><th></th></tr></thead><tbody>' +
+    rec.slice().reverse().map(r => '<tr><td><b>' + ymLbl(r.ym) + '</b>' + (locks[r.ym] ? '<div class="lg-note">قفله ' + esc(locks[r.ym].by) + ' · ' + String(locks[r.ym].at).slice(0,10) + '</div>' : '') + '</td><td><span class="lg-badge ' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? 'مطابق' : 'فرق ' + fmt(r.diff)) + '</span></td>' + n(r.pl) + '<td>' +
+      (locks[r.ym] ? '<button class="lg-btn sm" onclick="ARKL.unlock(\'' + r.ym + '\')"><i class="ti ti-lock-open"></i> فتح</button>' : (r.ym < nowYm() ? '<button class="lg-btn sm" onclick="ARKL.lock(\'' + r.ym + '\')"><i class="ti ti-lock"></i> إقفال</button>' : '<span class="lg-note">الشهر الجاري</span>')) + '</td></tr>').join('') + '</tbody></table></div>');
+  h += '</div><div class="lg-grid lg-g2">';
+  const q = L.LS.get('sl_acc_quarantine', []);
+  h += card('ti-box-off', 'القيود المعزولة', q.length ? q.length + ' قيد قبل ' + c.companyStart + ' — خارج الحسابات ومحفوظين هنا' : 'مفيش قيود معزولة',
+    q.length ? '<div class="lg-tbl-wrap"><table class="lg-t" style="min-width:0"><thead><tr><th>التاريخ</th><th>النوع</th><th class="n">المبلغ</th><th>الوصف</th><th></th></tr></thead><tbody>' + q.map(z => '<tr><td>' + esc(z.row.date) + '</td><td>' + (z.kind === 'inc' ? 'إيراد' : 'مصروف') + '</td>' + n(z.row.amount) + '<td>' + esc(z.row.note || '') + '</td><td><button class="lg-btn sm" onclick="ARKL.restoreQuarantined(\'' + esc(z.row.id) + '\')">استرجاع</button></td></tr>').join('') + '</tbody></table></div>' : '<div class="lg-empty"><i class="ti ti-circle-check"></i>نظيف</div>');
+  const log = L.LS.get('sl_acc_audit', []).slice(0, 80);
+  const actName = {quarantine:'عزل قيود', restore:'استرجاع', lock:'إقفال فترة', unlock:'فتح فترة', je:'قيد يدوي', je_delete:'حذف قيد يدوي', budget:'موازنة', settings:'إعدادات', inc_add:'إضافة إيراد', exp_add:'إضافة مصروف', inc_del:'حذف إيراد', exp_del:'حذف مصروف', inc_edit:'تعديل إيراد', exp_edit:'تعديل مصروف', fund:'تمويل شركاء'};
+  h += card('ti-history', 'سجل التدقيق', 'مين عمل إيه وإمتى — آخر ' + log.length + ' عملية',
+    log.length ? '<div class="lg-tbl-wrap" style="max-height:380px;overflow:auto"><table class="lg-t" style="min-width:0"><thead><tr><th>الوقت</th><th>العملية</th><th>التفاصيل</th></tr></thead><tbody>' +
+      log.map(l => '<tr><td style="white-space:nowrap">' + esc(String(l.t).slice(0,16).replace('T',' ')) + '<div class="lg-note">' + esc(l.by) + '</div></td><td><span class="lg-pill">' + esc(actName[l.act] || l.act) + '</span></td><td style="font-size:11.5px">' + esc([l.ym, l.date, l.amount != null ? fmt(l.amount) + ' د.ك' : '', l.memo, l.note, l.reason, l.count ? l.count + ' قيد' : ''].filter(Boolean).join(' · ')) + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="lg-empty">لسه مفيش عمليات</div>');
+  const C = L.accounts();
+  const tn = {asset:'أصول', liab:'التزامات', equity:'حقوق ملكية', rev:'إيرادات', exp:'مصروفات'};
+  h += card('ti-list-numbers', 'دليل الحسابات', C.length + ' حساب', '<div class="lg-tbl-wrap" style="max-height:380px;overflow:auto"><table class="lg-t" style="min-width:0"><thead><tr><th>الرقم</th><th>الحساب</th><th>النوع</th></tr></thead><tbody>' + C.map(x => '<tr><td><span class="lg-pill">' + x.code + '</span></td><td>' + esc(x.ar) + '<span class="lg-note" style="display:block">' + esc(x.en) + '</span></td><td>' + tn[x.type] + '</td></tr>').join('') + '</tbody></table></div>');
+  h += '</div>';
+  return h;
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   قيد اليومية اليدوي + تمويل الشركاء
+   ══════════════════════════════════════════════════════════════════════ */
+function jeModal(){
+  let m = document.getElementById('lgJE');
+  if(m) return m;
+  m = document.createElement('div'); m.className = 'ov'; m.id = 'lgJE';
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('on'); });
+  m.innerHTML = '<div class="modal" style="max-width:640px"><h2><i class="ti ti-arrows-left-right" style="color:var(--blue)"></i> قيد يومية</h2>' +
+    '<div class="fgrid"><div class="fg"><label for="lgje-date">التاريخ</label><input id="lgje-date" type="date"></div><div class="fg"><label for="lgje-memo">البيان</label><input id="lgje-memo" placeholder="مثلاً: تمويل من الشركاء، تسوية بنك، شراء سيارة نقداً"></div></div>' +
+    '<div class="lg-je-row" style="font-size:11px;font-weight:800;color:var(--muted);margin:12px 0 4px"><span>الحساب</span><span>مدين</span><span>دائن</span><span></span></div><div id="lgje-lines" class="lg-je-lines"></div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap"><button class="lg-btn sm" onclick="ARKL.jeAdd()"><i class="ti ti-plus"></i> سطر</button><span id="lgje-bal" class="lg-badge info"></span></div>' +
+    '<div class="lg-note" style="margin-top:10px">أمثلة: الشركاء حطوا فلوس ← مدين 1100 / دائن 3100 · شراء سيارة نقداً ← مدين 1500 / دائن 1100 · مصروف مستحق ← مدين المصروف / دائن 2100.</div>' +
+    '<div class="macts"><button class="btn btn-c" onclick="document.getElementById(\'lgJE\').classList.remove(\'on\')">إلغاء</button><button class="btn btn-s" onclick="ARKL.jeSave()"><i class="ti ti-check"></i> ترحيل القيد</button></div></div>';
+  document.body.appendChild(m);
+  return m;
+}
+const accOpts = sel => L.accounts().map(x => '<option value="' + x.code + '"' + (x.code === sel ? ' selected' : '') + '>' + x.code + ' · ' + esc(x.ar) + '</option>').join('');
+L.jeAdd = function(acct, dr, cr){
+  const box = document.getElementById('lgje-lines'); const row = document.createElement('div'); row.className = 'lg-je-row';
+  row.innerHTML = '<select aria-label="الحساب">' + accOpts(acct || '1100') + '</select><input type="number" step="0.001" min="0" placeholder="0.000" aria-label="مدين" value="' + (dr || '') + '"><input type="number" step="0.001" min="0" placeholder="0.000" aria-label="دائن" value="' + (cr || '') + '"><button class="lg-btn sm bad" aria-label="حذف السطر"><i class="ti ti-x"></i></button>';
+  row.querySelector('button').onclick = () => { row.remove(); L.jeBal(); };
+  row.querySelectorAll('input').forEach(i => i.oninput = L.jeBal);
+  box.appendChild(row); L.jeBal();
+};
+L.jeBal = function(){
+  let dr = 0, cr = 0; document.querySelectorAll('#lgje-lines .lg-je-row').forEach(r => { const i = r.querySelectorAll('input'); dr += num(i[0].value); cr += num(i[1].value); });
+  const b = document.getElementById('lgje-bal'); if(!b) return;
+  const ok = Math.abs(dr - cr) < 0.0005 && dr > 0;
+  b.className = 'lg-badge ' + (ok ? 'ok' : 'warn'); b.textContent = 'مدين ' + fmt(dr) + ' · دائن ' + fmt(cr) + (ok ? ' · متوازن ✓' : ' · الفرق ' + fmt(dr - cr));
+};
+L.openJE = function(preset){
+  const m = jeModal();
+  document.getElementById('lgje-date').value = (preset && preset.date) || new Date().toISOString().slice(0,10);
+  document.getElementById('lgje-memo').value = (preset && preset.memo) || '';
+  document.getElementById('lgje-lines').innerHTML = '';
+  ((preset && preset.lines) || [{acct:'1100'}, {acct:'3100'}]).forEach(l => L.jeAdd(l.acct, l.dr, l.cr));
+  m.classList.add('on');
+};
+L.jeSave = function(){
+  const lines = []; document.querySelectorAll('#lgje-lines .lg-je-row').forEach(r => { const i = r.querySelectorAll('input'); const dr = num(i[0].value), cr = num(i[1].value); if(dr || cr) lines.push({acct:r.querySelector('select').value, dr:r3(dr), cr:r3(cr)}); });
+  const err = L.saveJE({date:document.getElementById('lgje-date').value, memo:document.getElementById('lgje-memo').value.trim(), lines});
+  if(err){ toast(err, 'e'); return; }
+  document.getElementById('lgJE').classList.remove('on'); toast('اترحّل القيد ✅','s'); L.render();
+};
+L.fundShortfall = function(){
+  const sel = L.selYm(); const cash = L.balanceSheet(sel).cash;
+  if(cash >= 0){ toast('النقدية مش بالسالب','s'); return; }
+  L.openJE({date:ymEnd(sel) > new Date().toISOString().slice(0,10) ? new Date().toISOString().slice(0,10) : ymEnd(sel), memo:'تمويل من الشركاء لتغطية عجز النقدية حتى ' + ymLbl(sel),
+    lines:[{acct:'1100', dr:r3(-cash)}, {acct:'3100', cr:r3(-cash)}]});
+};
+
+/* ── تعديل القيود ── */
+L.editEntry = function(kind, id){
+  const arr = kind === 'inc' ? INCOMES : EXPENSES; const x = arr.find(z => z.id === id); if(!x) return;
+  if(kind === 'inc'){ openIncomeModal(); document.getElementById('inc-date').value = x.date; document.getElementById('inc-amt').value = x.amount; document.getElementById('inc-src').value = x.source || 'other'; document.getElementById('inc-drv').value = x.driverId || ''; document.getElementById('inc-note').value = x.note || ''; }
+  else { openExpenseModal(); document.getElementById('exp-date').value = x.date; document.getElementById('exp-amt').value = x.amount; document.getElementById('exp-cat').value = x.category || 'other'; document.getElementById('exp-drv').value = x.driverId || ''; document.getElementById('exp-note').value = x.note || ''; }
+  L.editing = {kind, id};
+  const t = document.querySelector('#' + (kind === 'inc' ? 'incomeModal' : 'expenseModal') + ' h2'); if(t){ t.dataset.orig = t.dataset.orig || t.innerHTML; t.innerHTML = '<i class="ti ti-pencil"></i> تعديل ' + (kind === 'inc' ? 'إيراد' : 'مصروف'); }
+};
+
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK-LEDGER — التقارير: حزمة القوائم المالية · تقرير الإدارة · Excel
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+const L = window.ARKL;
+const {r3, esc, fmt, fmt0, pct, ymAdd, ymRange, ymEnd, ymLbl, ymShort, nowYm, ymY, ymM} = L;
+
+const PRINT_CSS = `
+@page{size:A4;margin:14mm 13mm}
+*{box-sizing:border-box}
+body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;color:#0f1729;margin:0;font-size:11px;line-height:1.55;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pg{page-break-after:always;padding:4px 2px}
+.pg:last-child{page-break-after:auto}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1c5878;padding-bottom:8px;margin-bottom:14px}
+.hd .co{font-weight:900;font-size:13px;color:#1c5878}
+.hd .co small{display:block;font-weight:600;color:#64748b;font-size:9.5px}
+.hd .ttl{text-align:end;font-weight:900;font-size:15px}
+.hd .ttl small{display:block;font-weight:600;color:#64748b;font-size:10px}
+h2{font-size:13px;margin:16px 0 8px;color:#1c5878}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{background:#eef4f8;color:#334155;font-size:9.5px;font-weight:900;padding:6px 7px;text-align:start;border-bottom:1px solid #cbd5e1}
+td{padding:5px 7px;border-bottom:1px solid #eef2f7;font-size:10.5px}
+td.n,th.n{text-align:left;direction:ltr;font-family:'JetBrains Mono',Consolas,monospace;white-space:nowrap}
+tr.h td{font-weight:900;color:#1c5878;padding-top:11px;border-bottom:0}
+tr.l td:first-child{padding-inline-start:18px}
+tr.s td{font-weight:900;border-top:1px solid #0f1729}
+tr.t td{font-weight:900;border-top:1px solid #0f1729;border-bottom:3px double #0f1729;background:#f1f6fa}
+tr.k td{color:#64748b;font-style:italic;font-size:9.5px}
+.en{display:block;color:#94a3b8;font-size:8.5px;font-weight:600}
+.neg{color:#b91c1c}
+.cover{height:250mm;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(160deg,#0f2f42,#1c5878 60%,#0d9488);color:#fff;padding:26mm 20mm;border-radius:6px}
+.cover h1{font-size:34px;margin:0 0 6px;line-height:1.2}
+.cover .k{font-size:12px;opacity:.85;letter-spacing:.5px}
+.kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:10px 0}
+.kc{border:1px solid #e2e8f0;border-radius:9px;padding:9px 10px}
+.kc b{display:block;font-size:15px;font-family:'JetBrains Mono',Consolas,monospace;margin-top:3px}
+.kc span{font-size:9.5px;color:#64748b;font-weight:800}
+.note{font-size:10px;color:#475569;line-height:1.9}
+.ins{border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;margin-bottom:6px;font-size:10.5px}
+.ins b{display:block}
+.ins.good{border-inline-start:4px solid #059669}.ins.bad{border-inline-start:4px solid #b91c1c}.ins.warn{border-inline-start:4px solid #d97706}.ins.info{border-inline-start:4px solid #1c5878}
+.ok{color:#059669;font-weight:900}
+.foot{margin-top:14px;font-size:8.5px;color:#94a3b8;display:flex;justify-content:space-between}
+.sig{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;font-size:10px;text-align:center}
+.sig div{border-top:1px solid #94a3b8;padding-top:6px}
+.bar{height:7px;background:#eef2f7;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%}
+@media screen{body{background:#e2e8f0;padding:20px}.pg{background:#fff;max-width:210mm;margin:0 auto 16px;padding:14mm 13mm;box-shadow:0 6px 24px rgba(0,0,0,.12)}.cover{border-radius:0}.tools{position:sticky;top:0;text-align:center;margin-bottom:12px}.tools button{font-family:inherit;font-weight:800;padding:9px 18px;border-radius:9px;border:0;background:#1c5878;color:#fff;cursor:pointer;font-size:13px}}
+@media print{.tools{display:none}}
+`;
+const N = (v) => '<td class="n' + (v < -0.0005 ? ' neg' : '') + '">' + fmt(v) + '</td>';
+const LB = (ar, en) => '<td>' + esc(ar) + (en ? '<span class="en">' + esc(en) + '</span>' : '') + '</td>';
+function header(title, en, period){
+  return '<div class="hd"><div class="co">شركة السلاسل لتوصيل الطلبات الاستهلاكية<small>Al-Salasil Consumer Delivery Services · Kuwait · KWD</small></div><div class="ttl">' + title + '<small>' + en + ' · ' + period + '</small></div></div>';
+}
+function foot(){ return '<div class="foot"><span>أُعدّ من نظام ARK — قيد مزدوج مطابق لمحرك قائمة الدخل</span><span>' + new Date().toLocaleString('en-GB') + '</span></div>'; }
+function openDoc(title, body){
+  const w = window.open('', '_blank');
+  if(!w){ toast('المتصفح منع فتح نافذة التقرير — اسمح بالنوافذ المنبثقة لـ ARK','e'); return; }
+  w.document.open();
+  w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>' + esc(title) + '</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"><style>' + PRINT_CSS + '</style></head><body><div class="tools"><button onclick="print()">طباعة / حفظ PDF</button></div>' + body + '</body></html>');
+  w.document.close();
+  setTimeout(() => { try{ w.focus(); }catch(e){} }, 300);
+}
+
+function isTable(ms){
+  const cols = ms.map(ym => L.incomeStatement(ym, ym)); const T = L.incomeStatement(ms[0], ms[ms.length-1]);
+  const pick = (IS, code) => { const z = IS.rev.concat(IS.cor, IS.opex, IS.dep, IS.fin).find(q => q.code === code); return z ? z.v : 0; };
+  const span = cols.length + 3;
+  let t = '<table><thead><tr><th>البند</th>' + ms.map(ym => '<th class="n">' + ymShort(ym, true) + '</th>').join('') + '<th class="n">Total</th><th class="n">%</th></tr></thead><tbody>';
+  const line = (cls, ar, en, g, tot) => '<tr class="' + cls + '">' + LB(ar, en) + cols.map(c => N(g(c))).join('') + N(tot) + '<td class="n">' + (T.R ? pct(tot/T.R) : '') + '</td></tr>';
+  const hd = (ar, en) => '<tr class="h"><td colspan="' + span + '">' + ar + ' · ' + en + '</td></tr>';
+  t += hd('الإيرادات', 'Revenue'); T.rev.forEach(x => t += line('l', x.ar, x.en, c => pick(c, x.code), x.v)); t += line('s', 'إجمالي الإيرادات', 'Total revenue', c => c.R, T.R);
+  t += hd('تكلفة الخدمة', 'Cost of service'); T.cor.forEach(x => t += line('l', x.ar, x.en, c => pick(c, x.code), x.v)); t += line('s', 'إجمالي تكلفة الخدمة', 'Total cost of service', c => c.COR, T.COR);
+  t += line('t', 'مجمل الربح', 'Gross profit', c => c.GP, T.GP);
+  t += hd('المصروفات التشغيلية', 'Operating expenses'); T.opex.forEach(x => t += line('l', x.ar, x.en, c => pick(c, x.code), x.v)); t += line('s', 'إجمالي المصروفات التشغيلية', 'Total operating expenses', c => c.OPX, T.OPX);
+  t += line('t', 'EBITDA', 'Earnings before depreciation and finance', c => c.EBITDA, T.EBITDA);
+  t += line('l', 'الإهلاك', 'Depreciation', c => c.DEP, T.DEP); t += line('s', 'الربح التشغيلي', 'Operating profit (EBIT)', c => c.EBIT, T.EBIT);
+  t += line('l', 'تكلفة التمويل', 'Finance costs', c => c.FINC, T.FINC);
+  t += line('t', 'صافي الربح (الخسارة)', 'Net profit (loss)', c => c.NET, T.NET);
+  t += '<tr class="k"><td>هامش صافي الربح · Net margin</td>' + cols.map(c => '<td class="n">' + pct(c.nm) + '</td>').join('') + '<td class="n">' + pct(T.nm) + '</td><td></td></tr>';
+  return t + '</tbody></table>';
+}
+function bsTable(ym){
+  const B = L.balanceSheet(ym), prev = ymAdd(ym, -1) >= L.booksStart() ? ymAdd(ym, -1) : null, Bp = prev ? L.balanceSheet(prev) : null;
+  const r = (cls, ar, en, k, s) => '<tr class="' + cls + '">' + LB(ar, en) + N((s||1)*B[k]) + (Bp ? N((s||1)*Bp[k]) : '') + '</tr>';
+  const hd = (ar, en) => '<tr class="h"><td colspan="3">' + ar + ' · ' + en + '</td></tr>';
+  let t = '<table><thead><tr><th>البند</th><th class="n">' + ymEnd(ym) + '</th>' + (Bp ? '<th class="n">' + ymEnd(prev) + '</th>' : '') + '</tr></thead><tbody>';
+  t += hd('الأصول غير المتداولة', 'Non-current assets') + r('l','أسطول المركبات — التكلفة','Fleet at cost','fleet') + r('l','مجمع الإهلاك','Accumulated depreciation','accDep',-1) + r('s','صافي القيمة الدفترية','Net book value','nca');
+  t += hd('الأصول المتداولة', 'Current assets') + r('l','النقدية والبنوك','Cash and bank','cash') + r('t','إجمالي الأصول','Total assets','assets');
+  t += hd('الالتزامات', 'Liabilities') + r('l','رواتب مستحقة','Salaries payable','salPay') + r('l','الجزء المتداول من القرض','Current portion of loan','loanCur') + r('s','الالتزامات المتداولة','Current liabilities','curLiab') + r('l','القرض — طويل الأجل','Loan — non-current','loanNon') + r('s','إجمالي الالتزامات','Total liabilities','liab');
+  t += hd('حقوق الملكية', 'Equity') + r('l','رأس المال وجاري الشركاء',"Owners' capital and current account",'capital') + r('l','الأرباح (الخسائر) المتراكمة','Accumulated profit (loss)','re') + r('s','إجمالي حقوق الملكية','Total equity','equity');
+  t += '<tr class="t">' + LB('إجمالي الالتزامات وحقوق الملكية', 'Total liabilities and equity') + N(B.liab + B.equity) + (Bp ? N(Bp.liab + Bp.equity) : '') + '</tr>';
+  return t + '</tbody></table><div class="note" style="margin-top:6px">' + (Math.abs(B.check) < 0.01 ? '<span class="ok">✓ متوازنة · Balanced</span>' : 'فرق ' + fmt(B.check)) + '</div>';
+}
+function cfTable(a, b){
+  const CF = L.cashFlow(a, b), C = L.build().C;
+  const r = (cls, ar, en, v) => '<tr class="' + cls + '">' + LB(ar, en) + N(v) + '</tr>';
+  const hd = (ar, en) => '<tr class="h"><td colspan="2">' + ar + ' · ' + en + '</td></tr>';
+  let t = '<table><thead><tr><th>البند</th><th class="n">' + ymShort(a, true) + ' — ' + ymShort(b, true) + '</th></tr></thead><tbody>';
+  t += hd('الأنشطة التشغيلية', 'Operating activities');
+  Object.keys(CF.det).sort().forEach(k => t += r('l', 'مقبوضات — ' + ((C.map[k]||{}).ar || k), 'Receipts', CF.det[k]));
+  t += r('l','مدفوعات للموظفين','Paid to employees',CF.sec.emp) + r('l','مدفوعات للموردين والتشغيل','Paid to suppliers',CF.sec.sup) + (CF.sec.int ? r('l','فوائد مدفوعة','Interest paid',CF.sec.int) : '') + r('s','صافي النقد التشغيلي','Net operating cash flow',CF.cfo);
+  t += hd('الأنشطة الاستثمارية', 'Investing activities') + r('l','شراء أصول نقداً','Purchase of assets',CF.sec.inv) + r('s','صافي النقد الاستثماري','Net investing cash flow',CF.cfi);
+  t += hd('الأنشطة التمويلية', 'Financing activities') + r('l','سداد أصل القرض','Loan principal repaid',CF.sec.loan) + r('l','تمويل الشركاء','Owners funding',CF.sec.own) + r('s','صافي النقد التمويلي','Net financing cash flow',CF.cff);
+  t += r('s','صافي التغير في النقدية','Net change in cash',CF.net) + r('l','النقدية أول الفترة','Opening cash',CF.opening) + r('t','النقدية آخر الفترة','Closing cash',CF.closing);
+  t += '</tbody></table><h2>تسوية الطريقة غير المباشرة · Indirect reconciliation</h2><table><tbody>' + r('l','صافي الربح','Net profit',CF.indirect.net) + r('l','الإهلاك','Depreciation',CF.indirect.dep) + r('l','التغير في الرواتب المستحقة','Change in salaries payable',CF.indirect.dSal) + (Math.abs(CF.indirect.diff) > 0.005 ? r('l','بنود أخرى','Other',CF.indirect.diff) : '') + r('t','صافي النقد التشغيلي','Net operating cash flow',CF.cfo) + '</tbody></table>';
+  return t;
+}
+function segTable(a, b){
+  const S = L.segments(a, b);
+  let t = '<table><thead><tr><th>الشريك · Partner</th><th class="n">Revenue</th><th class="n">Direct cost</th><th class="n">Contribution</th><th class="n">CM%</th><th class="n">Overhead</th><th class="n">Net</th><th class="n">Net%</th><th class="n">Drivers</th></tr></thead><tbody>';
+  S.rows.forEach(r => t += '<tr><td><b>' + esc(r.name) + '</b></td>' + N(r.rev) + N(r.directAll) + N(r.contrib) + '<td class="n">' + (r.rev ? pct(r.cm) : '') + '</td>' + N(r.overhead) + N(r.net) + '<td class="n">' + (r.rev ? pct(r.nm) : '') + '</td><td class="n">' + r.nDrivers + '</td></tr>');
+  t += '<tr class="t"><td>الإجمالي</td>' + N(S.rows.reduce((s,r)=>s+r.rev,0)) + N(S.rows.reduce((s,r)=>s+r.directAll,0)) + N(S.rows.reduce((s,r)=>s+r.contrib,0)) + '<td></td>' + N(S.rows.reduce((s,r)=>s+r.overhead,0)) + N(S.totNet) + '<td></td><td></td></tr>';
+  return t + '</tbody></table><div class="note" style="margin-top:6px">التكلفة المباشرة: رواتب سائقي الشريك + البنزين والصيانة والمخالفات والإقامات (المسجّلة على سائق لشريكه، والباقي بعدد السائقين). المصاريف العامة موزّعة ' + (L.cfg().overheadBasis === 'drivers' ? 'بعدد السائقين' : 'بنسبة الإيراد') + '.</div>';
+}
+function tbTable(a, b){
+  const TB = L.trialBalance(a, b);
+  let t = '<table><thead><tr><th>Account</th><th class="n">Opening</th><th class="n">Debit</th><th class="n">Credit</th><th class="n">Closing Dr</th><th class="n">Closing Cr</th></tr></thead><tbody>';
+  TB.rows.forEach(r => t += '<tr><td>' + r.code + ' · ' + esc(r.ar) + '<span class="en">' + esc(r.en) + '</span></td>' + N(r.ob) + N(r.dr) + N(r.cr) + '<td class="n">' + (r.cb > 0.0004 ? fmt(r.cb) : '') + '</td><td class="n">' + (r.cb < -0.0004 ? fmt(-r.cb) : '') + '</td></tr>');
+  t += '<tr class="t"><td>Total</td><td></td>' + N(TB.tot.dr) + N(TB.tot.cr) + N(TB.tot.cbDr) + N(TB.tot.cbCr) + '</tr></tbody></table><div class="note" style="margin-top:6px">' + (TB.balanced ? '<span class="ok">✓ ميزان المراجعة متوازن · Trial balance agrees</span>' : 'غير متوازن') + '</div>';
+  return t;
+}
+function insHTML(list){ return list.map(x => '<div class="ins ' + x.sev + '"><b>' + esc(x.title) + '</b>' + esc(x.body) + '</div>').join(''); }
+
+L.printPack = function(){
+  const ms = L.rangeMonths(), a = ms[0], b = ms[ms.length-1];
+  const period = ymLbl(a) + ' — ' + ymLbl(b), periodEn = ymLbl(a, true) + ' — ' + ymLbl(b, true);
+  const T = L.incomeStatement(a, b), B = L.balanceSheet(b), CF = L.cashFlow(a, b), H = L.health(b);
+  let h = '<div class="pg"><div class="cover"><div><div class="k">AL-SALASIL CONSUMER DELIVERY SERVICES · KUWAIT</div></div><div><div class="k">FINANCIAL STATEMENTS PACK</div><h1>حزمة القوائم المالية<br><span style="font-size:22px;opacity:.9">Financial Statements</span></h1><div style="font-size:15px;margin-top:10px">' + period + '<br><span style="opacity:.8">' + periodEn + '</span></div></div>' +
+    '<div class="k">بالدينار الكويتي · Kuwaiti Dinar · أُعدّت ' + new Date().toISOString().slice(0,10) + '<br>إدارة غير مدققة · Unaudited management accounts</div></div></div>';
+  h += '<div class="pg">' + header('الملخص التنفيذي', 'Executive summary', period) +
+    '<div class="kgrid"><div class="kc"><span>الإيرادات · Revenue</span><b>' + fmt(T.R) + '</b></div><div class="kc"><span>مجمل الربح · Gross profit</span><b>' + fmt(T.GP) + '</b><span>' + pct(T.gm) + '</span></div><div class="kc"><span>EBITDA</span><b>' + fmt(T.EBITDA) + '</b><span>' + pct(T.em) + '</span></div><div class="kc"><span>صافي الربح · Net</span><b class="' + (T.NET < 0 ? 'neg' : '') + '">' + fmt(T.NET) + '</b><span>' + pct(T.nm) + '</span></div>' +
+    '<div class="kc"><span>إجمالي الأصول · Assets</span><b>' + fmt(B.assets) + '</b></div><div class="kc"><span>رصيد القرض · Loan</span><b>' + fmt(B.loan) + '</b></div><div class="kc"><span>حقوق الملكية · Equity</span><b class="' + (B.equity < 0 ? 'neg' : '') + '">' + fmt(B.equity) + '</b></div><div class="kc"><span>النقد التشغيلي · Operating CF</span><b class="' + (CF.cfo < 0 ? 'neg' : '') + '">' + fmt(CF.cfo) + '</b></div></div>' +
+    (H ? '<div class="note">مؤشر الصحة المالية لـ ' + ymLbl(b) + ': <b>' + H.score + '/100 — ' + H.label + '</b></div>' : '') +
+    '<h2>أهم الملاحظات · Key observations — ' + ymLbl(b) + '</h2>' + insHTML(L.insights(b).slice(0, 8)) + foot() + '</div>';
+  h += '<div class="pg">' + header('قائمة الدخل المقارنة', 'Statement of profit or loss', period) + isTable(ms) + foot() + '</div>';
+  h += '<div class="pg">' + header('قائمة المركز المالي', 'Statement of financial position', 'كما في ' + ymEnd(b)) + bsTable(b) + foot() + '</div>';
+  h += '<div class="pg">' + header('قائمة التدفقات النقدية', 'Statement of cash flows', period) + cfTable(a, b) + foot() + '</div>';
+  h += '<div class="pg">' + header('ربحية الشركاء', 'Segment information', period) + segTable(a, b) + '<h2>ميزان المراجعة · Trial balance</h2>' + tbTable(a, b) + foot() + '</div>';
+  const lo = FIN.loan, as = FIN.asset;
+  h += '<div class="pg">' + header('الإيضاحات المتممة', 'Notes to the financial statements', period) +
+    '<h2>1. أسس الإعداد · Basis of preparation</h2><div class="note">حسابات إدارية غير مدققة، معدّة بأساس الاستحقاق ومبدأ القيد المزدوج من سجلات نظام ARK. العملة الدينار الكويتي. القيود قبل تاريخ بداية النشاط (' + L.cfg().companyStart + ') مستبعدة. Unaudited management accounts prepared on an accrual basis.</div>' +
+    '<h2>2. الإيرادات · Revenue</h2><div class="note">إيرادات خدمات تشغيل السائقين لمنصات التوصيل بنظام السعر لكل طلب، تُثبت في شهر تقديم الخدمة.</div>' +
+    '<h2>3. الرواتب · Salaries</h2><div class="note">رواتب السائقين والإدارة من محرك الرواتب (payrollSnapshot) مقسّطة بأيام العمل. ' + (L.cfg().salariesPaid ? 'رواتب الشهور المنتهية معتبرة مدفوعة آخر الشهر ما لم يُسجّل تاريخ صرف.' : 'الرواتب غير المصروفة تظهر التزاماً.') + '</div>' +
+    '<h2>4. الأسطول والإهلاك · Fleet and depreciation</h2><div class="note">' + esc(as.name) + ' بتكلفة ' + fmt(as.cost) + ' د.ك، يُهلك بالقسط الثابت على ' + as.lifeYears + ' سنوات بقيمة خردة ' + as.salvagePct + '% = ' + fmt(as.cost * (1 - as.salvagePct/100) / (as.lifeYears*12)) + ' د.ك شهرياً، بدءاً من ' + ymLbl(L.ymMake(as.inService.y, as.inService.m)) + '.</div>' +
+    '<h2>5. القرض · Borrowings</h2><div class="note">' + esc(lo.lender) + ' (' + esc(lo.ref) + '): ' + lo.months + ' قسطاً × ' + fmt(lo.installment) + ' د.ك (الأخير ' + fmt(lo.lastInstallment) + ')، أولها ' + ymLbl(L.ymMake(lo.firstPayment.y, lo.firstPayment.m)) + '. القسط يُفصل إلى سداد أصل (ميزانية) وفائدة (قائمة دخل). الرصيد في ' + ymEnd(b) + ': ' + fmt(B.loan) + ' د.ك، منه ' + fmt(B.loanCur) + ' د.ك مستحق خلال 12 شهراً.</div>' +
+    '<h2>6. جوهر المعاملة · Substance over form</h2><div class="note">' + esc(FIN.disclosure) + '<br>' + esc(FIN.disclosureEn) + '</div>' +
+    (B.cash < 0 ? '<h2>7. النقدية · Cash</h2><div class="note">النقدية المحسوبة من الدفاتر سالبة (' + fmt(B.cash) + ' د.ك)، ما يعني تمويلاً من الشركاء لم يُسجّل بعد كقيد. يوصى بتسجيله ومطابقة الرصيد مع كشف البنك.</div>' : '') +
+    '<div class="sig"><div>أعدّه · Prepared by</div><div>راجعه · Reviewed by</div><div>اعتمده · Approved by</div></div>' + foot() + '</div>';
+  openDoc('القوائم المالية — السلاسل — ' + periodEn, h);
+};
+
+L.printMgmt = function(){
+  const ym = L.selYm(), P = L.pl(ym), IS = L.incomeStatement(ym, ym), prev = L.dataMonths().filter(x => x < ym).slice(-1)[0];
+  const ISp = prev ? L.incomeStatement(prev, prev) : null;
+  const d = (c, p) => !p ? '' : ' <span style="font-size:9.5px;color:' + (c >= p ? '#059669' : '#b91c1c') + '">' + (c >= p ? '▲' : '▼') + pct(Math.abs((c-p)/(Math.abs(p)||1))) + '</span>';
+  const S = L.segments(ym, ym), bud = L.budgetFor(ym), act = L.actualByKey(ym), H = L.health(ym);
+  let h = '<div class="pg">' + header('تقرير الإدارة الشهري', 'Monthly management report', ymLbl(ym)) +
+    '<div class="kgrid"><div class="kc"><span>الإيرادات</span><b>' + fmt(IS.R) + d(IS.R, ISp && ISp.R) + '</b></div><div class="kc"><span>مجمل الربح</span><b>' + fmt(IS.GP) + '</b><span>' + pct(IS.gm) + '</span></div><div class="kc"><span>صافي الربح</span><b class="' + (IS.NET < 0 ? 'neg' : '') + '">' + fmt(IS.NET) + d(IS.NET, ISp && ISp.NET) + '</b></div><div class="kc"><span>نقطة التعادل</span><b>' + fmt(P.breakEven) + '</b><span>تغطية ' + (P.breakEven ? pct(IS.R/P.breakEven, 0) : '—') + '</span></div></div>' +
+    (H ? '<div class="note">مؤشر الصحة المالية: <b>' + H.score + '/100 — ' + H.label + '</b> · السائقين: ' + P.driverCount + ' · إيراد السائق: ' + fmt0(P.driverCount ? IS.R/P.driverCount : 0) + ' د.ك</div>' : '') +
+    '<h2>ملاحظات المحلل</h2>' + insHTML(L.insights(ym)) +
+    '<h2>الشركاء</h2>' + segTable(ym, ym) +
+    (Object.keys(bud).length ? '<h2>الموازنة مقابل الفعلي</h2><table><thead><tr><th>البند</th><th class="n">الموازنة</th><th class="n">الفعلي</th><th class="n">الانحراف</th></tr></thead><tbody>' +
+      L.budgetLines().filter(l => bud[l.key] != null || act[l.key]).map(l => { const bv = +bud[l.key] || 0, av = +act[l.key] || 0, v = l.kind === 'rev' ? av - bv : bv - av; return '<tr><td>' + esc(l.ar) + '</td>' + N(bv) + N(av) + '<td class="n" style="color:' + (v >= 0 ? '#059669' : '#b91c1c') + '">' + fmt(v) + '</td></tr>'; }).join('') + '</tbody></table>' : '') +
+    '<h2>قائمة الدخل المختصرة</h2>' + isTable([ym]) + foot() + '</div>';
+  openDoc('تقرير الإدارة — ' + ymLbl(ym, true), h);
+};
+
+/* ── Excel ── */
+L.exportXlsx = function(){
+  if(typeof XLSX === 'undefined'){ toast('مكتبة Excel ماتحمّلتش — اتأكد من النت','e'); return; }
+  const ms = L.rangeMonths(), a = ms[0], b = ms[ms.length-1];
+  const wb = XLSX.utils.book_new();
+  const add = (name, aoa, widths) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!views'] = [{RTL:true}]; if(widths) ws['!cols'] = widths.map(w => ({wch:w})); XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31)); };
+  const R = v => r3(v);
+  const T = L.incomeStatement(a, b), B = L.balanceSheet(b), CF = L.cashFlow(a, b);
+  add('الملخص', [['شركة السلاسل لتوصيل الطلبات الاستهلاكية — Al-Salasil'], ['الفترة', ymLbl(a) + ' — ' + ymLbl(b)], ['تاريخ الإعداد', new Date().toISOString().slice(0,10)], [],
+    ['المؤشر', 'القيمة (د.ك)'], ['الإيرادات', R(T.R)], ['تكلفة الخدمة', R(T.COR)], ['مجمل الربح', R(T.GP)], ['هامش مجمل الربح', +(T.gm*100).toFixed(2) + '%'], ['المصروفات التشغيلية', R(T.OPX)], ['EBITDA', R(T.EBITDA)], ['الإهلاك', R(T.DEP)], ['تكلفة التمويل', R(T.FINC)], ['صافي الربح', R(T.NET)], ['هامش صافي الربح', +(T.nm*100).toFixed(2) + '%'], [],
+    ['إجمالي الأصول ' + ymEnd(b), R(B.assets)], ['النقدية', R(B.cash)], ['رصيد القرض', R(B.loan)], ['حقوق الملكية', R(B.equity)], ['النقد التشغيلي للفترة', R(CF.cfo)]], [34, 20]);
+  /* قائمة الدخل */
+  const cols = ms.map(ym => L.incomeStatement(ym, ym));
+  const pick = (IS, code) => { const z = IS.rev.concat(IS.cor, IS.opex, IS.dep, IS.fin).find(q => q.code === code); return z ? z.v : 0; };
+  const isA = [['الحساب', 'البند', 'Line'].concat(ms.map(ym => ymLbl(ym)), ['الإجمالي', '% من الإيراد'])];
+  const L1 = (code, ar, en, g, tot) => isA.push([code, ar, en].concat(cols.map(c => R(g(c))), [R(tot), T.R ? +(tot/T.R*100).toFixed(2) : '']));
+  T.rev.forEach(x => L1(x.code, x.ar, x.en, c => pick(c, x.code), x.v)); L1('', 'إجمالي الإيرادات', 'Total revenue', c => c.R, T.R);
+  T.cor.forEach(x => L1(x.code, x.ar, x.en, c => pick(c, x.code), x.v)); L1('', 'إجمالي تكلفة الخدمة', 'Cost of service', c => c.COR, T.COR); L1('', 'مجمل الربح', 'Gross profit', c => c.GP, T.GP);
+  T.opex.forEach(x => L1(x.code, x.ar, x.en, c => pick(c, x.code), x.v)); L1('', 'إجمالي المصروفات التشغيلية', 'Operating expenses', c => c.OPX, T.OPX); L1('', 'EBITDA', 'EBITDA', c => c.EBITDA, T.EBITDA);
+  L1('6800', 'الإهلاك', 'Depreciation', c => c.DEP, T.DEP); L1('', 'الربح التشغيلي', 'EBIT', c => c.EBIT, T.EBIT); L1('7100', 'تكلفة التمويل', 'Finance costs', c => c.FINC, T.FINC); L1('', 'صافي الربح', 'Net profit', c => c.NET, T.NET);
+  add('قائمة الدخل', isA, [8, 30, 28].concat(ms.map(() => 13), [14, 12]));
+  /* المركز المالي */
+  add('المركز المالي', [['البند', 'Line', ymEnd(b)], ['أسطول المركبات — التكلفة', 'Fleet at cost', R(B.fleet)], ['مجمع الإهلاك', 'Accumulated depreciation', R(-B.accDep)], ['صافي الأسطول', 'Net book value', R(B.nca)], ['النقدية', 'Cash', R(B.cash)], ['إجمالي الأصول', 'Total assets', R(B.assets)], [],
+    ['رواتب مستحقة', 'Salaries payable', R(B.salPay)], ['الجزء المتداول من القرض', 'Current portion of loan', R(B.loanCur)], ['القرض طويل الأجل', 'Non-current loan', R(B.loanNon)], ['إجمالي الالتزامات', 'Total liabilities', R(B.liab)], [],
+    ['رأس المال وجاري الشركاء', "Owners' capital", R(B.capital)], ['الأرباح المتراكمة', 'Accumulated profit', R(B.re)], ['إجمالي حقوق الملكية', 'Total equity', R(B.equity)], ['الالتزامات + حقوق الملكية', 'Total L+E', R(B.liab + B.equity)]], [32, 28, 16]);
+  /* التدفقات */
+  add('التدفقات النقدية', [['البند', 'Line', ymLbl(a) + ' — ' + ymLbl(b)], ['مقبوضات من المنصات', 'Receipts', R(CF.sec.rec)], ['مدفوعات للموظفين', 'Paid to employees', R(CF.sec.emp)], ['مدفوعات للموردين', 'Paid to suppliers', R(CF.sec.sup)], ['فوائد مدفوعة', 'Interest paid', R(CF.sec.int)], ['صافي النقد التشغيلي', 'Operating', R(CF.cfo)],
+    ['شراء أصول', 'Investing', R(CF.cfi)], ['سداد أصل القرض', 'Loan repaid', R(CF.sec.loan)], ['تمويل الشركاء', 'Owners funding', R(CF.sec.own)], ['صافي النقد التمويلي', 'Financing', R(CF.cff)], ['صافي التغير', 'Net change', R(CF.net)], ['النقدية أول الفترة', 'Opening', R(CF.opening)], ['النقدية آخر الفترة', 'Closing', R(CF.closing)]], [30, 22, 18]);
+  /* ميزان المراجعة */
+  const TB = L.trialBalance(a, b);
+  add('ميزان المراجعة', [['الحساب', 'الاسم', 'Name', 'رصيد أول', 'مدين', 'دائن', 'رصيد مدين', 'رصيد دائن']].concat(TB.rows.map(r => [r.code, r.ar, r.en, R(r.ob), R(r.dr), R(r.cr), r.cb > 0 ? R(r.cb) : '', r.cb < 0 ? R(-r.cb) : ''])).concat([['', 'الإجمالي', 'Total', '', TB.tot.dr, TB.tot.cr, TB.tot.cbDr, TB.tot.cbCr]]), [8, 28, 26, 13, 13, 13, 13, 13]);
+  /* الأستاذ واليومية */
+  const Bk = L.build(), C = Bk.C;
+  const gl = [['الحساب', 'التاريخ', 'رقم القيد', 'البيان', 'مدين', 'دائن', 'الرصيد']];
+  C.list.forEach(x => { const G = L.ledger(x.code, a, b); if(!G.rows.length) return; gl.push([x.code + ' · ' + x.ar, '', '', 'رصيد أول المدة', '', '', R(G.open)]); G.rows.forEach(r => gl.push(['', r.date, r.no, r.memo, R(r.dr) || '', R(r.cr) || '', R(r.bal)])); gl.push([]); });
+  add('دفتر الأستاذ', gl, [26, 11, 16, 44, 12, 12, 13]);
+  const jr = [['رقم القيد', 'التاريخ', 'المصدر', 'البيان', 'الحساب', 'اسم الحساب', 'مدين', 'دائن']];
+  Bk.J.filter(j => j.ym >= a && j.ym <= b).forEach(j => j.lines.forEach((l,i) => jr.push([i ? '' : j.no, i ? '' : j.date, i ? '' : j.src, i ? '' : j.memo, l.acct, (C.map[l.acct]||{}).ar || '', R(l.dr) || '', R(l.cr) || ''])));
+  add('دفتر اليومية', jr, [16, 11, 9, 40, 8, 26, 12, 12]);
+  /* الشركاء */
+  const S = L.segments(a, b);
+  add('ربحية الشركاء', [['الشريك', 'الإيراد', 'رواتب السائقين', 'مباشر على سائق', 'مباشر موزع', 'هامش المساهمة', '%', 'نصيب العام', 'صافي الربح', '%', 'سائقين', 'إيراد/سائق/شهر']].concat(S.rows.map(r => [r.name, r.rev, r.sal, r.direct, r.alloc, r.contrib, +(r.cm*100).toFixed(2), r.overhead, r.net, +(r.nm*100).toFixed(2), r.nDrivers, R(r.revPerDriver)])), [16, 12, 13, 13, 12, 13, 8, 12, 12, 8, 8, 14]);
+  /* الموازنة */
+  const sel = L.selYm(), bud = L.budgetFor(sel), act = L.actualByKey(sel);
+  add('الموازنة', [['البند — ' + ymLbl(sel), 'الموازنة', 'الفعلي', 'الانحراف']].concat(L.budgetLines().map(l => { const bv = +bud[l.key] || 0, av = +act[l.key] || 0; return [l.ar, bv, R(av), R(l.kind === 'rev' ? av - bv : bv - av)]; })), [28, 13, 13, 13]);
+  /* القيود */
+  const en = [['النوع', 'التاريخ', 'المبلغ', 'البند/المصدر', 'الحساب', 'السائق', 'الوصف', 'المعرّف']];
+  INCOMES.filter(x => L.ymOf(x.date) >= a && L.ymOf(x.date) <= b).forEach(x => en.push(['إيراد', x.date, +x.amount, x.source, L.revAcc(x.source), x.driverId || '', x.note || '', x.id]));
+  EXPENSES.filter(x => L.ymOf(x.date) >= a && L.ymOf(x.date) <= b).forEach(x => en.push(['مصروف', x.date, +x.amount, (EXP_CATS[x.category]||{name:x.category}).name, L.catAcc(x.category), x.driverId || '', x.note || '', x.id]));
+  add('كل القيود', en, [8, 11, 11, 16, 8, 10, 40, 22]);
+  add('دليل الحسابات', [['الرقم', 'الحساب', 'Account', 'النوع']].concat(C.list.map(x => [x.code, x.ar, x.en, x.type])), [8, 30, 34, 10]);
+  XLSX.writeFile(wb, 'AlSalasil_Financials_' + a + '_to_' + b + '.xlsx');
+  toast('اتنزّل ملف Excel — ' + wb.SheetNames.length + ' أوراق ✅','s');
+};
+
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK-LEDGER — التشغيل: ربط الشاشة الجديدة بالدوال الأصلية
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+const L = window.ARKL;
+if(typeof renderAccounting !== 'function' || typeof monthlyPL !== 'function'){ console.warn('[ARKL] المحاسبة الأصلية مش موجودة — مش هشغّل'); return; }
+
+/* الشاشة القديمة محفوظة كاملة وبتتفتح من «التقارير ← العرض القديم» */
+L._classic = renderAccounting;
+window.renderAccounting = function(){ return L.render(); };
+
+/* الحفظ: أي قيد قبل بداية الشركة بيتعزل قبل ما يتحفظ أو يترفع */
+L._rawSaveInc = window.saveInc; L._rawSaveExp = window.saveExp;
+window.saveInc = function(){ try{ L.quarantine({noSave:true}); }catch(e){} L.invalidate(); return L._rawSaveInc.apply(this, arguments); };
+window.saveExp = function(){ try{ L.quarantine({noSave:true}); }catch(e){} L.invalidate(); return L._rawSaveExp.apply(this, arguments); };
+
+const resetTitle = id => { const t = document.querySelector('#' + id + ' h2'); if(t && t.dataset.orig){ t.innerHTML = t.dataset.orig; } };
+['openIncomeModal','openExpenseModal'].forEach(fn => {
+  const orig = window[fn]; if(typeof orig !== 'function') return;
+  window[fn] = function(){ L.editing = null; resetTitle(fn === 'openIncomeModal' ? 'incomeModal' : 'expenseModal'); return orig.apply(this, arguments); };
+});
+
+/* الإضافة والتعديل: احترام الإقفال + سجل التدقيق */
+function wrapSave(fn, kind, pre){
+  const orig = window[fn]; if(typeof orig !== 'function') return;
+  window[fn] = function(){
+    const date = (document.getElementById(pre + '-date') || {}).value;
+    const amt  = parseFloat((document.getElementById(pre + '-amt') || {}).value);
+    if(date && String(date) < L.cfg().companyStart){ toast('التاريخ ' + date + ' قبل بداية نشاط الشركة (' + L.cfg().companyStart + ')','e'); return; }
+    if(date && L.isLocked(L.ymOf(date))){ toast(L.ymLbl(L.ymOf(date)) + ' مقفول 🔒 — افتحه من الإعدادات الأول','e'); return; }
+    const arr = () => kind === 'inc' ? INCOMES : EXPENSES;
+    const ed = L.editing && L.editing.kind === kind ? L.editing : null;
+    let old = null;
+    if(ed){
+      old = arr().find(x => x.id === ed.id);
+      if(old && L.isLocked(L.ymOf(old.date))){ toast('القيد الأصلي في فترة مقفولة','e'); return; }
+      if(!date || !amt || amt <= 0) return orig.apply(this, arguments);   /* الأصلية بتعرض رسالة الخطأ */
+    }
+    const before = arr().length;
+    if(ed && old){ const i = arr().indexOf(old); if(i >= 0) arr().splice(i, 1); }
+    const r = orig.apply(this, arguments);
+    const after = arr().length;
+    if(ed && old){
+      if(after >= before){ try{ finDelete(kind, old.id); }catch(e){} const nw = arr()[arr().length-1];
+        L.audit(kind + '_edit', {id:nw && nw.id, from:{date:old.date, amount:old.amount}, date:nw && nw.date, amount:nw && nw.amount, memo:nw && nw.note}); }
+      else { arr().push(old); }   /* الحفظ فشل — نرجّع القديم */
+      L.editing = null; resetTitle(kind === 'inc' ? 'incomeModal' : 'expenseModal');
+    } else if(after > before){ const nw = arr()[arr().length-1]; L.audit(kind + '_add', {id:nw.id, date:nw.date, amount:nw.amount, memo:nw.note}); }
+    L.invalidate(); try{ L.render(); }catch(e){}
+    return r;
+  };
+}
+wrapSave('saveIncome', 'inc', 'inc');
+wrapSave('saveExpense', 'exp', 'exp');
+
+function wrapDel(fn, kind){
+  const orig = window[fn]; if(typeof orig !== 'function') return;
+  window[fn] = function(id){
+    const arr = kind === 'inc' ? INCOMES : EXPENSES; const x = arr.find(z => z.id === id);
+    if(x && L.isLocked(L.ymOf(x.date))){ toast('الفترة مقفولة 🔒','e'); return; }
+    const before = arr.length; const r = orig.apply(this, arguments);
+    const now = kind === 'inc' ? INCOMES : EXPENSES;
+    if(x && now.length < before) L.audit(kind + '_del', {id, date:x.date, amount:x.amount, memo:x.note});
+    L.invalidate(); try{ L.render(); }catch(e){}
+    return r;
+  };
+}
+wrapDel('deleteIncome', 'inc');
+wrapDel('deleteExpense', 'exp');
+
+/* تسجيل قيد التمويل في سجل التدقيق */
+const _saveJE = L.saveJE;
+L.saveJE = function(je){ const e = _saveJE(je); if(!e && /تمويل/.test(je.memo || '')) L.audit('fund', {date:je.date, amount:je.lines.reduce((s,l)=>s+(+l.dr||0),0)}); return e; };
+
+/* أول تشغيل: نعزل أبريل 2025 وأي قيد أقدم من بداية الشركة، ونشيله من السحابة */
+try{
+  const n = L.quarantine();
+  if(n){ console.log('[ARKL] اتعزل', n, 'قيد قبل بداية الشركة'); setTimeout(() => { try{ toast('اتشال ' + n + ' قيد بتاريخ قبل بداية الشركة (منهم أبريل 2025) — محفوظين في الإعدادات','s'); }catch(e){} }, 3500); }
+}catch(e){ console.error('[ARKL] quarantine', e); }
+
+/* لو شاشة المحاسبة مفتوحة دلوقتي نعيد رسمها */
+try{ if(typeof currentView !== 'undefined' && currentView === 'acc') L.render(); }catch(e){}
+console.log('[ARKL] نظام المحاسبة المالية جاهز');
+})();
+
+</script>
 </body>
 </html>
