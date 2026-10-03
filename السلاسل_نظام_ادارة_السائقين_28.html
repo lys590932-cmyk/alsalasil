@@ -20234,16 +20234,16 @@ const BASE_COA = [
   {code:'5200', ar:'وقود',                          en:'Fuel',                           type:'exp',    grp:'cor', key:'fuel'},
   {code:'5300', ar:'صيانة المركبات',                en:'Vehicle maintenance',            type:'exp',    grp:'cor', key:'maintenance'},
   {code:'5400', ar:'مخالفات مرورية',                en:'Traffic fines',                  type:'exp',    grp:'cor', key:'violations'},
-  {code:'5500', ar:'إقامات ورخص',                   en:'Residencies and licences',       type:'exp',    grp:'cor', key:'residency'},
   {code:'6100', ar:'رواتب الإدارة',                 en:'Administrative salaries',        type:'exp',    grp:'opex', key:'adminSalaries'},
   {code:'6200', ar:'إيجارات',                       en:'Rent',                           type:'exp',    grp:'opex', key:'rent'},
   {code:'6300', ar:'تأمين',                         en:'Insurance',                      type:'exp',    grp:'opex', key:'insurance'},
+  {code:'6500', ar:'إقامات ورخص وتجهيز سائقين جدد',  en:'Residencies, licences and new-driver onboarding', type:'exp', grp:'opex', key:'residency'},
   {code:'6400', ar:'مصاريف إدارية وعمومية',          en:'General and administrative',     type:'exp',    grp:'opex', key:'admin'},
   {code:'6900', ar:'مصروفات أخرى',                  en:'Other expenses',                 type:'exp',    grp:'opex', key:'other'},
   {code:'6800', ar:'إهلاك الأسطول',                 en:'Depreciation',                   type:'exp',    grp:'dep',  key:'_dep'},
   {code:'7100', ar:'تكلفة التمويل',                 en:'Finance costs',                  type:'exp',    grp:'fin',  key:'_int'}
 ];
-const CAT_ACC = {fuel:'5200', maintenance:'5300', violations:'5400', residency:'5500', rent:'6200', insurance:'6300', admin:'6400', other:'6900', salaries:'5100'};
+const CAT_ACC = {fuel:'5200', maintenance:'5300', violations:'5400', residency:'6500', rent:'6200', insurance:'6300', admin:'6400', other:'6900', salaries:'5100'};
 const REV_FIXED = {keeta:'4110', homy:'4120', caboria:'4130', imile:'4140', other:'4900'};
 
 L.partners = () => (typeof PARTNERS !== 'undefined' && Array.isArray(PARTNERS)) ? PARTNERS : [];
@@ -20603,6 +20603,7 @@ L.segments = function(a, b){
   P.forEach(p => mk(p.id, p.name, p.color));
   mk('_none', 'غير موزّع', '#94a3b8');
   const norm = k => seg[k] ? k : '_none';
+  let hire = 0;   /* تكاليف تجهيز سائقين جدد — على مستوى الشركة */
   ymRange(a, b).forEach(ym => {
     const m = ymM(ym), y = ymY(ym), PL = L.pl(ym);
     INCOMES.forEach(i => { if(ymOf(i.date) === ym) mk(norm(i.source)).rev += num(i.amount); });
@@ -20622,6 +20623,9 @@ L.segments = function(a, b){
       const direct = ['fuel','maintenance','violations','residency'].includes(e.category);
       if(!direct) return;
       const w = e.driverId && drvW[e.driverId];
+      /* الإقامات: مصروفة على سائقين جداد لسه ما اشتغلوش — مش تكلفة شريك.
+         بتتحمّل على شريك بس لو مربوطة بسائق شغال فعلاً الشهر ده (تجديد). */
+      if(e.category === 'residency' && !w){ hire += num(e.amount); return; }
       if(w){ Object.keys(w).forEach(p => mk(norm(p)).direct += num(e.amount) * w[p]); }
       else if(e.driverId){ const d = (typeof DRV !== 'undefined' ? DRV : []).find(x => x.id === e.driverId); mk(norm(d && d.partner)).direct += num(e.amount); }
       else pool += num(e.amount);
@@ -20645,9 +20649,10 @@ L.segments = function(a, b){
       nDrivers: s.drivers.size, avgDrivers: s.driverMonths / Math.max(1, ymRange(a, b).length), revPerDriver: dm ? s.rev/dm : 0, costPerDriver: dm ? directAll/dm : 0});
   }).filter(s => s.rev || s.directAll || s.overhead);
   rows.sort((x,y) => y.rev - x.rev);
-  const totNet = r3(rows.reduce((s,r) => s + r.net, 0));
+  const partnersNet = r3(rows.reduce((s,r) => s + r.net, 0));
+  const totNet = r3(partnersNet - hire);
   let plNet = 0; ymRange(a, b).forEach(ym => plNet += L.pl(ym).net);
-  return {rows, totNet, plNet:r3(plNet), diff:r3(totNet - plNet)};
+  return {rows, partnersNet, hire:r3(hire), totNet, plNet:r3(plNet), diff:r3(totNet - plNet)};
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -20762,7 +20767,7 @@ L.insights = function(ym){
   const salRatio = R ? (P.driverSal + P.adminSal)/R : 0;
   if(salRatio > 0.65) out.push({sev:'warn', title:'الرواتب ' + pct(salRatio, 0) + ' من الإيراد', body:'النسبة الصحية لشركة توصيل حوالي 55–60%. كل سائق محتاج يجيب إيراد أكتر أو التكلفة تتراجع.'});
   const nDrv = P.driverCount || 0;
-  if(nDrv) out.push({sev:'info', title:'إيراد السائق ' + fmt(R/nDrv, 0) + ' د.ك في الشهر', body:'تكلفة السائق الكاملة (راتب + بنزين + صيانة + مخالفات + إقامة) حوالي ' + fmt((P.driverSal + (P.lines.filter(l => ['fuel','maintenance','violations','residency'].includes(l.key)).reduce((s,l)=>s+l.amount,0)))/nDrv, 0) + ' د.ك.'});
+  if(nDrv) out.push({sev:'info', title:'إيراد السائق ' + fmt(R/nDrv, 0) + ' د.ك في الشهر', body:'تكلفة السائق الشغال (راتب + بنزين + صيانة + مخالفات) حوالي ' + fmt((P.driverSal + (P.lines.filter(l => ['fuel','maintenance','violations'].includes(l.key)).reduce((s,l)=>s+l.amount,0)))/nDrv, 0) + ' د.ك.'});
   try{
     const S = L.segments(ym, ym);
     const rows = S.rows.filter(r => r.id !== '_none' && r.rev > 0);
@@ -21435,8 +21440,9 @@ VIEWS.seg = function(sel){
   const T = {rev:0, sal:0, direct:0, alloc:0, contrib:0, overhead:0, net:0};
   S.rows.forEach(r => { Object.keys(T).forEach(k => T[k] += r[k]);
     h += '<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + (r.color||'#94a3b8') + ';margin-inline-end:7px"></i><b>' + esc(r.name) + '</b></td>' + n(r.rev) + n(-r.sal) + n(-r.direct) + n(-r.alloc) + n(r.contrib) + '<td class="n">' + (r.rev ? pct(r.cm) : '—') + '</td>' + n(-r.overhead) + n(r.net) + '<td class="n ' + (r.net < 0 ? 'lg-neg' : 'lg-up') + '">' + (r.rev ? pct(r.nm) : '—') + '</td><td class="n">' + r.nDrivers + '</td>' + n(r.revPerDriver) + '</tr>'; });
-  h += '<tr style="font-weight:900;background:var(--s2)"><td>الإجمالي</td>' + n(T.rev) + n(-T.sal) + n(-T.direct) + n(-T.alloc) + n(T.contrib) + '<td class="n">' + (T.rev ? pct(T.contrib/T.rev) : '') + '</td>' + n(-T.overhead) + n(T.net) + '<td class="n">' + (T.rev ? pct(T.net/T.rev) : '') + '</td><td></td><td></td></tr></tbody></table></div>';
-  h += '<div class="lg-note" style="margin-top:10px">طريقة الحساب: رواتب كل سائق على الشريك المسجّل عليه · البنزين والصيانة والمخالفات والإقامات المسجّلة على سائق بتروح لشريكه، والمش مسجّلة على سائق بتتوزع بعدد السائقين · المصاريف العامة (رواتب الإدارة، إيجار، تأمين، إدارية، إهلاك، تمويل) بتتوزع ' + (basis === 'revenue' ? 'بنسبة الإيراد' : 'بعدد السائقين') + '.</div></div>';
+  if(S.hire) h += '<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#7c3aed;margin-inline-end:7px"></i><b>على مستوى الشركة</b><div class="lg-note">إقامات ورخص لسائقين جداد لسه ما اشتغلوش — استثمار في التوسع، مش تكلفة شريك</div></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>' + n(-S.hire) + '<td></td><td></td><td></td></tr>';
+  h += '<tr style="font-weight:900;background:var(--s2)"><td>الإجمالي</td>' + n(T.rev) + n(-T.sal) + n(-T.direct) + n(-T.alloc) + n(T.contrib) + '<td class="n">' + (T.rev ? pct(T.contrib/T.rev) : '') + '</td>' + n(-T.overhead) + n(S.totNet) + '<td class="n">' + (T.rev ? pct(S.totNet/T.rev) : '') + '</td><td></td><td></td></tr></tbody></table></div>';
+  h += '<div class="lg-note" style="margin-top:10px">طريقة الحساب: رواتب كل سائق على الشريك اللي اشتغل معاه · البنزين والصيانة والمخالفات المسجّلة على سائق بتروح لشريكه، والمش مسجّلة على سائق بتتوزع بعدد السائقين · الإقامات ورخص السائقين الجداد على مستوى الشركة (إلا لو مربوطة بسائق شغال) · المصاريف العامة (رواتب الإدارة، إيجار، تأمين، إدارية، إهلاك، تمويل) بتتوزع ' + (basis === 'revenue' ? 'بنسبة الإيراد' : 'بعدد السائقين') + '.</div></div>';
   /* رسم */
   const mx = niceMax(Math.max(...S.rows.map(r => Math.max(r.rev, r.directAll + r.overhead)), 1));
   h += '<div class="lg-grid lg-g3">';
@@ -21792,8 +21798,9 @@ function segTable(a, b){
   const S = L.segments(a, b);
   let t = '<table><thead><tr><th>الشريك · Partner</th><th class="n">Revenue</th><th class="n">Direct cost</th><th class="n">Contribution</th><th class="n">CM%</th><th class="n">Overhead</th><th class="n">Net</th><th class="n">Net%</th><th class="n">Drivers</th></tr></thead><tbody>';
   S.rows.forEach(r => t += '<tr><td><b>' + esc(r.name) + '</b></td>' + N(r.rev) + N(r.directAll) + N(r.contrib) + '<td class="n">' + (r.rev ? pct(r.cm) : '') + '</td>' + N(r.overhead) + N(r.net) + '<td class="n">' + (r.rev ? pct(r.nm) : '') + '</td><td class="n">' + r.nDrivers + '</td></tr>');
+  if(S.hire) t += '<tr><td>على مستوى الشركة — إقامات وتجهيز سائقين جدد<span class="en">Company level — new-driver onboarding</span></td><td></td><td></td><td></td><td></td><td></td>' + N(-S.hire) + '<td></td><td></td></tr>';
   t += '<tr class="t"><td>الإجمالي</td>' + N(S.rows.reduce((s,r)=>s+r.rev,0)) + N(S.rows.reduce((s,r)=>s+r.directAll,0)) + N(S.rows.reduce((s,r)=>s+r.contrib,0)) + '<td></td>' + N(S.rows.reduce((s,r)=>s+r.overhead,0)) + N(S.totNet) + '<td></td><td></td></tr>';
-  return t + '</tbody></table><div class="note" style="margin-top:6px">التكلفة المباشرة: رواتب سائقي الشريك + البنزين والصيانة والمخالفات والإقامات (المسجّلة على سائق لشريكه، والباقي بعدد السائقين). المصاريف العامة موزّعة ' + (L.cfg().overheadBasis === 'drivers' ? 'بعدد السائقين' : 'بنسبة الإيراد') + '.</div>';
+  return t + '</tbody></table><div class="note" style="margin-top:6px">التكلفة المباشرة: رواتب سائقي الشريك + البنزين والصيانة والمخالفات (المسجّلة على سائق لشريكه، والباقي بعدد السائقين). الإقامات وتجهيز السائقين الجدد على مستوى الشركة. المصاريف العامة موزّعة ' + (L.cfg().overheadBasis === 'drivers' ? 'بعدد السائقين' : 'بنسبة الإيراد') + '.</div>';
 }
 function tbTable(a, b){
   const TB = L.trialBalance(a, b);
