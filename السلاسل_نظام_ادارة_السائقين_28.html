@@ -20523,6 +20523,78 @@ L.reconcile = function(){
 /* ══════════════════════════════════════════════════════════════════════
    5) ربحية الشركاء (تقارير القطاعات)
    ══════════════════════════════════════════════════════════════════════ */
+/* ── توزيع السائقين على الشركاء لكل شهر ─────────────────────────────
+   حقل «الشريك» في ملف السائق بيعبّر عن شريكه النهارده، مش اللي اشتغل معاه
+   في كل شهر. فبنحدد الشريك الفعلي بالترتيب ده:
+   1) تعديل يدوي للشهر (sl_acc_assign)
+   2) طلبات التشغيل المباشر (هومي) من جدول orders: نسبة أيامه على هومي
+   3) الشريك المسجّل في ملف السائق
+   ═══════════════════════════════════════════════════════════════════ */
+const WORK = L._work = L._work || LS.get('sl_acc_work', {});   /* {ym: {driverId: {orders, days}}} */
+const LOADING = {};
+L.directPartner = () => L.cfg().directPartner || 'homy';
+L.workReady = ym => !!WORK[ym];
+L.loadWork = async function(ym, force){
+  if((WORK[ym] && !force) || LOADING[ym]) return;
+  if(typeof SUPA_URL === 'undefined') return;
+  LOADING[ym] = true;
+  try{
+    const from = ym + '-01', to = ymAdd(ym, 1) + '-01';
+    const rows = []; let off = 0;
+    for(let page = 0; page < 30; page++){
+      const url = SUPA_URL + '/rest/v1/orders?select=driver_id,created_at,status&status=eq.delivered&created_at=gte.' + from + '&created_at=lt.' + to + '&order=created_at.asc';
+      const res = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer ' + SUPA_KEY, Range:off + '-' + (off + 999), 'Range-Unit':'items'}});
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const chunk = await res.json(); rows.push(...chunk);
+      if(chunk.length < 1000) break; off += 1000;
+    }
+    const m = {};
+    rows.forEach(o => { if(!o.driver_id) return; const k = String(o.driver_id); const x = m[k] || (m[k] = {orders:0, days:{}}); x.orders++; x.days[String(o.created_at).slice(0,10)] = 1; });
+    const out = {}; Object.keys(m).forEach(k => out[k] = {orders:m[k].orders, days:Object.keys(m[k].days).length});
+    WORK[ym] = out;
+    /* الشهور اللي خلصت بنحفظها؛ الشهر الجاري بيتحدّث */
+    const keep = {}; Object.keys(WORK).forEach(k => { if(k < nowYm()) keep[k] = WORK[k]; });
+    LS.set('sl_acc_work', keep);
+    L.invalidate(); try{ if(L.render) L.render(); }catch(e){}
+  }catch(e){ console.warn('[ARKL] orders', ym, e); WORK[ym] = WORK[ym] || null; }
+  finally{ LOADING[ym] = false; }
+};
+L.assignments = () => LS.get('sl_acc_assign', {});
+L.setAssign = function(ym, drvId, partner){
+  const a = L.assignments(); a[ym] = a[ym] || {};
+  if(!partner) delete a[ym][drvId]; else a[ym][drvId] = partner;
+  LS.set('sl_acc_assign', a); L.audit('assign', {ym, id:drvId, memo:partner || 'تلقائي'}); L.invalidate(); L.render();
+};
+/* أوزان الشركاء لسائق في شهر: {weights:{partner:share}, source, orders, days} */
+L.driverPartner = function(d, ym, salDays){
+  const man = (L.assignments()[ym] || {})[d.id];
+  if(man) return {weights:{[man]:1}, source:'manual'};
+  const dp = L.directPartner(); const w = WORK[ym];
+  const base = d.partner || '_none';
+  if(w){
+    const x = w[d.id];
+    if(x && x.orders >= 5){
+      const share = Math.min(1, x.days / Math.max(1, salDays || x.days));
+      if(share >= 0.85 || base === dp || base === '_none' || !base) return {weights:{[dp]:1}, source:'orders', orders:x.orders, days:x.days};
+      return {weights:{[dp]:share, [base]:1 - share}, source:'split', orders:x.orders, days:x.days};
+    }
+    if(base === dp) return {weights:{[dp]:1}, source:'profile-noorders'};
+  }
+  return {weights:{[base]:1}, source:'profile'};
+};
+L.driverMap = function(ym){
+  const m = ymM(ym), y = ymY(ym), rows = [];
+  try{
+    reportableDrivers().forEach(d => {
+      const r = driverSalaryForMonth(d, m, y);
+      if(!(r.days > 0 || r.net)) return;
+      const a = L.driverPartner(d, ym, r.days);
+      rows.push({id:d.id, name:d.name, profile:d.partner || '', net:r.net, days:r.days, ...a});
+    });
+  }catch(e){}
+  return rows;
+};
+
 L.segments = function(a, b){
   const cfg = L.cfg();
   const P = L.partners();
@@ -20530,15 +20602,16 @@ L.segments = function(a, b){
   const mk = (id, name, color) => seg[id] || (seg[id] = {id, name, color, rev:0, sal:0, direct:0, alloc:0, overhead:0, drivers:new Set(), driverMonths:0});
   P.forEach(p => mk(p.id, p.name, p.color));
   mk('_none', 'غير موزّع', '#94a3b8');
-  const drvPartner = id => { const d = (typeof DRV !== 'undefined' ? DRV : []).find(x => x.id === id); return d && seg[d.partner] ? d.partner : '_none'; };
+  const norm = k => seg[k] ? k : '_none';
   ymRange(a, b).forEach(ym => {
     const m = ymM(ym), y = ymY(ym), PL = L.pl(ym);
-    INCOMES.forEach(i => { if(ymOf(i.date) === ym) mk(seg[i.source] ? i.source : '_none').rev += num(i.amount); });
-    /* رواتب السائقين حسب الشريك — بنفس إجمالي المحرك بالضبط */
-    const per = {}; let tot = 0; const hc = {};
-    try{
-      reportableDrivers().forEach(d => { const r = driverSalaryForMonth(d, m, y); if(r.days > 0 || r.net){ const k = seg[d.partner] ? d.partner : '_none'; per[k] = (per[k]||0) + r.net; tot += r.net; hc[k] = (hc[k]||0) + 1; mk(k).drivers.add(d.id); } });
-    }catch(e){}
+    INCOMES.forEach(i => { if(ymOf(i.date) === ym) mk(norm(i.source)).rev += num(i.amount); });
+    /* رواتب السائقين حسب الشريك الفعلي — بنفس إجمالي المحرك بالضبط */
+    const per = {}; let tot = 0; const hc = {}; const drvW = {};
+    L.driverMap(ym).forEach(r => {
+      tot += r.net; drvW[r.id] = r.weights;
+      Object.keys(r.weights).forEach(p => { const k = norm(p), w = r.weights[p]; per[k] = (per[k]||0) + r.net * w; hc[k] = (hc[k]||0) + w; if(w >= 0.5) mk(k).drivers.add(r.id); });
+    });
     Object.keys(per).forEach(k => { mk(k).sal += tot ? PL.driverSal * per[k] / tot : 0; });
     Object.keys(hc).forEach(k => mk(k).driverMonths += hc[k]);
     const hcTot = Object.values(hc).reduce((s,v) => s+v, 0);
@@ -20548,7 +20621,9 @@ L.segments = function(a, b){
       if(ymOf(e.date) !== ym || e.category === 'salaries') return;
       const direct = ['fuel','maintenance','violations','residency'].includes(e.category);
       if(!direct) return;
-      if(e.driverId){ mk(drvPartner(e.driverId)).direct += num(e.amount); }
+      const w = e.driverId && drvW[e.driverId];
+      if(w){ Object.keys(w).forEach(p => mk(norm(p)).direct += num(e.amount) * w[p]); }
+      else if(e.driverId){ const d = (typeof DRV !== 'undefined' ? DRV : []).find(x => x.id === e.driverId); mk(norm(d && d.partner)).direct += num(e.amount); }
       else pool += num(e.amount);
     });
     Object.keys(hc).forEach(k => { mk(k).alloc += hcTot ? pool * hc[k] / hcTot : 0; });
@@ -20567,7 +20642,7 @@ L.segments = function(a, b){
     const dm = s.driverMonths || 0;
     return Object.assign(s, {sal:r3(s.sal), direct:r3(s.direct), alloc:r3(s.alloc), overhead:r3(s.overhead), rev:r3(s.rev),
       directAll:r3(directAll), contrib:r3(contrib), net:r3(net), cm: s.rev ? contrib/s.rev : 0, nm: s.rev ? net/s.rev : 0,
-      nDrivers: s.drivers.size, revPerDriver: dm ? s.rev/dm : 0, costPerDriver: dm ? directAll/dm : 0});
+      nDrivers: s.drivers.size, avgDrivers: s.driverMonths / Math.max(1, ymRange(a, b).length), revPerDriver: dm ? s.rev/dm : 0, costPerDriver: dm ? directAll/dm : 0});
   }).filter(s => s.rev || s.directAll || s.overhead);
   rows.sort((x,y) => y.rev - x.rev);
   const totNet = r3(rows.reduce((s,r) => s + r.net, 0));
@@ -20690,14 +20765,21 @@ L.insights = function(ym){
   if(nDrv) out.push({sev:'info', title:'إيراد السائق ' + fmt(R/nDrv, 0) + ' د.ك في الشهر', body:'تكلفة السائق الكاملة (راتب + بنزين + صيانة + مخالفات + إقامة) حوالي ' + fmt((P.driverSal + (P.lines.filter(l => ['fuel','maintenance','violations','residency'].includes(l.key)).reduce((s,l)=>s+l.amount,0)))/nDrv, 0) + ' د.ك.'});
   try{
     const S = L.segments(ym, ym);
-    S.rows.filter(r => r.id !== '_none' && r.rev > 0).forEach(r => {
-      if(r.contrib < 0) out.push({sev:'bad', title:r.name + ' مش مغطّي تكلفته المباشرة', body:'الإيراد ' + fmt(r.rev) + ' د.ك والتكلفة المباشرة ' + fmt(r.directAll) + ' د.ك — خسارة قبل المصاريف العامة ' + fmt(-r.contrib) + ' د.ك.'});
-      else if(r.net < 0) out.push({sev:'warn', title:r.name + ' بيغطي تكلفته المباشرة بس', body:'هامش مساهمة ' + pct(r.cm) + '، لكن بعد نصيبه من المصاريف العامة بيخسر ' + fmt(-r.net) + ' د.ك.'});
-      else out.push({sev:'good', title:r.name + ' رابح', body:'صافي ' + fmt(r.net) + ' د.ك بهامش ' + pct(r.nm) + '.'});
+    const rows = S.rows.filter(r => r.id !== '_none' && r.rev > 0);
+    const ready = L.workReady(ym);
+    const tag = ready ? '' : ' — تقديري لحد ما طلبات التشغيل المباشر تتحمّل';
+    /* فحص منطقي: إيراد السائق لكل شريك لازم يكون في حدود معقولة */
+    const avgRpd = rows.reduce((s,r) => s + r.rev, 0) / Math.max(1, rows.reduce((s,r) => s + (r.avgDrivers || r.nDrivers), 0));
+    const odd = rows.filter(r => { const rpd = r.rev / Math.max(0.5, r.avgDrivers || r.nDrivers); return rpd > avgRpd * 1.6 || rpd < avgRpd * 0.6; });
+    if(odd.length) out.push({sev:'warn', title:'توزيع السائقين على ' + odd.map(r => r.name).join(' و') + ' محتاج مراجعة', body:'إيراد السائق عندهم بعيد جداً عن المتوسط (' + odd.map(r => r.name + ': ' + fmt0(r.rev / Math.max(0.5, r.avgDrivers || r.nDrivers)) + ' د.ك لـ ' + Math.round(r.avgDrivers || r.nDrivers) + ' سائق').join(' · ') + ') — غالباً سائقين متسجلين على شريك وهم شغالين مع غيره. صحّحهم من «ربحية الشركاء ← توزيع السائقين».', action:'assign'});
+    if(!odd.length) rows.forEach(r => {
+      if(r.contrib < 0) out.push({sev:'bad', title:r.name + ' مش مغطّي تكلفته المباشرة', body:'الإيراد ' + fmt(r.rev) + ' د.ك والتكلفة المباشرة ' + fmt(r.directAll) + ' د.ك — خسارة قبل المصاريف العامة ' + fmt(-r.contrib) + ' د.ك' + tag + '.'});
+      else if(r.net < 0) out.push({sev:'warn', title:r.name + ' بيغطي تكلفته المباشرة بس', body:'هامش مساهمة ' + pct(r.cm) + '، لكن بعد نصيبه من المصاريف العامة بيخسر ' + fmt(-r.net) + ' د.ك' + tag + '.'});
+      else out.push({sev:'good', title:r.name + ' رابح', body:'صافي ' + fmt(r.net) + ' د.ك بهامش ' + pct(r.nm) + tag + '.'});
     });
   }catch(e){}
   const BS = L.balanceSheet(ym);
-  if(BS.cash < 0) out.push({sev:'warn', title:'النقدية المحسوبة بالسالب (' + fmt(BS.cash) + ' د.ك)', body:'معناها إن الشركاء موّلوا العجز ده من بره الدفاتر. سجّل قيد «تمويل من الشركاء» عشان الميزانية تعكس الواقع.', action:'fund'});
+  if(BS.cash < 0) out.push({sev:'warn', title:'النقدية المحسوبة بالسالب: −' + fmt(-BS.cash) + ' د.ك', body:'معناها إن الشركاء موّلوا العجز ده من بره الدفاتر. سجّل قيد «تمويل من الشركاء» عشان الميزانية تعكس الواقع.', action:'fund'});
   return out;
 };
 
@@ -20964,6 +21046,7 @@ const delta = (cur, prev, invert) => {
 const card = (icon, title, sub, body, extra) => '<div class="lg-card lg-fade"' + (extra||'') + '><h3><i class="ti ' + icon + '"></i>' + title + '</h3>' + (sub ? '<div class="lg-cs">' + sub + '</div>' : '') + body + '</div>';
 const sevIcon = {good:'ti-circle-check', bad:'ti-alert-octagon', warn:'ti-alert-triangle', info:'ti-info-circle'};
 const insightHTML = list => '<div class="lg-ins">' + list.map(x => '<div class="lg-in ' + x.sev + '"><div class="ic"><i class="ti ' + sevIcon[x.sev] + '"></i></div><div style="flex:1;min-width:0"><b>' + esc(x.title) + '</b><p>' + esc(x.body) + '</p>' +
+  (x.action === 'assign' ? '<button class="lg-btn sm" style="margin-top:7px" onclick="ARKL.go(\'seg\')"><i class="ti ti-users"></i> راجع توزيع السائقين</button>' : '') +
   (x.action === 'fund' ? '<button class="lg-btn sm" style="margin-top:7px" onclick="ARKL.fundShortfall()"><i class="ti ti-building-bank"></i> سجّل تمويل الشركاء</button>' : '') +
   (x.ids ? '<button class="lg-btn sm" style="margin-top:7px" onclick=\'ARKL.showIds(' + JSON.stringify(x.ids) + ')\'><i class="ti ti-list-search"></i> افتح القيود</button>' : '') + '</div></div>').join('') + '</div>';
 
@@ -21002,6 +21085,7 @@ L.render = function(){
   try{
     L.quarantine();
     const sel = L.selYm(), months = L.months().slice().reverse();
+    try{ L.loadWork(sel); if(L.tab === 'seg') L.rangeMonths().forEach(ym => L.loadWork(ym)); }catch(e){}
     if(!months.includes(sel)) months.unshift(sel);
     const rec = L.reconcile(); const bad = rec.filter(r => !r.ok);
     h = '<div class="lg">';
@@ -21341,6 +21425,11 @@ VIEWS.seg = function(sel){
   let h = '<div class="lg-card lg-fade" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div><h3><i class="ti ti-building-store"></i>ربحية الشركاء · Segment reporting</h3><div class="lg-cs" style="margin:0">' + (ms.length === 1 ? ymLbl(a) : ymLbl(a) + ' — ' + ymLbl(b)) + ' · المجموع مطابق لصافي الربح ' + (Math.abs(S.diff) < 0.01 ? '✓' : '(فرق ' + fmt(S.diff) + ')') + '</div></div>' +
     '<div class="lg-ctl"><select class="lg-sel" aria-label="الفترة" onchange="ARKL.setSegScope(this.value)"><option value="month"' + (L.segScope === 'month' ? ' selected' : '') + '>الشهر المختار</option><option value="range"' + (L.segScope === 'range' ? ' selected' : '') + '>فترة المقارنة</option></select>' +
     '<select class="lg-sel" aria-label="أساس التوزيع" onchange="ARKL.setBasis(this.value)"><option value="revenue"' + (basis === 'revenue' ? ' selected' : '') + '>توزيع العام بالإيراد</option><option value="drivers"' + (basis === 'drivers' ? ' selected' : '') + '>توزيع العام بعدد السائقين</option></select></div></div>';
+  const dpName = (L.partners().find(p => p.id === L.directPartner()) || {name:L.directPartner()}).name;
+  const notReady = ms.filter(ym => !L.workReady(ym));
+  h += '<div class="lg-note" style="margin-bottom:10px;padding:9px 12px;border-radius:10px;background:' + (notReady.length ? 'rgba(217,119,6,.08)' : 'rgba(5,150,105,.07)') + '">' +
+    (notReady.length ? '<i class="ti ti-loader"></i> بيتم تحميل طلبات ' + esc(dpName) + ' من السحابة عشان نعرف مين اشتغل مع مين فعلاً — لحد ما تتحمل، التوزيع من ملف السائق وممكن يكون غلط.' :
+      '<i class="ti ti-circle-check"></i> السائق بيتحسب على ' + esc(dpName) + ' لو له طلبات تشغيل مباشر في الشهر (بنسبة أيامه)، والباقي على الشريك المسجّل في ملفه. تقدر تصحح أي سائق من الجدول تحت.') + '</div>';
   if(!S.rows.length){ h += '<div class="lg-empty">مفيش بيانات</div></div>'; return h; }
   h += '<div class="lg-tbl-wrap"><table class="lg-t"><thead><tr><th>الشريك</th><th class="n">الإيراد</th><th class="n">رواتب السائقين</th><th class="n">مباشر مسجّل على سائق</th><th class="n">مباشر موزّع</th><th class="n">هامش المساهمة</th><th class="n">%</th><th class="n">نصيب العام</th><th class="n">صافي الربح</th><th class="n">%</th><th class="n">سائقين</th><th class="n">إيراد/سائق/شهر</th></tr></thead><tbody>';
   const T = {rev:0, sal:0, direct:0, alloc:0, contrib:0, overhead:0, net:0};
@@ -21360,6 +21449,19 @@ VIEWS.seg = function(sel){
       '<div class="lg-note">إيراد السائق ' + fmt0(r.revPerDriver) + ' د.ك/شهر مقابل تكلفته المباشرة ' + fmt0(r.costPerDriver) + ' د.ك' + (r.revPerDriver && r.costPerDriver > r.revPerDriver ? ' — <b style="color:var(--red)">السائق بيكلّف أكتر من اللي بيجيبه</b>' : '') + '.</div></div></div>';
   });
   h += '</div>';
+  /* توزيع السائقين للشهر المختار */
+  const DM = L.driverMap(sel), P = L.partners();
+  const srcLbl = {manual:['يدوي','info'], orders:['من الطلبات','ok'], split:['مقسوم بالأيام','ok'], profile:['من ملف السائق','warn'], 'profile-noorders':['ملف السائق — بلا طلبات','warn']};
+  const cnt = {}; DM.forEach(r => Object.keys(r.weights).forEach(p => cnt[p] = (cnt[p]||0) + r.weights[p]));
+  h += '<div class="lg-card lg-fade" style="margin-top:14px"><h3><i class="ti ti-users"></i>توزيع السائقين على الشركاء · ' + ymLbl(sel) + '</h3><div class="lg-cs">' + Object.keys(cnt).map(p => esc((P.find(x => x.id === p) || {name:p === '_none' ? 'غير موزّع' : p}).name) + ': ' + (Math.round(cnt[p]*10)/10)).join(' · ') + ' — قارن العدد ده بفواتير الشركاء، ولو سائق متسجّل غلط غيّره من القائمة.</div>' +
+    '<div class="lg-tbl-wrap" style="max-height:520px;overflow:auto"><table class="lg-t"><thead><tr><th>السائق</th><th class="n">الراتب</th><th class="n">أيام</th><th>في ملفه</th><th>طلبات ' + esc(dpName) + '</th><th>اتحسب على</th><th>تصحيح</th></tr></thead><tbody>' +
+    DM.sort((x,y) => String(x.profile).localeCompare(String(y.profile)) || x.name.localeCompare(y.name)).map(r => {
+      const sl = srcLbl[r.source] || ['—','info'];
+      const on = Object.keys(r.weights).map(p => esc((P.find(x => x.id === p) || {name:p}).name) + (r.weights[p] < 1 ? ' ' + Math.round(r.weights[p]*100) + '%' : '')).join(' + ');
+      const man = (L.assignments()[sel] || {})[r.id] || '';
+      return '<tr><td><b>' + esc(r.name) + '</b> <span class="lg-mut">' + esc(r.id) + '</span></td>' + n(r.net) + '<td class="n">' + r.days + '</td><td>' + esc((P.find(x => x.id === r.profile) || {name:r.profile || '—'}).name) + '</td><td class="n">' + (r.orders != null ? r.orders + ' طلب / ' + r.days + ' يوم' : (L.workReady(sel) ? '0' : '…')) + '</td><td><b>' + on + '</b> <span class="lg-badge ' + sl[1] + '">' + sl[0] + '</span></td>' +
+        '<td><select class="lg-sel" style="padding:5px 8px;font-size:11.5px" aria-label="شريك ' + esc(r.name) + '" onchange="ARKL.setAssign(\'' + sel + '\',\'' + esc(r.id) + '\',this.value)"><option value="">تلقائي</option>' + P.map(p => '<option value="' + p.id + '"' + (man === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select></td></tr>';
+    }).join('') + '</tbody></table></div></div>';
   return h;
 };
 
@@ -21503,7 +21605,7 @@ VIEWS.settings = function(sel){
   h += card('ti-box-off', 'القيود المعزولة', q.length ? q.length + ' قيد قبل ' + c.companyStart + ' — خارج الحسابات ومحفوظين هنا' : 'مفيش قيود معزولة',
     q.length ? '<div class="lg-tbl-wrap"><table class="lg-t" style="min-width:0"><thead><tr><th>التاريخ</th><th>النوع</th><th class="n">المبلغ</th><th>الوصف</th><th></th></tr></thead><tbody>' + q.map(z => '<tr><td>' + esc(z.row.date) + '</td><td>' + (z.kind === 'inc' ? 'إيراد' : 'مصروف') + '</td>' + n(z.row.amount) + '<td>' + esc(z.row.note || '') + '</td><td><button class="lg-btn sm" onclick="ARKL.restoreQuarantined(\'' + esc(z.row.id) + '\')">استرجاع</button></td></tr>').join('') + '</tbody></table></div>' : '<div class="lg-empty"><i class="ti ti-circle-check"></i>نظيف</div>');
   const log = L.LS.get('sl_acc_audit', []).slice(0, 80);
-  const actName = {quarantine:'عزل قيود', restore:'استرجاع', lock:'إقفال فترة', unlock:'فتح فترة', je:'قيد يدوي', je_delete:'حذف قيد يدوي', budget:'موازنة', settings:'إعدادات', inc_add:'إضافة إيراد', exp_add:'إضافة مصروف', inc_del:'حذف إيراد', exp_del:'حذف مصروف', inc_edit:'تعديل إيراد', exp_edit:'تعديل مصروف', fund:'تمويل شركاء'};
+  const actName = {quarantine:'عزل قيود', restore:'استرجاع', lock:'إقفال فترة', unlock:'فتح فترة', je:'قيد يدوي', je_delete:'حذف قيد يدوي', budget:'موازنة', settings:'إعدادات', inc_add:'إضافة إيراد', exp_add:'إضافة مصروف', inc_del:'حذف إيراد', exp_del:'حذف مصروف', inc_edit:'تعديل إيراد', exp_edit:'تعديل مصروف', fund:'تمويل شركاء', assign:'توزيع سائق'};
   h += card('ti-history', 'سجل التدقيق', 'مين عمل إيه وإمتى — آخر ' + log.length + ' عملية',
     log.length ? '<div class="lg-tbl-wrap" style="max-height:380px;overflow:auto"><table class="lg-t" style="min-width:0"><thead><tr><th>الوقت</th><th>العملية</th><th>التفاصيل</th></tr></thead><tbody>' +
       log.map(l => '<tr><td style="white-space:nowrap">' + esc(String(l.t).slice(0,16).replace('T',' ')) + '<div class="lg-note">' + esc(l.by) + '</div></td><td><span class="lg-pill">' + esc(actName[l.act] || l.act) + '</span></td><td style="font-size:11.5px">' + esc([l.ym, l.date, l.amount != null ? fmt(l.amount) + ' د.ك' : '', l.memo, l.note, l.reason, l.count ? l.count + ' قيد' : ''].filter(Boolean).join(' · ')) + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="lg-empty">لسه مفيش عمليات</div>');
@@ -21883,6 +21985,9 @@ try{
   const n = L.quarantine();
   if(n){ console.log('[ARKL] اتعزل', n, 'قيد قبل بداية الشركة'); setTimeout(() => { try{ toast('اتشال ' + n + ' قيد بتاريخ قبل بداية الشركة (منهم أبريل 2025) — محفوظين في الإعدادات','s'); }catch(e){} }, 3500); }
 }catch(e){ console.error('[ARKL] quarantine', e); }
+
+/* نحمّل طلبات التشغيل المباشر لآخر 6 شهور في الخلفية — لتوزيع السائقين على الشركاء */
+setTimeout(() => { try{ L.months().filter(ym => ym <= L.nowYm()).slice(-6).forEach(ym => L.loadWork(ym)); }catch(e){} }, 6000);
 
 /* لو شاشة المحاسبة مفتوحة دلوقتي نعيد رسمها */
 try{ if(typeof currentView !== 'undefined' && currentView === 'acc') L.render(); }catch(e){}
