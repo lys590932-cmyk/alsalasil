@@ -15,7 +15,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700;800&family=Readex+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 /* ═════════════ TOKENS ═════════════ */
@@ -770,6 +770,370 @@ svg{flex-shrink:0}
 @keyframes bounce-call{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes orbit{to{transform:rotate(360deg)}}
 @keyframes dash{to{stroke-dashoffset:0}}
+
+/* ═══════════════════════════════════════════════════════════════
+   LUXE GLASS — طبقة التصميم الفاخر (زجاج مغبّش + أورورا + هوية السلاسل)
+   ═══════════════════════════════════════════════════════════════ */
+@property --ang{syntax:'<angle>';initial-value:0deg;inherits:false}
+:root{
+  --font:'IBM Plex Sans Arabic','Readex Pro',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-d:'Readex Pro','IBM Plex Sans Arabic',sans-serif;
+  --blur:22px; --r:14px; --r-lg:20px; --r-xl:28px;
+}
+:root,[data-theme="light"]{
+  --bg:#dfeaef;
+  --glass:rgba(255,255,255,.62); --glass-2:rgba(255,255,255,.48); --glass-3:rgba(255,255,255,.78);
+  --glass-line:rgba(255,255,255,.75); --glass-edge:rgba(0,52,74,.09);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.9);
+  --panel:rgba(255,255,255,.72); --panel2:rgba(255,255,255,.55); --panel3:rgba(230,240,244,.8);
+  --line:rgba(0,52,74,.08); --line2:rgba(0,52,74,.16);
+  --text:#082230; --text2:#2c4a57; --muted:#5d7a87; --faint:#90a8b2;
+  --brand:#00587a; --brand2:#0a7aa5; --brand-soft:rgba(10,122,165,.11);
+  --own1:#1290bd; --own2:#00557a; --other:rgba(255,255,255,.86); --other-line:rgba(255,255,255,.9);
+  --chat-bg:transparent;
+  --a1:#7fd0ee; --a2:#f3a6b0; --a3:#a7e3d2; --a4:#c9d8ff; --a-op:.55;
+  --rail-bg:linear-gradient(180deg,#00435e,#002a3c); --rail-ink:#a9d6e6;
+  --shadow:0 1px 1px rgba(0,40,60,.04),0 6px 24px -6px rgba(0,40,60,.14);
+  --shadow-lg:0 30px 80px -20px rgba(0,40,60,.35),0 8px 24px -8px rgba(0,40,60,.16);
+  --glow:0 0 0 1px rgba(10,122,165,.18),0 10px 30px -8px rgba(10,122,165,.45);
+}
+[data-theme="dark"]{
+  --bg:#020b10;
+  --glass:rgba(9,27,36,.58); --glass-2:rgba(12,34,45,.46); --glass-3:rgba(9,25,33,.82);
+  --glass-line:rgba(255,255,255,.07); --glass-edge:rgba(0,0,0,.4);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.06);
+  --panel:rgba(11,30,40,.72); --panel2:rgba(255,255,255,.045); --panel3:rgba(255,255,255,.075);
+  --line:rgba(160,210,230,.09); --line2:rgba(160,210,230,.17);
+  --text:#e6f3f8; --text2:#bdd6e0; --muted:#86a9b6; --faint:#5a7c89;
+  --brand:#2aa3d4; --brand2:#4cc0ea; --brand-soft:rgba(76,192,234,.13);
+  --own1:#1290bd; --own2:#00476a; --other:rgba(22,52,66,.78); --other-line:rgba(255,255,255,.06);
+  --chat-bg:transparent;
+  --a1:#0a6d93; --a2:#8a1f2b; --a3:#0b6b63; --a4:#16306a; --a-op:.6;
+  --rail-bg:linear-gradient(180deg,rgba(2,18,26,.85),rgba(1,10,15,.92)); --rail-ink:#7fa8b8;
+  --shadow:0 1px 1px rgba(0,0,0,.25),0 8px 28px -8px rgba(0,0,0,.6);
+  --shadow-lg:0 40px 90px -20px rgba(0,0,0,.8),0 10px 30px -10px rgba(0,0,0,.5);
+  --glow:0 0 0 1px rgba(76,192,234,.25),0 10px 34px -8px rgba(42,163,212,.55);
+}
+body{background:var(--bg);font-feature-settings:"ss01","kern"}
+h1,h2,h3,.side-h h2,.page-h h1,.modal-h h3{font-family:var(--font-d);letter-spacing:-.2px}
+
+/* ─── أورورا + حبيبات ─── */
+#aurora{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:var(--bg)}
+#aurora i{position:absolute;border-radius:50%;filter:blur(90px);opacity:var(--a-op);will-change:transform;animation:aur 28s ease-in-out infinite}
+#aurora .a1{width:62vmax;height:62vmax;background:var(--a1);top:-22vmax;inset-inline-start:-14vmax}
+#aurora .a2{width:46vmax;height:46vmax;background:var(--a2);bottom:-20vmax;inset-inline-end:-10vmax;animation-delay:-9s;animation-duration:34s}
+#aurora .a3{width:40vmax;height:40vmax;background:var(--a3);top:30%;inset-inline-start:38%;animation-delay:-17s;opacity:calc(var(--a-op) * .7)}
+#aurora .a4{width:36vmax;height:36vmax;background:var(--a4);top:-10vmax;inset-inline-end:10%;animation-delay:-5s;animation-duration:40s;opacity:calc(var(--a-op) * .6)}
+#aurora .grain{position:absolute;inset:-50%;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+@keyframes aur{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(6vmax,-4vmax) scale(1.1)}66%{transform:translate(-5vmax,5vmax) scale(.92)}}
+
+/* ─── الإطار العام زجاج ─── */
+#app{background:transparent;z-index:1}
+.glass,.side,.info,.chat-h,.page-h,.composer-in,.modal,.pop,.sheet,.toast,.bnav,.mention-pop{
+  -webkit-backdrop-filter:blur(var(--blur)) saturate(170%);backdrop-filter:blur(var(--blur)) saturate(170%)}
+.side{background:var(--glass);border-inline-end:1px solid var(--glass-line);box-shadow:var(--glass-hi)}
+.main,.page{background:transparent}
+.main::before{background-image:var(--wall);background-size:280px 280px;opacity:1}
+.main::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 80% at 50% 120%,color-mix(in srgb,var(--bg) 55%,transparent),transparent 60%);z-index:0}
+.info{background:var(--glass-3);border-inline-start:1px solid var(--glass-line)}
+
+/* ─── الشريط الجانبي (Rail) ─── */
+.rail{background:var(--rail-bg);box-shadow:inset -1px 0 0 rgba(255,255,255,.05),8px 0 30px -12px rgba(0,0,0,.4);position:relative}
+[dir="rtl"] .rail{box-shadow:inset 1px 0 0 rgba(255,255,255,.05),-8px 0 30px -12px rgba(0,0,0,.4)}
+.rail-btn{z-index:1;border-radius:16px}
+.rail-btn.on{background:transparent;color:#fff}
+.rail-btn.on::before{display:none}
+.rail-btn.on svg{filter:drop-shadow(0 0 8px rgba(127,199,227,.7))}
+.rail-ind{position:absolute;top:0;inset-inline-start:10px;width:52px;border-radius:16px;z-index:0;pointer-events:none;
+  background:linear-gradient(140deg,rgba(255,255,255,.18),rgba(255,255,255,.06));box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 22px -6px rgba(0,0,0,.45);
+  transition:transform .5s cubic-bezier(.3,1.4,.5,1),height .3s,opacity .2s}
+.rail-ind::after{content:'';position:absolute;inset-inline-start:-10px;top:22%;bottom:22%;width:4px;border-radius:4px;background:linear-gradient(#ff8f98,#ff5c68);box-shadow:0 0 12px #ff5c68}
+.rail-btn .tip{background:var(--glass-3);color:var(--text);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+
+/* ─── الشعار ─── */
+.logo-mark{background:radial-gradient(120% 120% at 20% 10%,#18a6d6 0%,#00587a 45%,#002a3c 100%);box-shadow:0 10px 26px -6px rgba(0,88,122,.7),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 6px rgba(0,0,0,.3)}
+.logo-mark::after{display:none}
+.logo-mark .logo-svg{width:62%;height:62%;overflow:visible}
+.logo-mark:hover .lk1{animation:link-l .6s var(--spring)}
+.logo-mark:hover .lk2{animation:link-r .6s var(--spring)}
+@keyframes link-l{50%{transform:translate(-2px,2px) rotate(-38deg)}}
+@keyframes link-r{50%{transform:translate(2px,-2px) rotate(-38deg)}}
+.lk-dot{animation:dot-pulse 2.6s ease-in-out infinite;transform-origin:38.5px 9.5px}
+@keyframes dot-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+
+/* ─── الأفاتار ─── */
+.av{background:linear-gradient(140deg,color-mix(in srgb,var(--c,#0a6d93) 55%,#fff),var(--c,#0a6d93) 70%);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 6px -2px rgba(0,0,0,.25);text-shadow:0 1px 2px rgba(0,0,0,.25);font-family:var(--font-d);font-weight:600}
+.av.emoji{background:linear-gradient(140deg,var(--glass-3),var(--panel3));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 2px 8px -3px rgba(0,0,0,.2),0 0 0 1px var(--line)}
+.av .dot{border-color:var(--glass-3)}
+.av .dot.on{background:radial-gradient(circle at 35% 35%,#6ff0a7,#16b45a)}
+.av.sq{border-radius:32%}
+
+/* ─── القائمة الجانبية ─── */
+.side-h h2{font-size:23px;font-weight:700;background:linear-gradient(90deg,var(--text),color-mix(in srgb,var(--text) 60%,var(--brand2)));-webkit-background-clip:text;background-clip:text;color:transparent}
+.search input{background:var(--panel2);border:1px solid var(--line);box-shadow:inset 0 1px 2px rgba(0,0,0,.04)}
+.search input:focus{background:var(--glass-3);box-shadow:var(--glow)}
+.chip{background:var(--panel2);border-color:var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.chip.on{background:linear-gradient(135deg,var(--brand2),var(--brand));border-color:transparent;box-shadow:0 6px 16px -6px rgba(10,122,165,.7)}
+.sec-t{font-family:var(--font-d);font-weight:600;letter-spacing:.4px;font-size:11.5px}
+.ci{border-radius:18px;margin:1px 0;transition:background .25s,transform .25s var(--spring),box-shadow .25s}
+.ci:hover{background:var(--panel2);transform:translateX(0) scale(1.005)}
+.ci.on{background:linear-gradient(135deg,color-mix(in srgb,var(--brand2) 16%,transparent),color-mix(in srgb,var(--brand2) 6%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand2) 25%,transparent),0 8px 24px -14px rgba(10,122,165,.6)}
+.ci.on::before{background:linear-gradient(var(--brand2),#ff5c68);width:3px;top:14px;bottom:14px;box-shadow:0 0 10px var(--brand2)}
+.ci .nm{font-family:var(--font-d);font-weight:500;letter-spacing:-.1px}
+.ci.unread .nm{font-weight:700}
+.badge{background:linear-gradient(135deg,var(--brand2),var(--brand));box-shadow:0 3px 10px -2px rgba(10,122,165,.6);font-family:var(--font-d)}
+.badge.red,.ci .mention-dot{background:linear-gradient(135deg,#ff7a84,#d6303f);box-shadow:0 3px 10px -2px rgba(230,50,65,.65)}
+.notif-card{background:linear-gradient(135deg,#0a7aa5,#003a52 70%);position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
+.notif-card::before{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);transform:translateX(-100%);animation:sheen 3.5s ease-in-out infinite}
+@keyframes sheen{60%,100%{transform:translateX(100%)}}
+.fab{border-radius:20px;box-shadow:0 14px 30px -8px rgba(0,88,122,.7),inset 0 1px 0 rgba(255,255,255,.3)}
+.fab::after{content:'';position:absolute;inset:-6px;border-radius:24px;border:2px solid rgba(76,192,234,.4);animation:ripple 2.4s infinite;pointer-events:none}
+
+/* ─── هيدر المحادثة ─── */
+.chat-h{background:var(--glass);border-bottom:0;box-shadow:var(--glass-hi);position:relative}
+.chat-h::after{content:'';position:absolute;inset-inline:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--brand2) 45%,transparent),color-mix(in srgb,#ff5c68 35%,transparent),transparent)}
+.chat-h .ttl b{font-family:var(--font-d);font-weight:600;font-size:16.5px}
+.chat-h .ibtn{border-radius:14px}
+.chat-h .ibtn:hover{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line)}
+#aCall,#vCall{color:var(--brand2)}
+.pin-bar{background:var(--glass-2);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+
+/* ─── الرسائل ─── */
+.day{background:var(--glass-3);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font-family:var(--font-d);font-weight:500;box-shadow:var(--shadow)}
+.sys{background:var(--glass-2);border:1px solid var(--line);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:12px}
+.new-div{font-family:var(--font-d)}
+.new-div::before,.new-div::after{background:linear-gradient(90deg,transparent,var(--accent));opacity:.6}
+.new-div::after{background:linear-gradient(90deg,var(--accent),transparent)}
+.welcome .av{box-shadow:0 20px 40px -14px rgba(0,0,0,.4),0 0 0 6px var(--glass-2)}
+.welcome h3{font-size:22px}
+.bub{border-radius:20px;background:var(--other);border:1px solid var(--other-line);box-shadow:0 1px 1px rgba(0,0,0,.04),0 6px 18px -10px rgba(0,30,45,.35);padding:9px 13px 7px}
+.m.own .bub{background:linear-gradient(155deg,var(--own1) 0%,var(--own2) 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 24px -12px rgba(0,85,122,.75)}
+.m.own .bub.media-only,.bub.media-only{background:var(--other);padding:4px}
+.m.own .bub.media-only{background:linear-gradient(155deg,var(--own1),var(--own2))}
+/* ذيل الفقاعة */
+.m.last .bub:not(.media-only):not(.deleted)::before{content:'';position:absolute;bottom:-1px;width:14px;height:18px;background:inherit;pointer-events:none}
+.m.last:not(.own) .bub:not(.media-only):not(.deleted)::before{inset-inline-start:-7px;background:var(--other);
+  -webkit-mask:radial-gradient(circle at 0 0,transparent 13px,#000 13.5px);mask:radial-gradient(circle at 0 0,transparent 13px,#000 13.5px)}
+[dir="ltr"] .m.last:not(.own) .bub:not(.media-only):not(.deleted)::before{-webkit-mask:radial-gradient(circle at 0 0,transparent 13px,#000 13.5px);mask:radial-gradient(circle at 0 0,transparent 13px,#000 13.5px);transform:none}
+[dir="rtl"] .m.last:not(.own) .bub:not(.media-only):not(.deleted)::before{-webkit-mask:radial-gradient(circle at 100% 0,transparent 13px,#000 13.5px);mask:radial-gradient(circle at 100% 0,transparent 13px,#000 13.5px)}
+.m.own.last .bub:not(.media-only):not(.deleted)::before{inset-inline-end:-7px;background:var(--own2)}
+[dir="ltr"] .m.own.last .bub:not(.media-only):not(.deleted)::before{-webkit-mask:radial-gradient(circle at 100% 0,transparent 13px,#000 13.5px);mask:radial-gradient(circle at 100% 0,transparent 13px,#000 13.5px)}
+[dir="rtl"] .m.own.last .bub:not(.media-only):not(.deleted)::before{-webkit-mask:radial-gradient(circle at 0 0,transparent 13px,#000 13.5px);mask:radial-gradient(circle at 0 0,transparent 13px,#000 13.5px)}
+.m:not(.own).last .bub{border-end-start-radius:4px}
+.m.own.last .bub{border-end-end-radius:4px}
+.m.first:not(.last):not(.own) .bub{border-end-start-radius:8px}
+.m:not(.first):not(.last):not(.own) .bub{border-start-start-radius:8px;border-end-start-radius:8px}
+.m.last:not(.first):not(.own) .bub{border-start-start-radius:8px}
+.m.own.first:not(.last) .bub{border-end-end-radius:8px}
+.m.own:not(.first):not(.last) .bub{border-start-end-radius:8px;border-end-end-radius:8px}
+.m.own.last:not(.first) .bub{border-start-end-radius:8px}
+.m .who{font-family:var(--font-d);font-weight:600}
+.m.anim{animation:msg-pop .55s cubic-bezier(.2,1.3,.4,1) both}
+.m.own.anim{animation:msg-fly .6s cubic-bezier(.2,1.25,.35,1) both}
+@keyframes msg-pop{0%{opacity:0;transform:translateY(18px) scale(.9);filter:blur(4px)}60%{filter:blur(0)}100%{opacity:1;transform:none}}
+@keyframes msg-fly{0%{opacity:0;transform:translateY(42px) scale(.78);filter:blur(6px)}55%{opacity:1;filter:blur(0)}100%{transform:none}}
+.bub .foot .read{color:#8ff0ff;filter:drop-shadow(0 0 4px rgba(143,240,255,.6))}
+.react{background:var(--glass-3);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 4px 12px -4px rgba(0,0,0,.25)}
+.react.mine{background:linear-gradient(135deg,color-mix(in srgb,var(--brand2) 28%,var(--glass-3)),var(--glass-3));border-color:color-mix(in srgb,var(--brand2) 55%,transparent)}
+.hover-bar{background:var(--glass-3);border:1px solid var(--glass-line);border-radius:16px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:var(--shadow-lg)}
+.quote{background:color-mix(in srgb,var(--brand2) 9%,transparent);border-inline-start-width:3px;border-radius:12px}
+.gal{border-radius:16px;box-shadow:0 10px 26px -14px rgba(0,0,0,.5)}
+.gi::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.35));opacity:0;transition:opacity .3s;pointer-events:none}
+.gi:hover::after{opacity:1}
+.gi .play span{width:60px;height:60px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 10px 30px -6px rgba(0,0,0,.5);transition:transform .3s var(--spring)}
+.gi:hover .play span{transform:scale(1.12)}
+.file{border-radius:16px;background:color-mix(in srgb,var(--panel3) 70%,transparent)}
+.fi{box-shadow:0 6px 14px -6px var(--fc)}
+.voice .pp{background:linear-gradient(135deg,var(--brand2),var(--brand));box-shadow:0 6px 16px -6px rgba(10,122,165,.8)}
+.voice .pp:hover{transform:scale(1.06)}
+.wave i{border-radius:3px}
+.wave i.p{opacity:1;background:linear-gradient(var(--brand2),var(--brand))}
+.m.own .wave i.p{background:#fff}
+
+/* مؤشر الكتابة كفقاعة */
+.typing-ind{height:auto;min-height:0;padding:0 18px;max-width:880px}
+.typing-ind:not(:empty){padding:4px 18px 2px}
+.typing-bub{display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border-radius:18px 18px 18px 6px;background:var(--other);border:1px solid var(--other-line);box-shadow:var(--shadow);animation:msg-pop .4s var(--spring);font-size:12.5px;color:var(--muted)}
+[dir="rtl"] .typing-bub{border-radius:18px 18px 6px 18px}
+.typing-bub .av{--s:22px;font-size:9px}
+.dots i{background:var(--muted);width:7px;height:7px}
+
+/* ─── الإعلانات ─── */
+.ann{border-radius:24px;background:var(--glass-3);border:1px solid var(--glass-line);box-shadow:var(--shadow-lg);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);position:relative}
+.ann-h{background:linear-gradient(120deg,#0a7aa5,#004e6d 55%,#002f44);position:relative;overflow:hidden;padding:14px 18px}
+.ann-h::after{content:'';position:absolute;inset:0;background:radial-gradient(60% 140% at 100% 0,rgba(255,255,255,.22),transparent 60%)}
+.ann.important .ann-h{background:linear-gradient(120deg,#e0a02a,#a8680a 60%,#6d4100)}
+.ann.urgent .ann-h{background:linear-gradient(120deg,#ff5c68,#c2283a 55%,#6e101b)}
+.ann.urgent{box-shadow:0 0 0 1px rgba(255,92,104,.35),0 30px 70px -24px rgba(230,50,65,.55)}
+.ann.urgent .ann-h svg{animation:ring 1.6s infinite}
+.ann-h b{font-family:var(--font-d);font-size:14.5px;letter-spacing:.2px}
+.ann-b .txt{font-size:15.5px}
+.ack-prog .bar{height:8px;background:var(--panel3);box-shadow:inset 0 1px 2px rgba(0,0,0,.1)}
+.ack-prog .bar i{background:linear-gradient(90deg,#16b45a,#5be0ac);box-shadow:0 0 12px rgba(52,199,143,.6);position:relative;overflow:hidden}
+.ack-prog .bar i::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:sheen 2.4s infinite;transform:translateX(-100%)}
+.btn-ok{background:linear-gradient(135deg,#2ed187,#0f8a5f);box-shadow:0 8px 20px -8px rgba(15,138,95,.8),inset 0 1px 0 rgba(255,255,255,.25)}
+
+/* ─── الكومبوزر ─── */
+.composer-in{background:var(--glass-3);border:1px solid var(--glass-line);border-radius:26px;box-shadow:var(--shadow-lg),var(--glass-hi);position:relative}
+.composer-in:focus-within{border-color:transparent;
+  background:linear-gradient(var(--glass-3),var(--glass-3)) padding-box,conic-gradient(from var(--ang),#4cc0ea,#0a7aa5,#ff5c68,#4cc0ea) border-box;
+  animation:ang 5s linear infinite;box-shadow:var(--shadow-lg),0 0 30px -10px rgba(76,192,234,.55)}
+@keyframes ang{to{--ang:360deg}}
+.cmp-row .ibtn{border-radius:50%}
+.cmp-row .ibtn:hover{color:var(--brand2);background:var(--brand-soft)}
+.send{background:radial-gradient(120% 120% at 30% 20%,#2bb3e3,#0a7aa5 45%,#00466a);box-shadow:0 10px 22px -8px rgba(10,122,165,.9),inset 0 1px 0 rgba(255,255,255,.35)}
+.send:not(.mic):hover{transform:scale(1.06) rotate(-4deg)}
+.send.mic{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line)}
+.send.launch svg{animation:launch .45s cubic-bezier(.5,0,.3,1)}
+@keyframes launch{40%{transform:translate(18px,-18px) scale(.6);opacity:0}41%{transform:translate(-14px,14px) scale(.6);opacity:0}100%{transform:none;opacity:1}}
+[dir="rtl"] .send.launch svg{animation-name:launch-rtl}
+@keyframes launch-rtl{40%{transform:scaleX(-1) translate(18px,-18px) scale(.6);opacity:0}41%{transform:scaleX(-1) translate(-14px,14px) scale(.6);opacity:0}100%{transform:scaleX(-1);opacity:1}}
+.cf{border-radius:16px;box-shadow:0 8px 18px -8px rgba(0,0,0,.4)}
+.rec .dotrec{box-shadow:0 0 0 0 rgba(255,92,104,.6);animation:rec-pulse 1.2s infinite}
+@keyframes rec-pulse{70%{box-shadow:0 0 0 10px rgba(255,92,104,0)}100%{box-shadow:0 0 0 0 rgba(255,92,104,0)}}
+.rec .live i{background:linear-gradient(var(--brand2),#ff5c68);border-radius:3px}
+.readonly-bar{background:var(--glass-3);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--glass-line);border-radius:22px}
+.jump{background:var(--glass-3);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--shadow-lg)}
+.drop{background:color-mix(in srgb,var(--glass-3) 80%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:30px}
+
+/* ─── شاشة البداية الفارغة ─── */
+.main-empty h2{font-size:30px;background:linear-gradient(90deg,var(--text),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.main-empty .hero-art{filter:drop-shadow(0 30px 40px rgba(0,40,60,.25))}
+.kb kbd{background:var(--glass-3);border-color:var(--line2);box-shadow:0 2px 0 var(--line2)}
+
+/* ─── الأزرار والحقول ─── */
+.btn{border-radius:14px;font-family:var(--font-d);font-weight:500;letter-spacing:.1px}
+.btn-primary{background:radial-gradient(130% 160% at 20% 0,#2bb3e3,#0a7aa5 40%,#00466a);box-shadow:0 10px 24px -10px rgba(10,122,165,.9),inset 0 1px 0 rgba(255,255,255,.3)}
+.btn-primary:hover{box-shadow:0 14px 30px -10px rgba(10,122,165,1),inset 0 1px 0 rgba(255,255,255,.3);transform:translateY(-1px)}
+.btn-danger{background:radial-gradient(130% 160% at 20% 0,#ff7a84,#d6303f 45%,#8a1622);box-shadow:0 10px 24px -10px rgba(214,48,63,.9),inset 0 1px 0 rgba(255,255,255,.3)}
+.btn-ghost{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line)}
+.input,.select,.textarea{background:var(--panel2);border:1px solid var(--line);border-radius:14px}
+.input:focus,.select:focus,.textarea:focus{background:var(--glass-3);box-shadow:var(--glow);border-color:transparent}
+.switch{box-shadow:inset 0 1px 3px rgba(0,0,0,.2)}
+.switch.on{background:linear-gradient(135deg,#2ed187,#0f8a5f)}
+.rp-host{position:relative;overflow:hidden;isolation:isolate}
+.ripple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.16;transform:scale(0);animation:rip .6s cubic-bezier(.2,.8,.2,1) forwards;z-index:0}
+@keyframes rip{to{transform:scale(1);opacity:0}}
+
+/* ─── المودال والقوائم ─── */
+.ov{background:radial-gradient(120% 100% at 50% 0,rgba(0,40,60,.35),rgba(1,8,12,.6));-webkit-backdrop-filter:blur(10px) saturate(120%);backdrop-filter:blur(10px) saturate(120%)}
+.modal{background:var(--glass-3);border:1px solid var(--glass-line);border-radius:30px;box-shadow:var(--shadow-lg),var(--glass-hi)}
+.modal-h h3{font-size:20px;font-weight:600}
+.modal-f{border-top:1px solid var(--line);background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--panel3) 40%,transparent))}
+.pop{background:var(--glass-3);border:1px solid var(--glass-line);border-radius:20px;box-shadow:var(--shadow-lg)}
+.sheet{background:var(--glass-3);border-top:1px solid var(--glass-line)}
+.menu-it{border-radius:12px}
+.menu-it:hover{background:var(--brand-soft)}
+.kind{background:var(--panel2);border-radius:20px}
+.kind.on{box-shadow:var(--glow)}
+.pick.on{background:var(--brand-soft)}
+.tabs{background:var(--panel2);border-radius:14px;box-shadow:inset 0 0 0 1px var(--line)}
+.tabs button.on{background:var(--glass-3);box-shadow:0 4px 12px -4px rgba(0,0,0,.2),inset 0 0 0 1px var(--line)}
+
+/* ─── التوست / الإشعار ─── */
+.toast{background:var(--glass-3);border:1px solid var(--glass-line);border-radius:22px;box-shadow:var(--shadow-lg),var(--glass-hi)}
+.toast .tbar{background:linear-gradient(90deg,var(--brand2),#ff5c68);height:3px}
+.toast.urgent{box-shadow:0 0 0 1px rgba(255,92,104,.5),var(--shadow-lg)}
+
+/* ─── الصفحات ─── */
+.page-h{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
+.page-h h1{font-size:30px;font-weight:700;background:linear-gradient(90deg,var(--text),color-mix(in srgb,var(--text) 55%,var(--brand2)));-webkit-background-clip:text;background-clip:text;color:transparent}
+.pcard,.stat,.panel{background:var(--glass);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);box-shadow:var(--shadow),var(--glass-hi)}
+.pcard{border-radius:26px}
+.pcard::before{height:80px;opacity:.35;background:radial-gradient(120% 100% at 50% 0,var(--c),transparent 70%)}
+.pcard:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.pcard .av{box-shadow:0 0 0 4px var(--glass-3),0 14px 28px -10px rgba(0,0,0,.45)}
+.stat{border-radius:22px;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;width:120px;height:120px;border-radius:50%;inset-inline-end:-40px;top:-40px;background:currentColor;opacity:.06}
+.stat b{font-size:34px;font-weight:700}
+.panel{border-radius:24px}
+.code{background:linear-gradient(135deg,var(--brand-soft),transparent);border:1px dashed color-mix(in srgb,var(--brand2) 45%,transparent);font-family:'Readex Pro',ui-monospace,monospace}
+
+/* ─── الشريط السفلي (موبايل) ─── */
+.bnav{background:var(--glass-3)!important;border-top:1px solid var(--glass-line)!important;position:relative}
+.bnav button.on::before{display:none}
+.bnav-ind{position:absolute;top:8px;left:0;height:32px;border-radius:14px;background:var(--brand-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand2) 30%,transparent);transition:transform .45s cubic-bezier(.3,1.4,.5,1),width .3s;pointer-events:none;z-index:0}
+.bnav button{z-index:1}
+
+/* ─── المكالمات ─── */
+.call{background:radial-gradient(80% 60% at 20% 0,#0d4f6a 0,transparent 60%),radial-gradient(70% 60% at 100% 100%,#5a1220 0,transparent 60%),#020b10}
+.call::before{content:'';position:absolute;inset:0;background:var(--wall);background-size:280px;opacity:.5;pointer-events:none}
+.call>*:not(.self-view){position:relative}
+.call-ctrl{margin:0 auto 22px;padding:12px 16px;border-radius:30px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);width:max-content;max-width:calc(100% - 24px);box-shadow:0 20px 50px -10px rgba(0,0,0,.6)}
+.cbtn{background:rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.cbtn.end{background:radial-gradient(120% 140% at 30% 0,#ff7a84,#e5484d 50%,#a3202a);box-shadow:0 10px 24px -6px rgba(229,72,77,.8)}
+.cbtn.accept{background:radial-gradient(120% 140% at 30% 0,#6ff0a7,#22c55e 50%,#15803d);box-shadow:0 10px 24px -6px rgba(34,197,94,.8)}
+.tile{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:28px}
+.ringing h2{font-family:var(--font-d);font-weight:600;font-size:30px}
+.ringing .av::before,.ringing .av::after{border-color:rgba(127,199,227,.6)}
+
+/* ─── شاشة الدخول ─── */
+#auth{background:radial-gradient(90% 70% at 15% 10%,#0b4a63 0,transparent 60%),radial-gradient(70% 60% at 100% 100%,#4d0f19 0,transparent 55%),#01090d}
+#auth canvas.net{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.9}
+.auth-card{background:rgba(8,26,35,.6);border:1px solid rgba(160,220,240,.14);border-radius:32px;box-shadow:0 40px 100px -20px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.08);position:relative}
+.auth-card::before{content:'';position:absolute;inset:-1px;border-radius:33px;padding:1px;background:conic-gradient(from var(--ang),transparent 0 60%,rgba(76,192,234,.7),rgba(255,92,104,.6),transparent 90%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);animation:ang 6s linear infinite;pointer-events:none}
+.auth-hero h1{font-family:var(--font-d);font-weight:700;font-size:46px;line-height:1.2}
+.auth-hero h1 em{background:linear-gradient(90deg,#7fd8f6,#ffffff 45%,#ff9aa3);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%;animation:shine 6s ease-in-out infinite}
+@keyframes shine{50%{background-position:100% 0}}
+.auth-hero .logo .logo-mark{width:62px;height:62px;border-radius:20px}
+.auth-feat{background:rgba(255,255,255,.04);border:1px solid rgba(160,220,240,.12);border-radius:16px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.mock{position:relative;margin-top:28px;width:min(400px,100%);height:150px}
+.mock .mb{position:absolute;padding:10px 14px;border-radius:18px;font-size:13.5px;color:#e6f3f8;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  box-shadow:0 20px 40px -14px rgba(0,0,0,.6);opacity:0;animation:mock 9s infinite;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.mock .mb.own{background:linear-gradient(155deg,#1290bd,#00476a);inset-inline-end:0}
+.mock .mb .av{--s:24px;font-size:10px}
+.mock .m1{top:0;inset-inline-start:0;animation-delay:0s}
+.mock .m2{top:50px;inset-inline-end:0;animation-delay:1.4s}
+.mock .m3{top:100px;inset-inline-start:20px;animation-delay:2.8s}
+@keyframes mock{0%{opacity:0;transform:translateY(14px) scale(.95)}6%,80%{opacity:1;transform:none}90%,100%{opacity:0;transform:translateY(-8px)}}
+
+/* ─── شاشة الافتتاح ─── */
+#splash{position:fixed;inset:0;z-index:999;display:grid;place-items:center;background:radial-gradient(90% 70% at 30% 20%,#0b4a63,transparent 60%),radial-gradient(70% 60% at 100% 100%,#4d0f19,transparent 55%),#01090d;transition:opacity .55s,transform .55s;color:#e6f3f8}
+#splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.sp-in{text-align:center}
+.sp-logo{width:104px;height:104px;margin:0 auto;border-radius:32px;display:grid;place-items:center;background:radial-gradient(120% 120% at 20% 10%,#18a6d6,#00587a 45%,#002a3c);
+  box-shadow:0 30px 70px -14px rgba(10,122,165,.75),inset 0 1px 0 rgba(255,255,255,.35);animation:sp-pop .8s cubic-bezier(.2,1.4,.4,1) both}
+.sp-logo .lk1,.sp-logo .lk2{stroke-dasharray:80;stroke-dashoffset:80;animation:draw .7s .25s ease-out forwards}
+.sp-logo .lk2{animation-delay:.45s}
+.sp-logo .lk-dot{transform:scale(0);animation:sp-dot .4s .85s cubic-bezier(.2,1.6,.4,1) forwards}
+.sp-name{margin-top:22px;font-family:var(--font-d);font-size:22px;font-weight:600;letter-spacing:.3px;opacity:0;animation:rise .6s .5s forwards}
+.sp-bar{width:120px;height:3px;border-radius:3px;background:rgba(255,255,255,.1);margin:18px auto 0;overflow:hidden}
+.sp-bar i{display:block;height:100%;width:40%;border-radius:3px;background:linear-gradient(90deg,#4cc0ea,#ff5c68);animation:sp-load 1.1s ease-in-out infinite}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes sp-pop{0%{transform:scale(.4) rotate(-12deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes sp-dot{to{transform:scale(1)}}
+@keyframes sp-load{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+
+/* ─── مؤثرات ─── */
+.fx-emo{position:fixed;z-index:500;font-size:22px;pointer-events:none;transform:translate(-50%,-50%);animation:emo 1s cubic-bezier(.15,.8,.3,1) forwards}
+@keyframes emo{0%{opacity:1;transform:translate(-50%,-50%) scale(.3)}70%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--rot)) scale(var(--sc))}}
+.fx-cf{position:fixed;z-index:500;pointer-events:none;border-radius:2px;animation:cf 1.4s cubic-bezier(.2,.7,.4,1) forwards}
+@keyframes cf{0%{transform:translate(0,0) rotate(0)}45%{transform:translate(var(--dx),var(--dy)) rotate(calc(var(--rot) * .5));opacity:1}100%{transform:translate(calc(var(--dx) * 1.2),calc(var(--dy) + var(--fall))) rotate(var(--rot));opacity:0}}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.28s}
+.main{view-transition-name:mainpane}
+::view-transition-old(mainpane){animation:vt-out .22s ease-in both}
+::view-transition-new(mainpane){animation:vt-in .34s cubic-bezier(.2,.9,.3,1) both}
+@keyframes vt-out{to{opacity:0;transform:translateY(-6px) scale(.99)}}
+@keyframes vt-in{from{opacity:0;transform:translateY(10px) scale(.99)}}
+
+/* ─── موبايل: تخفيف البلور للأداء ─── */
+@media (max-width:900px){
+  :root{--blur:16px}
+  .rail-ind{display:none}
+  .auth-hero h1{font-size:30px}
+  .mock{display:none}
+  .chat-h{background:var(--glass-3)}
+  .main{background:radial-gradient(90% 45% at 0 0,color-mix(in srgb,var(--a1) 38%,transparent),transparent 70%),radial-gradient(80% 45% at 100% 100%,color-mix(in srgb,var(--a2) 32%,transparent),transparent 70%),var(--bg)}
+  .info{background:var(--bg)}
+  .info::before{content:'';position:absolute;inset:0;z-index:-1;background:radial-gradient(90% 45% at 100% 0,color-mix(in srgb,var(--a1) 30%,transparent),transparent 70%)}
+  .composer-in{border-radius:24px}
+  .call-ctrl{margin-bottom:calc(14px + var(--safe-b))}
+}
+@media (prefers-reduced-transparency:reduce){
+  .side,.info,.chat-h,.composer-in,.modal,.pop,.sheet,.toast,.bnav{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--panel)}
+}
 </style>
 </head>
 <body>
@@ -1585,6 +1949,7 @@ function applyTheme() {
   const dark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   $('meta[name=theme-color]').content = dark ? '#031017' : '#004e6d';
+  if (typeof FX !== 'undefined') FX.wallpaper();
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
@@ -1634,7 +1999,7 @@ function errMsg(e) {
 
 /* ═════════════ BOOT ═════════════ */
 async function boot() {
-  applyLang(); applyTheme();
+  applyLang(); FX.aurora(); applyTheme(); FX.splash();
   if (!DEMO && !window.supabase) { document.body.innerHTML = '<p style="padding:40px;text-align:center">تعذّر تحميل المكتبات — تأكد من الاتصال بالإنترنت</p>'; return; }
   registerSW();
   let user = null;
@@ -1663,10 +2028,10 @@ async function afterLogin() {
 function authShell(inner) {
   $('#app').classList.add('hidden');
   const a = $('#auth'); a.classList.remove('hidden');
-  a.innerHTML = `<div class="auth-bg"><div class="grid"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+  a.innerHTML = `<canvas class="net"></canvas><div class="auth-bg"><div class="grid"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
   <div class="auth-wrap">
     <div class="auth-hero">
-      <div class="logo"><div class="logo-mark">${ic('link')}</div><div><div style="font-family:var(--font-d);font-weight:800;font-size:22px">${t('app')}</div><div style="color:#87a7b3;font-size:13px">AL-SALASIL CONNECT</div></div></div>
+      <div class="logo">${logoMark()}<div><div style="font-family:var(--font-d);font-weight:800;font-size:22px">${t('app')}</div><div style="color:#87a7b3;font-size:13px">AL-SALASIL CONNECT</div></div></div>
       <h1>${t('hero1')}<br><em>${t('hero2')}</em></h1>
       <p>${t('heroP')}</p>
       <div class="auth-feats">
@@ -1675,7 +2040,14 @@ function authShell(inner) {
     </div>
     <div class="auth-card">${inner}</div>
   </div>`;
+  const hero = $('.auth-hero', a); hero && hero.insertAdjacentHTML('beforeend', mockHTML());
+  FX.particles($('canvas.net', a)); FX.hideSplash();
   return a;
+}
+function mockHTML() {
+  const m = (cls, who, txt, d) => `<div class="mb ${cls}" style="animation-delay:${d}s">${who ? avHTML({ display_name: who, user_id: who }, 24) : ''}<span>${txt}</span></div>`;
+  return LANG === 'ar' ? `<div class="mock">${m('m1', 'خالد', 'الطلبات اتوزّعت كلها ✅', 0)}${m('m2 own', '', 'ممتاز، شكراً يا خالد 👏', 1.4)}${m('m3', 'Bikash', '📣 تم الاطلاع على القرار', 2.8)}</div>`
+    : `<div class="mock">${m('m1', 'Khaled', 'All orders dispatched ✅', 0)}${m('m2 own', '', 'Great work, thanks 👏', 1.4)}${m('m3', 'Bikash', '📣 Announcement acknowledged', 2.8)}</div>`;
 }
 function langToggleHTML() { return `<button type="button" id="langT" class="row" style="gap:6px">${ic('globe')}<span>${LANG === 'ar' ? 'English' : 'العربية'}</span></button>`; }
 function bindLangToggle(re) { const b = $('#langT'); b && (b.onclick = () => { LANG = LANG === 'ar' ? 'en' : 'ar'; store.set('lang', LANG); applyLang(); re(); }); }
@@ -1777,6 +2149,7 @@ async function startApp() {
   const open = new URLSearchParams(location.search).get('c') || store.get('last', null);
   if (open && S.conv.has(open) && (!S.mobile || new URLSearchParams(location.search).get('c'))) openConv(open);
   else renderMain();
+  FX.hideSplash();
   checkUrgent();
   updateBadge();
   if (DEMO) setTimeout(() => toast(t('demoP'), 'info'), 600);
@@ -1812,7 +2185,7 @@ function navBadge(v) {
 }
 function renderRail() {
   const r = $('#rail');
-  r.innerHTML = `<div class="logo-mark" title="${t('app')}">${ic('link')}</div>
+  r.innerHTML = `${logoMark()}
     ${NAV().map(([v, i, l]) => `<button class="rail-btn ${S.view === v ? 'on' : ''}" data-v="${v}" aria-label="${l}">${ic(i)}${navBadge(v)}<span class="tip">${l}</span></button>`).join('')}
     <div class="rail-sp"></div>
     <button class="rail-btn" id="themeBtn" aria-label="${t('theme')}">${ic(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon')}<span class="tip">${t('theme')}</span></button>
@@ -1826,6 +2199,7 @@ function renderRail() {
     + `<button data-v="me">${avHTML(S.me, 24)}<span>${S.me?.role === 'admin' ? t('settings') : t('settings')}</span>${navBadge('admin')}</button>`;
   $$('button', bn).forEach(b => b.onclick = () => b.dataset.v === 'me' ? openSettings() : go(b.dataset.v));
   hydrate(r); hydrate(bn);
+  FX.slideIndicator(r, '.rail-btn.on', 'rail-ind', 'y'); FX.slideIndicator(bn, 'button.on', 'bnav-ind', 'x');
 }
 function go(v) {
   if (S.mobile && v !== 'chats' && v !== 'anns') history.pushState({ v }, '');
@@ -1944,10 +2318,8 @@ async function openConv(id, { jumpTo } = {}) {
   if (S.mobile) { if (!app.classList.contains('show-main')) history.pushState({ v: 'chat' }, ''); app.classList.add('show-main'); }
   const ch = chatOf(id), c = S.conv.get(id);
   ch.unreadFrom = c.unread > 0 ? c.last_read_at : null;
-  renderChat();
-  if (!ch.loaded) {
-    await loadMsgs(id);
-  } else { rebuildMsgs(true); }
+  FX.vt(() => { renderChat(); if (ch.loaded) rebuildMsgs(true); });
+  if (!ch.loaded) await loadMsgs(id);
   if (S.cur !== id) return;
   B.participants(id).then(ps => { ps.forEach(p => ch.parts.set(p.user_id, p)); updateChatHeaderSub(); patchTicks(); }).catch(() => {});
   B.pinned(id).then(p => { ch.pinned = p; renderPinBar(); }).catch(() => {});
@@ -2270,7 +2642,7 @@ function bindMsgs(root, only) {
 }
 async function toggleReact(mid, emoji) {
   const ch = chatOf(S.cur), set = ch.reacts.get(mid)?.get(emoji), on = !(set && set.has(S.me.user_id));
-  if (on) addReact(ch, { message_id: mid, user_id: S.me.user_id, emoji }); else set.delete(S.me.user_id);
+  if (on) { addReact(ch, { message_id: mid, user_id: S.me.user_id, emoji }); const p = FX.lastPt || { x: innerWidth / 2, y: innerHeight / 2 }; FX.burst(p.x, p.y, emoji); navigator.vibrate?.(10); } else set.delete(S.me.user_id);
   patchMsg(mid);
   try { await B.react(mid, emoji, on); } catch (e) { toast(errMsg(e), 'err'); }
 }
@@ -2322,6 +2694,7 @@ function jumpToMsg(id) {
 async function doAck(id) {
   const ch = chatOf(S.cur); if (!ch.acks.has(id)) ch.acks.set(id, new Map()); ch.acks.get(id).set(S.me.user_id, new Date().toISOString());
   patchMsg(id); navigator.vibrate?.(15);
+  { const p = FX.lastPt || { x: innerWidth / 2, y: innerHeight / 2 }; FX.confetti(p.x, p.y); }
   const c = S.conv.get(S.cur); if (c) { c.pending_acks = Math.max(0, (c.pending_acks || 1) - 1); renderSide(); renderRail(); updateBadge(); }
   try { await B.ack(id); toast(t('ackDone')); } catch (e) { toast(errMsg(e), 'err'); }
 }
@@ -2489,6 +2862,7 @@ async function sendNow() {
     priority: c.kind === 'announce' ? d.priority : 'normal', requires_ack: c.kind === 'announce' ? d.ack : false };
   d.text = ''; d.files = []; d.reply = null; d.mentions = new Set(); d.priority = 'normal'; store.set('draft-' + c.id, '');
   renderComposer(); closeMention();
+  { const sb = $('#sendBtn'); if (sb) { sb.classList.add('launch'); setTimeout(() => sb.classList.remove('launch'), 500); } }
   if (!S.mobile) $('#txt')?.focus(); else $('#txt')?.focus();
   Sound.sent();
   await dispatch({ ...base, kind: files.length ? 'media' : 'text' }, files);
@@ -2580,8 +2954,10 @@ function typingChanged(c) {
 }
 function renderTyping() {
   const el = $('#typInd'); if (!el) return; const ty = S.typing.get(S.cur);
-  if (!ty || !ty.size || curConv()?.kind === 'dm') { el.innerHTML = ''; return; }
-  el.innerHTML = `<span class="dots"><i></i><i></i><i></i></span><span>${esc([...ty.keys()].map(u => memberOf(u).display_name.split(' ')[0]).join('، '))} ${ty.size > 1 ? t('typingMany') : t('typing')}</span>`;
+  if (!ty || !ty.size) { el.innerHTML = ''; return; }
+  const ids = [...ty.keys()], dm = curConv()?.kind === 'dm';
+  el.innerHTML = `<span class="typing-bub">${ids.slice(0, 3).map(u => avHTML(memberOf(u), 22)).join('')}<span class="dots"><i></i><i></i><i></i></span>${dm ? '' : `<span>${esc(ids.map(u => memberOf(u).display_name.split(' ')[0]).join('، '))}</span>`}</span>`;
+  hydrate(el); if (nearBottom()) scrollBottom();
 }
 
 /* ─────────── voice notes ─────────── */
@@ -2879,6 +3255,7 @@ function urgentModal(m) {
   $('#uAck', ov).onclick = async () => {
     $('#uAck', ov).disabled = true;
     try { await B.ack(m.id); } catch {}
+    { const r = $('#uAck', ov).getBoundingClientRect(); FX.confetti(r.left + r.width / 2, r.top, 40); }
     const ch = S.chats.get(m.conversation_id); if (ch) { if (!ch.acks.has(m.id)) ch.acks.set(m.id, new Map()); ch.acks.get(m.id).set(S.me.user_id, new Date().toISOString()); if (S.cur === m.conversation_id) patchMsg(m.id); }
     const c = S.conv.get(m.conversation_id); if (c) c.pending_acks = Math.max(0, c.pending_acks - 1);
     ov.close(); renderSide(); renderRail(); updateBadge(); toast(t('ackDone')); setTimeout(checkUrgent, 400);
@@ -3253,6 +3630,133 @@ window.addEventListener('popstate', () => {
   if (S.infoOpen) { S.infoOpen = false; $('#info')?.remove(); $('#app').classList.remove('info-open'); return; }
   closeMobile();
 });
+/* ═══════════════════════════════════════════════════════════════
+   FX — الهوية البصرية الفاخرة: شعار، خلفية أورورا، ورق حائط، ريبل، انفجار تفاعلات، كونفيتي، شاشة افتتاحية
+   ═══════════════════════════════════════════════════════════════ */
+const LOGO = (size = 30, dot = true) => `<svg class="logo-svg" viewBox="0 0 48 48" width="${size}" height="${size}" fill="none" aria-hidden="true">
+  <defs><linearGradient id="lg-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#bfe9f7"/></linearGradient></defs>
+  <g stroke="url(#lg-a)" stroke-width="4.2" stroke-linecap="round">
+    <rect class="lk1" x="6" y="15" width="22" height="13" rx="6.5" transform="rotate(-38 17 21.5)"/>
+    <rect class="lk2" x="20" y="20" width="22" height="13" rx="6.5" transform="rotate(-38 31 26.5)"/>
+  </g>${dot ? '<circle class="lk-dot" cx="38.5" cy="9.5" r="4.6" fill="#ff5c68" stroke="#00334a" stroke-width="2"/>' : ''}</svg>`;
+const logoMark = (cls = '') => `<div class="logo-mark ${cls}">${LOGO(30)}</div>`;
+
+const FX = {
+  reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+
+  /* خلفية أورورا ثابتة خلف التطبيق */
+  aurora() {
+    if ($('#aurora')) return;
+    document.body.insertAdjacentHTML('afterbegin', `<div id="aurora" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i><i class="a4"></i><div class="grain"></div></div>`);
+  },
+
+  /* ورق حائط الشات: رسومات خط بهوية السلاسل */
+  wallpaper() {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    const col = dark ? 'rgba(127,199,227,.075)' : 'rgba(0,78,109,.07)';
+    const items = [['link', 30, 34, -20, 1.1], ['truck', 150, 26, 8, 1], ['chat', 236, 90, -12, .9], ['clock', 70, 128, 14, .85], ['sparkle', 190, 168, 0, .75],
+      ['ann', 26, 226, 18, .9], ['phone', 128, 230, -16, .85], ['check2', 238, 252, 0, .8], ['image', 92, 62, 10, .7], ['bell', 210, 6, 22, .7], ['folder', 6, 150, -8, .75], ['zap', 150, 110, 12, .7]];
+    const g = items.map(([n, x, y, r, s]) => `<g transform="translate(${x} ${y}) rotate(${r} 12 12) scale(${s})">${IC[n]}</g>`).join('');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280"><g fill="none" stroke="${col}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${g}</g></svg>`;
+    document.documentElement.style.setProperty('--wall', `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`);
+  },
+
+  /* موجة لمس (ripple) */
+  initRipple() {
+    const SEL = '.btn,.ci,.chip,.menu-it,.kind,.pick,.send,.cbtn,.set-row,.call-row,.mem,.tabs button,.info-acts button,.pcard,.quick-react button';
+    document.addEventListener('pointerdown', e => {
+      FX.lastPt = { x: e.clientX, y: e.clientY };
+      if (this.reduced) return;
+      const el = e.target.closest(SEL); if (!el || el.disabled) return;
+      const r = el.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2;
+      const s = document.createElement('span'); s.className = 'ripple';
+      s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+      el.classList.add('rp-host'); el.appendChild(s); setTimeout(() => s.remove(), 650);
+    }, { passive: true });
+  },
+
+  /* انفجار إيموجي عند التفاعل */
+  burst(x, y, emoji, n = 9) {
+    if (this.reduced) return;
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement('span'); p.className = 'fx-emo'; p.textContent = emoji;
+      const a = (Math.PI * 2 * i) / n + Math.random() * .5, dist = 46 + Math.random() * 46;
+      p.style.cssText = `left:${x}px;top:${y}px;--dx:${Math.cos(a) * dist}px;--dy:${Math.sin(a) * dist - 30}px;--rot:${(Math.random() - .5) * 120}deg;--sc:${.7 + Math.random() * .7};animation-delay:${Math.random() * 60}ms`;
+      document.body.appendChild(p); setTimeout(() => p.remove(), 1100);
+    }
+  },
+
+  /* كونفيتي (تأكيد الاطلاع) */
+  confetti(x, y, n = 28) {
+    if (this.reduced) return;
+    const cols = ['#ff5c68', '#4bb6e0', '#34c78f', '#f0b54a', '#ffffff', '#9a232e'];
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement('i'); p.className = 'fx-cf';
+      const a = -Math.PI / 2 + (Math.random() - .5) * Math.PI * 1.2, v = 80 + Math.random() * 120;
+      p.style.cssText = `left:${x}px;top:${y}px;background:${cols[i % cols.length]};--dx:${Math.cos(a) * v}px;--dy:${Math.sin(a) * v}px;--fall:${120 + Math.random() * 120}px;--rot:${Math.random() * 720 - 360}deg;width:${5 + Math.random() * 5}px;height:${8 + Math.random() * 6}px`;
+      document.body.appendChild(p); setTimeout(() => p.remove(), 1500);
+    }
+  },
+
+  /* مؤشر منزلق في الشريط الجانبي والسفلي */
+  slideIndicator(container, activeSel, cls, axis = 'y') {
+    if (!container) return;
+    const on = $(activeSel, container); let ind = $('.' + cls, container);
+    if (!on) { ind && (ind.style.opacity = 0); return; }
+    if (!ind) { ind = h(`<i class="${cls}"></i>`); container.appendChild(ind); }
+    const key = '_last_' + cls, prev = FX[key];
+    const pos = axis === 'y' ? { top: on.offsetTop, h: on.offsetHeight } : { left: on.offsetLeft, w: on.offsetWidth };
+    const apply = p => { if (axis === 'y') { ind.style.transform = `translateY(${p.top}px)`; ind.style.height = p.h + 'px'; } else { ind.style.transform = `translateX(${p.left}px)`; ind.style.width = p.w + 'px'; } };
+    ind.style.transition = 'none'; apply(prev || pos); ind.style.opacity = 1;
+    requestAnimationFrame(() => requestAnimationFrame(() => { ind.style.transition = ''; apply(pos); }));
+    FX[key] = pos;
+  },
+
+  /* شاشة افتتاحية */
+  splash() {
+    if ($('#splash')) return;
+    document.body.insertAdjacentHTML('beforeend', `<div id="splash"><div class="sp-in"><div class="sp-logo">${LOGO(64)}</div><div class="sp-name">${esc(t('app'))}</div><div class="sp-bar"><i></i></div></div></div>`);
+    this._splashAt = Date.now();
+  },
+  async hideSplash() {
+    const s = $('#splash'); if (!s) return;
+    const wait = Math.max(0, 950 - (Date.now() - (this._splashAt || 0))); await sleep(wait);
+    s.classList.add('out'); setTimeout(() => s.remove(), 600);
+  },
+
+  /* شبكة جزيئات متصلة (سلاسل) في شاشة الدخول */
+  particles(canvas) {
+    if (!canvas || this.reduced) return;
+    const ctx = canvas.getContext('2d'); let W, H, pts, raf, dpr = Math.min(2, devicePixelRatio || 1);
+    const resize = () => { W = canvas.clientWidth; H = canvas.clientHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const n = Math.round(Math.min(70, W * H / 16000)); pts = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, r: 1 + Math.random() * 1.6, red: Math.random() < .12 })); };
+    resize(); addEventListener('resize', resize);
+    const mouse = { x: -999, y: -999 }; canvas.parentElement.addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    const loop = () => {
+      if (!canvas.isConnected) { cancelAnimationFrame(raf); removeEventListener('resize', resize); return; }
+      ctx.clearRect(0, 0, W, H);
+      for (const p of pts) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1; }
+      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+        const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < 130) { ctx.strokeStyle = `rgba(127,199,227,${(1 - d / 130) * .22})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+      }
+      for (const p of pts) {
+        const md = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+        if (md < 160) { ctx.strokeStyle = `rgba(255,143,152,${(1 - md / 160) * .35})`; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(mouse.x, mouse.y); ctx.stroke(); }
+        ctx.fillStyle = p.red ? 'rgba(255,92,104,.9)' : 'rgba(191,233,247,.8)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+  },
+
+  /* انتقال سلس بين الشاشات (View Transitions) */
+  vt(fn) {
+    if (this.reduced || !document.startViewTransition || S.mobile) return fn();
+    try { document.startViewTransition(fn); } catch { fn(); }
+  },
+};
+FX.initRipple();
 /* ═══════════════════════════════════════════════════════════════
    Calls — WebRTC mesh (حتى 8 أشخاص) + إشارات عبر Supabase Realtime
    ═══════════════════════════════════════════════════════════════ */
