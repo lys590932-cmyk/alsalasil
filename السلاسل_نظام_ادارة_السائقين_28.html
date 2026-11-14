@@ -2016,6 +2016,7 @@ body::after{
     <button class="nav-tab" id="nav-rating" data-tip="التقييمات" onclick="setMainView('rating')"><i class="ti ti-award"></i> <span>التقييمات</span></button>
     <button class="nav-tab" id="nav-reports" data-tip="تقارير الشركة" onclick="setMainView('reports')"><i class="ti ti-chart-pie"></i> <span data-i18n="nav_reports">تقارير الشركة</span></button>
     <button class="nav-tab" id="nav-vio" data-tip="المخالفات" onclick="setMainView('vio')"><i class="ti ti-alert-triangle"></i> <span data-i18n="nav_violations">المخالفات</span></button>
+    <button class="nav-tab" id="nav-docs" data-tip="تنبيهات المستندات" onclick="setMainView('docs')" style="position:relative"><i class="ti ti-calendar-due"></i> <span>تنبيهات المستندات</span><span id="navDocsBadge" class="badge-dot" style="display:none">0</span></button>
     <button class="nav-tab" id="nav-apps" data-tip="طلبات التقديم" onclick="setMainView('apps')"><i class="ti ti-user-plus"></i> <span data-i18n="nav_applications">طلبات التقديم</span></button>
 
     <div class="rail-sec">أنظمة مرتبطة</div>
@@ -2140,6 +2141,9 @@ body::after{
 <!-- VIOLATIONS VIEW -->
 <div id="view-vio" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
   <div id="vio-content"></div>
+</div>
+<div id="view-docs" style="display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)">
+  <div id="docs-content"></div>
 </div>
 
 <!-- ACCOUNTING VIEW -->
@@ -3373,6 +3377,7 @@ async function cloudLoadDrivers(){
     device:x.device||'', nationality:x.nationality||'', age:x.age||0,
     startDate:x.start_date||'', endDate:x.end_date||'', civil:x.civil||'',
     license:x.license||'', partner:x.partner||'', health:x.health||'',
+    civil_expiry:x.civil_expiry||'', health_expiry:x.health_expiry||'',
     email:x.email||'', email_consent_at:x.email_consent_at||'',
     staff_type:x.staff_type||'driver', position:x.position||'',
     iban:x.iban||'', bank_name:x.bank_name||'', status:x.status||'active',
@@ -4019,6 +4024,7 @@ function renderDetail(){
         <div class="isec-h"><div class="dot" style="background:#3b82f6"></div>معلومات السيارة</div>
         <div class="irows">
           <div class="irow"><i class="ti ti-car iico"></i><span class="ilbl">رقم السيارة</span><span class="ival mono">${F(d.car,'car')}</span></div>
+          ${(!editing && window.DOCX) ? DOCX.vehRowsHTML(d) : ''}
           <div class="irow"><i class="ti ti-gas-station iico"></i><span class="ilbl">بطاقة البترول</span><span class="ival mono">${F(d.petrol,'petrol')}</span></div>
           <div class="irow"><i class="ti ti-device-mobile iico"></i><span class="ilbl">رقم الجهاز</span><span class="ival mono">${F(d.device,'device')}</span></div>
           <div class="irow"><i class="ti ti-sim iico"></i><span class="ilbl">SIM</span><span class="ival mono">${F(d.sim,'sim')}</span></div>
@@ -4039,11 +4045,13 @@ function renderDetail(){
         <div class="isec-h"><div class="dot" style="background:#f59e0b"></div>المستندات الرسمية</div>
         <div class="irows">
           <div class="irow"><i class="ti ti-id iico"></i><span class="ilbl">الرقم المدني</span><span class="ival mono">${F(d.civil,'civil')}</span></div>
-          <div class="irow"><i class="ti ti-license iico"></i><span class="ilbl">انتهاء الرخصة</span><span class="ival">${F(d.license,'license',{t:'date',vc:ls.vc})}</span></div>
+          <div class="irow"><i class="ti ti-id-badge-2 iico"></i><span class="ilbl">انتهاء المدنية</span><span class="ival">${F(d.civil_expiry||'','civil_expiry',{t:'date',disp:window.docxChip?docxChip(d.civil_expiry):(d.civil_expiry||'—')})}</span></div>
+          <div class="irow"><i class="ti ti-license iico"></i><span class="ilbl">انتهاء الرخصة</span><span class="ival">${F(d.license,'license',{t:'date',vc:ls.vc,disp:(window.docxChip&&!isAdminStaff(d))?docxChip(d.license):undefined})}</span></div>
           <div class="irow"><i class="ti ti-heart-plus iico"></i><span class="ilbl">البطاقة الصحية</span><span class="ival">
             ${F(d.health,'health',{sel:[{v:'available',l:'متاحة'},{v:'',l:'غير متاحة'}],
               disp:d.health==='available'?'<span class="ival ok">متاحة</span>':'<span class="ival bad">غير متاحة</span>',vc:''})}
           </span></div>
+          <div class="irow"><i class="ti ti-calendar-heart iico"></i><span class="ilbl">انتهاء الصحية</span><span class="ival">${F(d.health_expiry||'','health_expiry',{t:'date',disp:window.docxChip?docxChip(d.health_expiry):(d.health_expiry||'—')})}</span></div>
         </div>
       </div>
       <div class="isec">
@@ -4110,7 +4118,7 @@ function saveDriver(){
   const d = DRV.find(x=>x.id===selId); if(!d) return;
   if(!requirePerm('edit','drivers')) return;
   const _before = JSON.parse(JSON.stringify(d));
-  const _fields = ['car','petrol','device','sim','name','nationality','civil','license','health','partner','startDate','endDate','email','iban','bank_name'];
+  const _fields = ['car','petrol','device','sim','name','nationality','civil','civil_expiry','license','health','health_expiry','partner','startDate','endDate','email','iban','bank_name'];
   // ── تحقق على نسخة مؤقتة قبل تطبيق التعديل ──
   const _cand = Object.assign({}, d);
   _fields.forEach(f=>{ const el=document.getElementById('e_'+f); if(el) _cand[f]=el.value; });
@@ -4122,8 +4130,8 @@ function saveDriver(){
   const _ibEl = document.getElementById('e_iban');
   if(_ibEl){
     const _ib = _ibEl.value.replace(/[\s-]/g,'').toUpperCase();
-    if(_ib && !/^KW\d{2}[A-Z0-9]{22}$/.test(_ib)){
-      if(!confirm('الـ IBAN المُدخَل لا يطابق صيغة الآيبان الكويتي\n(KW + رقمان + 22 خانة = 30 خانة).\n\n'
+    if(_ib && !/^KW\d{2}[A-Z]{4}[A-Z0-9]{22}$/.test(_ib)){
+      if(!confirm('الـ IBAN المُدخَل لا يطابق صيغة الآيبان الكويتي\n(KW + رقمان + كود البنك 4 حروف + 22 خانة = 30 خانة).\n\n'
                 + 'المُدخَل: ' + _ib + ' (' + _ib.length + ' خانة)\n\nالحفظ رغم ذلك؟')) return;
     }
     _ibEl.value = _ib;
@@ -5001,8 +5009,10 @@ function setMainView(view) {
   if(drepEl) drepEl.style.display = view==='dreports' ? 'block' : 'none';
   const rtEl = document.getElementById('view-rating');
   if(rtEl) rtEl.style.display = view==='rating' ? 'block' : 'none';
+  const dxEl = document.getElementById('view-docs');
+  if(dxEl) dxEl.style.display = view==='docs' ? 'block' : 'none';
   // Update nav tabs
-  ['drivers','dash','att','vio','clockin','acc','custody','payroll','homicash','livemap','apps','reports','orders','dreports','rating'].forEach(v => {
+  ['drivers','dash','att','vio','clockin','acc','custody','payroll','homicash','livemap','apps','reports','orders','dreports','rating','docs'].forEach(v => {
     const el = document.getElementById('nav-'+v);
     if(el) el.classList.toggle('on', v===view);
   });
@@ -5021,6 +5031,7 @@ function setMainView(view) {
   if(view==='orders')  renderOrdersAdmin();
   if(view==='dreports') renderDailyReports();
   if(view==='rating')   renderRating();
+  if(view==='docs' && window.DOCX) DOCX.render();
   if(view!=='clockin') clearInterval(clockinAutoRefresh);
   if(view!=='livemap') stopLiveMapRefresh();
 }
@@ -15004,6 +15015,34 @@ window.addEventListener('ark-auth-ready', function(){
   }, 2500);
 });
 
+/* ─── مزامنة دورية للعهدة ───
+   المزامنة كانت بتحصل مرة واحدة بس عند فتح ARK. لو ARK فاضل مفتوح
+   والعهدة اتصرف منها من الموبايل، المصروف ماكانش بيوصل للحسابات
+   غير بعد إعادة تحميل الصفحة. دلوقتي: كل دقيقتين + عند الرجوع للتبويب. */
+let _custAutoBusy = false, _custAutoLast = 0;
+async function custodyAutoSync(force){
+  if(_custAutoBusy || !window.ARK_SB) return;
+  if(!force && Date.now() - _custAutoLast < 60000) return;
+  _custAutoBusy = true;
+  try{
+    const r = await fetchCustody();
+    if(!r.ok) return;
+    _custAutoLast = Date.now();
+    const s = syncCustodyToExpenses();
+    if(s.added || s.updated || s.removed){
+      if(typeof toast === 'function') toast('العهدة: اتزامن '+(s.added+s.updated)+' مصروف مع المحاسبة','s');
+      if(typeof currentView !== 'undefined' && currentView === 'acc' && typeof renderAccounting === 'function') renderAccounting();
+      if(typeof currentView !== 'undefined' && currentView === 'custody') drawCustody(s);
+    }
+  }catch(e){ console.warn('[custody auto-sync]', e); }
+  finally{ _custAutoBusy = false; }
+}
+window.addEventListener('ark-auth-ready', function(){
+  setInterval(function(){ if(document.visibilityState === 'visible') custodyAutoSync(true); }, 120000);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible') custodyAutoSync(false); });
+  window.addEventListener('focus', function(){ custodyAutoSync(false); });
+});
+
 
 
 
@@ -19561,7 +19600,8 @@ function doPush(cols, silent){
       sim: d.sim || '', car: d.car || '', license: d.license || '',
       civil: d.civil || '', device: d.device || '', petrol: d.petrol || '',
       nationality: d.nationality || '', age: parseInt(d.age) || 0,
-      start_date: d.startDate || '', health: d.health || ''
+      start_date: d.startDate || '', health: d.health || '',
+      civil_expiry: d.civil_expiry || null, health_expiry: d.health_expiry || null
     };
     if(hasActive) r.is_active = true;
     try{ r.salary_base = (getSalData(d.id) || {}).base || 0; }catch(e){ r.salary_base = 0; }
@@ -22467,5 +22507,1176 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
 })();
 
 </script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   ARK — تنبيهات انتهاء المستندات (السائقين + المركبات)
+   ──────────────────────────────────────────────────────────────────────────
+   السائق:  البطاقة المدنية (civil_expiry) · الرخصة (license) · الصحية (health_expiry)
+   المركبة: التأمين (insurance) · الدفتر/التجديد (registration)
+
+   المراحل:  أخضر > 45 يوم · برتقالي ≤ 45 (تنبيه أول) · أحمر ≤ 30 (تنبيه تاني)
+             · أحمر غامق = منتهي. الحدود قابلة للتعديل من الإعدادات.
+
+   التنبيه بيظهر مرة لكل مرحلة: أول ما المستند يدخل الـ 45، تاني لما يدخل
+   الـ 30، وتالت لما ينتهي. «تم الاطلاع» بيتسجّل على (المستند + تاريخه)،
+   فلو اتجدّد بتاريخ جديد العدّاد بيبدأ من الأول تلقائياً.
+
+   المركبات متخزّنة بالـ «لوحة الموحّدة» (أرقام اللوحة مفصولة بـ /) عشان
+   «/ 23 / 72401» و«23/72401» يبقوا نفس العربية، ولوحة مشتركة بين سائقين
+   تبقى سجل واحد.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+var SK_VEH = 'sl_veh1', SK_CFG = 'sl_docx_cfg', SK_ACK = 'sl_docx_ack', SK_DEL = 'sl_veh_del';
+var VEH_TBL = 'ark_vehicles';
+
+function ld(k, def){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch(e){ return def; } }
+function sv(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function tst(m,t){ try{ toast(m,t||'s'); }catch(e){} }
+
+var VEH = ld(SK_VEH, {});              // { plate: {plate,type,insurance,registration,notes,updated_at} }
+var CFG = Object.assign({ warn1:45, warn2:30, popup:true }, ld(SK_CFG, {}));
+var ACK = ld(SK_ACK, {});              // { itemKey: stageAcked }
+var UI  = { kind:'all', tier:'', doc:'', q:'', partner:'', tab:'alerts' };
+var CLOUD = { ok:null, err:'' };
+
+/* ───────── أدوات التاريخ واللوحة ───────── */
+var AR_DIG = /[٠-٩]/g;
+function enDigits(s){ return String(s==null?'':s).replace(AR_DIG, function(c){ return String(c.charCodeAt(0)-1632); }); }
+
+function normPlate(s){
+  var g = enDigits(s).match(/\d+/g);
+  return g ? g.join('/') : '';
+}
+
+function pad(n){ return (n<10?'0':'') + n; }
+function isoOf(y,m,d){
+  var dt = new Date(Date.UTC(y, m-1, d));
+  if(dt.getUTCFullYear()!==y || dt.getUTCMonth()!==m-1 || dt.getUTCDate()!==d) return null;
+  return y + '-' + pad(m) + '-' + pad(d);
+}
+/* بيقبل: رقم Excel التسلسلي · Date · yyyy-mm-dd · dd/mm/yyyy · dd-mm-yyyy · dd.mm.yyyy
+   (والأرقام العربية). اليوم/الشهر الملتبس بيتقري يوم/شهر زي الكويت؛ ولو الرقم
+   التاني أكبر من 12 يبقى مكتوب شهر/يوم فبنعكسه. */
+function parseDate(v){
+  if(v===null || v===undefined || v==='') return { empty:true };
+  if(v instanceof Date && !isNaN(v)) return { iso: isoOf(v.getFullYear(), v.getMonth()+1, v.getDate()) };
+  if(typeof v === 'number'){
+    if(v < 20000 || v > 80000) return { err:'رقم مش تاريخ' };
+    var ms = Math.round((v - 25569) * 86400000);          // 25569 = 1970-01-01
+    var d = new Date(ms);
+    return { iso: isoOf(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate()) };
+  }
+  var s = enDigits(v).trim();
+  if(!s) return { empty:true };
+  var m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m){ var r = isoOf(+m[1], +m[2], +m[3]); return r ? { iso:r } : { err:'تاريخ غير موجود' }; }
+  m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})$/);
+  if(m){
+    var a = +m[1], b = +m[2], y = +m[3];
+    if(y < 100) y += 2000;
+    var day = a, mon = b;
+    if(b > 12 && a <= 12){ day = b; mon = a; }
+    var r2 = isoOf(y, mon, day);
+    return r2 ? { iso:r2 } : { err:'تاريخ غير موجود' };
+  }
+  if(/^\d+(\.\d+)?$/.test(s)) return parseDate(Number(s));
+  return { err:'صيغة غير مفهومة' };
+}
+function todayISO(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function daysLeft(iso){
+  if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  var t = todayISO().split('-'), e = iso.split('-');
+  return Math.round((Date.UTC(+e[0],+e[1]-1,+e[2]) - Date.UTC(+t[0],+t[1]-1,+t[2])) / 86400000);
+}
+function fmtD(iso){ if(!iso) return '—'; var p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function cleanISO(v){ var p = parseDate(v); return p.iso || ''; }
+
+/* ───────── المراحل والألوان ───────── */
+var TIERS = {
+  exp:  { l:'منتهي',        c:'#fff',    bg:'#991b1b', bd:'#7f1d1d', stage:3, ic:'ti-alert-octagon' },
+  crit: { l:'عاجل',         c:'#991b1b', bg:'#fee2e2', bd:'#fca5a5', stage:2, ic:'ti-alarm' },
+  warn: { l:'تنبيه أول',    c:'#9a3412', bg:'#ffedd5', bd:'#fdba74', stage:1, ic:'ti-bell-ringing' },
+  ok:   { l:'سليم',         c:'#166534', bg:'#dcfce7', bd:'#86efac', stage:0, ic:'ti-circle-check' },
+  none: { l:'بدون تاريخ',   c:'#475569', bg:'#f1f5f9', bd:'#cbd5e1', stage:0, ic:'ti-calendar-question' }
+};
+function tierOf(days){
+  if(days===null || days===undefined) return 'none';
+  if(days < 0) return 'exp';
+  if(days <= CFG.warn2) return 'crit';
+  if(days <= CFG.warn1) return 'warn';
+  return 'ok';
+}
+function daysTxt(days){
+  if(days===null) return '—';
+  if(days < 0)  return 'منتهي من ' + (-days) + ' يوم';
+  if(days === 0) return 'ينتهي النهارده';
+  if(days === 1) return 'باقي يوم واحد';
+  return 'باقي ' + days + ' يوم';
+}
+function chip(iso, opt){
+  opt = opt || {};
+  var d = daysLeft(iso), t = TIERS[tierOf(d)];
+  if(!iso) return '<span class="dx-chip" style="background:'+t.bg+';color:'+t.c+';border-color:'+t.bd+'">'+(opt.emptyTxt||'غير مسجّل')+'</span>';
+  return (opt.noDate?'':'<span class="mono" style="font-weight:700">'+fmtD(iso)+'</span> ')
+       + '<span class="dx-chip" style="background:'+t.bg+';color:'+t.c+';border-color:'+t.bd+'"><i class="ti '+t.ic+'"></i> '+daysTxt(d)+'</span>';
+}
+
+/* ───────── تعريف المستندات ───────── */
+var DOCS = {
+  civil:        { kind:'driver',  f:'civil_expiry', l:'البطاقة المدنية', ic:'ti-id' },
+  license:      { kind:'driver',  f:'license',      l:'رخصة القيادة',    ic:'ti-license', driverOnly:true },
+  health:       { kind:'driver',  f:'health_expiry',l:'الشهادة الصحية',  ic:'ti-heart-plus', driverOnly:true },
+  insurance:    { kind:'vehicle', f:'insurance',    l:'تأمين المركبة',   ic:'ti-shield-check' },
+  registration: { kind:'vehicle', f:'registration', l:'دفتر المركبة',    ic:'ti-notebook' }
+};
+var VTYPE = { car:{l:'سيارة', ic:'ti-car'}, motorcycle:{l:'دراجة نارية', ic:'ti-motorbike'} };
+
+function drvList(){ return (typeof DRV!=='undefined' && Array.isArray(DRV)) ? DRV : []; }
+function isActive(d){
+  if(!d) return false;
+  if(d.status && d.status !== 'active') return false;
+  if(d.endDate && d.endDate <= todayISO()) return false;
+  return true;
+}
+function isAdm(d){ return d && d.staff_type === 'admin'; }
+function partnerName(pid){
+  try{ var p = (PARTNERS||[]).find(function(x){ return x.id===pid; }); return p ? p.name : (pid||''); }catch(e){ return pid||''; }
+}
+
+/* كل المركبات: المسجّلة + المكتشفة من سيارات السائقين النشطين */
+function vehicles(){
+  var map = {};
+  Object.keys(VEH).forEach(function(p){ if(!VEH[p]._deleted) map[p] = { plate:p, rec:VEH[p], drivers:[] }; });
+  drvList().forEach(function(d){
+    if(!isActive(d)) return;
+    var p = normPlate(d.car); if(!p) return;
+    if(!map[p]) map[p] = { plate:p, rec:VEH[p] || null, drivers:[] };
+    map[p].drivers.push(d);
+  });
+  return Object.keys(map).map(function(k){ return map[k]; })
+    .sort(function(a,b){ return a.plate.localeCompare(b.plate, 'en', {numeric:true}); });
+}
+function vehOfDriver(d){ var p = normPlate(d && d.car); return p ? (VEH[p] || null) : null; }
+
+/* قائمة كل البنود القابلة للتنبيه */
+function items(){
+  var out = [];
+  drvList().forEach(function(d){
+    if(!isActive(d)) return;
+    ['civil','license','health'].forEach(function(k){
+      var def = DOCS[k];
+      if(def.driverOnly && isAdm(d)) return;
+      var iso = cleanISO(d[def.f]);
+      var days = daysLeft(iso);
+      out.push({ kind:'driver', id:d.id, name:d.name||d.id, partner:d.partner||'', sub:d.id,
+                 doc:k, date:iso, days:days, tier:tierOf(days), key:'d|'+d.id+'|'+k+'|'+iso });
+    });
+  });
+  vehicles().forEach(function(v){
+    var r = v.rec || {};
+    ['insurance','registration'].forEach(function(k){
+      var iso = cleanISO(r[k]); var days = daysLeft(iso);
+      out.push({ kind:'vehicle', id:v.plate, name:v.plate, partner:(v.drivers[0]||{}).partner||'',
+                 sub:(VTYPE[r.type]||{}).l || 'النوع غير محدد', type:r.type||'',
+                 drivers:v.drivers.map(function(d){ return d.id+' '+(d.name||''); }),
+                 doc:k, date:iso, days:days, tier:tierOf(days), key:'v|'+v.plate+'|'+k+'|'+iso });
+    });
+  });
+  return out;
+}
+function stageOf(it){ return TIERS[it.tier].stage; }
+function pendingAlerts(list){
+  return (list||items()).filter(function(it){ var s = stageOf(it); return s > 0 && s > (ACK[it.key]||0); });
+}
+function ackAll(list){
+  var all = items(), live = {};
+  all.forEach(function(it){ live[it.key] = 1; });
+  (list || pendingAlerts(all)).forEach(function(it){ ACK[it.key] = Math.max(ACK[it.key]||0, stageOf(it)); });
+  /* نشيل المفاتيح القديمة (مستند اتجدّد أو سائق مشي) عشان الذاكرة ماتكبرش */
+  Object.keys(ACK).forEach(function(k){ if(!live[k]) delete ACK[k]; });
+  sv(SK_ACK, ACK);
+  paintBadge();
+}
+
+/* ───────── شارة القائمة ───────── */
+function paintBadge(){
+  var b = document.getElementById('navDocsBadge'); if(!b) return;
+  var all = items();
+  var n = all.filter(function(it){ return it.tier==='exp'||it.tier==='crit'||it.tier==='warn'; }).length;
+  var hot = all.some(function(it){ return it.tier==='exp'||it.tier==='crit'; });
+  b.style.display = n ? '' : 'none';
+  b.textContent = n > 99 ? '99+' : n;
+  b.style.background = hot ? '#b91c1c' : '#d97706';
+}
+
+/* ───────── المزامنة السحابية للمركبات ───────── */
+function sbf(url, o){ return (window.ARKSB ? ARKSB.fetch(url, o) : fetch(url, Object.assign({}, o, {headers:Object.assign({apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json'}, (o||{}).headers||{})}))); }
+function sbh(x){ return window.ARKSB ? (x||{}) : Object.assign({apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json'}, x||{}); }
+function vehRow(r){
+  return { plate:r.plate, type:r.type||null, insurance_expiry:r.insurance||null,
+           registration_expiry:r.registration||null, notes:r.notes||null,
+           updated_at:r.updated_at || new Date().toISOString() };
+}
+function cloudPushVeh(plates){
+  if(typeof SUPA_URL === 'undefined') return Promise.resolve();
+  var rows = plates.map(function(p){ return VEH[p]; }).filter(function(r){ return r && !r._deleted; }).map(vehRow);
+  if(!rows.length) return Promise.resolve();
+  return sbf(SUPA_URL + '/rest/v1/' + VEH_TBL + '?on_conflict=plate', {
+    method:'POST', headers: sbh({ 'Prefer':'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(rows)
+  }).then(function(r){
+    if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+' '+t.slice(0,120)); });
+    CLOUD.ok = true; CLOUD.err = '';
+  }).catch(function(e){ CLOUD.ok = false; CLOUD.err = String(e.message||e); console.warn('[DOCX] vehicles push', CLOUD.err); })
+    .then(paintCloud);
+}
+function cloudPullVeh(){
+  if(typeof SUPA_URL === 'undefined') return Promise.resolve();
+  return sbf(SUPA_URL + '/rest/v1/' + VEH_TBL + '?select=*&limit=5000', { headers: sbh() })
+    .then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+' '+t.slice(0,120)); });
+      return r.json();
+    }).then(function(rows){
+      CLOUD.ok = true; CLOUD.err = '';
+      var changed = 0, localNewer = [];
+      var cloudSet = {};
+      (rows||[]).forEach(function(x){
+        var p = normPlate(x.plate); if(!p) return; cloudSet[p] = 1;
+        var cur = VEH[p];
+        var cRec = { plate:p, type:x.type||'', insurance:x.insurance_expiry||'', registration:x.registration_expiry||'',
+                     notes:x.notes||'', updated_at:x.updated_at||'' };
+        if(!cur || (cRec.updated_at && (!cur.updated_at || cRec.updated_at > cur.updated_at))){ VEH[p] = cRec; changed++; }
+        else if(cur.updated_at && cur.updated_at > cRec.updated_at) localNewer.push(p);
+      });
+      /* سجلات محلية ماوصلتش السحابة لسه */
+      Object.keys(VEH).forEach(function(p){ if(!cloudSet[p] && !VEH[p]._deleted) localNewer.push(p); });
+      if(changed){ sv(SK_VEH, VEH); refreshAll(); }
+      if(localNewer.length) cloudPushVeh(localNewer);
+      paintCloud();
+    }).catch(function(e){ CLOUD.ok = false; CLOUD.err = String(e.message||e); paintCloud(); });
+}
+function paintCloud(){
+  var el = document.getElementById('dxCloud'); if(!el) return;
+  if(CLOUD.ok === null){ el.innerHTML = ''; return; }
+  el.innerHTML = CLOUD.ok
+    ? '<span style="color:#059669"><i class="ti ti-cloud-check"></i> المركبات متزامنة مع السحابة</span>'
+    : '<span style="color:#b45309" title="'+esc(CLOUD.err)+'"><i class="ti ti-cloud-off"></i> المركبات محفوظة على الجهاز ده بس — جدول '+VEH_TBL+' مش جاهز في Supabase</span>';
+}
+
+/* ───────── حفظ ───────── */
+function saveVeh(plates){
+  sv(SK_VEH, VEH);
+  if(plates && plates.length) cloudPushVeh(plates);
+}
+function setVeh(plate, patch, silent){
+  var p = normPlate(plate); if(!p) return null;
+  var before = VEH[p] ? JSON.parse(JSON.stringify(VEH[p])) : null;
+  var r = VEH[p] || { plate:p, type:'', insurance:'', registration:'', notes:'' };
+  Object.keys(patch).forEach(function(k){ r[k] = patch[k]; });
+  delete r._deleted;
+  r.updated_at = new Date().toISOString();
+  VEH[p] = r;
+  if(!silent){
+    try{ audit('update','vehicle',p,before,JSON.parse(JSON.stringify(r))); }catch(e){}
+    saveVeh([p]); refreshAll();
+  }
+  return r;
+}
+function refreshAll(){
+  paintBadge();
+  try{ if(typeof currentView!=='undefined' && currentView==='docs') render(); }catch(e){}
+  try{ if(typeof selId!=='undefined' && selId && typeof renderDetail==='function' && !editing) renderDetail(); }catch(e){}
+}
+
+/* ═════════════════════════ الشاشة ═════════════════════════ */
+function render(){
+  var host = document.getElementById('docs-content'); if(!host) return;
+  var all = items();
+  var cnt = { exp:0, crit:0, warn:0, ok:0, none:0 };
+  all.forEach(function(it){ cnt[it.tier]++; });
+  var filled = all.length - cnt.none;
+  var pct = all.length ? Math.round(filled*100/all.length) : 0;
+  var pend = pendingAlerts(all).length;
+
+  var h = '';
+  h += '<div class="dx-head"><h2><i class="ti ti-calendar-due"></i> تنبيهات انتهاء المستندات</h2>'
+     + '<div class="dx-actions">'
+     + (pend ? '<button class="btn btn-d" onclick="DOCX.showPopup(true)"><i class="ti ti-bell-ringing"></i> '+pend+' تنبيه جديد</button>' : '')
+     + '<button class="btn btn-s" onclick="DOCX.pickImport()"><i class="ti ti-file-import"></i> استيراد Excel</button>'
+     + '<button class="btn btn-e" onclick="DOCX.exportXlsx()"><i class="ti ti-file-spreadsheet"></i> تصدير شيت للتعبئة</button>'
+     + '<button class="btn btn-c" onclick="DOCX.settings()" title="إعدادات التنبيه"><i class="ti ti-adjustments"></i></button>'
+     + '</div></div>';
+  h += '<div class="dx-sub">التنبيه الأول قبل <b>'+CFG.warn1+'</b> يوم · التنبيه التاني قبل <b>'+CFG.warn2+'</b> يوم · وتنبيه عند الانتهاء'
+     + ' <span id="dxCloud" style="margin-inline-start:10px"></span></div>';
+
+  /* بطاقات الملخص — قابلة للضغط كفلتر */
+  h += '<div class="dx-cards">';
+  ['exp','crit','warn','ok','none'].forEach(function(t){
+    var T = TIERS[t];
+    var lbl = t==='crit' ? 'خلال '+CFG.warn2+' يوم' : t==='warn' ? 'خلال '+(CFG.warn2+1)+'–'+CFG.warn1+' يوم' : T.l;
+    h += '<div class="dx-card'+(UI.tier===t?' on':'')+'" style="--c:'+T.c+';--cbg:'+T.bg+';--bd:'+T.bd+(t==='exp'?';--lc:#fee2e2':'')+'" onclick="DOCX.f(\'tier\',\''+(UI.tier===t?'':t)+'\')">'
+       + '<i class="ti '+T.ic+'"></i><div class="n">'+cnt[t]+'</div><div class="l">'+lbl+'</div></div>';
+  });
+  h += '<div class="dx-card dx-prog"><div class="l" style="margin-bottom:6px">اكتمال البيانات</div>'
+     + '<div class="dx-bar"><span style="width:'+pct+'%"></span></div><div class="l" style="margin-top:6px">'+filled+' من '+all.length+' تاريخ ('+pct+'%)</div></div>';
+  h += '</div>';
+
+  /* التبويبات */
+  h += '<div class="dx-tabs">'
+     + tabBtn('alerts','ti-list-check','كل المستندات')
+     + tabBtn('vehicles','ti-car','سجل المركبات ('+vehicles().length+')')
+     + '</div>';
+
+  if(UI.tab === 'vehicles') h += renderVehicles();
+  else h += renderAlerts(all);
+
+  host.innerHTML = h;
+  paintCloud();
+}
+function tabBtn(id, ic, l){
+  return '<span class="sch-ftab'+(UI.tab===id?' on':'')+'" onclick="DOCX.f(\'tab\',\''+id+'\')"><i class="ti '+ic+'"></i> '+l+'</span>';
+}
+
+function renderAlerts(all){
+  var list = all.filter(function(it){
+    if(UI.kind!=='all' && it.kind!==UI.kind) return false;
+    if(UI.tier && it.tier!==UI.tier) return false;
+    if(UI.doc && it.doc!==UI.doc) return false;
+    if(UI.partner && it.partner!==UI.partner) return false;
+    if(UI.q){
+      var q = UI.q.toLowerCase().trim(), qp = normPlate(UI.q);
+      var hay = (it.id+' '+it.name+' '+(it.drivers||[]).join(' ')).toLowerCase();
+      var hit = hay.indexOf(q) >= 0 || (it.kind==='vehicle' && qp && it.id.indexOf(qp) >= 0);
+      if(!hit) return false;
+    }
+    return true;
+  }).sort(function(a,b){
+    var da = a.days===null ? 1e9 : a.days, db = b.days===null ? 1e9 : b.days;
+    return da - db || a.name.localeCompare(b.name);
+  });
+
+  var partners = []; try{ partners = PARTNERS||[]; }catch(e){}
+  var h = '<div class="dx-filters">'
+    + '<span class="sch-ftab'+(UI.kind==='all'?' on':'')+'" onclick="DOCX.f(\'kind\',\'all\')">الكل</span>'
+    + '<span class="sch-ftab'+(UI.kind==='driver'?' on':'')+'" onclick="DOCX.f(\'kind\',\'driver\')"><i class="ti ti-user"></i> السائقين</span>'
+    + '<span class="sch-ftab'+(UI.kind==='vehicle'?' on':'')+'" onclick="DOCX.f(\'kind\',\'vehicle\')"><i class="ti ti-car"></i> المركبات</span>'
+    + '<select class="dx-sel" onchange="DOCX.f(\'doc\',this.value)"><option value="">كل المستندات</option>'
+    + Object.keys(DOCS).map(function(k){ return '<option value="'+k+'"'+(UI.doc===k?' selected':'')+'>'+DOCS[k].l+'</option>'; }).join('')
+    + '</select>'
+    + '<select class="dx-sel" onchange="DOCX.f(\'partner\',this.value)"><option value="">كل الشركاء</option>'
+    + partners.map(function(p){ return '<option value="'+esc(p.id)+'"'+(UI.partner===p.id?' selected':'')+'>'+esc(p.name)+'</option>'; }).join('')
+    + '</select>'
+    + '<input class="dx-sel" style="min-width:180px" placeholder="بحث بالاسم / الكود / اللوحة" value="'+esc(UI.q)+'" oninput="DOCX.q(this.value)" id="dxQ">'
+    + (UI.tier||UI.doc||UI.partner||UI.q||UI.kind!=='all' ? '<span class="sch-ftab" onclick="DOCX.reset()"><i class="ti ti-x"></i> مسح الفلاتر</span>' : '')
+    + '</div>';
+
+  if(!list.length) return h + '<div class="dx-empty"><i class="ti ti-mood-smile"></i>مفيش بنود مطابقة للفلتر</div>';
+
+  h += '<div class="dx-tblwrap"><table class="dx-tbl"><thead><tr>'
+     + '<th>الحالة</th><th>الجهة</th><th>المستند</th><th>تاريخ الانتهاء</th><th>المتبقي</th><th>المرحلة</th><th></th></tr></thead><tbody>';
+  list.forEach(function(it){
+    var T = TIERS[it.tier], D = DOCS[it.doc];
+    var who = it.kind==='driver'
+      ? '<a class="dx-link" onclick="DOCX.openDriver(\''+esc(it.id)+'\')"><b>'+esc(it.name)+'</b></a><div class="dx-mut">'+esc(it.id)+(it.partner?' · '+esc(partnerName(it.partner)):'')+'</div>'
+      : '<b class="mono">'+esc(it.id)+'</b> <span class="dx-mut"><i class="ti '+((VTYPE[it.type]||{}).ic||'ti-help')+'"></i> '+esc(it.sub)+'</span>'
+        + '<div class="dx-mut">'+(it.drivers.length ? esc(it.drivers.join('، ')) : 'غير مربوطة بسائق')+'</div>';
+    var stage = it.tier==='exp' ? 'انتهى' : it.tier==='crit' ? 'التنبيه التاني ('+CFG.warn2+')' : it.tier==='warn' ? 'التنبيه الأول ('+CFG.warn1+')' : '—';
+    var isNew = stageOf(it) > (ACK[it.key]||0);
+    h += '<tr style="--rc:'+T.bd+'">'
+       + '<td><span class="dx-chip" style="background:'+T.bg+';color:'+T.c+';border-color:'+T.bd+'"><i class="ti '+T.ic+'"></i> '+T.l+'</span>'+(isNew?' <span class="dx-new">جديد</span>':'')+'</td>'
+       + '<td style="text-align:right">'+who+'</td>'
+       + '<td><i class="ti '+D.ic+'" style="color:var(--muted)"></i> '+D.l+'</td>'
+       + '<td class="mono">'+fmtD(it.date)+'</td>'
+       + '<td style="font-weight:800;color:'+(it.tier==='exp'?'#991b1b':T.c)+'">'+daysTxt(it.days)+'</td>'
+       + '<td class="dx-mut">'+stage+'</td>'
+       + '<td><button class="btn btn-c dx-mini" onclick="DOCX.renew(\''+it.kind+'\',\''+esc(it.id)+'\',\''+it.doc+'\')"><i class="ti ti-refresh"></i> '+(it.date?'تجديد':'إضافة تاريخ')+'</button></td>'
+       + '</tr>';
+  });
+  h += '</tbody></table></div><div class="dx-mut" style="margin-top:8px">'+list.length+' بند</div>';
+  return h;
+}
+
+function renderVehicles(){
+  var vs = vehicles();
+  var h = '<div class="dx-filters"><button class="btn btn-s dx-mini" onclick="DOCX.addVehicle()"><i class="ti ti-plus"></i> إضافة مركبة</button>'
+        + '<span class="dx-mut">التعديل هنا بيتحفظ فوراً. المركبات بتتربط بالسائقين من خانة «رقم السيارة» في كارت السائق.</span></div>';
+  if(!vs.length) return h + '<div class="dx-empty"><i class="ti ti-car-off"></i>مفيش مركبات لسه</div>';
+  h += '<div class="dx-tblwrap"><table class="dx-tbl"><thead><tr><th>اللوحة</th><th>النوع</th><th>انتهاء التأمين</th><th>انتهاء الدفتر</th><th>السائقون</th><th></th></tr></thead><tbody>';
+  vs.forEach(function(v){
+    var r = v.rec || {}; var P = esc(v.plate);
+    var warn = v.plate.indexOf('/') < 0 ? ' <i class="ti ti-alert-triangle" style="color:#d97706" title="مش بصيغة لوحة — راجع خانة رقم السيارة في كارت السائق"></i>' : '';
+    h += '<tr>'
+       + '<td class="mono"><b>'+P+'</b>'+warn+'</td>'
+       + '<td><select class="dx-sel" onchange="DOCX.setV(\''+P+'\',\'type\',this.value)">'
+       + '<option value="">— اختر —</option>'
+       + Object.keys(VTYPE).map(function(k){ return '<option value="'+k+'"'+(r.type===k?' selected':'')+'>'+VTYPE[k].l+'</option>'; }).join('')
+       + '</select></td>'
+       + '<td><input type="date" class="dx-sel" value="'+esc(r.insurance||'')+'" onchange="DOCX.setV(\''+P+'\',\'insurance\',this.value)"><div>'+(r.insurance?chip(r.insurance,{noDate:true}):'')+'</div></td>'
+       + '<td><input type="date" class="dx-sel" value="'+esc(r.registration||'')+'" onchange="DOCX.setV(\''+P+'\',\'registration\',this.value)"><div>'+(r.registration?chip(r.registration,{noDate:true}):'')+'</div></td>'
+       + '<td style="text-align:right;font-size:11.5px">'+(v.drivers.length ? v.drivers.map(function(d){ return '<a class="dx-link" onclick="DOCX.openDriver(\''+esc(d.id)+'\')">'+esc(d.id)+' '+esc(d.name||'')+'</a>'; }).join('<br>') : '<span class="dx-mut">غير مربوطة</span>')
+       + (v.drivers.length > 1 ? '<div class="dx-mut" style="color:#b45309">مشتركة بين '+v.drivers.length+' سائقين</div>' : '') + '</td>'
+       + '<td>'+(v.drivers.length ? '' : '<button class="btn btn-c dx-mini" title="حذف المركبة" onclick="DOCX.delVehicle(\''+P+'\')"><i class="ti ti-trash"></i></button>')+'</td>'
+       + '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+/* ───────── نافذة عامة ───────── */
+function modal(html, maxw){
+  var ov = document.getElementById('dxModal');
+  if(!ov){
+    ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'dxModal';
+    ov.addEventListener('click', function(e){ if(e.target===ov) closeM(); });
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = '<div class="modal" style="max-width:'+(maxw||520)+'px">'+html+'</div>';
+  ov.classList.add('on');
+  return ov;
+}
+function closeM(){ var ov = document.getElementById('dxModal'); if(ov) ov.classList.remove('on'); }
+
+/* ───────── تجديد / إضافة تاريخ ───────── */
+function renew(kind, id, doc){
+  if(typeof requirePerm==='function' && !requirePerm('edit','drivers')) return;
+  var D = DOCS[doc], cur = '', title = '';
+  if(kind === 'driver'){ var d = drvList().find(function(x){ return x.id===id; }); if(!d) return; cur = cleanISO(d[D.f]); title = (d.name||id)+' — '+id; }
+  else { cur = cleanISO((VEH[id]||{})[D.f]); title = 'المركبة '+id; }
+  modal('<h2><i class="ti '+D.ic+'" style="color:var(--blue)"></i> '+D.l+'</h2>'
+    + '<div class="dx-mut" style="margin:-6px 0 14px">'+esc(title)+'</div>'
+    + (cur ? '<div style="margin-bottom:10px">التاريخ الحالي: '+chip(cur)+'</div>' : '')
+    + '<div class="fg"><label>تاريخ الانتهاء الجديد</label><input id="dxRenewDate" type="date" value="'+esc(cur)+'"></div>'
+    + '<div class="macts"><button class="btn btn-c" onclick="DOCX.close()">إلغاء</button>'
+    + '<button class="btn btn-s" onclick="DOCX.saveRenew(\''+kind+'\',\''+esc(id)+'\',\''+doc+'\')"><i class="ti ti-check"></i> حفظ</button></div>', 440);
+  setTimeout(function(){ var el = document.getElementById('dxRenewDate'); if(el) el.focus(); }, 50);
+}
+function saveRenew(kind, id, doc){
+  var v = (document.getElementById('dxRenewDate')||{}).value || '';
+  var p = parseDate(v);
+  if(v && !p.iso){ alert('التاريخ غير صحيح'); return; }
+  var D = DOCS[doc];
+  if(kind === 'driver'){
+    var d = drvList().find(function(x){ return x.id===id; }); if(!d) return;
+    var before = JSON.parse(JSON.stringify(d));
+    d[D.f] = p.iso || '';
+    if(doc==='health' && p.iso && daysLeft(p.iso) >= 0) d.health = 'available';
+    try{ audit('update','driver',d.id,before,JSON.parse(JSON.stringify(d))); }catch(e){}
+    try{ save(); }catch(e){}
+  } else {
+    var patch = {}; patch[D.f] = p.iso || ''; setVeh(id, patch, true);
+    try{ audit('update','vehicle',id,null,VEH[normPlate(id)]); }catch(e){}
+    saveVeh([normPlate(id)]);
+  }
+  closeM(); refreshAll();
+  tst(p.iso ? 'اتحفظ — '+D.l+' لحد '+fmtD(p.iso) : 'اتمسح التاريخ', 's');
+}
+
+function addVehicle(){
+  modal('<h2><i class="ti ti-car" style="color:var(--blue)"></i> إضافة مركبة</h2>'
+    + '<div class="fgrid">'
+    + '<div class="fg"><label>رقم اللوحة</label><input id="dxNP" placeholder="23/72401"></div>'
+    + '<div class="fg"><label>النوع</label><select id="dxNT"><option value="car">سيارة</option><option value="motorcycle">دراجة نارية</option></select></div>'
+    + '<div class="fg"><label>انتهاء التأمين</label><input id="dxNI" type="date"></div>'
+    + '<div class="fg"><label>انتهاء الدفتر</label><input id="dxNR" type="date"></div>'
+    + '</div><div class="macts"><button class="btn btn-c" onclick="DOCX.close()">إلغاء</button>'
+    + '<button class="btn btn-s" onclick="DOCX.saveNewVehicle()"><i class="ti ti-check"></i> حفظ</button></div>', 520);
+}
+function saveNewVehicle(){
+  var p = normPlate(document.getElementById('dxNP').value);
+  if(!p){ alert('اكتب رقم اللوحة'); return; }
+  if(VEH[p] && !VEH[p]._deleted && !confirm('المركبة '+p+' موجودة. تحدّث بياناتها؟')) return;
+  setVeh(p, { type:document.getElementById('dxNT').value,
+              insurance:cleanISO(document.getElementById('dxNI').value),
+              registration:cleanISO(document.getElementById('dxNR').value) });
+  closeM(); tst('اتضافت المركبة '+p, 's');
+}
+function delVehicle(p){
+  if(!confirm('حذف المركبة '+p+' من السجل؟')) return;
+  var before = VEH[p];
+  delete VEH[p]; sv(SK_VEH, VEH);
+  try{ audit('delete','vehicle',p,before,null); }catch(e){}
+  if(typeof SUPA_URL !== 'undefined')
+    sbf(SUPA_URL + '/rest/v1/' + VEH_TBL + '?plate=eq.' + encodeURIComponent(p), { method:'DELETE', headers:sbh() }).catch(function(){});
+  refreshAll();
+}
+
+/* ───────── الإعدادات ───────── */
+function settings(){
+  modal('<h2><i class="ti ti-adjustments" style="color:var(--blue)"></i> إعدادات التنبيه</h2>'
+    + '<div class="fgrid">'
+    + '<div class="fg"><label>التنبيه الأول قبل (يوم)</label><input id="dxW1" type="number" min="2" max="365" value="'+CFG.warn1+'"></div>'
+    + '<div class="fg"><label>التنبيه التاني قبل (يوم)</label><input id="dxW2" type="number" min="1" max="364" value="'+CFG.warn2+'"></div>'
+    + '<div class="fg full"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input id="dxPop" type="checkbox" '+(CFG.popup?'checked':'')+' style="width:auto"> إظهار نافذة التنبيهات الجديدة عند فتح ARK</label></div>'
+    + '</div><div class="macts"><button class="btn btn-c" onclick="DOCX.close()">إلغاء</button>'
+    + '<button class="btn btn-s" onclick="DOCX.saveSettings()"><i class="ti ti-check"></i> حفظ</button></div>', 460);
+}
+function saveSettings(){
+  var w1 = parseInt(document.getElementById('dxW1').value,10), w2 = parseInt(document.getElementById('dxW2').value,10);
+  if(!(w1 > 0 && w2 > 0 && w2 < w1)){ alert('التنبيه التاني لازم يكون أقل من الأول، والاتنين أكبر من صفر'); return; }
+  CFG.warn1 = w1; CFG.warn2 = w2; CFG.popup = document.getElementById('dxPop').checked;
+  sv(SK_CFG, CFG); closeM(); refreshAll(); tst('اتحفظت الإعدادات','s');
+}
+
+/* ───────── نافذة التنبيهات الجديدة ───────── */
+function showPopup(force){
+  var pend = pendingAlerts();
+  if(!pend.length){ if(force) tst('مفيش تنبيهات جديدة','s'); return; }
+  pend.sort(function(a,b){ return a.days - b.days; });
+  var groups = { exp:[], crit:[], warn:[] };
+  pend.forEach(function(it){ groups[it.tier].push(it); });
+  var h = '<h2><i class="ti ti-bell-ringing" style="color:#b91c1c"></i> تنبيهات مستندات جديدة <span class="dx-mut" style="font-size:12px">('+pend.length+')</span></h2>';
+  ['exp','crit','warn'].forEach(function(t){
+    if(!groups[t].length) return;
+    var T = TIERS[t];
+    var ttl = t==='exp' ? 'منتهية' : t==='crit' ? 'خلال '+CFG.warn2+' يوم' : 'خلال '+CFG.warn1+' يوم';
+    h += '<div class="dx-pgrp" style="border-color:'+T.bd+'"><div class="dx-pgh" style="background:'+T.bg+';color:'+(t==='exp'?'#fff':T.c)+'"><i class="ti '+T.ic+'"></i> '+ttl+' — '+groups[t].length+'</div>';
+    groups[t].forEach(function(it){
+      h += '<div class="dx-prow"><span><b>'+esc(it.kind==='driver'?it.name:it.id)+'</b> <span class="dx-mut">'+esc(it.kind==='driver'?it.id:it.sub)+'</span></span>'
+         + '<span>'+DOCS[it.doc].l+'</span><span class="mono">'+fmtD(it.date)+'</span><span style="font-weight:800;color:'+(t==='exp'?'#991b1b':T.c)+'">'+daysTxt(it.days)+'</span></div>';
+    });
+    h += '</div>';
+  });
+  h += '<div class="macts"><button class="btn btn-c" onclick="DOCX.close()">لاحقاً</button>'
+     + '<button class="btn btn-e" onclick="DOCX.ack();DOCX.close();setMainView(\'docs\')"><i class="ti ti-list-details"></i> فتح الشاشة</button>'
+     + '<button class="btn btn-s" onclick="DOCX.ack();DOCX.close()"><i class="ti ti-checks"></i> تم الاطلاع</button></div>';
+  modal(h, 760);
+}
+
+/* ═════════════════════════ التصدير ═════════════════════════ */
+var HDR_D = ['كود السائق','اسم السائق','الشريك','الرقم المدني','انتهاء البطاقة المدنية','انتهاء رخصة القيادة','انتهاء الشهادة الصحية','ملاحظات'];
+var HDR_V = ['رقم اللوحة','نوع المركبة','انتهاء التأمين','انتهاء الدفتر (التجديد)','السائقون على المركبة','ملاحظات'];
+function xlDate(iso){ if(!iso) return null; var p = iso.split('-'); return new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); }
+function exportXlsx(){
+  if(typeof XLSX === 'undefined'){ alert('مكتبة Excel ماتحمّلتش — اتأكد من النت'); return; }
+  var drv = drvList().filter(isActive).slice().sort(function(a,b){ return a.id.localeCompare(b.id,'en',{numeric:true}); });
+  var civCount = {}; drv.forEach(function(d){ if(d.civil) civCount[d.civil] = (civCount[d.civil]||0)+1; });
+  var rowsD = [HDR_D];
+  drv.forEach(function(d){
+    var n = [];
+    var c = String(d.civil||'').trim();
+    if(!c) n.push('الرقم المدني مش مسجّل'); else if(c.length!==12) n.push('الرقم المدني '+c.length+' خانة');
+    if(c && civCount[c] > 1) n.push('رقم مدني مكرر');
+    if(!normPlate(d.car) && !isAdm(d)) n.push('مفيش مركبة مربوطة');
+    if(isAdm(d)) n.push('إداري — الرخصة والصحية مش مطلوبين');
+    rowsD.push([d.id, d.name||'', partnerName(d.partner)||'', c, xlDate(cleanISO(d.civil_expiry)), xlDate(cleanISO(d.license)), xlDate(cleanISO(d.health_expiry)), n.join(' · ')]);
+  });
+  var rowsV = [HDR_V];
+  vehicles().forEach(function(v){
+    var r = v.rec || {}; var n = [];
+    if(v.drivers.length > 1) n.push('مشتركة بين '+v.drivers.length+' سائقين');
+    if(v.plate.indexOf('/') < 0) n.push('مش بصيغة لوحة');
+    rowsV.push([v.plate, (VTYPE[r.type]||{}).l || '', xlDate(r.insurance), xlDate(r.registration),
+                v.drivers.map(function(d){ return d.id+' '+(d.name||''); }).join('، '), n.join(' · ')]);
+  });
+  var wb = XLSX.utils.book_new();
+  var info = XLSX.utils.aoa_to_sheet([
+    ['شيت تواريخ انتهاء المستندات — ARK'],
+    ['تاريخ التصدير', todayISO()],
+    [''],
+    ['1','املأ أعمدة التواريخ في شيت «السائقين» و«المركبات» بصيغة يوم/شهر/سنة (مثال 25/03/2027).'],
+    ['2','ماتغيّرش كود السائق ولا رقم اللوحة — دول المفتاح.'],
+    ['3','نوع المركبة: اكتب «سيارة» أو «دراجة نارية».'],
+    ['4','الخانة الفاضية = لم يتغيّر (مش هتمسح التاريخ الموجود).'],
+    ['5','ارجع ARK ← تنبيهات المستندات ← استيراد Excel.']
+  ]);
+  info['!cols'] = [{wch:16},{wch:80}];
+  var wsD = XLSX.utils.aoa_to_sheet(rowsD, { cellDates:true });
+  var wsV = XLSX.utils.aoa_to_sheet(rowsV, { cellDates:true });
+  [wsD, wsV].forEach(function(ws){
+    var ref = XLSX.utils.decode_range(ws['!ref']);
+    for(var R=1; R<=ref.e.r; R++) for(var C=0; C<=ref.e.c; C++){
+      var cell = ws[XLSX.utils.encode_cell({r:R,c:C})];
+      if(cell && cell.t === 'd'){ cell.z = 'dd/mm/yyyy'; }
+      if(cell && C===3 && ws===wsD){ cell.t = 's'; cell.v = String(cell.v); }
+    }
+  });
+  wsD['!cols'] = [{wch:12},{wch:28},{wch:11},{wch:15},{wch:18},{wch:18},{wch:18},{wch:40}];
+  wsV['!cols'] = [{wch:14},{wch:14},{wch:16},{wch:20},{wch:40},{wch:30}];
+  [info, wsD, wsV].forEach(function(ws){ ws['!views'] = [{ RTL:true }]; });
+  XLSX.utils.book_append_sheet(wb, info, 'تعليمات');
+  XLSX.utils.book_append_sheet(wb, wsD, 'السائقين');
+  XLSX.utils.book_append_sheet(wb, wsV, 'المركبات');
+  wb.Workbook = { Views:[{ RTL:true }] };
+  XLSX.writeFile(wb, 'ARK_مستندات_'+todayISO()+'.xlsx', { cellDates:true });
+  try{ audit('export','documents','xlsx',null,{drivers:drv.length, vehicles:rowsV.length-1}); }catch(e){}
+  tst('اتصدّر الشيت — '+drv.length+' سائق و'+(rowsV.length-1)+' مركبة','s');
+}
+
+/* ═════════════════════════ الاستيراد ═════════════════════════ */
+var PENDING_IMPORT = null;
+function pickImport(){
+  if(typeof requirePerm==='function' && !requirePerm('edit','drivers')) return;
+  if(typeof XLSX === 'undefined'){ alert('مكتبة Excel ماتحمّلتش — اتأكد من النت'); return; }
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.xlsx,.xls,.xlsm,.csv';
+  inp.onchange = function(){ if(inp.files && inp.files[0]) readFile(inp.files[0]); };
+  inp.click();
+}
+function readFile(file){
+  var fr = new FileReader();
+  fr.onload = function(e){
+    try{
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates:false });
+      var res = analyze(wb);
+      res.fileName = file.name;
+      PENDING_IMPORT = res;
+      showPreview(res);
+    }catch(err){ console.error(err); alert('تعذّر قراءة الملف:\n'+(err.message||err)); }
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+function norm(s){ return enDigits(s).replace(/[ً-ْ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase(); }
+/* بنحدّد كل عمود من عنوانه — فترتيب الأعمدة مايفرقش، وأعمدة «متبقي» بتتجاهل */
+function mapHeaders(row){
+  var m = {};
+  row.forEach(function(v, i){
+    var h = norm(v); if(!h || h.indexOf('متبقي') >= 0 || h.indexOf('remaining') >= 0) return;
+    if(m.iban===undefined && /iban|ايبان/.test(h)) m.iban = i;
+    else if(m.bankname===undefined && /بالعربي|arabic/.test(h)) m.bankname = i;
+    else if(m.id===undefined && (/كود/.test(h) || /driver id|^id$|^code$/.test(h))) m.id = i;
+    else if(m.plate===undefined && (/لوحه/.test(h) || /plate/.test(h)) && !/سائق/.test(h)) m.plate = i;
+    else if(m.vtype===undefined && (/نوع/.test(h) || /type/.test(h))) m.vtype = i;
+    else if(m.civil===undefined && (/مدنيه/.test(h) && /انتهاء|صلاحيه/.test(h) || /civil.*exp/.test(h))) m.civil = i;
+    else if(m.license===undefined && (/رخصه/.test(h) && /انتهاء|صلاحيه/.test(h) || /licen.*exp/.test(h))) m.license = i;
+    else if(m.health===undefined && (/صحيه/.test(h) && /انتهاء|صلاحيه/.test(h) || /health.*exp/.test(h))) m.health = i;
+    else if(m.insurance===undefined && (/تامين/.test(h) || /insur/.test(h))) m.insurance = i;
+    else if(m.registration===undefined && (/دفتر|استماره|ترخيص المركبه|تجديد/.test(h) || /regist/.test(h))) m.registration = i;
+  });
+  return m;
+}
+function findTable(ws){
+  var rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null, blankrows:true });
+  for(var r=0; r<Math.min(rows.length, 15); r++){
+    var m = mapHeaders(rows[r] || []);
+    if(m.id!==undefined && (m.civil!==undefined || m.license!==undefined || m.health!==undefined || m.iban!==undefined || m.bankname!==undefined)) return { type:'driver', hdr:r, map:m, rows:rows };
+    if(m.plate!==undefined && (m.insurance!==undefined || m.registration!==undefined || m.vtype!==undefined)) return { type:'vehicle', hdr:r, map:m, rows:rows };
+  }
+  return null;
+}
+function ibanCheck(raw){
+  var s = enDigits(raw).replace(/[\s\-]/g,'').toUpperCase();
+  if(!/^KW\d{2}[A-Z]{4}[A-Z0-9]{22}$/.test(s)) return { err:'صيغة الإيبان الكويتي غلط (KW + رقمين + كود البنك 4 حروف + 22 خانة = 30) — المكتوب '+s.length+' خانة', v:s };
+  var r = s.slice(4) + s.slice(0,4), rem = 0;
+  for(var i=0;i<r.length;i++){
+    var c = r.charCodeAt(i), d = c >= 65 ? String(c-55) : r[i];
+    for(var j=0;j<d.length;j++) rem = (rem*10 + (+d[j])) % 97;
+  }
+  return rem === 1 ? { v:s } : { err:'رقم الإيبان فيه رقم غلط (خانة التحقق مش مظبوطة) — راجعه حرف حرف', v:s };
+}
+function vtypeOf(v){
+  var s = norm(v); if(!s) return '';
+  if(/دراج|موتو|بايك|motor|bike/.test(s)) return 'motorcycle';
+  if(/سياره|عربيه|car|auto/.test(s)) return 'car';
+  return '?';
+}
+
+function analyze(wb){
+  var res = { changes:[], errors:[], warns:[], drvTouched:{}, vehTouched:{}, vehNew:{}, sheets:[], rowsRead:0 };
+  var byId = {}; drvList().forEach(function(d){ byId[String(d.id).toUpperCase()] = d; });
+  wb.SheetNames.forEach(function(sn){
+    var t = findTable(wb.Sheets[sn]); if(!t) return;
+    res.sheets.push(sn + ' (' + (t.type==='driver'?'سائقين':'مركبات') + ')');
+    for(var r = t.hdr+1; r < t.rows.length; r++){
+      var row = t.rows[r] || []; var line = r+1;
+      if(t.type === 'driver'){
+        var id = String(row[t.map.id]==null?'':row[t.map.id]).trim().toUpperCase();
+        if(!id) continue;
+        res.rowsRead++;
+        var d = byId[id];
+        if(!d){ res.errors.push({ sheet:sn, line:line, who:id, msg:'كود السائق مش موجود في ARK' }); continue; }
+        if(t.map.iban !== undefined){
+          var rawI = row[t.map.iban];
+          if(rawI !== null && rawI !== undefined && String(rawI).trim() !== ''){
+            var ib = ibanCheck(rawI);
+            res._ibSeen = res._ibSeen || {};
+            if(ib.err) res.errors.push({ sheet:sn, line:line, who:id+' '+(d.name||''), msg:'IBAN: '+ib.err });
+            else if(res._ibSeen[ib.v] && res._ibSeen[ib.v] !== d.id){
+              var other = res._ibSeen[ib.v];
+              res.errors.push({ sheet:sn, line:line, who:id+' '+(d.name||''), msg:'نفس الـ IBAN مكتوب لـ '+other+' في نفس الملف — مش هيتطبّق على الاتنين' });
+              res.changes = res.changes.filter(function(c){ return !(c.field==='iban' && c.val===ib.v); });
+            }
+            else if((res._ibSeen[ib.v] = d.id) && false){}
+            else if(ib.v !== String(d.iban||'').replace(/\s/g,'').toUpperCase()){
+              var dup = drvList().find(function(x){ return x.id !== d.id && String(x.iban||'').replace(/\s/g,'').toUpperCase() === ib.v; });
+              if(dup) res.errors.push({ sheet:sn, line:line, who:id+' '+(d.name||''), msg:'IBAN ده مسجّل فعلاً على '+dup.id+' '+(dup.name||'') });
+              else { res.changes.push({ kind:'driver', id:d.id, name:d.name||'', field:'iban', label:'IBAN', old:d.iban||'', val:ib.v, valTxt:ib.v });
+                     res.drvTouched[d.id] = 1; }
+            }
+          }
+        }
+        if(t.map.bankname !== undefined){
+          var bn = String(row[t.map.bankname]==null?'':row[t.map.bankname]).replace(/\s+/g,' ').trim();
+          if(bn && bn !== String(d.bank_name||'').trim()){
+            res.changes.push({ kind:'driver', id:d.id, name:d.name||'', field:'bank_name', label:'الاسم بالعربي للبنك', old:d.bank_name||'', val:bn, valTxt:bn });
+            res.drvTouched[d.id] = 1;
+          }
+        }
+        [['civil','civil_expiry'],['license','license'],['health','health_expiry']].forEach(function(pr){
+          var col = t.map[pr[0]]; if(col===undefined) return;
+          var p = parseDate(row[col]);
+          if(p.empty) return;
+          if(!p.iso){ res.errors.push({ sheet:sn, line:line, who:id+' '+(d.name||''), msg:DOCS[pr[0]].l+': '+p.err+' («'+row[col]+'»)' }); return; }
+          var dl = daysLeft(p.iso);
+          if(dl > 365*15){ res.errors.push({ sheet:sn, line:line, who:id+' '+(d.name||''), msg:DOCS[pr[0]].l+': التاريخ بعيد جداً ('+fmtD(p.iso)+') — غالباً غلط' }); return; }
+          var old = cleanISO(d[pr[1]]);
+          if(old === p.iso) return;
+          if(dl < -365*5) res.warns.push({ sheet:sn, line:line, who:id, msg:DOCS[pr[0]].l+' منتهي من أكتر من 5 سنين ('+fmtD(p.iso)+')' });
+          res.changes.push({ kind:'driver', id:d.id, name:d.name||'', doc:pr[0], field:pr[1], old:old, val:p.iso });
+          res.drvTouched[d.id] = 1;
+        });
+      } else {
+        var rawP = row[t.map.plate];
+        var plate = normPlate(rawP);
+        if(!plate) continue;
+        res.rowsRead++;
+        var cur = VEH[plate] && !VEH[plate]._deleted ? VEH[plate] : null;
+        var known = cur || vehicles().some(function(v){ return v.plate===plate; });
+        var any = false;
+        if(t.map.vtype !== undefined){
+          var tv = vtypeOf(row[t.map.vtype]);
+          if(tv === '?') res.errors.push({ sheet:sn, line:line, who:plate, msg:'نوع المركبة مش مفهوم («'+row[t.map.vtype]+'») — اكتب سيارة أو دراجة نارية' });
+          else if(tv && tv !== ((cur||{}).type||'')){ res.changes.push({ kind:'vehicle', id:plate, name:plate, doc:'type', field:'type', old:(VTYPE[(cur||{}).type]||{}).l||'', val:tv, valTxt:VTYPE[tv].l }); any = true; }
+        }
+        [['insurance','insurance'],['registration','registration']].forEach(function(pr){
+          var col = t.map[pr[0]]; if(col===undefined) return;
+          var p = parseDate(row[col]);
+          if(p.empty) return;
+          if(!p.iso){ res.errors.push({ sheet:sn, line:line, who:plate, msg:DOCS[pr[0]].l+': '+p.err+' («'+row[col]+'»)' }); return; }
+          if(daysLeft(p.iso) > 365*15){ res.errors.push({ sheet:sn, line:line, who:plate, msg:DOCS[pr[0]].l+': التاريخ بعيد جداً ('+fmtD(p.iso)+')' }); return; }
+          var old = cleanISO((cur||{})[pr[1]]);
+          if(old === p.iso) return;
+          res.changes.push({ kind:'vehicle', id:plate, name:plate, doc:pr[0], field:pr[1], old:old, val:p.iso });
+          any = true;
+        });
+        if(any){ res.vehTouched[plate] = 1; if(!known) res.vehNew[plate] = 1; }
+      }
+    }
+  });
+  if(!res.sheets.length) res.fatal = 'الملف مافيهوش جدول مفهوم. لازم يكون فيه عمود «كود السائق» مع أعمدة الانتهاء أو IBAN، أو عمود «رقم اللوحة» مع التأمين/الدفتر.';
+  return res;
+}
+
+function showPreview(res){
+  if(res.fatal){ modal('<h2><i class="ti ti-file-alert" style="color:#b91c1c"></i> تعذّر الاستيراد</h2><p>'+esc(res.fatal)+'</p><div class="macts"><button class="btn btn-c" onclick="DOCX.close()">إغلاق</button></div>', 520); return; }
+  var nD = Object.keys(res.drvTouched).length, nV = Object.keys(res.vehTouched).length, nN = Object.keys(res.vehNew).length;
+  var h = '<h2><i class="ti ti-file-import" style="color:var(--blue)"></i> معاينة الاستيراد</h2>'
+    + '<div class="dx-mut" style="margin:-6px 0 12px">'+esc(res.fileName||'')+' · '+esc(res.sheets.join(' · '))+' · '+res.rowsRead+' صف</div>'
+    + '<div class="dx-cards" style="margin-bottom:12px">'
+    + kpi(res.changes.length,'تغيير','#1c5878') + kpi(nD,'سائق هيتحدّث','#059669') + kpi(nV,'مركبة هتتحدّث'+(nN?' ('+nN+' جديدة)':''),'#0d9488')
+    + kpi(res.errors.length,'خطأ (مش هيتطبّق)', res.errors.length?'#b91c1c':'#94a3b8')
+    + '</div>';
+  if(res.errors.length){
+    h += '<div class="dx-pgrp" style="border-color:#fca5a5"><div class="dx-pgh" style="background:#fee2e2;color:#991b1b"><i class="ti ti-alert-circle"></i> صفوف فيها مشكلة — صلّحها في الشيت واستورد تاني</div>'
+       + res.errors.slice(0,200).map(function(e){ return '<div class="dx-prow"><span class="mono">'+esc(e.sheet)+' · صف '+e.line+'</span><span><b>'+esc(e.who)+'</b></span><span style="grid-column:span 2">'+esc(e.msg)+'</span></div>'; }).join('')
+       + '</div>';
+  }
+  if(res.warns.length){
+    h += '<div class="dx-pgrp" style="border-color:#fdba74"><div class="dx-pgh" style="background:#ffedd5;color:#9a3412"><i class="ti ti-info-circle"></i> ملاحظات</div>'
+       + res.warns.map(function(e){ return '<div class="dx-prow"><span class="mono">صف '+e.line+'</span><span><b>'+esc(e.who)+'</b></span><span style="grid-column:span 2">'+esc(e.msg)+'</span></div>'; }).join('') + '</div>';
+  }
+  if(res.changes.length){
+    h += '<div class="dx-tblwrap" style="max-height:340px"><table class="dx-tbl"><thead><tr><th>الجهة</th><th>البند</th><th>الحالي</th><th>الجديد</th><th>الحالة بعد التحديث</th></tr></thead><tbody>'
+       + res.changes.map(function(c){
+           var isDate = c.field !== 'type' && c.field !== 'iban' && c.field !== 'bank_name';
+           return '<tr><td style="text-align:right"><b>'+esc(c.kind==='driver'?c.name:c.id)+'</b> <span class="dx-mut">'+esc(c.kind==='driver'?c.id:(res.vehNew[c.id]?'جديدة':''))+'</span></td>'
+             + '<td>'+(c.label || (c.field==='type'?'نوع المركبة':DOCS[c.doc].l))+'</td>'
+             + '<td class="mono dx-mut">'+(isDate?fmtD(c.old):esc(c.old||'—'))+'</td>'
+             + '<td class="mono" style="direction:ltr"><b>'+(isDate?fmtD(c.val):esc(c.valTxt))+'</b></td>'
+             + '<td>'+(isDate?chip(c.val,{noDate:true}):'')+'</td></tr>';
+         }).join('') + '</tbody></table></div>';
+  } else {
+    h += '<div class="dx-empty" style="padding:20px"><i class="ti ti-equal"></i>مفيش أي تغيير — كل التواريخ في الشيت زي اللي في ARK</div>';
+  }
+  h += '<div class="macts"><button class="btn btn-c" onclick="DOCX.close()">إلغاء</button>'
+     + (res.changes.length ? '<button class="btn btn-s" onclick="DOCX.applyImport()"><i class="ti ti-check"></i> تطبيق '+res.changes.length+' تغيير</button>' : '')
+     + '</div>';
+  modal(h, 900);
+}
+function kpi(n, l, c){ return '<div class="dx-card" style="--c:'+c+';--cbg:#fff;--bd:var(--br);cursor:default"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+
+function applyImport(){
+  var res = PENDING_IMPORT; if(!res || !res.changes.length) return;
+  var byId = {}; drvList().forEach(function(d){ byId[d.id] = d; });
+  var before = {};
+  var plates = {};
+  res.changes.forEach(function(c){
+    if(c.kind === 'driver'){
+      var d = byId[c.id]; if(!d) return;
+      if(!before[d.id]) before[d.id] = JSON.parse(JSON.stringify(d));
+      d[c.field] = c.val;
+      if(c.field === 'health_expiry' && daysLeft(c.val) >= 0) d.health = 'available';
+    } else {
+      var patch = {}; patch[c.field] = c.val;
+      setVeh(c.id, patch, true); plates[c.id] = 1;
+    }
+  });
+  Object.keys(before).forEach(function(id){ try{ audit('update','driver',id,before[id],JSON.parse(JSON.stringify(byId[id]))); }catch(e){} });
+  try{ audit('import','documents',res.fileName||'xlsx',null,{changes:res.changes.length, drivers:Object.keys(before).length, vehicles:Object.keys(plates).length}); }catch(e){}
+  if(Object.keys(before).length){ try{ save(); }catch(e){} }
+  saveVeh(Object.keys(plates));
+  PENDING_IMPORT = null;
+  closeM(); refreshAll();
+  tst('اتطبّق '+res.changes.length+' تغيير — '+Object.keys(before).length+' سائق و'+Object.keys(plates).length+' مركبة','s');
+  setTimeout(function(){ showPopup(false); }, 600);
+}
+
+/* ═════════════════════════ كارت السائق ═════════════════════════ */
+function vehRowsHTML(d){
+  var p = normPlate(d && d.car); if(!p) return '';
+  var r = VEH[p] || {};
+  return '<div class="irow"><i class="ti '+((VTYPE[r.type]||{}).ic||'ti-car')+' iico"></i><span class="ilbl">نوع المركبة</span><span class="ival">'+((VTYPE[r.type]||{}).l||'<span class="ival bad">غير محدد</span>')+'</span></div>'
+       + '<div class="irow"><i class="ti ti-shield-check iico"></i><span class="ilbl">انتهاء التأمين</span><span class="ival">'+chip(r.insurance)+'</span></div>'
+       + '<div class="irow"><i class="ti ti-notebook iico"></i><span class="ilbl">انتهاء الدفتر</span><span class="ival">'+chip(r.registration)+'</span></div>';
+}
+function openDriver(id){
+  try{ setMainView('drivers'); }catch(e){}
+  try{ if(typeof selectDriver==='function') selectDriver(id); else { selId = id; renderList(); renderDetail(); } }catch(e){}
+}
+
+/* ═════════════════════════ التشغيل ═════════════════════════ */
+var _qT = null;
+window.DOCX = {
+  render: render, items: items, chip: chip, vehRowsHTML: vehRowsHTML, normPlate: normPlate, parseDate: parseDate,
+  daysLeft: daysLeft, pending: pendingAlerts, paintBadge: paintBadge, cfg: function(){ return CFG; }, veh: function(){ return VEH; },
+  f: function(k, v){ UI[k] = v; render(); },
+  q: function(v){ UI.q = v; clearTimeout(_qT); _qT = setTimeout(function(){ render(); var el = document.getElementById('dxQ'); if(el){ el.focus(); el.setSelectionRange(v.length, v.length); } }, 250); },
+  reset: function(){ UI.kind='all'; UI.tier=''; UI.doc=''; UI.q=''; UI.partner=''; render(); },
+  setV: function(p, k, v){ var patch = {}; patch[k] = k==='type' ? v : cleanISO(v); setVeh(p, patch); },
+  renew: renew, saveRenew: saveRenew, addVehicle: addVehicle, saveNewVehicle: saveNewVehicle, delVehicle: delVehicle,
+  settings: settings, saveSettings: saveSettings, showPopup: showPopup, ack: function(){ ackAll(); refreshAll(); },
+  close: closeM, exportXlsx: exportXlsx, pickImport: pickImport, readFile: readFile, analyze: analyze, applyImport: applyImport,
+  openDriver: openDriver, pullCloud: cloudPullVeh
+};
+window.docxChip = chip;
+
+function boot(){
+  paintBadge();
+  cloudPullVeh();
+  if(CFG.popup) setTimeout(function(){ showPopup(false); }, 1800);
+  setInterval(paintBadge, 30*60*1000);   // اليوم بيتغيّر والـ ARK ممكن يفضل مفتوح
+}
+if(document.body && document.body.classList.contains('ark-authed')) setTimeout(boot, 300);
+else window.addEventListener('ark-auth-ready', function(){ setTimeout(boot, 300); }, { once:true });
+})();
+</script>
+<style>
+#nav-docs i{background:linear-gradient(135deg,rgba(234,88,12,0.18),rgba(185,28,28,0.12))!important;color:#c2410c!important}
+.rail #nav-docs.on i{ background:linear-gradient(135deg,#fdba74,#c2410c) !important; color:#fff !important }
+#view-docs .dx-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+#view-docs .dx-head h2{font-size:17px;font-weight:900;display:flex;align-items:center;gap:8px;margin:0}
+#view-docs .dx-head h2 i{color:#c2410c}
+.dx-actions{display:flex;gap:8px;flex-wrap:wrap}
+.dx-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.dx-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.dx-card{background:var(--cbg,#fff);border:1.5px solid var(--bd,var(--br));border-radius:14px;padding:12px;text-align:center;cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative}
+.dx-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(15,23,41,.08)}
+.dx-card.on{outline:3px solid var(--c);outline-offset:1px}
+.dx-card i{font-size:20px;color:var(--c)}
+.dx-card .n{font-size:24px;font-weight:900;color:var(--c);line-height:1.2;font-family:'JetBrains Mono',monospace}
+.dx-card .l{font-size:11px;color:var(--lc,var(--muted));font-weight:700}
+.dx-prog{background:var(--s1,#fff)!important;border-color:var(--br)!important;cursor:default}
+.dx-bar{height:10px;background:var(--s3,#eef2f8);border-radius:99px;overflow:hidden}
+.dx-bar span{display:block;height:100%;background:linear-gradient(90deg,#0d9488,#1c5878);border-radius:99px}
+.dx-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.dx-filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.dx-sel{background:var(--s1,#fff);border:1px solid var(--br);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Cairo',sans-serif;font-size:12px;outline:none}
+.dx-tblwrap{overflow:auto;border:1px solid var(--br);border-radius:12px;background:var(--s1,#fff)}
+.dx-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.dx-tbl th{position:sticky;top:0;background:var(--s2);color:var(--muted);font-weight:800;font-size:11.5px;padding:9px 8px;border-bottom:1px solid var(--br);text-align:center;white-space:nowrap;z-index:1}
+.dx-tbl td{padding:8px;border-bottom:1px solid var(--br);text-align:center;vertical-align:middle}
+.dx-tbl tbody tr{box-shadow:inset -4px 0 0 var(--rc,transparent)}
+.dx-tbl tbody tr:hover{background:var(--s2)}
+.dx-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;border:1px solid;font-size:11px;font-weight:800;white-space:nowrap}
+.dx-new{display:inline-block;background:#1c5878;color:#fff;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:6px;vertical-align:middle}
+.dx-mut{color:var(--muted);font-size:11px}
+.dx-link{cursor:pointer;color:var(--blue,#1c5878)}
+.dx-link:hover{text-decoration:underline}
+.dx-mini{padding:4px 10px!important;font-size:11px!important}
+.dx-empty{padding:40px;text-align:center;color:var(--muted)}
+.dx-empty i{font-size:28px;display:block;margin-bottom:8px}
+.dx-pgrp{border:1.5px solid;border-radius:12px;overflow:hidden;margin-bottom:10px}
+.dx-pgh{padding:8px 12px;font-weight:900;font-size:12.5px;display:flex;gap:6px;align-items:center}
+.dx-prow{display:grid;grid-template-columns:2fr 1.2fr 1fr 1.2fr;gap:8px;padding:7px 12px;border-top:1px solid var(--br);font-size:12px;align-items:center}
+@media (max-width:700px){ .dx-prow{grid-template-columns:1fr 1fr} }
+</style>
+
+<!-- ════════ ARK-RADAR: رادار كيتا + الدفع بالأوردر (نوفمبر 2026) ════════ -->
+<style>
+#view-radar .rd-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+#view-radar .rd-title{display:flex;align-items:center;gap:10px}
+#view-radar .rd-title i{font-size:26px;color:#0e7490;background:rgba(14,116,144,.12);padding:8px;border-radius:12px}
+#view-radar .rd-title b{font-size:18px;display:block}
+#view-radar .rd-title span{font-size:12px;color:var(--muted)}
+#view-radar .rd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+#view-radar .rd-k{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:12px 14px}
+#view-radar .rd-k b{font-size:22px;display:block}
+#view-radar .rd-k span{font-size:12px;color:var(--muted)}
+#view-radar .rd-card{background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:14px;overflow:auto}
+#view-radar table{width:100%;border-collapse:collapse;font-size:12.5px}
+#view-radar th{position:sticky;top:0;background:var(--s2);color:var(--muted);font-weight:800;font-size:11.5px;padding:8px;border-bottom:1px solid var(--br);white-space:nowrap;cursor:pointer}
+#view-radar td{padding:7px 8px;border-bottom:1px solid var(--br);text-align:center;white-space:nowrap}
+#view-radar td.l{text-align:right}
+#view-radar .rd-bars{display:flex;align-items:flex-end;gap:4px;height:120px;padding:6px 2px}
+#view-radar .rd-bar{flex:1;background:#0e7490;border-radius:4px 4px 0 0;position:relative;min-width:8px}
+#view-radar .rd-bar span{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted)}
+#view-radar .rd-bl{display:flex;gap:4px;font-size:10px;color:var(--muted)}#view-radar .rd-bl div{flex:1;text-align:center}
+#view-radar .rd-tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:800}
+#view-radar .rd-ctl{display:flex;gap:6px;align-items:center}
+#view-radar .rd-ctl select,#view-radar .rd-ctl button{padding:6px 10px;border:1px solid var(--br);border-radius:10px;background:var(--s1);font:inherit}
+</style>
+<script>
+(function(){
+'use strict';
+/* ── 1) الإعداد: سائقو الدفع بالأوردر ───────────────────────────────── */
+const RADAR_PER_ORDER = [
+  {id:'SA1024', rate:0.400, from:'2026-11-01'},   // CHANDRA DEV YADAV
+  {id:'SA1016', rate:0.400, from:'2026-11-01'}    // SANTOSH PRASAD SAH
+];
+const KEETA = { cache:{}, loading:{} };   // { '2026-11': {rows:[...], byDrv:{SA..:{orders,days,...}}, at} }
+window.KEETA_RADAR = KEETA;
+
+function _p(m,y){ return String(y)+'-'+String(m).padStart(2,'0'); }
+function _lastDay(m,y){ return new Date(y, m, 0).getDate(); }
+
+/* ── 2) تحميل بيانات الرادار من Supabase ───────────────────────────── */
+async function keetaLoad(m, y, force){
+  const p = _p(m,y);
+  if(KEETA.cache[p] && !force) return KEETA.cache[p];
+  if(KEETA.loading[p]) return KEETA.loading[p];
+  const from = p+'-01', to = p+'-'+String(_lastDay(m,y)).padStart(2,'0');
+  KEETA.loading[p] = (async () => {
+    try{
+      const url = SUPA_URL + '/rest/v1/v_keeta_daily?select=day,keeta_id,keeta_name,driver_id,vehicle,online_hours,delivered,cancelled,on_time,delivery_min'
+        + '&day=gte.' + from + '&day=lte.' + to + '&order=day.asc&limit=10000';
+      const r = await fetch(url, {headers:{apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const rows = await r.json();
+      const byDrv = {}, byKeeta = {}, byDay = {};
+      rows.forEach(x => {
+        const k = x.driver_id || ('K:'+x.keeta_id);
+        const o = byDrv[k] || (byDrv[k] = {driver_id:x.driver_id, keeta_ids:new Set(), names:new Set(), vehicle:x.vehicle,
+                                           orders:0, days:0, hours:0, cancelled:0, otSum:0, otN:0, dtSum:0, dtN:0, daily:{}});
+        o.keeta_ids.add(x.keeta_id); if(x.keeta_name) o.names.add(x.keeta_name);
+        const del = +x.delivered || 0;
+        o.orders += del; o.hours += +x.online_hours || 0; o.cancelled += +x.cancelled || 0;
+        o.daily[x.day] = (o.daily[x.day]||0) + del;
+        if(del > 0){ if(x.on_time!=null){ o.otSum += (+x.on_time)*del; o.otN += del; } if(x.delivery_min!=null){ o.dtSum += (+x.delivery_min)*del; o.dtN += del; } }
+        byDay[x.day] = (byDay[x.day]||0) + del;
+      });
+      Object.values(byDrv).forEach(o => { o.days = Object.values(o.daily).filter(v => v >= 1).length; });
+      const res = {rows, byDrv, byDay, at:new Date()};
+      KEETA.cache[p] = res;
+      return res;
+    }catch(e){
+      console.warn('[radar] load failed', e);
+      return null;
+    }finally{ delete KEETA.loading[p]; }
+  })();
+  return KEETA.loading[p];
+}
+window.keetaLoad = keetaLoad;
+
+function keetaOrdersFor(driverId, m, y){
+  const c = KEETA.cache[_p(m,y)];
+  if(!c) return null;
+  const o = c.byDrv[driverId];
+  return o ? o.orders : 0;
+}
+window.keetaOrdersFor = keetaOrdersFor;
+
+/* ── 3) مكوّن «الدفع بالأوردر» + التعيينات (مرة واحدة، بلا لمس الشهور السابقة) ── */
+function radarEnsurePayroll(){
+  if(typeof PAY_COMPONENTS === 'undefined') return;
+  if(!PAY_COMPONENTS.some(c => c.code === 'PER_ORDER')){
+    PAY_COMPONENTS.push({code:'PER_ORDER', ar:'أجر بالأوردر (كيتا)', en:'Per-Order Pay (Keeta)', kind:'earning',
+      method:'per_unit', rate:0.400, prorate:false, eos:false, gl:'salaries', ord:15, sys:false, active:true});
+    _paySave(PAY_SK.comp, PAY_COMPONENTS);
+  }
+  let changed = false;
+  RADAR_PER_ORDER.forEach(cfg => {
+    const has = (code, from) => PAY_ASSIGNMENTS.some(a => a.driver_id === cfg.id && a.component_code === code && String(a.effective_from) === from && a.active !== false);
+    const mk = (code, amount, from, to, note) => {
+      const a = {id:'PA'+Date.now()+Math.random().toString(36).slice(2,6), driver_id:cfg.id, component_code:code,
+        amount:amount, effective_from:from, effective_to:to||null, note:note, active:true,
+        created_by:'ARK-RADAR', created_at:new Date().toISOString()};
+      PAY_ASSIGNMENTS.push(a); changed = true;
+      try{ paySyncAssignment(a); }catch(e){}
+      try{ audit('create','payroll_assignment', a.id, null, a); }catch(e){}
+    };
+    /* أ) تثبيت الأساسي القديم حتى آخر الشهر السابق — كي لا يتغيّر أي شهر قبل التحويل */
+    const prevEnd = (() => { const d = new Date(cfg.from); d.setDate(0); return fmtDate(d); })();
+    const oldBasic = PAY_ASSIGNMENTS.some(a => a.driver_id === cfg.id && a.component_code === 'BASIC' && String(a.effective_from) < cfg.from && a.active !== false);
+    if(!oldBasic){
+      const sal = getSalData(cfg.id); const d = DRV.find(x => x.id === cfg.id) || {};
+      const base = parseFloat(sal && sal.base) || 0;
+      if(base > 0) mk('BASIC', base, (d.start_date || d.startDate || '2025-01-01'), prevEnd, 'تثبيت الأساسي قبل التحويل للدفع بالأوردر');
+    }
+    /* ب) من تاريخ التحويل: أساسي صفر + أجر بالأوردر */
+    if(!has('BASIC', cfg.from))     mk('BASIC', 0, cfg.from, null, 'تحويل للدفع بالأوردر');
+    if(!has('PER_ORDER', cfg.from)) mk('PER_ORDER', cfg.rate, cfg.from, null, 'سعر الأوردر — الكمية من رادار كيتا');
+  });
+  if(changed) payAsgSave();
+}
+
+/* ── 4) ربط المحرّك: الكمية = أوردرات كيتا المُسلَّمة في الشهر ───────────── */
+function radarHookPayroll(){
+  if(typeof payComputeEmployee !== 'function' || payComputeEmployee.__radar) return;
+  const orig = payComputeEmployee;
+  const wrapped = function(d, m, y){
+    const line = orig(d, m, y);
+    try{
+      if(!line || line.not_started) return line;
+      const asg = payAssignmentsFor(d.id, m, y).find(a => a.component_code === 'PER_ORDER');
+      if(!asg) return line;
+      line.components = line.components.filter(c => c.code !== 'PER_ORDER');
+      const qty = keetaOrdersFor(d.id, m, y);
+      const rate = parseFloat(asg.amount) || 0;
+      const amt = _payRound((qty || 0) * rate);
+      line.components.push({code:'PER_ORDER', name:'أجر بالأوردر (كيتا)', kind:'earning', method:'per_unit',
+        qty:qty || 0, amount:amt,
+        note: qty == null ? '⚠ بيانات الرادار لم تُحمَّل بعد' : (qty + ' أوردر × ' + rate.toFixed(3)),
+        source:'radar'});
+      line.per_order = {qty:qty, rate:rate, loaded: qty != null};
+      line.gross = 0; line.total_ded = 0;
+      line.components.forEach(c => { if(c.kind === 'earning') line.gross += c.amount; else line.total_ded += c.amount; });
+      line.gross = _payRound(line.gross); line.total_ded = _payRound(line.total_ded);
+      const net = line.gross - line.total_ded;
+      line.net = _payRound(PAY_CFG.netFloorZero ? Math.max(0, net) : net);
+      line.uncovered = PAY_CFG.netFloorZero && net < 0 ? _payRound(-net) : 0;
+    }catch(e){ console.warn('[radar] payroll hook', e); }
+    return line;
+  };
+  wrapped.__radar = true;
+  payComputeEmployee = wrapped;
+  window.payComputeEmployee = wrapped;
+
+  /* مسيّر الرواتب ينتظر بيانات الرادار للشهر المعروض ثم يعيد الرسم مرة واحدة */
+  if(typeof renderPayroll === 'function' && !renderPayroll.__radar){
+    const origR = renderPayroll;
+    const r2 = function(){
+      const out = origR.apply(this, arguments);
+      try{
+        const p = _p(PAY_VIEW.m, PAY_VIEW.y);
+        if(!KEETA.cache[p]) keetaLoad(PAY_VIEW.m, PAY_VIEW.y).then(res => { if(res && currentView === 'payroll') origR(); });
+      }catch(e){}
+      return out;
+    };
+    r2.__radar = true;
+    renderPayroll = r2; window.renderPayroll = r2;
+  }
+}
+
+/* ── 5) شاشة «رادار كيتا» داخل ARK ───────────────────────────────────── */
+const RV = { m:(new Date()).getMonth()+1, y:(new Date()).getFullYear(), sort:'orders' };
+function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function _n(v,d){ return (v==null||isNaN(v)) ? '—' : (+v).toFixed(d==null?0:d); }
+
+async function renderRadar(force){
+  const el = document.getElementById('radarBody'); if(!el) return;
+  el.innerHTML = '<div class="dx-empty"><i class="ti ti-loader"></i>جاري تحميل بيانات الرادار…</div>';
+  const res = await keetaLoad(RV.m, RV.y, force);
+  if(!res){ el.innerHTML = '<div class="dx-empty"><i class="ti ti-wifi-off"></i>تعذّر تحميل بيانات الرادار</div>'; return; }
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const list = Object.values(res.byDrv).filter(o => o.orders > 0 || o.hours > 1);
+  const perOrder = {}; RADAR_PER_ORDER.forEach(c => perOrder[c.id] = c);
+  list.forEach(o => {
+    const d = o.driver_id ? DRV.find(x => x.id === o.driver_id) : null;
+    o.name = d ? d.name : [...o.names][0] || '—';
+    o.partner = d ? (d.partner||'') : '';
+    o.avg = o.days ? o.orders / o.days : 0;
+    o.ot = o.otN ? o.otSum / o.otN : null;
+    o.dt = o.dtN ? o.dtSum / o.dtN : null;
+    const po = o.driver_id && perOrder[o.driver_id];
+    o.pay = po && (_p(RV.m,RV.y)+'-01') >= po.from ? o.orders * po.rate : null;
+  });
+  const key = RV.sort;
+  list.sort((a,b) => (b[key]||0) - (a[key]||0));
+  const days = Object.keys(res.byDay).sort();
+  const tot = days.reduce((s,d) => s + res.byDay[d], 0);
+  const active = list.filter(o => o.orders > 0).length;
+  const lastDay = days[days.length-1] || '—';
+  const unmapped = list.filter(o => !o.driver_id);
+  const max = Math.max(1, ...days.map(d => res.byDay[d]));
+  const mOpts = months.map((n,i) => '<option value="'+(i+1)+'"'+(i+1===RV.m?' selected':'')+'>'+n+'</option>').join('');
+  const yOpts = [RV.y-1, RV.y, RV.y+1].map(y => '<option'+(y===RV.y?' selected':'')+'>'+y+'</option>').join('');
+  const th = (k,t) => '<th onclick="radarSort(\''+k+'\')">'+t+(RV.sort===k?' ▼':'')+'</th>';
+  el.innerHTML =
+    '<div class="rd-head"><div class="rd-title"><i class="ti ti-radar-2"></i><div><b>رادار كيتا</b>' +
+      '<span>أداء الكباتن من شيت كيتا اليومي · آخر يوم في البيانات: '+_esc(lastDay)+'</span></div></div>' +
+      '<div class="rd-ctl"><select onchange="radarMonth(this.value,null)">'+mOpts+'</select>' +
+      '<select onchange="radarMonth(null,this.value)">'+yOpts+'</select>' +
+      '<button onclick="renderRadar(true)"><i class="ti ti-refresh"></i> تحديث</button></div></div>' +
+    '<div class="rd-kpis">' +
+      '<div class="rd-k"><b>'+tot.toLocaleString('en')+'</b><span>أوردر مُسلَّم</span></div>' +
+      '<div class="rd-k"><b>'+(days.length? _n(tot/days.length,0):'—')+'</b><span>متوسط الأوردرات في اليوم</span></div>' +
+      '<div class="rd-k"><b>'+active+'</b><span>كابتن اشتغل</span></div>' +
+      '<div class="rd-k"><b>'+days.length+'</b><span>يوم في البيانات</span></div>' +
+    '</div>' +
+    '<div class="rd-card"><div style="font-weight:900;margin-bottom:18px">الأوردرات اليومية</div>' +
+      '<div class="rd-bars">'+days.map(d => '<div class="rd-bar" style="height:'+(res.byDay[d]/max*100)+'%"><span>'+res.byDay[d]+'</span></div>').join('')+'</div>' +
+      '<div class="rd-bl">'+days.map(d => '<div>'+(+d.slice(8))+'</div>').join('')+'</div></div>' +
+    '<div class="rd-card"><table><thead><tr><th>#</th><th>الكابتن</th><th>الشريك</th><th>المركبة</th>' +
+      th('orders','الأوردرات') + th('days','أيام العمل') + th('avg','متوسط/يوم') + th('hours','ساعات أونلاين') +
+      th('cancelled','ملغي') + th('ot','في الوقت') + '<th>زمن التوصيل</th><th>أجر بالأوردر</th></tr></thead><tbody>' +
+      list.map((o,i) => '<tr><td>'+(i+1)+'</td><td class="l"><b>'+_esc(o.name)+'</b>'+(o.driver_id?' <span class="dx-mut">'+_esc(o.driver_id)+'</span>':' <span class="rd-tag" style="background:#fef3c7;color:#92400e">غير مربوط</span>')+'</td>' +
+        '<td>'+_esc(o.partner||'—')+'</td><td>'+(o.vehicle==='M'?'موتوسيكل':'سيارة')+'</td>' +
+        '<td><b>'+o.orders+'</b></td><td>'+o.days+'</td>' +
+        '<td><span class="rd-tag" style="background:'+(o.avg>=12?'#dcfce7;color:#166534':o.avg>=9?'#fef9c3;color:#854d0e':'#fee2e2;color:#991b1b')+'">'+_n(o.avg,1)+'</span></td>' +
+        '<td>'+_n(o.hours,1)+'</td><td>'+o.cancelled+'</td><td>'+(o.ot==null?'—':_n(o.ot*100,0)+'٪')+'</td><td>'+(o.dt==null?'—':_n(o.dt,1)+' د')+'</td>' +
+        '<td>'+(o.pay==null?'—':'<b>'+o.pay.toFixed(3)+'</b> د.ك')+'</td></tr>').join('') +
+    '</tbody></table></div>' +
+    (unmapped.length ? '<div class="dx-mut">كباتن في شيت كيتا غير مربوطين بسائق في ARK: '+unmapped.map(o => _esc(o.name)).join('، ')+'</div>' : '') +
+    '<div class="dx-mut" style="margin-top:6px">الأجر بالأوردر: '+RADAR_PER_ORDER.map(c => { const d = DRV.find(x => x.id === c.id); return _esc(d?d.name:c.id)+' ('+c.rate.toFixed(3)+' من '+c.from+')'; }).join('، ')+' — يُحسب تلقائياً في مسيّر الرواتب من نفس البيانات.</div>';
+}
+window.renderRadar = renderRadar;
+window.radarSort  = k => { RV.sort = k; renderRadar(); };
+window.radarMonth = (m,y) => { if(m) RV.m = +m; if(y) RV.y = +y; renderRadar(); };
+
+function radarMountUI(){
+  if(!document.getElementById('nav-radar')){
+    const ref = document.getElementById('nav-payroll');
+    if(ref){
+      const b = document.createElement('button');
+      b.className = 'nav-tab'; b.id = 'nav-radar'; b.setAttribute('data-tip','رادار كيتا');
+      b.onclick = () => setMainView('radar');
+      b.innerHTML = '<i class="ti ti-radar-2"></i> <span>رادار كيتا</span>';
+      ref.parentNode.insertBefore(b, ref);
+    }
+  }
+  if(!document.getElementById('view-radar')){
+    const ref = document.getElementById('view-payroll');
+    const v = document.createElement('div');
+    v.id = 'view-radar';
+    v.style.cssText = 'display:none;padding:20px;overflow-y:auto;height:calc(100vh - 56px);background:var(--bg)';
+    v.innerHTML = '<div id="radarBody"></div>';
+    (ref && ref.parentNode ? ref.parentNode : document.body).insertBefore(v, ref || null);
+  }
+  if(typeof setMainView === 'function' && !setMainView.__radar){
+    const orig = setMainView;
+    const sv = function(view){
+      orig(view);
+      const v = document.getElementById('view-radar'); if(v) v.style.display = view === 'radar' ? 'block' : 'none';
+      const n = document.getElementById('nav-radar');  if(n) n.classList.toggle('on', view === 'radar');
+      if(view === 'radar') renderRadar();
+    };
+    sv.__radar = true;
+    setMainView = sv; window.setMainView = sv;
+  }
+}
+
+function radarInit(){
+  try{ radarEnsurePayroll(); }catch(e){ console.warn('[radar] payroll setup', e); }
+  try{ radarHookPayroll(); }catch(e){ console.warn('[radar] hook', e); }
+  try{ radarMountUI(); }catch(e){ console.warn('[radar] ui', e); }
+  const now = new Date();
+  keetaLoad(now.getMonth()+1, now.getFullYear());
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(radarInit, 300));
+else setTimeout(radarInit, 300);
+})();
+</script>
+
 </body>
 </html>
