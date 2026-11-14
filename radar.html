@@ -1,0 +1,1782 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>رادار السلاسل</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@700;800&display=swap">
+<style>
+/* Layout: operations console — dark-petrol nav rail on the start side, light working canvas; pulse band → KPI sparks → boards. Semantic green/red only for performance. */
+:root{
+  --bg:#f2f5f7; --surface:#ffffff; --surface-2:#f1f5f7; --surface-3:#e8eef1; --line:#e0e7eb; --line-2:#cfdbe1;
+  --ink:#0e2630; --ink-2:#4b6570; --ink-3:#8399a2;
+  --brand:#004e6d; --brand-2:#9a232e; --accent:#0b6b90; --accent-soft:#e3f0f5;
+  --side:#032d40; --side-2:#0a3c53; --side-ink:#d8e8ee; --side-mute:#86a7b4;
+  --good:#127a45; --good-bg:#e1f3e8; --bad:#b42f3a; --bad-bg:#fbe6e8; --bad-strong:#c0392b; --abs-bg:#f5bcc1; --abs-ink:#8a1c25; --warn:#9a6400; --warn-bg:#fdf1d8; --new:#e9b730; --new-bg:#fff5d6;
+  --moto:#9a232e; --car:#0b6b90;
+  --shadow:0 1px 1px rgba(10,40,55,.04),0 2px 8px rgba(10,40,55,.05);
+  --f-ui:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-disp:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#071820; --surface:#0d222c; --surface-2:#112b36; --surface-3:#163542; --line:#1b3a47; --line-2:#24495a;
+  --ink:#e3eef2; --ink-2:#9ab6c1; --ink-3:#6c8b97;
+  --brand:#0b4a66; --brand-2:#ff6b75; --accent:#7cc4e0; --accent-soft:#12394a;
+  --side:#04141b; --side-2:#0c2733; --side-ink:#d8e8ee; --side-mute:#7997a3;
+  --good:#5fd394; --good-bg:#0f3624; --bad:#ff7b85; --bad-bg:#3a161a; --bad-strong:#d9434f; --abs-bg:#6b2a31; --abs-ink:#ffd3d7; --warn:#f2b84b; --warn-bg:#36290d; --new:#f2c94c; --new-bg:#352d10;
+  --moto:#ff8a93; --car:#7cc4e0; --shadow:0 1px 2px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#071820; --surface:#0d222c; --surface-2:#112b36; --surface-3:#163542; --line:#1b3a47; --line-2:#24495a;
+  --ink:#e3eef2; --ink-2:#9ab6c1; --ink-3:#6c8b97;
+  --brand:#0b4a66; --brand-2:#ff6b75; --accent:#7cc4e0; --accent-soft:#12394a;
+  --side:#04141b; --side-2:#0c2733; --side-ink:#d8e8ee; --side-mute:#7997a3;
+  --good:#5fd394; --good-bg:#0f3624; --bad:#ff7b85; --bad-bg:#3a161a; --bad-strong:#d9434f; --abs-bg:#6b2a31; --abs-ink:#ffd3d7; --warn:#f2b84b; --warn-bg:#36290d; --new:#f2c94c; --new-bg:#352d10;
+  --moto:#ff8a93; --car:#7cc4e0; --shadow:0 1px 2px rgba(0,0,0,.35); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.55;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--side)}
+button,select,input{font:inherit;color:inherit}
+.num{direction:ltr;unicode-bidi:isolate;display:inline-block}
+:focus-visible{outline:2px solid var(--new);outline-offset:2px}
+
+/* ===== shell ===== */
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+.side{background:var(--side);color:var(--side-ink);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:18px 14px calc(16px + env(safe-area-inset-bottom,0px));padding-inline-start:max(14px,env(safe-area-inset-left,0px));gap:14px;overflow-y:auto}
+html[dir="ltr"] .side{padding-inline-start:max(14px,env(safe-area-inset-left,0px))}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 6px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.links{width:36px;height:24px;position:relative;flex:none}
+.links i{position:absolute;top:3px;width:21px;height:17px;border:3px solid #e9f4f8;border-radius:9px}
+.links i:first-child{inset-inline-start:0}.links i:last-child{inset-inline-start:13px;border-color:#ff6b75}
+.brand h1{font-family:var(--f-disp);font-size:17px;font-weight:800;margin:0;line-height:1.3;color:#fff}
+.brand small{display:block;font-size:11.5px;color:var(--side-mute);font-weight:500}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav .lbl{font-size:10.5px;font-weight:600;letter-spacing:.6px;color:var(--side-mute);padding:10px 10px 4px;text-transform:uppercase}
+.nv{display:flex;align-items:center;gap:10px;border:0;background:none;color:var(--side-ink);padding:9px 10px;border-radius:9px;cursor:pointer;font-weight:500;font-size:13.5px;text-align:start;width:100%;opacity:.86}
+.nv svg{width:18px;height:18px;flex:none;opacity:.8}
+.nv:hover{background:var(--side-2);opacity:1}
+.nv[aria-current="page"]{background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.06));opacity:1;font-weight:600;box-shadow:inset 3px 0 0 #ff6b75}
+html[dir="rtl"] .nv[aria-current="page"]{box-shadow:inset -3px 0 0 #ff6b75;background:linear-gradient(270deg,rgba(255,255,255,.12),rgba(255,255,255,.06))}
+.nv .c{margin-inline-start:auto;font-size:11px;font-weight:600;border-radius:20px;padding:0 7px;background:rgba(255,255,255,.1);direction:ltr}
+.nv .c.r{background:rgba(255,107,117,.2);color:#ffb3b9}.nv .c.g{background:rgba(95,211,148,.18);color:#9ef0c2}
+.side-foot{margin-top:auto;display:grid;gap:8px}
+.sbtn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:9px;padding:9px 12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font-weight:600;font-size:13px}
+.sbtn:hover{background:rgba(255,255,255,.12)}
+.sbtn.hero{background:#fff;color:#023a51;border-color:transparent}
+.sbtn.hero:hover{background:#e9f4f8}
+.sbtn svg{width:16px;height:16px}
+.srow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sstat{font-size:11.5px;color:var(--side-mute);display:grid;gap:3px;padding:8px 4px 0;border-top:1px solid rgba(255,255,255,.08)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--side-mute);margin-inline-end:6px;vertical-align:1px}
+.dot.ok{background:#5fd394}.dot.warn{background:#f2b84b}
+
+.main{min-width:0;padding-block:18px 10px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 20px;margin-bottom:18px}
+.top .ttl{min-width:0}
+.top h2{font-family:var(--f-disp);font-size:24px;font-weight:800;margin:0;letter-spacing:-.2px;line-height:1.25;text-wrap:balance}
+.top .meta{color:var(--ink-2);font-size:12.5px;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-inline-start:auto}
+.fld{display:flex;align-items:center;gap:0;border:1px solid var(--line);background:var(--surface);border-radius:9px;overflow:hidden;height:36px}
+.fld span{font-size:11.5px;color:var(--ink-3);padding-inline:10px 4px;font-weight:600;white-space:nowrap}
+.fld select{border:0;background:transparent;padding:0 8px;height:100%;font-weight:600;max-width:170px;cursor:pointer}
+.fld select option{color:#0e2630;background:#fff}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 13px;height:36px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap}
+.btn:hover{border-color:var(--line-2);background:var(--surface-2)}
+.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.btn.primary:hover{filter:brightness(1.08);background:var(--brand)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn svg{width:16px;height:16px;flex:none}
+.mtabs{display:none}
+
+/* ===== cards & grids ===== */
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (min-width:1280px){.kpis{grid-template-columns:repeat(8,minmax(0,1fr))}.kpis.six{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))}
+.three{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.span2{grid-template-columns:minmax(0,1.65fr) minmax(0,1fr)}
+@media (max-width:1100px){.span2{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;min-width:0;box-shadow:var(--shadow)}
+.card h3{font-size:14px;margin:0 0 12px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--ink)}
+.card h3 .sub{font-weight:500;color:var(--ink-3);font-size:12px}
+.card h3 .act{margin-inline-start:auto;font-size:12px;font-weight:600;color:var(--accent);background:none;border:0;cursor:pointer;padding:0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--ink-3);text-transform:uppercase}
+.kpi{padding:14px 16px 10px;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.kpi .lbl{font-size:12px;color:var(--ink-2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .val{font-size:25px;font-weight:700;letter-spacing:-.4px;line-height:1.25;margin-top:2px;direction:ltr;unicode-bidi:isolate;text-align:start}
+html[dir="rtl"] .kpi .val{text-align:right}
+.kpi .val small{font-size:13px;font-weight:600;color:var(--ink-3)}
+.kpi .cmp{font-size:11.5px;color:var(--ink-3);display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-height:20px}
+.spark{display:block;width:100%;height:30px;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:3px;border-radius:20px;padding:0 7px;font-size:11px;font-weight:700;direction:ltr;line-height:18px}
+.chip.g{background:var(--good-bg);color:var(--good)}.chip.r{background:var(--bad-bg);color:var(--bad)}.chip.n{background:var(--surface-3);color:var(--ink-2)}
+.pill{display:inline-block;border-radius:6px;padding:1px 8px;font-size:11.5px;font-weight:700;white-space:nowrap;line-height:19px}
+.pill.g{background:var(--good-bg);color:var(--good)}.pill.r{background:var(--bad-bg);color:var(--bad)}.pill.n{background:var(--surface-3);color:var(--ink-2)}.pill.y{background:var(--warn-bg);color:var(--warn)}
+.veh{font-size:10.5px;font-weight:700;border-radius:4px;padding:0 5px;border:1px solid currentColor;white-space:nowrap;line-height:16px}
+.veh.M{color:var(--moto)}.veh.C{color:var(--car)}
+.chart{position:relative;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ink-2);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:-1px}
+
+/* pulse band */
+.pulse{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:0;padding:0;overflow:hidden;margin-bottom:14px}
+.pulse .pa{padding:20px 22px;display:grid;gap:12px;align-content:start}
+.pulse .pb{padding:20px 22px;background:var(--surface-2);border-inline-start:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;align-content:center}
+@media (max-width:900px){.pulse{grid-template-columns:1fr}.pulse .pb{border-inline-start:0;border-top:1px solid var(--line)}}
+.big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.big b{font-size:40px;font-weight:700;letter-spacing:-1px;line-height:1.1;direction:ltr;unicode-bidi:isolate}
+.big span{color:var(--ink-2);font-size:14px}
+.track{position:relative;height:14px;border-radius:8px;background:var(--surface-3);overflow:hidden}
+.track .a{position:absolute;inset-block:0;inset-inline-start:0;background:linear-gradient(90deg,var(--brand),var(--accent));border-radius:8px}
+html[dir="rtl"] .track .a{background:linear-gradient(270deg,var(--brand),var(--accent))}
+.track .f{position:absolute;inset-block:0;background:repeating-linear-gradient(135deg,var(--new) 0 6px,var(--new-bg) 6px 11px);opacity:.9}
+.track .m{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.vsplit{display:flex;flex-wrap:wrap;gap:10px}
+.vs{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 12px;background:var(--surface-2)}
+.vs b{font-size:18px;font-weight:700}
+.trackx{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);gap:10px;flex-wrap:wrap}
+.ms{display:grid;gap:2px}
+.ms .k{font-size:11.5px;color:var(--ink-2);font-weight:600}
+.ms .v{font-size:20px;font-weight:700;direction:ltr;unicode-bidi:isolate;text-align:start}
+html[dir="rtl"] .ms .v{text-align:right}
+.ms .s{font-size:11.5px;color:var(--ink-3)}
+
+/* leaderboard */
+.lead{display:grid;gap:2px}
+.lr{display:grid;grid-template-columns:20px 34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 6px;border-radius:9px;cursor:pointer}
+.lr:hover{background:var(--surface-2)}
+.lr .rk{font-size:12px;color:var(--ink-3);text-align:center;font-weight:600}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;letter-spacing:.3px;direction:ltr}
+.av.C{background:linear-gradient(135deg,#0b6b90,#004e6d)}.av.M{background:linear-gradient(135deg,#c2414b,#9a232e)}
+.lr .who{min-width:0;display:grid;gap:4px}
+.lr .who b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
+html[dir="rtl"] .lr .who b{text-align:right}
+.lr .v{font-weight:700;direction:ltr;text-align:end;font-size:13.5px}
+.lr .v small{display:block;font-weight:500;color:var(--ink-3);font-size:11px}
+.meter{height:5px;border-radius:4px;background:var(--surface-3);overflow:hidden;position:relative}
+.meter i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:4px;background:var(--accent)}
+.meter i.g{background:var(--good)}.meter i.y{background:var(--warn)}.meter i.r{background:var(--bad)}
+
+/* tables */
+.tblwrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);max-height:72vh;box-shadow:var(--shadow)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+th{background:var(--surface-2);font-weight:600;color:var(--ink-2);font-size:11.5px;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;letter-spacing:.2px}
+th[data-k]:hover{color:var(--ink)}
+th .arr{opacity:.7;font-size:9px;margin-inline-start:4px}
+tbody tr:last-child td{border-bottom:0}
+td.name{text-align:start;font-weight:600;direction:ltr;unicode-bidi:isolate}
+html[dir="rtl"] td.name{text-align:right}
+td.note{text-align:start;white-space:normal;min-width:300px;color:var(--ink-2);font-size:12.5px;line-height:1.5}
+tbody tr:hover td{background:var(--surface-2)}
+tr.click{cursor:pointer}
+td.g{background:var(--good-bg);color:var(--good);font-weight:700}td.r{background:var(--bad-bg);color:var(--bad);font-weight:700}
+td.name.g,td.name.r{background:none}
+td.name.g{box-shadow:inset 3px 0 0 var(--good)}td.name.r{box-shadow:inset 3px 0 0 var(--bad)}
+html[dir="rtl"] td.name.g{box-shadow:inset -3px 0 0 var(--good)}html[dir="rtl"] td.name.r{box-shadow:inset -3px 0 0 var(--bad)}
+td.name.g,td.name.r{color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+.filters input,.filters select{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:0 12px;height:36px;min-width:0}
+.filters input{flex:1 1 220px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface);height:36px}
+.seg button{border:0;background:none;padding:0 12px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.bar{display:inline-block;vertical-align:middle;width:56px;height:6px;border-radius:4px;background:var(--surface-3);overflow:hidden;margin-inline-start:8px}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--accent)}.bar i.g{background:var(--good)}.bar i.y{background:var(--warn)}.bar i.r{background:var(--bad)}.bar i.a{background:var(--accent)}
+
+/* matrix */
+.mx td,.mx th{padding:6px 7px;font-size:12px}
+.mx td.c{min-width:36px;font-weight:500}
+.mx td.lo{background:var(--bad-bg);color:var(--bad);font-weight:700}
+.mx td.hi{background:var(--good-bg);color:var(--good);font-weight:700}
+.mx td.pt{background:var(--warn-bg);color:var(--warn);font-weight:700}
+.mx td.ab{background:var(--abs-bg);color:var(--abs-ink);font-weight:700;text-decoration:line-through}
+.mx th.newd{background:var(--new-bg);color:var(--warn)}
+.mx td.stick,.mx th.stick{position:sticky;inset-inline-start:0;background:var(--surface);z-index:1}
+.mx th.stick{z-index:3;background:var(--surface-2)}
+
+/* insights */
+.ins{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:0 22px;margin:0;padding:0;list-style:none}
+.ins li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.ins .tag{font-size:10.5px;font-weight:700;border-radius:5px;padding:1px 7px;white-space:nowrap;margin-top:3px}
+.tag.ov{background:var(--accent-soft);color:var(--accent)}.tag.up{background:var(--good-bg);color:var(--good)}.tag.dn{background:var(--bad-bg);color:var(--bad)}.tag.wt{background:var(--warn-bg);color:var(--warn)}.tag.in{background:var(--surface-3);color:var(--ink-2)}
+.mini{display:grid;gap:2px}
+.mini .row{display:grid;grid-template-columns:22px minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 6px;border-radius:8px}
+.mini .row:hover{background:var(--surface-2);cursor:pointer}
+.mini .rk{font-size:12px;color:var(--ink-3);text-align:center}
+.mini .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:start}
+html[dir="rtl"] .mini .nm{text-align:right}
+.mini .v{font-size:12.5px;color:var(--ink-2)}
+
+/* messages */
+.msg{white-space:pre-wrap;background:var(--surface-2);border-radius:10px;padding:14px 16px;font-size:13.5px;line-height:1.8;max-height:560px;overflow:auto;border:1px solid var(--line)}
+.msgbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(3,20,28,.5);z-index:40;backdrop-filter:blur(2px)}
+.drawer{position:fixed;top:0;bottom:0;inset-inline-end:0;width:min(580px,100%);background:var(--bg);z-index:41;overflow:auto;box-shadow:-12px 0 40px rgba(0,0,0,.25);padding:calc(env(safe-area-inset-top,0px) + 16px) max(18px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 20px) max(18px,env(safe-area-inset-left,0px))}
+.drawer header{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.drawer h2{margin:0;font-size:20px;direction:ltr}
+.drawer .x{margin-inline-start:auto}
+.drawer .av{width:46px;height:46px;font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.stat b{display:block;font-size:18px;direction:ltr;text-align:start}
+html[dir="rtl"] .stat b{text-align:right}
+.stat span{font-size:11px;color:var(--ink-2);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.dchip{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--bad-bg);color:var(--bad);border-radius:20px;padding:5px 12px;cursor:pointer;font-size:12.5px;font-weight:600}
+.dchip span{background:var(--surface);border-radius:10px;padding:0 6px;color:var(--ink-2)}
+.setf{display:grid;gap:5px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.setf input{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:0 12px;height:38px;direction:ltr}
+.setgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.toast{position:fixed;inset-inline-start:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--ink);color:var(--surface);padding:11px 18px;border-radius:10px;z-index:60;font-weight:600;max-width:calc(100% - 32px);box-shadow:0 8px 30px rgba(0,0,0,.25)}
+html[dir="rtl"] .toast{transform:translateX(50%)}
+.overlay[hidden]{display:none}
+.lr .who .muted{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.overlay{position:fixed;inset:0;z-index:70;background:rgba(3,45,64,.82);display:grid;place-items:center;color:#fff;padding:24px}
+.overlay div{border:2px dashed rgba(255,255,255,.6);border-radius:18px;padding:40px 48px;text-align:center;max-width:520px}
+.overlay b{display:block;font-family:var(--f-disp);font-size:22px;margin-bottom:6px}
+.empty{padding:56px 16px;text-align:center;color:var(--ink-2);display:grid;justify-items:center;gap:10px}
+.empty h2{font-family:var(--f-disp);color:var(--ink);font-size:22px;margin:0}
+.muted{color:var(--ink-3);font-size:12px}
+.sec{margin-block:22px 10px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+footer{padding-block:24px 30px;color:var(--ink-3);font-size:11.5px;max-width:900px}
+
+/* ===== small screens: rail becomes a top bar ===== */
+@media (max-width:960px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));gap:10px}
+  .brand{border:0;padding:0;flex:1 1 auto}
+  .nav,.sstat{display:none}
+  .side-foot{margin:0;display:flex;gap:6px}
+  .side-foot .sbtn{padding:7px 10px}
+  .side-foot .sbtn .t{display:none}
+  .srow{display:flex;gap:6px}
+  .mtabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px;padding-bottom:4px;scrollbar-width:none}
+  .mtabs button{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px;font-weight:600;font-size:12.5px;white-space:nowrap;cursor:pointer;color:var(--ink-2)}
+  .mtabs button[aria-current="page"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .top h2{font-size:20px}
+  .ctrls{margin-inline-start:0;width:100%}
+  .fld select{max-width:120px}
+}
+@media (max-width:560px){.kpis,.kpis.six{grid-template-columns:repeat(2,minmax(0,1fr))}.big b{font-size:32px}.kpi .val{font-size:21px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="links" aria-hidden="true"><i></i><i></i></div>
+      <div><h1 id="appTitle">رادار السلاسل</h1><small id="appSub">أداء سائقي كيتا</small></div></div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <div class="side-foot">
+      <button class="sbtn hero" id="btnImport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg><span class="t" id="txtImport">استيراد شيت</span></button>
+      <div class="srow">
+        <button class="sbtn" id="btnSet" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span class="t" id="txtSet">الإعدادات</span></button>
+        <button class="sbtn" id="btnLang" type="button" aria-label="Language">EN</button>
+      </div>
+      <div class="sstat" id="strip"></div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="ttl"><h2 id="pageTitle"></h2><div class="meta" id="pageMeta"></div></div>
+      <div class="ctrls">
+        <label class="fld"><span id="lblEnd">حتى</span><select id="selEnd"></select></label>
+        <label class="fld"><span id="lblPrev">مقارنة بـ</span><select id="selPrev"></select></label>
+        <button class="btn primary" id="btnExport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12l6 6m0-6-6 6"/></svg><span id="txtExport">تقرير Excel</span></button>
+      </div>
+    </header>
+    <nav class="mtabs" id="tabs" aria-label="Sections"></nav>
+    <section id="view"></section>
+    <footer id="foot"></footer>
+  </div>
+</div>
+<input type="file" id="file" accept=".xlsx,.xls,.csv" multiple hidden>
+<div class="overlay" id="drop" hidden><div><b id="dropT"></b><span id="dropS"></span></div></div>
+<div id="layer"></div>
+<script>
+/* ═══ ARK bridge: رادار السلاسل يحفظ في Supabase بدل قاعدة الآرتيفاكت ═══ */
+(function(){
+  const URL0 = 'https://pqpowedqewjgkrzvmgyv.supabase.co/rest/v1/';
+  const KEY  = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
+  const H = (extra) => Object.assign({apikey:KEY, Authorization:'Bearer '+KEY, 'Content-Type':'application/json'}, extra||{});
+  const api = async (path, opt) => { const r = await fetch(URL0+path, opt); if(!r.ok){ const t = await r.text().catch(()=> ''); const e = new Error('HTTP '+r.status+' '+t.slice(0,160)); e.code = r.status; throw e; } return r.status === 204 ? null : r.json().catch(()=>null); };
+  const upsert = (table, rows, conflict) => api(table + (conflict?'?on_conflict='+conflict:''), {method:'POST', headers:H({Prefer:'resolution=merge-duplicates,return=minimal'}), body:JSON.stringify(rows)});
+
+  /* أيام الرادار → جدول keeta_daily (اللي بيقرا منه مسيّر الرواتب في ARK) */
+  async function syncDaily(dayKey, rows){
+    const s = String(dayKey), day = s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+    const out = [], names = [];
+    for(const a of rows||[]){
+      const r = Array.isArray(a) ? a : null; if(!r) continue;
+      const on = +r[4]||0, dl = +r[5]||0;
+      names.push({keeta_id:String(r[1]), keeta_name:r[2]||null});
+      if(dl<=0 && on<=0) continue;
+      out.push({day, keeta_id:String(r[1]), keeta_name:r[2]||null, vehicle:r[3]||null, online_hours:Math.round(on*100)/100, delivered:dl, cancelled:+r[6]||0,
+                on_time:r[11]==null?null:+r[11], delivery_min:r[12]==null?null:+r[12], synced_at:new Date().toISOString()});
+    }
+    if(out.length) await upsert('keeta_daily', out, 'day,keeta_id');
+    if(names.length){ try{ await api('keeta_map?on_conflict=keeta_id', {method:'POST', headers:H({Prefer:'resolution=ignore-duplicates,return=minimal'}), body:JSON.stringify(names)}); }catch(e){} }
+  }
+
+  function snapOf(docs){ return { docChanges: () => docs.map(d => ({type:d.removed?'removed':'added', doc:{id:d.id, data:()=>d.data}})) }; }
+  function docSnap(data){ return { exists: data!=null, data: () => data }; }
+
+  const listeners = { days:[], docs:{} };
+  const known = new Map(); // path -> updated_at
+  let lastPoll = null;
+
+  async function fetchDays(since){
+    const q = 'radar_store?select=path,data,updated_at&path=like.days%2F*' + (since ? '&updated_at=gt.'+encodeURIComponent(since) : '') + '&order=path.asc&limit=2000';
+    return api(q, {headers:H()});
+  }
+  async function poll(){
+    try{
+      const rows = await fetchDays(lastPoll);
+      if(rows && rows.length){
+        const docs = [];
+        for(const r of rows){ if(known.get(r.path) === r.updated_at) continue; known.set(r.path, r.updated_at); docs.push({id:r.path.slice(5), data:r.data}); if(!lastPoll || r.updated_at > lastPoll) lastPoll = r.updated_at; }
+        if(docs.length) listeners.days.forEach(cb => cb(snapOf(docs)));
+      }
+      for(const p of Object.keys(listeners.docs)){
+        const res = await api('radar_store?select=data,updated_at&path=eq.'+encodeURIComponent(p), {headers:H()});
+        const row = res && res[0]; const stamp = row ? row.updated_at : null;
+        if(known.get(p) !== stamp){ known.set(p, stamp); listeners.docs[p].forEach(cb => cb(docSnap(row ? row.data : null))); }
+      }
+    }catch(e){ console.warn('[radar-bridge] poll', e); }
+  }
+
+  /* أول تشغيل: لو المخزن فاضي، حمّل نسخة البيانات المنقولة من الرادار القديم */
+  async function seedIfEmpty(){
+    try{
+      const head = await api('radar_store?select=path&path=like.days%2F*&limit=1', {headers:H()});
+      if(head && head.length) return;
+      const r = await fetch('radar_seed.json', {cache:'no-store'}); if(!r.ok) return;
+      const seed = await r.json();
+      const keys = Object.keys(seed.days||{}).sort();
+      for(let i=0;i<keys.length;i+=4){
+        const chunk = keys.slice(i,i+4);
+        await upsert('radar_store', chunk.map(k => ({path:'days/'+k, data:seed.days[k]})), 'path');
+        for(const k of chunk) await syncDaily(k, seed.days[k].rows);
+      }
+      if(seed.imports)  await upsert('radar_store', [{path:'meta/imports',  data:seed.imports}], 'path');
+      if(seed.settings) await upsert('radar_store', [{path:'meta/settings', data:seed.settings}], 'path');
+      console.log('[radar-bridge] seeded', keys.length, 'days');
+    }catch(e){ console.warn('[radar-bridge] seed', e); }
+  }
+
+  const ready = seedIfEmpty();
+  const DB = {
+    collection(name){
+      return {
+        onSnapshot(cb, err){ listeners.days.push(cb); ready.then(poll).catch(e => err && err(e)); return () => {}; },
+        doc(id){ return DB.doc(name+'/'+id); }
+      };
+    },
+    doc(path){
+      return {
+        onSnapshot(cb){ (listeners.docs[path] = listeners.docs[path] || []).push(cb); ready.then(poll); return () => {}; },
+        async set(data){
+          await upsert('radar_store', [{path, data}], 'path');
+          if(path.startsWith('days/') && data && Array.isArray(data.rows)) await syncDaily(path.slice(5), data.rows);
+          try{ parent && parent !== window && parent.postMessage({type:'radar-updated', path}, '*'); }catch(e){}
+        }
+      };
+    }
+  };
+  const DL = { async save({filename, data}){ const u = URL.createObjectURL(data); const a = document.createElement('a'); a.href = u; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); } };
+  window.claude = { use: async cap => cap === 'db' ? DB : cap === 'downloads' ? DL : null };
+  setInterval(poll, 60000);
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script>
+/* Al-Salasil Keeta analysis engine — same method as the Excel reports */
+(function (root) {
+  'use strict';
+  // ---------- dates ----------
+  const kd = k => { const s = String(k); return Date.UTC(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8)); };
+  const dayNo = k => Math.round(kd(k) / 864e5);
+  const dow = k => new Date(kd(k)).getUTCDay(); // 0=Sun
+  const keyFromDay = n => { const d = new Date(n * 864e5); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
+  const dd = k => +String(k).slice(6, 8);
+  const ym = k => Math.floor(k / 100);
+
+  // ---------- parsing ----------
+  function hrs(s) {
+    if (s == null) return 0;
+    if (typeof s === 'number') return s;
+    s = String(s);
+    let h = 0;
+    const m1 = s.match(/(\d+(?:\.\d+)?)\s*(?:hr|h|س)/); if (m1) h += +m1[1];
+    const m2 = s.match(/(\d+(?:\.\d+)?)\s*(?:min|m(?!s)|د)/); if (m2) h += +m2[1] / 60;
+    const m3 = s.match(/(\d+(?:\.\d+)?)\s*(?:sec|s|ث)/); if (m3) h += +m3[1] / 3600;
+    return h;
+  }
+  const num = v => { if (v == null || v === '' || v === '-') return null; let t = String(v).trim().replace(/,/g, ''); let k = 1; if (t.endsWith('%')) { t = t.slice(0, -1); k = 100; } const n = +t / k; return isFinite(n) ? n : null; };
+  const n0 = v => num(v) || 0;
+  function titleCase(s) { return String(s || '').trim().toLowerCase().replace(/(^|[\s'-])([a-z])/g, (m, a, b) => a + b.toUpperCase()); }
+  // shift schedule: "12:00-14:00,On-Shift,2 hr,qualified|..." → scheduled/qualified slots and hours
+  function parseSched(s, flag) {
+    const f = String(flag == null ? '' : flag).trim();
+    const sch = /^(yes|نعم)$/i.test(f) ? 1 : /^(no|لا)$/i.test(f) ? 0 : null;
+    const out = { sch, sl: 0, sq: 0, shr: 0, qhr: 0, son: 0 };
+    if (s == null || s === '') return out;
+    for (const p of String(s).split('|')) {
+      const parts = p.split(',').map(x => x.trim()); if (parts.length < 3) continue;
+      const m = parts[0].match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/); if (!m) continue;
+      const len = (+m[3] + +m[4] / 60) - (+m[1] + +m[2] / 60);
+      if (!/^on-?shift$/i.test(parts[1])) continue;
+      const last = parts[parts.length - 1].toLowerCase();
+      const q = last === 'qualified' ? 1 : last === 'unqualified' ? 0 : null;
+      const dur = hrs(parts.slice(2, q == null ? parts.length : parts.length - 1).join(' '));
+      out.sl++; out.shr += len; out.son += Math.min(len, dur); if (q === 1) { out.sq++; out.qhr += len; }
+    }
+    out.shr = Math.round(out.shr * 100) / 100; out.qhr = Math.round(out.qhr * 100) / 100; out.son = Math.round(out.son * 1000) / 1000;
+    if (out.sl && sch == null) out.sch = 1;
+    return out;
+  }
+  // Keeta "courier daily performance" export: 29 fixed columns (English or Arabic headers)
+  function parseAoa(aoa) {
+    let h = 0;
+    while (h < aoa.length && !(aoa[h] && aoa[h].length >= 25 && /date|التاريخ/i.test(String(aoa[h][0] || '')))) h++;
+    if (h >= aoa.length) throw new Error('format');
+    const rows = [];
+    for (let i = h + 1; i < aoa.length; i++) {
+      const r = aoa[i]; if (!r || r[0] == null || r[1] == null || r[0] === '') continue;
+      const key = Math.round(num(r[0])); if (!key || key < 20000101) continue;
+      rows.push({
+        d: key, id: String(r[1]).replace(/\.0+$/, '').trim(), n: titleCase((r[2] || '') + ' ' + (r[3] || '')),
+        v: /motor/i.test(String(r[5])) ? 'M' : 'C', on: Math.round(hrs(r[11]) * 1000) / 1000,
+        dl: n0(r[15]), cx: n0(r[17]), rj: n0(r[18]), rc: n0(r[19]), ra: n0(r[20]), dlb: n0(r[21]),
+        ot: num(r[23]), dt: num(r[25]), o55: num(r[26]), od: n0(r[27]), sv: n0(r[28]),
+        ...parseSched(r[7], r[8]), pk: Math.round(hrs(r[12]) * 1000) / 1000, app: Math.round(hrs(r[10]) * 1000) / 1000
+      });
+    }
+    return rows;
+  }
+
+  // ---------- aggregation ----------
+  let ABS = 4; // a roster day with fewer orders than this counts as an absence
+  function agg(rows) {
+    const m = new Map();
+    for (const r of rows) {
+      let a = m.get(r.id);
+      if (!a) { a = { id: r.id, name: r.n, v: r.v, joined: r.d, last: r.d, roster: 0, active: 0, delivered: 0, online: 0, cancelled: 0, rejected: 0, rc: 0, ra: 0, dlb: 0, overdue: 0, sev: 0, otw: 0, dtw: 0, o55w: 0, dtD: 0, lastDeliv: null, lastWork: null, workDl: 0, absent: 0, schInfo: 0, schDays: 0, shr: 0, qhr: 0, son: 0, sl: 0, sq: 0, fullDays: 0, missDays: 0, pk: 0 }; m.set(r.id, a); }
+      if (r.d >= a.last) { a.name = r.n; a.v = r.v; }
+      a.joined = Math.min(a.joined, r.d); a.last = Math.max(a.last, r.d);
+      a.roster++; if (r.dl > 0) a.lastDeliv = Math.max(a.lastDeliv || 0, r.d);
+      if (r.dl >= ABS) { a.active++; a.workDl += r.dl; a.lastWork = Math.max(a.lastWork || 0, r.d); } else a.absent++;
+      a.delivered += r.dl; a.online += r.on; a.cancelled += r.cx; a.rejected += r.rj; a.rc += r.rc; a.ra += r.ra; a.dlb += r.dlb; a.overdue += r.od; a.sev += r.sv;
+      a.otw += (r.ot || 0) * r.dl; a.dtw += (r.dt || 0) * r.dl; a.o55w += (r.o55 || 0) * r.dl;
+      a.pk += r.pk || 0;
+      if (r.sch != null) { a.schInfo++; if (r.sch === 1 && r.sl) { a.schDays++; a.shr += r.shr || 0; a.qhr += r.qhr || 0; a.son += r.son || 0; a.sl += r.sl || 0; a.sq += r.sq || 0; if (r.sq === r.sl) a.fullDays++; else a.missDays++; } }
+    }
+    for (const a of m.values()) {
+      const D = a.delivered || null;
+      a.ontime = D ? a.otw / D : null; a.avgdt = D ? a.dtw / D : null; a.over55 = D ? a.o55w / D : null;
+      a.perActive = a.active ? a.workDl / a.active : null; a.attend = a.roster ? a.active / a.roster : null; a.hrsDay = a.roster ? a.online / a.roster : null; a.adh = a.shr ? a.qhr / a.shr : null; a.perRoster = a.delivered / a.roster;
+      a.perHr = a.online ? a.delivered / a.online : null;
+      a.rejRate = (a.delivered + a.rejected) ? a.rejected / (a.delivered + a.rejected) : null;
+    }
+    return m;
+  }
+  const wavg = (rows, f) => { let s = 0, w = 0; for (const r of rows) { if (r.dl > 0) { s += (r[f] || 0) * r.dl; w += r.dl; } } return w ? s / w : null; };
+  function pctRank(vals) { // pandas rank(pct=True, method='average'), ascending
+    const idx = vals.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]); const out = new Array(vals.length); const n = vals.length;
+    for (let i = 0; i < n;) { let j = i; while (j + 1 < n && idx[j + 1][0] === idx[i][0]) j++; const avg = (i + j) / 2 + 1; for (let k = i; k <= j; k++) out[idx[k][1]] = avg / n; i = j + 1; }
+    return out;
+  }
+  const median = a => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : 0; };
+
+  // status keys: normal | new | stopped | zero | left
+  function classify(rows, end) {
+    const upto = rows.filter(r => r.d <= end);
+    const m = agg(upto); const e = dayNo(end);
+    const l7 = new Map(), p7 = new Map();
+    for (const r of upto) { const x = e - dayNo(r.d); if (x < 7) l7.set(r.id, (l7.get(r.id) || 0) + r.dl); else if (x < 14) p7.set(r.id, (p7.get(r.id) || 0) + r.dl); }
+    const list = [...m.values()];
+    for (const a of list) {
+      a.last7 = l7.get(a.id) || 0; a.prev7 = p7.get(a.id) || 0;
+      a.status = a.last < end ? 'left' : a.delivered === 0 ? 'zero' : (a.last7 === 0 || !a.lastWork || e - dayNo(a.lastWork) >= 7) ? 'stopped' : (a.active < 5 || a.roster < 8) ? 'new' : 'normal';
+      a.score = null; a.green = false;
+    }
+    const rated = list.filter(a => a.status === 'normal');
+    if (rated.length) {
+      // productivity 70% (orders per roster day), delivery speed 20% (lower average time ranks higher), on-time 10%
+      const p1 = pctRank(rated.map(a => a.perRoster)), p2 = pctRank(rated.map(a => a.perHr || 0)), p3 = pctRank(rated.map(a => a.ontime || 0)), p4 = pctRank(rated.map(a => a.attend || 0)), p5 = pctRank(rated.map(a => -(a.rejRate || 0)));
+      const pdt = pctRank(rated.map(a => -(a.avgdt == null ? 99 : a.avgdt)));
+      rated.forEach((a, i) => { a.score = 100 * (W.vol * p1[i] + W.dt * pdt[i] + W.ot * p3[i]); });
+    }
+    const volBar = 0.8 * median(rated.map(a => a.perRoster));
+    for (const a of rated) a.green = a.score >= 50 && a.perRoster >= volBar;
+    const ord = { normal: 0, new: 1, stopped: 2, zero: 3, left: 4 };
+    const normal = rated.sort((a, b) => (b.green - a.green) || (b.score - a.score));
+    const rest = list.filter(a => a.status !== 'normal').sort((a, b) => (ord[a.status] - ord[b.status]) || (b.delivered - a.delivered));
+    const ranked = [...normal, ...rest]; ranked.forEach((a, i) => a.rank = i + 1);
+    return { list: ranked, byId: new Map(ranked.map(a => [a.id, a])), volBar, fleetDt: wavg(upto, 'dt'), fleetOt: wavg(upto, 'ot'), rows: upto };
+  }
+
+  // ---------- full model ----------
+  const W = { vol: 0.70, dt: 0.20, ot: 0.10 };
+  function build(allRows, end, prevEnd, cfg) {
+    cfg = Object.assign({ absMin: 4, targetC: 370, targetM: 400, basePay: 130, targetPay: 150, perOrder: 0.4 }, cfg || {});
+    ABS = cfg.absMin;
+    const month = ym(end);
+    const rows = allRows.filter(r => ym(r.d) === month && r.d <= end);
+    const dates = [...new Set(rows.map(r => r.d))].sort((a, b) => a - b);
+    const C = classify(rows, end);
+    const hasPrev = prevEnd && prevEnd < end && rows.some(r => r.d <= prevEnd);
+    const P = hasPrev ? classify(rows, prevEnd) : null;
+    const newRows = hasPrev ? rows.filter(r => r.d > prevEnd) : [];
+    const newDow = new Set(newRows.map(r => dow(r.d)));
+    const baseRows = hasPrev ? rows.filter(r => r.d <= prevEnd && newDow.has(dow(r.d))) : [];
+    const NW = agg(newRows), BD = agg(baseRows);
+    const baseDt = wavg(baseRows, 'dt'), newDt = wavg(newRows, 'dt');
+    const fleetDelta = (baseDt != null && newDt != null) ? newDt - baseDt : 0;
+    for (const a of C.list) {
+      a.note = note(a, C);
+      const n = NW.get(a.id), b = BD.get(a.id), p = P && P.byId.get(a.id);
+      a.n = n || null; a.cmp = { pRank: p ? p.rank : null, pGreen: p ? p.green : null, pScore: p ? p.score : null, pPer: b ? b.perActive : null, nPer: n ? n.perActive : null, pDt: b ? b.avgdt : null, nDt: n ? n.avgdt : null, repDt: p ? p.avgdt : null, dPer: null, dDt: null, pts: null, verdict: 'na' };
+      const c = a.cmp;
+      if (!hasPrev) continue;
+      if (!p) { c.verdict = 'newin'; continue; }
+      if (a.status === 'zero' || a.status === 'left' || ((!n || n.delivered === 0) && a.status !== 'normal')) { c.verdict = a.status === 'stopped' ? 'stillstopped' : 'noact'; continue; }
+      let pts = 0;
+      if (c.pPer && c.nPer != null) { c.dPer = (c.nPer - c.pPer) / c.pPer; pts += c.dPer >= 0.10 ? 1 : c.dPer <= -0.10 ? -1 : 0; }
+      else if (c.nPer != null && c.nPer >= 5) pts += 1;
+      if (c.pDt && c.nDt != null) { c.dDt = (c.nDt - c.pDt) - fleetDelta; pts += c.dDt <= -1.5 ? 1 : c.dDt >= 1.5 ? -1 : 0; }
+      if (p.green === false && a.green) pts += 1; if (p.green && !a.green) pts -= 1;
+      c.pts = pts; c.verdict = pts > 0 ? 'up' : pts < 0 ? 'down' : 'flat';
+    }
+    // daily totals
+    const daily = dates.map(k => { const rs = rows.filter(r => r.d === k); return { k, orders: rs.reduce((s, r) => s + r.dl, 0), online: rs.reduce((s, r) => s + r.on, 0), dt: wavg(rs, 'dt'), ot: wavg(rs, 'ot'), sev: rs.reduce((s, r) => s + r.sv, 0), drivers: rs.length, isNew: hasPrev && k > prevEnd, shr: rs.reduce((s, r) => s + (r.sch === 1 ? r.shr || 0 : 0), 0), qhr: rs.reduce((s, r) => s + (r.sch === 1 ? r.qhr || 0 : 0), 0), sched: rs.filter(r => r.sch === 1).length }; });
+    const matrix = new Map(); for (const r of rows) { if (!matrix.has(r.id)) matrix.set(r.id, new Map()); matrix.get(r.id).set(r.d, r.dl); }
+    const sum = (arr, f) => arr.reduce((s, x) => s + (x[f] || 0), 0);
+    const totals = { orders: sum(rows, 'dl'), online: sum(rows, 'on'), sev: sum(rows, 'sv'), rej: sum(rows, 'rj'), rejAuto: sum(rows, 'ra'), days: dates.length };
+    const greens = C.list.filter(a => a.green);
+    const kpi = (cls, rr, nd) => ({ orders: sum(rr, 'dl'), perDay: sum(rr, 'dl') / nd, perHr: sum(rr, 'dl') / (sum(rr, 'on') || 1), dt: wavg(rr, 'dt'), ot: wavg(rr, 'ot'), sev: sum(rr, 'sv'), green: cls.list.filter(a => a.green).length, red: cls.list.filter(a => !a.green).length, greenShare: cls.list.filter(a => a.green).reduce((s, a) => s + a.delivered, 0) / (sum(rr, 'dl') || 1) });
+    const K = kpi(C, rows, dates.length);
+    { const sr = rows.filter(r => r.sch === 1); const sh = sum(sr, 'shr'); K.adh = sh ? sum(sr, 'qhr') / sh : null; K.hasSched = rows.some(r => r.sch != null); K.onlinePerDay = sum(rows, 'on') / (rows.length || 1); }
+    K.cars = sum(rows.filter(r => r.v === 'C'), 'dl'); K.motos = sum(rows.filter(r => r.v === 'M'), 'dl');
+    const KP = P ? kpi(P, P.rows, new Set(P.rows.map(r => r.d)).size) : null;
+    if (KP) { const sr = P.rows.filter(r => r.sch === 1); const sh = sum(sr, 'shr'); KP.adh = sh ? sum(sr, 'qhr') / sh : null; }
+    if (KP) { KP.cars = sum(P.rows.filter(r => r.v === 'C'), 'dl'); KP.motos = sum(P.rows.filter(r => r.v === 'M'), 'dl'); }
+    const newDays = [...new Set(newRows.map(r => r.d))].sort();
+    const baseDays = [...new Set(baseRows.map(r => r.d))];
+    const sameDow = { now: newDays.length ? sum(newRows, 'dl') / newDays.length : null, before: baseDays.length ? sum(baseRows, 'dl') / baseDays.length : null };
+    // vehicle split (rated cars vs all motorcycles)
+    const moto = C.list.filter(a => a.v === 'M' && a.delivered > 0), cars = C.list.filter(a => a.v === 'C' && a.status === 'normal');
+    const grp = g => { const D = sum(g, 'delivered'); return { n: g.length, orders: D, online: sum(g, 'online'), perDay: D / (sum(g, 'roster') || 1), perHr: D / (sum(g, 'online') || 1), dt: D ? g.reduce((s, a) => s + (a.avgdt || 0) * a.delivered, 0) / D : null, ot: D ? g.reduce((s, a) => s + (a.ontime || 0) * a.delivered, 0) / D : null, overdue: D ? sum(g, 'overdue') / D : null }; };
+    const motoNew = newRows.filter(r => r.v === 'M'), motoOld = rows.filter(r => r.v === 'M' && (!hasPrev || r.d <= prevEnd));
+    const rg = rr => ({ perHr: sum(rr, 'dl') / (sum(rr, 'on') || 1), overdue: sum(rr, 'od') / (sum(rr, 'dl') || 1), dt: wavg(rr, 'dt') });
+    const veh = { moto: grp(moto), cars: grp(cars), motoNew: motoNew.length ? rg(motoNew) : null, motoOld: rg(motoOld) };
+    // speed vs volume
+    const sv = C.list.filter(a => a.status === 'normal' && a.active >= 15 && a.avgdt != null);
+    const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+    const speed = { fast: avg(sv.filter(a => a.avgdt <= 38).map(a => a.perActive)), slow: avg(sv.filter(a => a.avgdt > 38).map(a => a.perActive)), nFast: sv.filter(a => a.avgdt <= 38).length, nSlow: sv.filter(a => a.avgdt > 38).length };
+    // day-offs in new days among normal drivers
+    const offs = []; for (const a of C.list) { if (a.status !== 'normal' || !hasPrev) continue; for (const k of newDays) { const r = rows.find(x => x.id === a.id && x.d === k); if (r && r.dl < ABS) offs.push({ id: a.id, name: a.name, k }); } }
+    const FC = forecast(rows, end, C, cfg, month);
+    const ATT = attendance(rows, dates, C);
+    return { cfg, FC, ATT, end, prevEnd: hasPrev ? prevEnd : null, month, rows, dates, C, P, daily, matrix, totals, K, KP, sameDow, newDays, newDow: [...newDow], baseDt, newDt, fleetDelta, veh, speed, offs, greens, monthDays: new Date(Date.UTC(Math.floor(month / 100), month % 100, 0)).getUTCDate() };
+  }
+
+
+  // ---------- forecasting ----------
+  // fleet (top-down): weekday profile from this month, recency-weighted, times a damped recent-trend factor
+  function fleetModel(daily) {
+    const byDow = new Map();
+    daily.forEach((x, i) => { const d = dow(x.k); if (!byDow.has(d)) byDow.set(d, []); byDow.get(d).push({ v: x.orders, w: 1 + i / daily.length }); });
+    const mean = daily.reduce((s, x) => s + x.orders, 0) / (daily.length || 1);
+    const prof = new Map(); for (const [d, a] of byDow) prof.set(d, a.reduce((s, x) => s + x.v * x.w, 0) / a.reduce((s, x) => s + x.w, 0));
+    const exp = k => prof.has(dow(k)) ? prof.get(dow(k)) : mean;
+    const last = daily.slice(-7);
+    const ratio = last.length ? last.reduce((s, x) => s + x.orders, 0) / last.reduce((s, x) => s + exp(x.k), 0) : 1;
+    const trend = Math.max(0.85, Math.min(1.15, 1 + 0.5 * (ratio - 1)));
+    const res = daily.map(x => x.orders - exp(x.k)); const sd = Math.sqrt(res.reduce((s, x) => s + x * x, 0) / Math.max(1, res.length - 1));
+    const meanProf = [...prof.values()].reduce((s, x) => s + x, 0) / (prof.size || 1);
+    return { predict: k => exp(k) * trend, idx: k => (prof.has(dow(k)) ? prof.get(dow(k)) : mean) / (meanProf || 1), trend, sd, mean };
+  }
+  function forecast(rows, end, C, cfg, month) {
+    const y = Math.floor(month / 100), mo = month % 100, last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    const dates = [...new Set(rows.map(r => r.d))].sort((a, b) => a - b);
+    const tot = new Map(); for (const r of rows) tot.set(r.d, (tot.get(r.d) || 0) + r.dl);
+    const daily = dates.map(k => ({ k, orders: tot.get(k) }));
+    const rem = []; for (let d = dd(end) + 1; d <= last; d++) rem.push(month * 100 + d);
+    const fm = fleetModel(daily);
+    const actual = daily.reduce((s, x) => s + x.orders, 0);
+    const remDays = rem.map(k => ({ k, v: fm.predict(k) }));
+    const remSum = remDays.reduce((s, x) => s + x.v, 0);
+    const band = 1.28 * fm.sd * Math.sqrt(rem.length);
+    // backtest: predict each day from the days before it (from day 10 on)
+    const bt = [];
+    for (let i = 9; i < daily.length; i++) { const m = fleetModel(daily.slice(0, i)); const p = m.predict(daily[i].k); bt.push({ k: daily[i].k, actual: daily[i].orders, pred: p, err: Math.abs(p - daily[i].orders) / daily[i].orders }); }
+    const mape = bt.length ? bt.reduce((s, x) => s + x.err, 0) / bt.length : null;
+    // drivers (bottom-up)
+    const e = dayNo(end);
+    const byId = new Map(); for (const r of rows) { if (!byId.has(r.id)) byId.set(r.id, []); byId.get(r.id).push(r); }
+    const drivers = [];
+    for (const a of C.list) {
+      const rs = (byId.get(a.id) || []).sort((x, y2) => x.d - y2.d);
+      const win = rs.filter(r => e - dayNo(r.d) < 14);
+      const work = rs.filter(r => r.dl >= ABS);
+      const w7 = work.slice(-7);
+      const r7 = w7.length ? w7.reduce((s, r) => s + r.dl, 0) / w7.length : null;
+      const rM = a.perActive;
+      let rate = r7 != null && rM != null ? 0.6 * r7 + 0.4 * rM : (r7 || rM || 0);
+      let p = win.length ? win.filter(r => r.dl >= ABS).length / win.length : 0;
+      if (a.status === 'stopped' || a.status === 'zero' || a.status === 'left') { p = 0; }
+      const lowRate = Math.min(r7 == null ? rate : r7, rM == null ? rate : rM), highRate = Math.max(r7 == null ? rate : r7, rM == null ? rate : rM);
+      let exp = 0, lo = 0, hi = 0;
+      for (const k of rem) { const ix = fm.idx(k); exp += p * rate * ix; lo += p * 0.85 * lowRate * ix; hi += Math.min(1, p * 1.1) * highRate * ix; }
+      const proj = a.delivered + exp, projLo = a.delivered + lo, projHi = a.delivered + hi;
+      const tg = a.v === 'M' ? cfg.targetM : cfg.targetC;
+      const need = rem.length ? Math.max(0, tg - a.delivered) / rem.length : null;
+      const tStatus = a.delivered >= tg ? 'done' : projLo >= tg ? 'ontrack' : projHi >= tg ? 'close' : 'off';
+      const pay = o => o >= tg ? cfg.targetPay + cfg.perOrder * (o - tg) : cfg.basePay;
+      const f = { target: tg, v: a.v, id: a.id, rate, r7, rM, p, exp, proj, projLo, projHi, need, tStatus, pay: pay(Math.round(proj)), payNow: pay(a.delivered) };
+      a.fc = f; drivers.push(f);
+    }
+    const bottomUp = actual + drivers.reduce((s, x) => s + x.exp, 0);
+    return { sd: fm.sd, month, lastDay: last, remaining: rem, remDays, actual, projected: actual + remSum, low: actual + remSum - band, high: actual + remSum + band, bottomUp, trend: fm.trend, mape, accuracy: mape == null ? null : 1 - mape, backtest: bt, drivers,
+      targetCounts: (() => { const live = drivers.filter(d => !['left', 'zero', 'stopped'].includes(C.byId.get(d.id).status)); const o = ['done', 'ontrack', 'close', 'off'].reduce((o, k) => (o[k] = live.filter(d => d.tStatus === k).length, o), {});
+        for (const v of ['C', 'M']) { const g = live.filter(d => d.v === v); o[v] = { hit: g.filter(d => d.tStatus === 'done' || d.tStatus === 'ontrack').length, close: g.filter(d => d.tStatus === 'close').length, off: g.filter(d => d.tStatus === 'off').length, n: g.length }; } return o; })() };
+  }
+  // ---------- attendance (a roster day under ABS orders = absence) ----------
+  function attendance(rows, dates, C) {
+    const live = id => { const a = C.byId.get(id); return a && (a.status === 'normal' || a.status === 'new'); };
+    const days = dates.map(k => { const rs = rows.filter(r => r.d === k && live(r.id)); const ab = rs.filter(r => r.dl < ABS); return { k, roster: rs.length, present: rs.length - ab.length, absent: ab.length, ids: ab.map(r => r.id) }; });
+    const lastDay = days[days.length - 1] || null;
+    const ranked = C.list.filter(a => a.status === 'normal' || a.status === 'new').map(a => ({ id: a.id, absent: a.absent, roster: a.roster, rate: a.roster ? a.absent / a.roster : 0 })).sort((x, y2) => y2.absent - x.absent || y2.rate - x.rate);
+    const totalRoster = days.reduce((s, x) => s + x.roster, 0), totalAbs = days.reduce((s, x) => s + x.absent, 0);
+    return { days, lastDay, ranked, rate: totalRoster ? totalAbs / totalRoster : 0, totalAbs };
+  }
+
+  // ---------- one-day report ----------
+  function dayReport(M, k) {
+    const rs = M.rows.filter(r => r.d === k);
+    const wv = (arr, f) => { let s = 0, w = 0; for (const r of arr) if (r.dl > 0 && r[f] != null) { s += r[f] * r.dl; w += r.dl; } return w ? s / w : null; };
+    const sum = (arr, f) => arr.reduce((s, r) => s + (r[f] || 0), 0);
+    const live = r => { const a = M.C.byId.get(r.id); return a && (a.status === 'normal' || a.status === 'new'); };
+    const stopped = rs.filter(r => { const a = M.C.byId.get(r.id); return a && a.status === 'stopped'; }).map(r => M.C.byId.get(r.id).name);
+    const list = rs.filter(live).map(r => { const a = M.C.byId.get(r.id); return { id: r.id, name: a.name, v: a.v, dl: r.dl, dt: r.dt, ot: r.ot, on: r.on, sev: r.sv, od: r.od, rej: r.rj, absent: r.dl < ABS, mtd: M.rows.filter(x => x.id === r.id && x.d <= k).reduce((s, x) => s + x.dl, 0), target: a.fc ? a.fc.target : null, proj: a.fc ? a.fc.proj : null, ts: a.fc ? a.fc.tStatus : null, rank: a.rank, green: a.green, pk: r.pk, sch: r.sch, sl: r.sl, sq: r.sq, shr: r.shr, qhr: r.qhr }; })
+      .sort((x, y) => y.dl - x.dl || (x.dt || 99) - (y.dt || 99));
+    const part = v => { const g = rs.filter(r => r.v === v); return { orders: sum(g, 'dl'), drivers: list.filter(x => x.v === v && !x.absent).length, dt: wv(g, 'dt') }; };
+    const sameDow = M.daily.filter(x => x.k < k && dow(x.k) === dow(k));
+    const prevDay = M.daily.filter(x => x.k < k).slice(-1)[0] || null;
+    const orders = sum(rs, 'dl');
+    const srs = rs.filter(r => r.sch === 1 && r.sl > 0 && live(r)); const sh = sum(srs, 'shr');
+    return { adh: sh ? sum(srs, 'qhr') / sh : null, schedN: srs.length, schedFull: srs.filter(r => r.sq === r.sl).length, hasSched: rs.some(r => r.sch != null), stopped, k, orders, online: sum(rs, 'on'), dt: wv(rs, 'dt'), ot: wv(rs, 'ot'), sev: sum(rs, 'sv'), rej: sum(rs, 'rj'), C: part('C'), M: part('M'), list,
+      present: list.filter(x => !x.absent).length, absent: list.filter(x => x.absent), sameDowAvg: sameDow.length ? sameDow.reduce((s, x) => s + x.orders, 0) / sameDow.length : null, prevDay,
+      best: list.filter(x => !x.absent)[0] || null, fastest: list.filter(x => x.dl >= 8 && x.dt != null).sort((x, y) => x.dt - y.dt)[0] || null };
+  }
+
+  // ---------- assessment note (structured, translated at render) ----------
+  function note(a, C) {
+    const out = { kind: 'rated', issues: [], strengths: [], borderline: false };
+    if (a.status !== 'normal') { out.kind = a.status; out.date = a.status === 'new' ? a.joined : a.lastDeliv; return out; }
+    const fd = C.fleetDt;
+    if (a.perRoster < C.volBar) out.issues.push(['lowvol', a.perRoster]);
+    if (a.perHr != null && a.perHr < 0.85) out.issues.push(['slow', a.perHr]);
+    if (a.ontime != null && a.ontime < 0.93) out.issues.push(['ontime', a.ontime]);
+    if (a.avgdt != null && a.avgdt > fd + 2) out.issues.push(['highdt', a.avgdt]);
+    if (a.rejected >= 5) out.issues.push(['rej', a.rejected]);
+    if (a.active < a.roster - 3) out.issues.push(['worked', a.active, a.roster]);
+    if (a.prev7 > 0 && a.last7 < 0.6 * a.prev7) out.issues.push(['drop']);
+    if (a.perRoster >= 12) out.strengths.push(['hivol']);
+    if (a.perHr != null && a.perHr >= 1.15) out.strengths.push(['fasthr']);
+    if (a.ontime != null && a.ontime >= 0.98) out.strengths.push(['exot']);
+    if (a.avgdt != null && a.avgdt <= fd - 2) out.strengths.push(['fastdt', a.avgdt]);
+    out.borderline = !a.green && !out.issues.length;
+    return out;
+  }
+
+  // Some Keeta exports carry a wrong sheet dimension (A1:A986); rebuild it from the cells
+  function fixRef(XLSX, ws) {
+    let r1 = 0, c1 = 0;
+    for (const k of Object.keys(ws)) { if (k[0] === '!') continue; const c = XLSX.utils.decode_cell(k); if (c.r > r1) r1 = c.r; if (c.c > c1) c1 = c.c; }
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: r1, c: c1 } });
+    return ws;
+  }
+  function readWorkbook(XLSX, wb) {
+    let out = [];
+    for (const name of wb.SheetNames) {
+      const ws = fixRef(XLSX, wb.Sheets[name]);
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: null });
+      try { out = out.concat(parseAoa(aoa)); } catch (e) { /* not a Keeta sheet */ }
+    }
+    if (!out.length) throw new Error('format');
+    return out;
+  }
+  const api = { parseSched, dayReport, W, readWorkbook, forecast, parseAoa, agg, classify, build, kd, dayNo, dow, dd, ym, keyFromDay, hrs, titleCase };
+  if (typeof module !== 'undefined') module.exports = api; else root.KE = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* ---------- language ---------- */
+const MONTHS = { ar: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'], en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] };
+const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAYS = { ar: ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'], en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] };
+const DAYS_L = { ar: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'], en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] };
+const T = {
+  ar: {
+    title: 'رادار السلاسل', sub: 'أداء سائقي كيتا', end: 'حتى', prev: 'مقارنة بـ', import: 'استيراد شيت', export: 'تقرير Excel', none: 'بدون مقارنة',
+    tabs: { ov: 'نظرة عامة', rank: 'ترتيب السائقين', dt: 'زمن التوصيل', prog: 'مين اتطور', mx: 'المصفوفة اليومية', moto: 'الموتوسيكل', msg: 'رسائل الجروبات' },
+    dropT: 'استيراد شيت كيتا اليومي', dropS: 'اسحب ملف Excel هنا أو اضغط اختيار ملف. الشيت العربي والإنجليزي الاتنين شغالين، والأيام المكررة بتتحدّث تلقائياً.', pick: 'اختيار ملف',
+    stSaved: 'البيانات محفوظة ومشتركة', stLocal: 'الحفظ غير متاح في العرض ده — البيانات هتفضل لحد ما تقفل الصفحة', stLoading: 'جاري تحميل البيانات…',
+    days: 'يوم', rows: 'صف', drivers: 'سائق', lastImport: 'آخر استيراد', period: 'الفترة',
+    kOrders: 'الطلبات المُوصَّلة', kPerDay: 'متوسط الطلبات يومياً', kPerHr: 'طلبات / ساعة أونلاين', kDt: 'متوسط زمن التوصيل', kOt: 'الالتزام بالوقت', kGreen: 'سائقون خضر', kShare: 'حصة الخضر من الطلبات', kSev: 'متأخر جداً', kSame: 'متوسط الأيام الجديدة',
+    vsPrev: 'مقابل', min: 'د', minL: 'دقيقة',
+    chDaily: 'الطلبات اليومية وزمن التوصيل', chDailyS: 'الأعمدة = طلبات، الخط = متوسط زمن التوصيل', chScatter: 'السرعة مقابل عدد الطلبات', chScatterS: 'كل نقطة سائق — أسرع (شمال الخط) = طلبات أكتر',
+    newDays: 'أيام جديدة', oldDays: 'أيام سابقة', dtLine: 'زمن التوصيل', car: 'سيارة', moto: 'موتوسيكل', cars: 'السيارات', motos: 'الموتوسيكل',
+    insights: 'أهم الملاحظات', top5: 'أفضل 5 (أخضر)', bot5: 'أضعف 5 مُقيَّمين (أحمر)', fast5: 'الأسرع في التوصيل', slow5: 'الأبطأ في التوصيل', improved: 'اتطوروا', declined: 'تراجعوا',
+    rank: 'الترتيب', driver: 'السائق', id: 'رقم السائق', vehicle: 'المركبة', cls: 'التصنيف', score: 'الدرجة', status: 'الحالة', roster: 'أيام في القائمة', active: 'أيام عمل', delivered: 'التوصيلات', last7: 'آخر 7 أيام', online: 'ساعات أونلاين', perRoster: 'طلبات/يوم في القائمة', perHr: 'طلبات/ساعة', ontime: 'الالتزام بالوقت', avgdt: 'متوسط زمن التوصيل (د)', over55: 'أكثر من 55 د', overdue: 'متأخر', sev: 'متأخر جداً', rejected: 'مرفوض', assess: 'التقييم',
+    green: 'أخضر', red: 'أحمر', all: 'الكل', search: 'ابحث باسم السائق أو رقمه',
+    st: { normal: 'طبيعي', new: 'منضم جديد', stopped: 'متوقف (7+ أيام)', zero: 'صفر توصيلات', left: 'خرج من القائمة' },
+    vd: { up: 'اتطور ▲', down: 'تراجع ▼', flat: 'ثابت ●', newin: 'جديد — لم يكن في التقرير السابق', noact: 'لا يوجد أداء للمقارنة', stillstopped: 'لا يزال متوقفاً', na: '—' },
+    dtVsFleet: 'الفرق عن متوسط الأسطول', repDt: 'زمن التوصيل — التقرير السابق', newDt: 'زمن التوصيل — الأيام الجديدة',
+    pRank: 'الترتيب السابق', cRank: 'الترتيب الحالي', pCls: 'التصنيف السابق', cCls: 'التصنيف الحالي', pScore: 'الدرجة السابقة', cScore: 'الدرجة الحالية',
+    pPer: 'طلبات/يوم عمل — نفس الأيام قبل كده', nPer: 'طلبات/يوم عمل — الأيام الجديدة', dPer: 'التغيّر', pDt2: 'زمن التوصيل — نفس الأيام قبل كده', nDt2: 'زمن التوصيل — الأيام الجديدة', dDt: 'زمن التوصيل مقارنة بتغيّر الأسطول (د)', verdict: 'الحكم',
+    progNote: 'الأيام الجديدة ({new}) مقارنة بنفس أيام الأسبوع في الفترة السابقة، والطلبات محسوبة لكل يوم عمل. زمن الأسطول في الأيام دي اتغيّر من {a} لـ {b} دقيقة، فتغيّر زمن كل سائق محسوب بالنسبة للأسطول. نقطة + لكل: طلبات أكتر بـ 10%، زمن أحسن من الأسطول بـ 1.5 دقيقة، التحوّل من أحمر لأخضر؛ ونقطة − للعكس.',
+    noPrev: 'اختار تاريخ مقارنة من فوق علشان تشوف مين اتطور.',
+    mxNote: 'أحمر = أقل من 10 طلبات · أبيض = 10 لـ 15 · أخضر = أكثر من 15 · العنوان الأصفر = أيام جديدة بعد المقارنة · فارغ = لم يكن في القائمة',
+    total: 'الإجمالي', motoVsCar: 'الموتوسيكل مقابل السيارات', metric: 'المؤشر', overdueRate: 'نسبة الطلبات المتأخرة', ordersTot: 'إجمالي التوصيلات', onlineTot: 'ساعات أونلاين', perDay: 'طلبات / يوم', newPeriod: 'الأيام الجديدة',
+    msgCars: 'رسالة جروب السيارات', msgMoto: 'رسالة جروب الموتوسيكل', copy: 'نسخ', copied: 'اتنسخت', arabic: 'عربي', english: 'English', msgHint: 'الرسائل بتتكتب تلقائياً من الأرقام. المكتوب بين نجمتين بيظهر عريض في واتساب. الأسماء الضعيفة مش بتتذكر في الجروب — كلمهم لوحدهم.',
+    dOrders: 'طلبات اليوم', dDtL: 'زمن التوصيل', close: 'إغلاق', joined: 'انضم', lastDeliv: 'آخر توصيلة', note: 'ملاحظة',
+    impOk: 'تم استيراد {n} يوم: {days}', impBad: 'الملف ده مش شيت أداء كيتا اليومي. صدّر تقرير «Courier daily performance» من كيتا وجرب تاني.', impFail: 'ما قدرناش نحفظ البيانات: {m}', expOk: 'التقرير جاهز', expNo: 'تنزيل الملفات غير متاح في العرض ده', expDecl: 'تم إلغاء التنزيل',
+    emptyT: 'لسه مافيش بيانات', emptyS: 'استورد أول شيت من كيتا علشان الداشبورد تشتغل.',
+    saving: 'جاري الحفظ…', loadingLib: 'جاري تجهيز الملف…', footer: 'نفس منهجية تقارير Excel: درجة مجمّعة (طلبات/يوم 40%، طلبات/ساعة 25%، الالتزام 20%، عدم الرفض 15%). أخضر = درجة ≥ 50 وطلبات/يوم ≥ 80% من وسيط الأسطول.',
+    rejNote: '{a} طلب مرفوض منهم {b} رفض تلقائي'
+  },
+  en: {
+    title: 'Al-Salasil Radar', sub: 'Keeta driver performance', end: 'As of', prev: 'Compare to', import: 'Import sheet', export: 'Excel report', none: 'No comparison',
+    tabs: { ov: 'Overview', rank: 'Driver ranking', dt: 'Delivery time', prog: 'Who improved', mx: 'Daily matrix', moto: 'Motorcycles', msg: 'Group messages' },
+    dropT: 'Import the Keeta daily sheet', dropS: 'Drop an Excel file here or choose a file. Arabic and English exports both work; repeated days are updated automatically.', pick: 'Choose file',
+    stSaved: 'Data saved and shared', stLocal: 'Saving is not available in this view — data stays until you close the page', stLoading: 'Loading data…',
+    days: 'days', rows: 'rows', drivers: 'drivers', lastImport: 'Last import', period: 'Period',
+    kOrders: 'Delivered orders', kPerDay: 'Average orders per day', kPerHr: 'Orders per online hour', kDt: 'Avg delivery time', kOt: 'On-time rate', kGreen: 'GREEN drivers', kShare: 'GREEN share of orders', kSev: 'Severely overdue', kSame: 'New days average',
+    vsPrev: 'vs', min: 'min', minL: 'min',
+    chDaily: 'Daily orders and delivery time', chDailyS: 'Bars = orders, line = average delivery time', chScatter: 'Speed vs order volume', chScatterS: 'Each dot is a driver — faster (left of the line) = more orders',
+    newDays: 'New days', oldDays: 'Earlier days', dtLine: 'Delivery time', car: 'Car', moto: 'Motorcycle', cars: 'Cars', motos: 'Motorcycles',
+    insights: 'Key findings', top5: 'Top 5 (GREEN)', bot5: 'Bottom 5 rated (RED)', fast5: 'Fastest delivery', slow5: 'Slowest delivery', improved: 'Improved', declined: 'Declined',
+    rank: 'Rank', driver: 'Driver', id: 'Courier ID', vehicle: 'Vehicle', cls: 'Class', score: 'Score', status: 'Status', roster: 'Roster days', active: 'Active days', delivered: 'Delivered', last7: 'Last 7 days', online: 'Online hrs', perRoster: 'Orders / roster day', perHr: 'Orders / hr', ontime: 'On-time', avgdt: 'Avg delivery time (min)', over55: '> 55 min', overdue: 'Overdue', sev: 'Severely overdue', rejected: 'Rejected', assess: 'Assessment',
+    green: 'GREEN', red: 'RED', all: 'All', search: 'Search by driver name or ID',
+    st: { normal: 'Normal', new: 'New joiner', stopped: 'Stopped (7+ days)', zero: 'Zero deliveries', left: 'Left roster' },
+    vd: { up: 'Improved ▲', down: 'Declined ▼', flat: 'Stable ●', newin: 'New — not in previous report', noact: 'No activity to compare', stillstopped: 'Still stopped', na: '—' },
+    dtVsFleet: 'vs fleet average', repDt: 'Delivery time — previous report', newDt: 'Delivery time — new days',
+    pRank: 'Previous rank', cRank: 'Current rank', pCls: 'Previous class', cCls: 'Current class', pScore: 'Previous score', cScore: 'Current score',
+    pPer: 'Orders / working day — same weekdays before', nPer: 'Orders / working day — new days', dPer: 'Change', pDt2: 'Delivery time — same weekdays before', nDt2: 'Delivery time — new days', dDt: 'Delivery time vs fleet change (min)', verdict: 'Verdict',
+    progNote: 'New days ({new}) vs the same weekdays in the earlier period, with orders per working day. Fleet delivery time on those weekdays moved from {a} to {b} min, so each driver\'s time change is measured relative to the fleet. +1 point each for: orders up 10%, time 1.5 min better than the fleet change, RED to GREEN; −1 for the opposite.',
+    noPrev: 'Pick a comparison date above to see who improved.',
+    mxNote: 'Red = fewer than 10 orders · White = 10 to 15 · Green = more than 15 · Yellow header = new days since the comparison date · Blank = not on roster',
+    total: 'Total', motoVsCar: 'Motorcycles vs cars', metric: 'Metric', overdueRate: 'Overdue rate', ordersTot: 'Total delivered', onlineTot: 'Online hours', perDay: 'Orders / day', newPeriod: 'New days',
+    msgCars: 'Cars group message', msgMoto: 'Motorcycle group message', copy: 'Copy', copied: 'Copied', arabic: 'عربي', english: 'English', msgHint: 'Messages are written automatically from the numbers. Text between asterisks shows bold in WhatsApp. Weak performers are not named in the group — talk to them one-to-one.',
+    dOrders: 'Orders', dDtL: 'Delivery time', close: 'Close', joined: 'Joined', lastDeliv: 'Last delivery', note: 'Note',
+    impOk: 'Imported {n} day(s): {days}', impBad: 'This file is not the Keeta courier daily performance sheet. Export the "Courier daily performance" report from Keeta and try again.', impFail: 'Could not save the data: {m}', expOk: 'Report ready', expNo: 'Downloads are not available in this view', expDecl: 'Download cancelled',
+    emptyT: 'No data yet', emptyS: 'Import the first Keeta sheet to start the dashboard.',
+    saving: 'Saving…', loadingLib: 'Preparing the file…', footer: 'Same method as the Excel reports: composite score (orders/day 40%, orders/hr 25%, on-time 20%, no rejections 15%). GREEN = score ≥ 50 and orders/day ≥ 80% of the fleet median.',
+    rejNote: '{a} rejected orders, {b} auto-rejected'
+  }
+};
+let LANG = 'ar';
+const L = () => T[LANG];
+const fmt = (v, d = 0) => v == null || !isFinite(v) ? '—' : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (v, d = 0) => v == null || !isFinite(v) ? '—' : fmt(v * 100, d) + '%';
+const sgn = (v, d = 1) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : '') + fmt(v, d);
+const fill = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k] != null ? o[k] : m);
+function dLabel(k, lang = LANG, long = false) { const dd = KE.dd(k), m = Math.floor(k / 100) % 100 - 1; return lang === 'ar' ? `${dd} ${MONTHS.ar[m]}` : (long ? `${dd} ${MONTHS.en[m]}` : `${dd} ${MON3[m]}`); }
+function dHead(k, lang = LANG) { return `${DAYS[lang][KE.dow(k)]} ${KE.dd(k)}`; }
+function monthName(ymk, lang = LANG) { return `${MONTHS[lang][ymk % 100 - 1]} ${Math.floor(ymk / 100)}`; }
+function rangeLabel(days, lang = LANG) {
+  if (!days.length) return '';
+  const a = KE.dd(days[0]), b = KE.dd(days[days.length - 1]);
+  return a === b ? String(a) : `${a}–${b}`;
+}
+function noteText(nt, lang = LANG) {
+  const ar = lang === 'ar';
+  if (nt.kind !== 'rated') {
+    const k = nt.kind;
+    if (k === 'new') return ar ? `انضم ${dLabel(nt.date, 'ar')} — بيانات غير كافية للتقييم، تابع تطوّره` : `Joined ${dLabel(nt.date, 'en')} — not enough data to rate yet, monitor progress`;
+    if (k === 'stopped') return ar ? `لا توصيلات منذ ${dLabel(nt.date, 'ar')} — متوقف فعلياً` : `No deliveries since ${dLabel(nt.date, 'en')} — effectively stopped`;
+    if (k === 'zero') return ar ? 'مسجّل في القائمة ولم يُكمل أي توصيلة' : 'On the roster but has not completed a single delivery';
+    return ar ? 'خرج من قائمة السائقين' : 'Removed from the driver roster';
+  }
+  const P = {
+    lowvol: x => ar ? `حجم منخفض (${fmt(x[1], 1)}/يوم)` : `low volume (${fmt(x[1], 1)}/day)`,
+    slow: x => ar ? `بطيء (${fmt(x[1], 2)} طلب/ساعة)` : `slow (${fmt(x[1], 2)} orders/hr)`,
+    ontime: x => ar ? `التزام بالوقت ${pct(x[1])}` : `on-time ${pct(x[1])}`,
+    highdt: x => ar ? `زمن توصيل عالي (${fmt(x[1], 1)} د)` : `high delivery time (${fmt(x[1], 1)} min)`,
+    rej: x => ar ? `${x[1]} طلب مرفوض` : `${x[1]} rejected orders`,
+    worked: x => ar ? `اشتغل ${x[1]} من ${x[2]} يوم` : `worked ${x[1]} of ${x[2]} days`,
+    drop: () => ar ? 'تراجع آخر 7 أيام' : 'dropped in last 7 days',
+    hivol: () => ar ? 'حجم يومي مرتفع' : 'high daily volume',
+    fasthr: () => ar ? 'سريع (طلب/ساعة)' : 'fast (orders/hr)',
+    exot: () => ar ? 'التزام ممتاز بالوقت' : 'excellent on-time',
+    fastdt: x => ar ? `توصيل سريع (${fmt(x[1], 1)} د)` : `fast delivery (${fmt(x[1], 1)} min)`
+  };
+  const sep = ar ? '، ' : ', ', out = [];
+  if (nt.borderline) out.push(ar ? 'تحت خط الأخضر في الدرجة المجمّعة (حدّي)' : 'Just below the GREEN score line (borderline)');
+  if (nt.issues.length) out.push((ar ? 'المشاكل: ' : 'Issues: ') + nt.issues.map(x => P[x[0]](x)).join(sep));
+  if (nt.strengths.length) out.push((ar ? 'نقاط القوة: ' : 'Strengths: ') + nt.strengths.map(x => P[x[0]](x)).join(sep));
+  if (!out.length) out.push(ar ? 'متوازن في كل المؤشرات' : 'Balanced across all metrics');
+  return out.join(' | ');
+}
+Object.assign(T.ar, {
+  footer: 'التقييم: الإنتاجية 70% (طلبات/يوم في القائمة) + سرعة التوصيل 20% (متوسط زمن التوصيل — الأقل أحسن) + الالتزام بالوقت 10%. أخضر = درجة ≥ 50 وطلبات/يوم ≥ 80% من وسيط الأسطول. اليوم اللي فيه أقل من {abs} طلبات = غياب.',
+  kFc: 'توقع نهاية الشهر', kAbs: 'نسبة الغياب', absent: 'أيام غياب', attend: 'الحضور', proj: 'التوقع لآخر الشهر', projRange: 'المدى المتوقع', target: 'الهدف', need: 'المطلوب يومياً', pay: 'الراتب المتوقع (د.ك)', payNow: 'الراتب لو الشهر خلص النهارده', rate: 'طلبات/يوم عمل (مرجّح)', pAtt: 'احتمال الحضور',
+  ts: { done: 'حقق الهدف', ontrack: 'في الطريق', close: 'قريب', off: 'بعيد' },
+  fcT: 'التوقعات', attT: 'الحضور والغياب',
+  fcFleet: 'توقع إجمالي الطلبات', fcFleetS: 'الفعلي (أعمدة) والمتوقع لباقي الشهر (مخطط) مع المدى', fcCum: 'التراكمي', actual: 'فعلي', predicted: 'متوقع', remDays: 'الأيام الباقية', topDown: 'من نمط أيام الأسبوع', bottomUp: 'مجموع توقعات السائقين', accuracy: 'دقة التوقع اليومي', accS: 'اختبار رجعي: كل يوم اتوقّع من الأيام اللي قبله', trend: 'اتجاه آخر 7 أيام',
+  fcDrv: 'توقع كل سائق والهدف الشهري (سيارات {c} · موتوسيكل {m})', fcNote: 'التوقع = المحقق + (احتمال الحضور من آخر 14 يوم × معدل الطلبات في يوم العمل [60% آخر 7 أيام عمل + 40% الشهر] × وزن يوم الأسبوع) لكل يوم باقي. المتوقف والصفر = صفر.',
+  monthDone: 'الشهر خلص — مافيش أيام باقية للتوقع.',
+  attChart: 'الحضور والغياب يومياً', attChartS: 'غياب = يوم في القائمة بأقل من {abs} طلبات', present: 'حاضر', absentL: 'غايب', absentees: 'غايبين آخر يوم', absRank: 'الأكثر غياباً', absDays: 'أيام الغياب', none2: 'مافيش',
+  settings: 'الإعدادات', setAbs: 'حد الغياب (أقل من كام طلب في اليوم)', setTargetC: 'هدف السيارات الشهري', setTargetM: 'هدف الموتوسيكل الشهري', setBase: 'الراتب الأساسي (د.ك)', setTPay: 'الراتب عند الهدف (د.ك)', setPer: 'لكل طلب بعد الهدف (د.ك)', save: 'حفظ', saved: 'اتحفظت الإعدادات', cancel: 'إلغاء',
+  mxNote: 'وردي مشطوب = غياب (أقل من {abs} طلبات) · أحمر = أقل من 10 · أبيض = 10 لـ 15 · أخضر = أكثر من 15 · العنوان الأصفر = أيام جديدة بعد المقارنة · فارغ = لم يكن في القائمة'
+});
+Object.assign(T.en, {
+  footer: 'Score: productivity 70% (orders per roster day) + delivery speed 20% (average delivery time — lower is better) + on-time 10%. GREEN = score ≥ 50 and orders/day ≥ 80% of the fleet median. A roster day with fewer than {abs} orders counts as an absence.',
+  kFc: 'Month-end forecast', kAbs: 'Absence rate', absent: 'Absent days', attend: 'Attendance', proj: 'Month-end forecast', projRange: 'Expected range', target: 'Target', need: 'Needed per day', pay: 'Projected pay (KWD)', payNow: 'Pay if the month ended today', rate: 'Orders / working day (weighted)', pAtt: 'Attendance probability',
+  ts: { done: 'Target hit', ontrack: 'On track', close: 'Close', off: 'Off track' },
+  fcT: 'Forecast', attT: 'Attendance',
+  fcFleet: 'Total orders forecast', fcFleetS: 'Actual (bars) and forecast for the rest of the month (hatched) with range', fcCum: 'Cumulative', actual: 'Actual', predicted: 'Forecast', remDays: 'Days left', topDown: 'From the weekday pattern', bottomUp: 'Sum of driver forecasts', accuracy: 'Daily forecast accuracy', accS: 'Backtest: each day predicted from the days before it', trend: 'Last 7 days trend',
+  fcDrv: 'Driver forecast and the monthly target (cars {c} · motorcycles {m})', fcNote: 'Forecast = delivered so far + (attendance probability over the last 14 days × orders per working day [60% last 7 working days + 40% month] × weekday weight) for each remaining day. Stopped and zero = 0.',
+  monthDone: 'The month is complete — no days left to forecast.',
+  attChart: 'Daily attendance', attChartS: 'Absent = a roster day with fewer than {abs} orders', present: 'Present', absentL: 'Absent', absentees: 'Absent on the last day', absRank: 'Most absences', absDays: 'Absent days', none2: 'None',
+  settings: 'Settings', setAbs: 'Absence threshold (fewer than N orders a day)', setTargetC: 'Cars monthly target', setTargetM: 'Motorcycle monthly target', setBase: 'Basic salary (KWD)', setTPay: 'Salary at target (KWD)', setPer: 'Per order above target (KWD)', save: 'Save', saved: 'Settings saved', cancel: 'Cancel',
+  mxNote: 'Pink struck = absence (fewer than {abs} orders) · Red = fewer than 10 · White = 10 to 15 · Green = more than 15 · Yellow header = new days since the comparison date · Blank = not on roster'
+});
+T.ar.tabs = { ov: 'نظرة عامة', fc: 'التوقعات', rank: 'ترتيب السائقين', att: 'الحضور والغياب', dt: 'زمن التوصيل', prog: 'مين اتطور', mx: 'المصفوفة اليومية', moto: 'الموتوسيكل', msg: 'رسائل الجروبات' };
+T.en.tabs = { ov: 'Overview', fc: 'Forecast', rank: 'Driver ranking', att: 'Attendance', dt: 'Delivery time', prog: 'Who improved', mx: 'Daily matrix', moto: 'Motorcycles', msg: 'Group messages' };
+Object.assign(T.ar, { dayT: 'تقرير اليوم', dayPick: 'اليوم', dlImg: 'تحميل الصورة', imgOk: 'الصورة جاهزة', dayMsg: 'رسالة الجروب', dayImg: 'صورة التقرير', carsTot: 'طلبات السيارات', motoTot: 'طلبات الموتوسيكل', byVeh: 'حسب المركبة' });
+Object.assign(T.en, { dayT: 'Daily report', dayPick: 'Day', dlImg: 'Download image', imgOk: 'Image ready', dayMsg: 'Group message', dayImg: 'Report image', carsTot: 'Car orders', motoTot: 'Motorcycle orders', byVeh: 'By vehicle' });
+T.ar.tabs.day = 'تقرير اليوم'; T.en.tabs.day = 'Daily report';
+Object.assign(T.ar, { hrsDay: 'ساعات/يوم', adh: 'الالتزام بالجدول', schDays: 'أيام بجدول', shr: 'ساعات الجدول', qhr: 'ساعات ملتزم فيها', son: 'أونلاين داخل الجدول', fullDays: 'أيام التزام كامل', missDays: 'أيام فيها تقصير', peak: 'ساعات الذروة', hours: 'الساعات', schedT: 'الالتزام بجدول الورديات', schedS: 'من عمود الحضور في شيت كيتا: الفترة «ملتزم» لما السائق يكمّل وقتها أونلاين', adhChart: 'الالتزام بالجدول يومياً', noSched: 'مافيش بيانات جدول في الأيام دي. الجداول بدأت تظهر في شيت كيتا من 18 أكتوبر — لو استوردت قبل التحديث ده، استورد الشيت تاني علشان تظهر.', sched: 'الجدول', mxMode: 'العرض', mxOrders: 'الطلبات', mxHours: 'ساعات أونلاين', mxSched: 'الالتزام بالجدول', mxNoteH: 'ساعات أونلاين في اليوم · أخضر = 10 ساعات أو أكتر · أحمر = أقل من 6', mxNoteS: 'الفترات الملتزم فيها من فترات الجدول · أخضر = التزام كامل · أصفر = جزئي · أحمر = صفر · فارغ = مافيش جدول', pending: 'لسه' });
+Object.assign(T.en, { hrsDay: 'Hours/day', adh: 'Schedule adherence', schDays: 'Scheduled days', shr: 'Scheduled hours', qhr: 'Qualified hours', son: 'Online within schedule', fullDays: 'Fully compliant days', missDays: 'Days with gaps', peak: 'Peak hours', hours: 'Hours', schedT: 'Shift schedule adherence', schedS: 'From the Keeta attendance column: a slot is qualified when the driver is online for it', adhChart: 'Daily schedule adherence', noSched: 'No schedule data for these days. Keeta started publishing schedules on 18 Oct — if you imported before this update, import the sheet again.', sched: 'Schedule', mxMode: 'Show', mxOrders: 'Orders', mxHours: 'Online hours', mxSched: 'Schedule adherence', mxNoteH: 'Online hours per day · Green = 10 h or more · Red = under 6', mxNoteS: 'Qualified slots out of scheduled slots · Green = full · Yellow = partial · Red = none · Blank = no schedule', pending: 'pending' });
+
+/* ---------- auto-written findings & group messages ---------- */
+function facts(M) {
+  const list = M.C.list, rated = list.filter(a => a.status === 'normal');
+  const by = (arr, f, dir = 1) => [...arr].sort((a, b) => dir * (f(a) - f(b)));
+  const maxDel = Math.max(0, ...list.map(a => a.delivered));
+  const act50 = rated.filter(a => a.delivered >= 50 && a.avgdt != null);
+  const gain = a => (a.cmp.nPer != null && a.cmp.pPer != null) ? a.cmp.nPer - a.cmp.pPer : 0;
+  const up = by(list.filter(a => a.cmp.verdict === 'up'), a => a.cmp.pts * 100 + gain(a), -1);
+  const down = by(list.filter(a => a.cmp.verdict === 'down'), a => a.cmp.pts * 100 + gain(a));
+  const climbers = by(list.filter(a => a.green && a.cmp.pRank && a.cmp.pRank - a.rank >= 3), a => a.cmp.pRank - a.rank, -1);
+  const newJoin = list.filter(a => M.prevEnd && a.joined > M.prevEnd);
+  return {
+    list, rated, top: list.filter(a => a.green).slice(0, 5),
+    most: list.filter(a => a.delivered === maxDel && maxDel > 0), maxDel,
+    fastest: by(act50, a => a.avgdt)[0], fast5: by(act50, a => a.avgdt).slice(0, 5), slow5: by(act50, a => a.avgdt, -1).slice(0, 5),
+    bottom: by(rated.filter(a => !a.green), a => a.score).slice(0, 5),
+    up, down, climber: climbers[0],
+    offs: [...new Map(M.offs.map(o => [o.id, o])).values()],
+    zero: list.filter(a => a.status === 'zero'), stopped: list.filter(a => a.status === 'stopped'),
+    rejTop: by(list.filter(a => a.rejected > 0), a => a.rejected, -1).slice(0, 4),
+    motoUp: up.filter(a => a.v === 'M'), carUp: up.filter(a => a.v === 'C'), newJoin,
+    onTrack: list.filter(a => a.fc && (a.fc.tStatus === 'ontrack' || a.fc.tStatus === 'done')).sort((x, y) => y.fc.proj - x.fc.proj),
+    close: list.filter(a => a.fc && a.fc.tStatus === 'close').sort((x, y) => y.fc.proj - x.fc.proj),
+    absTop: list.filter(a => (a.status === 'normal' || a.status === 'new') && a.absent >= 3).sort((x, y) => y.absent - x.absent).slice(0, 6),
+    newDowNames: lang => { const ds = [...new Set(M.newDays.map(k => KE.dow(k)))]; const n = ds.map(d => DAYS_L[lang][d]); return lang === 'ar' ? n.join(' و') : n.join(' & '); }
+  };
+}
+const ISO = s => '\u2068' + s + '\u2069';
+const names = (arr, lang, f) => arr.map(f ? (a => ISO(f(a))) : (a => ISO(a.name))).join(lang === 'ar' ? '، ' : ', ');
+
+function insights(M, lang = LANG) {
+  const F = facts(M), ar = lang === 'ar', out = [];
+  const K = M.K, sd = M.sameDow;
+  // 1 overall
+  let s = ar ? `${K.green} أخضر و${K.red} أحمر. الخضر بيوصّلوا ${pct(K.greenShare)} من الطلبات. إجمالي الشهر ${fmt(K.orders)} طلب، بمتوسط ${fmt(K.perDay)} طلب في اليوم.`
+    : `${K.green} GREEN and ${K.red} RED drivers. GREEN drivers deliver ${pct(K.greenShare)} of all orders. ${fmt(K.orders)} orders month-to-date, ${fmt(K.perDay)} a day on average.`;
+  if (M.prevEnd && sd.now != null && sd.before) {
+    const ch = (sd.now - sd.before) / sd.before;
+    s += ar ? ` أيام ${F.newDowNames('ar')} الجديدة متوسطها ${fmt(sd.now)} طلب/يوم مقابل ${fmt(sd.before)} في نفس الأيام قبل كده (${sgn(ch * 100, 0)}%).`
+      : ` The new ${F.newDowNames('en')} averaged ${fmt(sd.now)} orders/day vs ${fmt(sd.before)} on the same weekdays before (${sgn(ch * 100, 0)}%).`;
+  }
+  out.push({ tag: 'ov', t: s });
+  // forecast
+  const FC = M.FC, cfg = M.cfg;
+  if (FC.remaining.length) out.push({ tag: 'ov', t: ar ? `توقع نهاية الشهر: ${ISO(fmt(FC.projected))} طلب (المدى ${ISO(fmt(FC.low) + '–' + fmt(FC.high))}). مجموع توقعات السائقين ${ISO(fmt(FC.bottomUp))}. دقة التوقع اليومي في الاختبار الرجعي ${ISO(pct(FC.accuracy))}.` : `Month-end forecast: ${fmt(FC.projected)} orders (range ${fmt(FC.low)}–${fmt(FC.high)}). Sum of driver forecasts ${fmt(FC.bottomUp)}. Daily backtest accuracy ${pct(FC.accuracy)}.` });
+  if (FC.remaining.length) out.push({ tag: F.onTrack.length ? 'up' : 'wt', t: ar ? `الهدف (سيارات ${cfg.targetC} · موتوسيكل ${cfg.targetM}): ${F.onTrack.length} في الطريق${F.onTrack.length ? ' (' + names(F.onTrack, lang, a => `${a.name} ${fmt(a.fc.proj)}`) + ')' : ''}، و${F.close.length} قريبين${F.close.length ? ' (' + names(F.close, lang, a => `${a.name} ${fmt(a.fc.proj)}، محتاج ${fmt(a.fc.need, 1)}/يوم`) + ')' : ''}.` : `Monthly target (cars ${cfg.targetC} · motorcycles ${cfg.targetM}): ${F.onTrack.length} on track${F.onTrack.length ? ' (' + names(F.onTrack, lang, a => `${a.name} ${fmt(a.fc.proj)}`) + ')' : ''}, ${F.close.length} close${F.close.length ? ' (' + names(F.close, lang, a => `${a.name} ${fmt(a.fc.proj)}, needs ${fmt(a.fc.need, 1)}/day`) + ')' : ''}.` });
+  // absence
+  const A = M.ATT;
+  if (A.lastDay) out.push({ tag: 'wt', t: (ar ? `الغياب (يوم بأقل من ${cfg.absMin} طلبات) بين السائقين الشغالين: ${pct(A.rate, 1)} من أيام القائمة. آخر يوم (${dLabel(A.lastDay.k, 'ar')}) غاب ${A.lastDay.absent} من ${A.lastDay.roster}.` : `Absence (a day under ${cfg.absMin} orders) among working drivers: ${pct(A.rate, 1)} of roster days. On the last day (${dLabel(A.lastDay.k, 'en')}) ${A.lastDay.absent} of ${A.lastDay.roster} were absent.`) + (F.absTop.length ? (ar ? ' الأكثر غياباً: ' : ' Most absences: ') + names(F.absTop, lang, a => `${a.name} (${a.absent})`) + '.' : '') });
+  // 2 best
+  if (F.top.length) {
+    const t1 = F.top[0];
+    s = ar ? `الأفضل: ${ISO(t1.name)} الأول (درجة ${fmt(t1.score, 1)}). الأعلى في الطلبات: ${names(F.most, lang)} (${fmt(F.maxDel)}).` : `Best: ${ISO(t1.name)} is #1 (score ${fmt(t1.score, 1)}). Most orders: ${names(F.most, lang)} (${fmt(F.maxDel)}).`;
+    if (F.fastest) s += ar ? ` الأسرع في الأسطول: ${ISO(F.fastest.name)} (${fmt(F.fastest.avgdt, 1)} دقيقة).` : ` Fastest in the fleet: ${ISO(F.fastest.name)} (${fmt(F.fastest.avgdt, 1)} min).`;
+    if (F.climber) s += ar ? ` ${ISO(F.climber.name)} طلع من المركز ${F.climber.cmp.pRank} للمركز ${F.climber.rank}.` : ` ${ISO(F.climber.name)} climbed from #${F.climber.cmp.pRank} to #${F.climber.rank}.`;
+    out.push({ tag: 'up', t: s });
+  }
+  // 3 worst
+  if (F.bottom.length) out.push({ tag: 'dn', t: (ar ? 'الأضعف بين المُقيَّمين: ' : 'Weakest rated drivers: ') + names(F.bottom.slice(0, 5), lang, a => `${a.name} (${fmt(a.delivered)}${ar ? ' طلب' : ''})`) + '.' });
+  if (M.prevEnd) {
+    // 4 improved
+    const u = F.up.slice(0, 5).map(a => ISO(a.cmp.nPer != null && a.cmp.pPer != null ? `${a.name} ${fmt(a.cmp.pPer, 1)} → ${fmt(a.cmp.nPer, 1)}` : a.name));
+    out.push({ tag: 'up', t: ar ? `اتطوروا (${F.up.length} سائق) — طلبات لكل يوم عمل مقارنة بنفس الأيام قبل كده: ${u.join('، ')}.` : `Improved (${F.up.length} drivers) — orders per working day vs the same weekdays before: ${u.join(', ')}.` });
+    // 5 declined
+    if (F.down.length) out.push({ tag: 'dn', t: ar ? `تراجعوا (${F.down.length}): ${names(F.down.slice(0, 8), lang)}.` : `Declined (${F.down.length}): ${names(F.down.slice(0, 8), lang)}.` });
+    // 6 days off
+    if (F.offs.length) out.push({ tag: 'in', t: ar ? `أخدوا يوم راحة في الأيام الجديدة: ${names(F.offs.slice(0, 10), lang)}${F.offs.length > 10 ? '…' : ''} — علشان كده المقارنة لكل يوم عمل.` : `Took a day off in the new days: ${names(F.offs.slice(0, 10), lang)}${F.offs.length > 10 ? '…' : ''} — that is why the comparison is per working day.` });
+    if (M.fleetDelta && Math.abs(M.fleetDelta) >= 1.5) out.push({ tag: 'wt', t: ar ? `الأسطول كله كان ${M.fleetDelta > 0 ? 'أبطأ' : 'أسرع'} في الأيام الجديدة (${fmt(M.baseDt, 1)} ← ${fmt(M.newDt, 1)} دقيقة)، فتغيّر زمن كل سائق اتحسب بالنسبة للأسطول.` : `The whole fleet was ${M.fleetDelta > 0 ? 'slower' : 'faster'} on the new days (${fmt(M.baseDt, 1)} → ${fmt(M.newDt, 1)} min), so each driver's time change is relative to the fleet.` });
+  }
+  // 7 delivery time
+  out.push({ tag: 'wt', t: (ar ? `زمن التوصيل: متوسط الأسطول ${fmt(M.K.dt, 1)} دقيقة والالتزام ${pct(M.K.ot, 1)}. الأبطأ بين النشطين: ` : `Delivery time: fleet average ${fmt(M.K.dt, 1)} min, on-time ${pct(M.K.ot, 1)}. Slowest active drivers: `) + names(F.slow5.slice(0, 5), lang, a => `${a.name} (${fmt(a.avgdt, 1)})`) + '.' });
+  // 8 motorcycles
+  const V = M.veh;
+  if (V.moto.n) out.push({ tag: 'in', t: ar ? `الموتوسيكل (${V.moto.n}): ${fmt(V.moto.orders)} طلب في ${fmt(V.moto.online)} ساعة — ${fmt(V.moto.perDay, 1)} طلب/يوم مقابل ${fmt(V.cars.perDay, 1)} للسيارات، ${fmt(V.moto.perHr, 2)} طلب/ساعة مقابل ${fmt(V.cars.perHr, 2)}، التزام ${pct(V.moto.ot)} مقابل ${pct(V.cars.ot)}، ومتأخر ${pct(V.moto.overdue, 1)} مقابل ${pct(V.cars.overdue, 1)}.`
+    : `Motorcycles (${V.moto.n}): ${fmt(V.moto.orders)} orders in ${fmt(V.moto.online)} online hours — ${fmt(V.moto.perDay, 1)} orders/day vs ${fmt(V.cars.perDay, 1)} for cars, ${fmt(V.moto.perHr, 2)} orders/hr vs ${fmt(V.cars.perHr, 2)}, on-time ${pct(V.moto.ot)} vs ${pct(V.cars.ot)}, overdue ${pct(V.moto.overdue, 1)} vs ${pct(V.cars.overdue, 1)}.` });
+  // 9 speed
+  if (M.speed.fast != null && M.speed.slow != null) out.push({ tag: 'ov', t: ar ? `السرعة = طلبات أكتر: اللي متوسطه 38 دقيقة أو أقل بيعمل ${fmt(M.speed.fast, 1)} طلب في يوم العمل، مقابل ${fmt(M.speed.slow, 1)} للي فوق 38 دقيقة.` : `Speed drives volume: drivers averaging 38 min or less do ${fmt(M.speed.fast, 1)} orders per working day vs ${fmt(M.speed.slow, 1)} for drivers over 38 min.` });
+  // 10 no output
+  if (F.zero.length || F.stopped.length) out.push({ tag: 'dn', t: ar ? `بدون إنتاج: ${F.zero.length} صفر توصيلات (${names(F.zero, lang)}) و${F.stopped.length} متوقفين (${names(F.stopped, lang)}).` : `No output: ${F.zero.length} with zero deliveries (${names(F.zero, lang)}) and ${F.stopped.length} stopped (${names(F.stopped, lang)}).` });
+  // 11 rejections
+  out.push({ tag: 'wt', t: (ar ? `الرفض: ${fmt(M.totals.rej)} طلب مرفوض، منهم ${fmt(M.totals.rejAuto)} رفض تلقائي. الأعلى: ` : `Rejections: ${fmt(M.totals.rej)} rejected orders, ${fmt(M.totals.rejAuto)} auto-rejected. Highest: `) + names(F.rejTop, lang, a => `${a.name} (${a.rejected})`) + '.' });
+  return out;
+}
+
+function messages(M, group, lang) {
+  const F = facts(M), ar = lang === 'ar', V = M.veh;
+  const endD = KE.dd(M.end), mon = MONTHS[lang][M.month % 100 - 1];
+  const left = M.monthDays - endD;
+  const L1 = [];
+  if (group === 'cars') {
+    L1.push(ar ? `*تحديث أداء كيتا | من 1 لـ ${endD} ${mon}*` : `*Keeta Performance Update | 1–${endD} ${MONTHS.en[M.month % 100 - 1]}*`, '');
+    const sd = M.sameDow;
+    if (M.prevEnd && sd.now != null && sd.before) {
+      const better = sd.now >= sd.before;
+      L1.push(ar ? `يا رجالة، أيام ${F.newDowNames('ar')} ${better ? 'كانت أحسن من الأسابيع اللي فاتت' : 'كانت أقل من الأسابيع اللي فاتت'}: *${fmt(sd.now)} أوردر في اليوم مقابل ${fmt(sd.before)}*. ${better ? 'برافو عليكم.' : 'محتاجين نرجع للمستوى بتاعنا.'}`
+        : `Team, ${F.newDowNames('en')} ${better ? 'were stronger than previous weeks' : 'were below previous weeks'}: *${fmt(sd.now)} orders a day vs ${fmt(sd.before)}*. ${better ? 'Well done.' : "Let's get back to our level."}`, '');
+    } else L1.push(ar ? `يا رجالة، ده ملخص أرقام الشهر لحد دلوقتي:` : `Team, here are this month's numbers so far:`, '');
+    L1.push(ar ? '*الأوائل:*' : '*Top performers:*');
+    const top = F.top[0];
+    if (top) L1.push(ar ? `- *${top.name}* رقم 1 في الترتيب.` : `- *${top.name}* is #1 in the ranking.`);
+    if (F.most.length) L1.push(ar ? `- *${F.most.map(a => a.name).join(' و')}* ${F.most.length > 1 ? 'أعلى ناس' : 'الأعلى'} في الأوردرات (${fmt(F.maxDel)}${F.most.length > 1 ? ' لكل واحد' : ''}).` : `- *${names(F.most, 'en')}* ${F.most.length > 1 ? 'share' : 'has'} the most orders (${fmt(F.maxDel)}${F.most.length > 1 ? ' each' : ''}).`);
+    if (F.fastest) L1.push(ar ? `- *${ISO(F.fastest.name)}* أسرع واحد في الفريق (${fmt(F.fastest.avgdt, 1)} دقيقة).` : `- *${ISO(F.fastest.name)}* is the fastest on the team (${fmt(F.fastest.avgdt, 1)} min).`);
+    if (F.climber) L1.push(ar ? `- *${ISO(F.climber.name)}* طلع من المركز ${F.climber.cmp.pRank} للمركز ${F.climber.rank}.` : `- *${ISO(F.climber.name)}* jumped from #${F.climber.cmp.pRank} to #${F.climber.rank}.`);
+    const cu = F.carUp.filter(a => a.cmp.dPer != null && a.cmp.dPer > 0.1 && a.cmp.pPer >= 3).slice(0, 4);
+    if (cu.length) {
+      L1.push('', ar ? '*أكتر ناس اتطوروا:*' : '*Most improved:*');
+      cu.forEach(a => L1.push(ar ? `- ${a.name}: من ${fmt(a.cmp.pPer, 1)} لـ ${fmt(a.cmp.nPer, 1)} أوردر في اليوم` : `- ${a.name}: ${fmt(a.cmp.pPer, 1)} → ${fmt(a.cmp.nPer, 1)} orders a day`));
+      L1.push(ar ? 'شغل محترم.' : 'Great work.');
+    }
+    const oT = F.onTrack.filter(a => a.v === 'C'), cL = F.close.filter(a => a.v === 'C');
+    if (M.FC.remaining.length && (oT.length || cL.length)) {
+      L1.push('', ar ? `*هدف الـ${M.cfg.targetC} أوردر:*` : `*The ${M.cfg.targetC}-order target:*`);
+      if (oT.length) L1.push(ar ? `- في الطريق: ${oT.map(a => a.name).join('، ')}` : `- On track: ${oT.map(a => a.name).join(', ')}`);
+      if (cL.length) L1.push(ar ? `- قريبين جداً: ${cL.map(a => `${a.name} (محتاج ${fmt(a.fc.need, 0)} في اليوم)`).join('، ')}` : `- Very close: ${cL.map(a => `${a.name} (needs ${fmt(a.fc.need, 0)} a day)`).join(', ')}`);
+      L1.push(ar ? 'لسه فيه وقت، اللي قريب يشد حيله.' : 'There is still time — if you are close, push now.');
+    }
+    if (M.speed.fast != null && M.speed.slow != null) L1.push('', ar ? `*افتكروا دايماً:* اللي بيوصّل في 38 دقيقة أو أقل بيعمل حوالي *${fmt(M.speed.fast, 1)} أوردر في اليوم*، واللي فوق 38 دقيقة حوالي *${fmt(M.speed.slow, 1)}*. السرعة فلوس.` : `*Remember:* drivers who deliver in 38 min or less do about *${fmt(M.speed.fast, 1)} orders a day*; over 38 min, about *${fmt(M.speed.slow, 1)}*. Speed = money.`);
+    if (M.totals.rejAuto) L1.push('', ar ? `*الشهر ده اترفض ${fmt(M.totals.rejAuto)} أوردر لوحدهم* علشان محدش قبلهم في الوقت. اقبل الأوردر أول ما يظهر.` : `*${fmt(M.totals.rejAuto)} orders were auto-rejected this month* because nobody accepted them in time. Accept every order the moment it appears.`);
+    L1.push('', ar ? `*تنبيه:* أي يوم أقل من ${M.cfg.absMin} أوردرات بيتحسب *غياب*.` : `*Note:* any day with fewer than ${M.cfg.absMin} orders counts as an *absence*.`);
+    L1.push('', left > 0 ? (ar ? `فاضل ${left} أيام على آخر الشهر، يلا نقفل الشهر قوي.` : `${left} days left in the month. Let's finish strong.`) : (ar ? 'شكراً على مجهود الشهر.' : 'Thanks for a strong month.'));
+  } else {
+    L1.push(ar ? `*تحديث أداء سواقين الموتوسيكل | من 1 لـ ${endD} ${mon}*` : `*Motorcycle Riders Update | 1–${endD} ${MONTHS.en[M.month % 100 - 1]}*`, '');
+    if (M.prevEnd && V.motoNew) {
+      const better = V.motoNew.perHr >= V.motoOld.perHr;
+      L1.push(ar ? `يا شباب، ${better ? 'فيه *تحسّن* في الأيام الجديدة' : 'الأيام الجديدة *كانت أضعف*'}:` : `Team, ${better ? 'we saw *improvement* on the new days' : 'the new days were *weaker*'}:`);
+      L1.push(ar ? `- الأوردرات في الساعة: *${fmt(V.motoOld.perHr, 2)} ← ${fmt(V.motoNew.perHr, 2)}*` : `- Orders per hour: *${fmt(V.motoOld.perHr, 2)} → ${fmt(V.motoNew.perHr, 2)}*`);
+      L1.push(ar ? `- الأوردرات المتأخرة: *${pct(V.motoOld.overdue, 1)} ← ${pct(V.motoNew.overdue, 1)}*` : `- Late orders: *${pct(V.motoOld.overdue, 1)} → ${pct(V.motoNew.overdue, 1)}*`, '');
+    }
+    const fastM = M.C.list.filter(a => a.v === 'M' && a.avgdt != null && a.avgdt <= M.K.dt && a.delivered >= 20 && (!a.n || a.n.avgdt == null || a.n.avgdt <= M.K.dt));
+    const shout = F.motoUp.slice(0, 3);
+    if (shout.length || fastM.length) {
+      L1.push(ar ? '*تحية خاصة:*' : '*Special mention:*');
+      shout.forEach(a => L1.push(ar ? `- *${a.name}*: ${fmt(a.n ? a.n.delivered : 0)} أوردر في الأيام الجديدة بمتوسط ${fmt(a.cmp.nDt, 1)} دقيقة` : `- *${a.name}*: ${fmt(a.n ? a.n.delivered : 0)} orders on the new days at ${fmt(a.cmp.nDt, 1)} min`));
+      fastM.filter(a => !shout.includes(a)).slice(0, 3).forEach(a => L1.push(ar ? `- *${a.name}*: أسرع من متوسط الفريق (${fmt(a.avgdt, 1)} دقيقة)` : `- *${a.name}*: faster than the team average (${fmt(a.avgdt, 1)} min)`));
+    }
+    F.newJoin.filter(a => a.v === 'M').forEach(a => L1.push(ar ? `- *أهلاً بـ ${a.name}*: انضم معانا وعمل ${fmt(a.delivered)} أوردر لحد دلوقتي` : `- *Welcome ${a.name}*: joined us and has done ${fmt(a.delivered)} orders so far`));
+    const mT = M.C.list.filter(a => a.v === 'M' && a.fc && !['left', 'zero', 'stopped'].includes(a.status)).sort((x, y) => y.fc.proj - x.fc.proj);
+    if (M.FC.remaining.length && mT.length) { const best = mT[0]; L1.push('', ar ? `*هدف الموتوسيكل ${M.cfg.targetM} أوردر في الشهر.* أقرب واحد: *${best.name}* متوقع يوصل ${fmt(best.fc.proj)}.` : `*Motorcycle target: ${M.cfg.targetM} orders a month.* Closest: *${best.name}*, on course for ${fmt(best.fc.proj)}.`); }
+    L1.push('', ar ? `*لسه محتاجين نشتغل على:* عدد الأوردرات. الموتوسيكل بيعمل حوالي *${fmt(V.moto.perDay, 1)} أوردر في اليوم*، والعربية *${fmt(V.cars.perDay, 1)}*. والالتزام بالوقت عندكم *${pct(V.moto.ot)}*، والمطلوب *95%*.`
+      : `*Still to work on:* order volume. Motorcycles do about *${fmt(V.moto.perDay, 1)} orders a day* vs *${fmt(V.cars.perDay, 1)}* for cars. Your on-time rate is *${pct(V.moto.ot)}*, and the target is *95%*.`, '');
+    const ins = ar ? ['*اقبل الأوردر فوراً.*', '*خليك قريب من المطاعم والمناطق اللي فيها شغل.*', '*ممنوع البريك في الذروة:* من 12 لـ 2 الضهر، ومن 7 لـ 11 بالليل.', '*الموبايل مشحون والـ GPS شغال.*', '*لو العنوان مش واضح، كلّم العميل على طول.*', '*أي مشكلة في المنطقة أو التطبيق، بلّغ المشرف فوراً.*']
+      : ['*Accept orders immediately.*', '*Stay close to restaurants and busy areas.*', '*No breaks in peak hours:* 12–2 pm and 7–11 pm.', '*Keep your phone charged and GPS on.*', '*If the address is unclear, call the customer right away.*', '*Report any zone or app problem to your supervisor right away.*'];
+    L1.push(ar ? `*تنبيه:* أي يوم أقل من ${M.cfg.absMin} أوردرات بيتحسب *غياب*.` : `*Note:* any day with fewer than ${M.cfg.absMin} orders counts as an *absence*.`, '');
+    L1.push(ar ? '*التعليمات:*' : '*Instructions:*'); ins.forEach((x, i) => L1.push(`${i + 1}. ${x}`));
+    L1.push('', ar ? 'يلا نكمّل ونرفع الأرقام.' : "Let's keep going and push the numbers up.");
+  }
+  return L1.join('\n').replace(/[\u2068\u2069]/g, '');
+}
+
+/* ---------- state ---------- */
+const CFG0 = { absMin: 4, targetC: 370, targetM: 400, basePay: 130, targetPay: 150, perOrder: 0.4 };
+const S = { cfg: Object.assign({}, CFG0), days: new Map(), imports: [], end: null, prevEnd: null, prevAuto: true, endAuto: true, tab: 'ov', M: null, db: null, dl: null, mode: 'loading', sort: { rank: ['rank', 1], dt: ['avgdt', 1], prog: ['_v', 1] }, f: { q: '', cls: 'all', veh: 'all', st: 'all' }, msgLang: { cars: 'ar', moto: 'ar' } };
+try { const l = localStorage.getItem('radar.lang'); if (l === 'en' || l === 'ar') LANG = l; const t = localStorage.getItem('radar.tab'); if (t) S.tab = t; } catch (e) { }
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function toast(msg, ms = 3200) { const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), ms); }
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(s); }); }
+const LIB = { xlsx: 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', excel: 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js' };
+
+/* ---------- storage ---------- */
+function allRows() { const out = []; for (const rs of S.days.values()) out.push(...rs); return out; }
+async function boot() {
+  applyLang();
+  renderShell();
+  let db = null; try { db = window.claude ? await window.claude.use('db') : null; } catch (e) { db = null; }
+  try { S.dl = window.claude ? await window.claude.use('downloads') : null; } catch (e) { S.dl = null; }
+  if (!db) { S.mode = 'local'; recompute(); return; }
+  S.db = db; S.mode = 'saved';
+  let t = null; const later = () => { clearTimeout(t); t = setTimeout(recompute, 120); };
+  db.collection('days').onSnapshot(snap => {
+    for (const ch of snap.docChanges()) { const d = ch.doc.data(); const k = +ch.doc.id; if (ch.type === 'removed') S.days.delete(k); else if (d && Array.isArray(d.rows)) S.days.set(k, d.rows.map(unpack)); }
+    later();
+  }, e => { S.mode = 'local'; later(); });
+  db.doc('meta/settings').onSnapshot(snap => { const d = snap.exists ? snap.data() : null; S.cfg = Object.assign({}, CFG0, d || {}); later(); }, () => { });
+  db.doc('meta/imports').onSnapshot(snap => { const d = snap.exists ? snap.data() : null; S.imports = d && Array.isArray(d.list) ? d.list.slice() : []; later(); }, () => { });
+  setTimeout(() => { if (!S.M) recompute(); }, 2500);
+}
+const FIELDS = ['d', 'id', 'n', 'v', 'on', 'dl', 'cx', 'rj', 'rc', 'ra', 'dlb', 'ot', 'dt', 'o55', 'od', 'sv', 'sch', 'sl', 'sq', 'shr', 'qhr', 'son', 'pk', 'app'];
+const pack = r => FIELDS.map(f => r[f] == null ? null : r[f]);
+const unpack = a => Array.isArray(a) ? Object.fromEntries(FIELDS.map((f, i) => [f, a[i]])) : a;
+
+async function importFiles(files) {
+  if (!files || !files.length) return;
+  const drop = $('#drop'); drop.classList.remove('hot');
+  try { if (!window.XLSX) { toast(L().loadingLib, 1500); await loadScript(LIB.xlsx); } } catch (e) { toast(fill(L().impFail, { m: e.message })); return; }
+  let rows = [];
+  for (const f of files) {
+    try { const buf = await f.arrayBuffer(); const wb = XLSX.read(buf, { type: 'array' }); rows = rows.concat(KE.readWorkbook(XLSX, wb)); }
+    catch (e) { toast(L().impBad, 6000); return; }
+  }
+  const byDay = new Map(); for (const r of rows) { if (!byDay.has(r.d)) byDay.set(r.d, new Map()); byDay.get(r.d).set(r.id, r); }
+  const keys = [...byDay.keys()].sort((a, b) => a - b);
+  const prevMax = S.days.size ? Math.max(...S.days.keys()) : null;
+  for (const k of keys) S.days.set(k, [...byDay.get(k).values()]);
+  const entry = { end: Math.max(...keys, prevMax || 0), at: new Date().toISOString(), days: keys };
+  const imports = S.imports.filter(x => x.end !== entry.end).concat([entry]).sort((a, b) => a.end - b.end).slice(-60);
+  S.imports = imports;
+  // new import → compare latest data with the end of the previous import
+  S.endAuto = true; S.prevAuto = true;
+  recompute();
+  toast(fill(L().impOk, { n: keys.length, days: keys.map(k => dLabel(k)).join('، ') }));
+  if (S.db) {
+    try {
+      for (const k of keys) await S.db.collection('days').doc(String(k)).set({ d: k, rows: byDay.get(k).size ? [...byDay.get(k).values()].map(pack) : [] });
+      await S.db.doc('meta/imports').set({ list: imports });
+    } catch (e) { toast(fill(L().impFail, { m: e.code === 'quota_exceeded' ? 'quota' : (e.message || e.code) }), 6000); }
+  }
+}
+
+/* ---------- model ---------- */
+function recompute() {
+  const dates = [...S.days.keys()].sort((a, b) => a - b);
+  if (!dates.length) { S.M = null; renderAll(); return; }
+  if (S.endAuto || !S.days.has(S.end)) S.end = dates[dates.length - 1];
+  const inMonth = dates.filter(k => KE.ym(k) === KE.ym(S.end) && k < S.end);
+  if (S.prevAuto || (S.prevEnd && !inMonth.includes(S.prevEnd))) {
+    const imp = S.imports.map(x => x.end).filter(e => inMonth.includes(e));
+    S.prevEnd = imp.length ? imp[imp.length - 1] : (inMonth.length ? inMonth[inMonth.length - 1] : null);
+  }
+  S.M = KE.build(allRows(), S.end, S.prevEnd, S.cfg);
+  renderAll();
+}
+
+/* ---------- shell ---------- */
+const ICONS = {
+  ov: '<path d="M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zm10-18v6h8V3z"/>',
+  fc: '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+  rank: '<path d="M8 21V11M16 21V7M12 21V3M4 21h16"/>',
+  att: '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7M17 8l4 4m0-4-4 4"/>',
+  dt: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/>',
+  prog: '<path d="M7 17 17 7M9 7h8v8"/>',
+  mx: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+  moto: '<circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M15 6h3l2 5M5.5 17 9 9h6l3.5 8M12 9l-1-3H8"/>',
+  day: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4m8-4v4M8 14h3v3H8z"/>',
+  msg: '<path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12z"/>'
+};
+const TABS = ['ov', 'day', 'fc', 'rank', 'att', 'dt', 'prog', 'mx', 'moto', 'msg'];
+const NAV_GROUPS = [['g1', ['ov', 'day', 'fc']], ['g2', ['rank', 'att', 'dt', 'prog']], ['g3', ['mx', 'moto', 'msg']]];
+function applyLang() {
+  document.documentElement.lang = LANG; document.documentElement.dir = LANG === 'ar' ? 'rtl' : 'ltr';
+  document.title = L().title;
+  $('#appTitle').textContent = L().title; $('#appSub').textContent = L().sub;
+  $('#lblEnd').textContent = L().end; $('#lblPrev').textContent = L().prev;
+  $('#txtImport').textContent = L().import; $('#txtSet').textContent = L().settings; $('#btnSet').title = L().settings; $('#txtExport').textContent = L().export;
+  $('#btnLang').textContent = LANG === 'ar' ? 'English' : 'عربي';
+  $('#dropT').textContent = L().dropT; $('#dropS').textContent = L().dropS;
+}
+function renderShell() {
+  $('#btnImport').onclick = () => $('#file').click();
+  $('#file').onchange = e => { importFiles([...e.target.files]); e.target.value = ''; };
+  $('#btnLang').onclick = () => { LANG = LANG === 'ar' ? 'en' : 'ar'; try { localStorage.setItem('radar.lang', LANG); } catch (e) { } applyLang(); renderAll(); };
+  $('#btnExport').onclick = exportXlsx;
+  $('#btnSet').onclick = openSettings;
+  $('#selEnd').onchange = e => { S.end = +e.target.value; S.endAuto = false; S.prevAuto = true; recompute(); };
+  $('#selPrev').onchange = e => { S.prevEnd = +e.target.value || null; S.prevAuto = false; recompute(); };
+  const drop = $('#drop'); let dc = 0;
+  document.addEventListener('dragenter', e => { if (![...(e.dataTransfer?.types || [])].includes('Files')) return; e.preventDefault(); dc++; drop.hidden = false; });
+  document.addEventListener('dragover', e => { if (!drop.hidden) e.preventDefault(); });
+  document.addEventListener('dragleave', () => { dc = Math.max(0, dc - 1); if (!dc) drop.hidden = true; });
+  document.addEventListener('drop', e => { e.preventDefault(); dc = 0; drop.hidden = true; importFiles([...(e.dataTransfer.files || [])]); });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => renderView());
+  new MutationObserver(() => renderView()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+function setTab(t) { S.tab = t; try { localStorage.setItem('radar.tab', t); } catch (e) { } renderAll(); window.scrollTo({ top: 0 }); }
+function renderAll() {
+  const M = S.M, dates = [...S.days.keys()].sort((a, b) => a - b), l = L();
+  $('#selEnd').innerHTML = dates.slice().reverse().map(k => `<option value="${k}" ${k === S.end ? 'selected' : ''}>${dLabel(k)}</option>`).join('') || `<option>—</option>`;
+  const pv = M ? dates.filter(k => KE.ym(k) === KE.ym(S.end) && k < S.end) : [];
+  const impSet = new Set(S.imports.map(x => x.end));
+  $('#selPrev').innerHTML = `<option value="">${l.none}</option>` + pv.slice().reverse().map(k => `<option value="${k}" ${k === S.prevEnd ? 'selected' : ''}>${dLabel(k)}${impSet.has(k) ? ' •' : ''}</option>`).join('');
+  $('#btnExport').disabled = !M;
+  // side status
+  const last = S.imports.length ? S.imports[S.imports.length - 1] : null;
+  const mode = S.mode === 'saved' ? `<span><i class="dot ok"></i>${l.stSaved}</span>` : S.mode === 'local' ? `<span><i class="dot warn"></i>${l.stLocal}</span>` : `<span><i class="dot"></i>${l.stLoading}</span>`;
+  $('#strip').innerHTML = mode + (last ? `<span>${l.lastImport}: ${new Date(last.at).toLocaleString(LANG === 'ar' ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>` : '');
+  // page title + meta
+  $('#pageTitle').textContent = l.tabs[S.tab];
+  $('#pageMeta').innerHTML = M ? `<span>${l.period}: <b>1–${KE.dd(M.end)} ${monthName(M.month)}</b></span><span><span class="num">${M.dates.length}</span> ${l.days} · <span class="num">${M.C.list.length}</span> ${l.drivers}</span>${M.prevEnd ? `<span>${l.prev} ${dLabel(M.prevEnd)}</span>` : ''}` : '';
+  // nav
+  const cnt = M ? { att: M.ATT.lastDay ? [M.ATT.lastDay.absent, 'r'] : null, rank: [M.C.list.length, ''], prog: M.prevEnd ? ['▲' + M.C.list.filter(a => a.cmp.verdict === 'up').length, 'g'] : null, moto: [M.veh.moto.n, ''], fc: M.FC.remaining.length ? [fmt(M.FC.projected), ''] : null } : {};
+  const gl = { g1: LANG === 'ar' ? 'الملخص' : 'Summary', g2: LANG === 'ar' ? 'الأداء' : 'Performance', g3: LANG === 'ar' ? 'التفاصيل والتواصل' : 'Detail & comms' };
+  $('#nav').innerHTML = NAV_GROUPS.map(([g, ts]) => `<div class="lbl">${gl[g]}</div>` + ts.map(t => `<button class="nv" type="button" data-t="${t}" ${S.tab === t ? 'aria-current="page"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[t]}</svg><span>${l.tabs[t]}</span>${cnt[t] ? `<span class="c ${cnt[t][1]}">${cnt[t][0]}</span>` : ''}</button>`).join('')).join('');
+  $('#tabs').innerHTML = TABS.map(t => `<button type="button" data-t="${t}" ${S.tab === t ? 'aria-current="page"' : ''}>${l.tabs[t]}</button>`).join('');
+  document.querySelectorAll('#nav [data-t], #tabs [data-t]').forEach(b => b.onclick = () => setTab(b.dataset.t));
+  $('#foot').textContent = fill(l.footer, { abs: S.cfg.absMin });
+  renderView();
+}
+/* ---------- charts ---------- */
+const charts = [];
+function killCharts() { while (charts.length) { try { charts.pop().destroy(); } catch (e) { } } }
+function chartBase() {
+  Chart.defaults.font.family = '"IBM Plex Sans Arabic",system-ui,sans-serif';
+  Chart.defaults.color = css('--ink-2'); Chart.defaults.borderColor = css('--line');
+}
+function mkChart(el, cfg) { if (!window.Chart) return; chartBase(); const c = new Chart(el, cfg); charts.push(c); return c; }
+
+/* ---------- views ---------- */
+function renderView() {
+  killCharts();
+  const v = $('#view'), M = S.M;
+  if (!M) { v.innerHTML = `<div class="empty"><h2>${S.mode === 'loading' ? L().stLoading : L().emptyT}</h2><p>${S.mode === 'loading' ? '' : L().emptyS}</p>${S.mode === 'loading' ? '' : `<button class="btn primary" type="button" id="btnPick">${L().pick}</button>`}</div>`; const bp = $('#btnPick'); if (bp) bp.onclick = () => $('#file').click(); return; }
+  ({ ov: viewOverview, day: viewDay, fc: viewForecast, att: viewAttendance, rank: viewRank, dt: viewDt, prog: viewProg, mx: viewMatrix, moto: viewMoto, msg: viewMsg }[S.tab] || viewOverview)(v, M);
+  v.querySelectorAll('[data-drv]').forEach(el => el.onclick = () => openDriver(el.getAttribute('data-drv')));
+}
+function deltaChip(now, before, goodUp = true, d = 1, isPct = false) {
+  if (now == null || before == null || !isFinite(now) || !isFinite(before)) return '';
+  const diff = now - before; if (Math.abs(diff) < (isPct ? 0.0005 : 0.05)) return `<span class="chip n">=</span>`;
+  const good = goodUp ? diff > 0 : diff < 0;
+  return `<span class="chip ${good ? 'g' : 'r'}">${diff > 0 ? '▲' : '▼'} ${isPct ? sgn(diff * 100, d) + '%' : sgn(diff, d)}</span>`;
+}
+function initials(n) { const p = String(n).trim().split(/\s+/); return ((p[0] || '')[0] || '').toUpperCase() + ((p[1] || '')[0] || '').toUpperCase(); }
+function spark(vals, color, opts = {}) {
+  const v = vals.filter(x => x != null && isFinite(x)); if (v.length < 2) return '';
+  const W = 120, H = 30, lo = Math.min(...v), hi = Math.max(...v), span = hi - lo || 1;
+  const pts = v.map((x, i) => [i / (v.length - 1) * W, H - 3 - (x - lo) / span * (H - 6)]);
+  const rtl = LANG === 'ar'; const P = pts.map(([x, y]) => [rtl ? W - x : x, y]);
+  const d = P.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const id = 'g' + Math.random().toString(36).slice(2, 8); const e = P[P.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".22"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${P[P.length - 1][0]} ${H} L${P[0][0]} ${H}Z" fill="url(#${id})"/><path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"/><circle cx="${e[0]}" cy="${e[1]}" r="2.4" fill="${color}"/></svg>`;
+}
+function viewOverview(v, M) {
+  const K = M.K, P = M.KP, l = L(), F = facts(M), FC = M.FC, ar = LANG === 'ar';
+  const prevLbl = M.prevEnd ? `${l.vsPrev} ${dLabel(M.prevEnd)}` : '';
+  const D = M.daily, acc = css('--accent');
+  const absSeries = M.ATT.days.map(x => x.roster ? x.absent / x.roster * 100 : null);
+  const tiles = [
+    [l.kPerDay, fmt(K.perDay, 1), P ? `${deltaChip(K.perDay, P.perDay)} <span>${prevLbl}</span>` : '', spark(D.map(x => x.orders), acc)],
+    [l.kSame, M.sameDow.now != null ? fmt(M.sameDow.now) : '—', M.sameDow.before ? `${deltaChip(M.sameDow.now, M.sameDow.before, true, 0)} <span>${ar ? 'مقابل' : 'vs'} ${fmt(M.sameDow.before)}</span>` : '', ''],
+    [l.kPerHr, fmt(K.perHr, 2), P ? `${deltaChip(K.perHr, P.perHr, true, 2)} <span>${prevLbl}</span>` : '', spark(D.map(x => x.online ? x.orders / x.online : null), acc)],
+    [l.kDt, `${fmt(K.dt, 1)} <small>${l.min}</small>`, P ? `${deltaChip(K.dt, P.dt, false)} <span>${prevLbl}</span>` : '', spark(D.map(x => x.dt), css('--brand-2'))],
+    [l.kOt, pct(K.ot, 1), P ? `${deltaChip(K.ot, P.ot, true, 1, true)} <span>${prevLbl}</span>` : '', spark(D.map(x => x.ot), css('--good'))],
+    [l.kGreen, `${K.green} <small>/ ${K.green + K.red}</small>`, P ? `${deltaChip(K.green, P.green, true, 0)} <span>${prevLbl}</span>` : '', `<div class="meter" style="margin-top:12px"><i class="g" style="width:${K.green / ((K.green + K.red) || 1) * 100}%"></i></div>`],
+    K.adh != null ? [l.adh, pct(K.adh), P && P.adh != null ? `${deltaChip(K.adh, P.adh, true, 1, true)} <span>${prevLbl}</span>` : '', spark(D.map(x => x.shr ? x.qhr / x.shr * 100 : null), css('--accent'))] : [l.kShare, pct(K.greenShare), P ? `${deltaChip(K.greenShare, P.greenShare, true, 1, true)} <span>${prevLbl}</span>` : '', `<div class="meter" style="margin-top:12px"><i style="width:${K.greenShare * 100}%"></i></div>`],
+    [l.kAbs, pct(M.ATT.rate, 1), M.ATT.lastDay ? `<span>${ar ? 'آخر يوم' : 'last day'}: ${M.ATT.lastDay.absent}</span>` : '', spark(absSeries, css('--bad'))]
+  ];
+  // pulse band
+  const total = FC.remaining.length ? FC.projected : FC.actual;
+  const aPct = FC.actual / (FC.high || total) * 100, fPct = Math.max(0, (total - FC.actual) / (FC.high || total) * 100);
+  const dayPct = KE.dd(M.end) / FC.lastDay * 100;
+  const tc = FC.targetCounts, cfg = M.cfg;
+  const ms = (k, val, s) => `<div class="ms"><span class="k">${k}</span><span class="v">${val}</span><span class="s">${s}</span></div>`;
+  const leadRow = a => { const t = a.fc ? a.fc.target : cfg.targetC; const p = Math.min(1, (a.fc && FC.remaining.length ? a.fc.proj : a.delivered) / t); const st = a.fc ? a.fc.tStatus : 'off';
+    return `<div class="lr" data-drv="${a.id}"><span class="rk">${a.rank}</span><span class="av ${a.v}">${initials(a.name)}</span><span class="who"><b>${esc(a.name)}</b><span class="meter"><i class="${st === 'off' ? '' : st === 'close' ? 'y' : 'g'}" style="width:${p * 100}%"></i></span></span><span class="v">${fmt(a.delivered)}<small>${FC.remaining.length && a.fc ? `→ ${fmt(a.fc.proj)} / ${t}` : `/ ${t}`}</small></span></div>`; };
+  const watchRow = a => `<div class="lr" data-drv="${a.id}"><span class="rk">${a.rank}</span><span class="av ${a.v}">${initials(a.name)}</span><span class="who"><b>${esc(a.name)}</b><span class="muted">${esc(noteText(a.note).split(' | ')[0].replace(/^[^:]+:\s*/, ''))}</span></span><span class="v">${fmt(a.delivered)}<small>${fmt(a.score, 1)}</small></span></div>`;
+  const miniRow = (a, val) => `<div class="row" data-drv="${a.id}"><span class="rk">${a.rank}</span><span class="nm">${esc(a.name)}</span><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span><span class="v num">${val}</span></div>`;
+  const ins = insights(M);
+  const tagName = { ov: ar ? 'عام' : 'Overall', up: ar ? 'إيجابي' : 'Positive', dn: ar ? 'للمتابعة' : 'Watch', wt: ar ? 'تنبيه' : 'Alert', in: ar ? 'معلومة' : 'Info' };
+  v.innerHTML = `
+  <div class="card pulse">
+    <div class="pa">
+      <span class="eyebrow">${ar ? 'نبض الشهر' : 'Month pulse'} · ${monthName(M.month)}</span>
+      <div class="big"><b>${fmt(FC.actual)}</b><span>${FC.remaining.length ? (ar ? `طلب من <b class="num">${fmt(FC.projected)}</b> متوقع لآخر الشهر` : `orders of <b>${fmt(FC.projected)}</b> forecast for the month`) : (ar ? 'طلب — الشهر اكتمل' : 'orders — month complete')}</span></div>
+      <div class="track" role="img" aria-label="${fmt(FC.actual)} / ${fmt(total)}"><span class="a" style="width:${aPct}%"></span>${FC.remaining.length ? `<span class="f" style="inset-inline-start:${aPct}%;width:${fPct}%"></span>` : ''}<span class="m" style="inset-inline-start:${dayPct}%" title="${ar ? 'اليوم' : 'today'}"></span></div>
+      <div class="vsplit"><div class="vs C"><span class="veh C">${l.car}</span><b class="num">${fmt(K.cars)}</b>${P ? deltaChip(K.cars, P.cars, true, 0) : ''}<span class="muted">${pct(K.cars / (K.orders || 1))}</span></div><div class="vs M"><span class="veh M">${l.moto}</span><b class="num">${fmt(K.motos)}</b>${P ? deltaChip(K.motos, P.motos, true, 0) : ''}<span class="muted">${pct(K.motos / (K.orders || 1))}</span></div></div>
+      <div class="trackx"><span>${ar ? 'يوم' : 'Day'} <b class="num">${KE.dd(M.end)}</b> ${ar ? 'من' : 'of'} <span class="num">${FC.lastDay}</span></span>${FC.remaining.length ? `<span>${ar ? 'المدى' : 'Range'} <b class="num">${fmt(FC.low)}–${fmt(FC.high)}</b></span><span>${l.accuracy} <b class="num">${pct(FC.accuracy)}</b></span>` : ''}<span>${l.kOrders} ${P ? deltaChip(K.orders, P.orders, true, 0) : ''}</span></div>
+    </div>
+    <div class="pb">
+      ${ms(l.remDays, `${FC.remaining.length}`, FC.remaining.length ? `${ar ? 'متوقع' : 'expected'} <span class="num">${fmt(FC.projected - FC.actual)}</span> ${ar ? 'طلب' : 'orders'}` : l.monthDone)}
+      ${ms(l.trend, `${FC.trend >= 1 ? '▲' : '▼'} ${sgn((FC.trend - 1) * 100, 1)}%`, ar ? 'مقابل نمط أيام الأسبوع' : 'vs weekday pattern')}
+      ${ms(ar ? `هدف السيارات ${cfg.targetC}` : `Cars target ${cfg.targetC}`, `${tc.C.hit} <small style="font-size:13px;color:var(--ink-3)">+${tc.C.close}</small>`, ar ? 'في الطريق + قريبين' : 'on track + close')}
+      ${ms(ar ? `هدف الموتوسيكل ${cfg.targetM}` : `Motorcycle target ${cfg.targetM}`, `${tc.M.hit} <small style="font-size:13px;color:var(--ink-3)">+${tc.M.close}</small>`, ar ? 'في الطريق + قريبين' : 'on track + close')}
+    </div>
+  </div>
+  <div class="grid kpis">${tiles.map(t => `<div class="card kpi"><div class="lbl">${t[0]}</div><div class="val">${t[1]}</div><div class="cmp">${t[2]}</div>${t[3]}</div>`).join('')}</div>
+  <div class="grid span2" style="margin-top:14px">
+    <div class="card"><h3>${l.chDaily}<span class="sub">${l.chDailyS}</span></h3><div class="chart" style="height:290px"><canvas id="cDaily" role="img" aria-label="${l.chDaily}"></canvas></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>${l.oldDays}</span><span><i style="background:var(--new)"></i>${l.newDays}</span><span><i style="background:var(--brand-2)"></i>${l.dtLine}</span></div></div>
+    <div class="card"><h3>${l.chScatter}</h3><div class="chart" style="height:290px"><canvas id="cScatter" role="img" aria-label="${l.chScatter}"></canvas></div>
+      <div class="legend"><span><i style="background:var(--car)"></i>${l.cars}</span><span><i style="background:var(--moto)"></i>${l.motos}</span><span>┆ 38 ${l.min}</span></div></div>
+  </div>
+  <div class="grid three" style="margin-top:14px">
+    <div class="card"><h3>${l.top5}<button class="act" type="button" data-go="rank">${ar ? 'الترتيب كامل' : 'Full ranking'}</button></h3><div class="lead">${F.top.map(leadRow).join('')}</div></div>
+    <div class="card"><h3>${l.bot5}<button class="act" type="button" data-go="att">${l.tabs.att}</button></h3><div class="lead">${F.bottom.map(watchRow).join('')}</div></div>
+    <div class="card"><h3>${M.prevEnd ? `${l.improved} <span class="pill g">${F.up.length}</span> · ${l.declined} <span class="pill r">${F.down.length}</span>` : l.fast5}<button class="act" type="button" data-go="${M.prevEnd ? 'prog' : 'dt'}">${ar ? 'التفاصيل' : 'Details'}</button></h3>
+      <div class="mini">${M.prevEnd ? F.up.slice(0, 4).map(a => miniRow(a, a.cmp.nPer != null ? `${fmt(a.cmp.pPer, 1)}→${fmt(a.cmp.nPer, 1)}` : '')).join('') + F.down.slice(0, 3).map(a => miniRow(a, `<span style="color:var(--bad)">${a.cmp.nPer != null ? `${fmt(a.cmp.pPer, 1)}→${fmt(a.cmp.nPer, 1)}` : '▼'}</span>`)).join('') : F.fast5.map(a => miniRow(a, `${fmt(a.avgdt, 1)} ${l.min}`)).join('')}</div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>${l.insights}</h3><ul class="ins">${ins.map(x => `<li><span class="tag ${x.tag}">${tagName[x.tag]}</span><span>${esc(x.t)}</span></li>`).join('')}</ul></div>`;
+  v.querySelectorAll('[data-go]').forEach(b => b.onclick = () => setTab(b.dataset.go));
+  mkChart($('#cDaily'), {
+    type: 'bar',
+    data: { labels: D.map(x => dHead(x.k)), datasets: [
+      { type: 'bar', label: l.kOrders, data: D.map(x => x.orders), backgroundColor: D.map(x => x.isNew ? css('--new') : css('--accent')), borderRadius: 4, yAxisID: 'y', order: 2, maxBarThickness: 22 },
+      { type: 'line', label: l.dtLine, data: D.map(x => x.dt && +x.dt.toFixed(1)), borderColor: css('--brand-2'), backgroundColor: css('--brand-2'), pointRadius: 0, pointHoverRadius: 4, borderWidth: 2, tension: .35, yAxisID: 'y2', order: 1 }] },
+    options: chartOpts({ y2: { position: LANG === 'ar' ? 'left' : 'right', grid: { display: false }, suggestedMin: 25, suggestedMax: 50, border: { display: false } } })
+  });
+  const pts = M.C.list.filter(a => a.status === 'normal' && a.avgdt != null);
+  const ds = veh => pts.filter(a => a.v === veh).map(a => ({ x: +a.avgdt.toFixed(1), y: +a.perActive.toFixed(1), name: a.name, id: a.id }));
+  const line38 = { id: 'l38', afterDraw(c) { const x = c.scales.x.getPixelForValue(38); const { top, bottom } = c.chartArea; const g = c.ctx; g.save(); g.strokeStyle = css('--ink-3'); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(x, top); g.lineTo(x, bottom); g.stroke(); g.restore(); } };
+  mkChart($('#cScatter'), {
+    type: 'scatter', plugins: [line38],
+    data: { datasets: [{ label: l.cars, data: ds('C'), backgroundColor: css('--car'), pointRadius: 5, pointHoverRadius: 7 }, { label: l.motos, data: ds('M'), backgroundColor: css('--moto'), pointRadius: 5, pointHoverRadius: 7 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tipOpts({ callbacks: { label: c => `${c.raw.name}: ${c.raw.x} ${l.min} · ${c.raw.y}/${ar ? 'يوم' : 'day'}` } }) },
+      onClick: (e, els) => { if (els[0]) openDriver(els[0].element.$context.raw.id); },
+      scales: { x: { title: { display: true, text: l.avgdt }, grid: { color: css('--line') }, border: { display: false } }, y: { title: { display: true, text: ar ? 'طلبات / يوم عمل' : 'Orders / working day' }, beginAtZero: true, grid: { color: css('--line') }, border: { display: false } } } }
+  });
+}
+function tipOpts(extra) { return Object.assign({ backgroundColor: css('--ink'), titleColor: css('--surface'), bodyColor: css('--surface'), padding: 10, cornerRadius: 8, boxPadding: 4, rtl: LANG === 'ar', textDirection: LANG === 'ar' ? 'rtl' : 'ltr' }, extra || {}); }
+function chartOpts(extraScales) {
+  return { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: tipOpts() },
+    scales: Object.assign({ x: { reverse: LANG === 'ar', grid: { display: false }, border: { display: false }, ticks: { font: { size: 10 }, maxRotation: 60, autoSkip: true } }, y: { beginAtZero: true, position: LANG === 'ar' ? 'right' : 'left', grid: { color: css('--line') }, border: { display: false } } }, extraScales || {}) };
+}
+function sortRows(arr, key, dir) {
+  return [...arr].sort((a, b) => { const x = key(a), y = key(b); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (typeof x === 'string' ? x.localeCompare(y) : x - y) * dir; });
+}
+function thead(cols, which) {
+  const [sk, sd] = S.sort[which] || [];
+  return `<thead><tr>${cols.map(c => `<th ${c.k ? `data-k="${c.k}"` : ''} scope="col">${c.h}${c.k && c.k === sk ? `<span class="arr">${sd > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr></thead>`;
+}
+function wireSort(v, which) { v.querySelectorAll('th[data-k]').forEach(th => th.onclick = () => { const k = th.dataset.k; const [sk, sd] = S.sort[which]; S.sort[which] = [k, sk === k ? -sd : 1]; renderView(); }); }
+const clsPill = g => `<span class="pill ${g ? 'g' : 'r'}">${g ? L().green : L().red}</span>`;
+const dtCell = (x, fd) => x == null ? '<td>—</td>' : `<td class="${x <= fd ? 'g' : 'r'}">${fmt(x, 1)}</td>`;
+function filtered(M) {
+  const f = S.f, q = f.q.trim().toLowerCase();
+  return M.C.list.filter(a => (!q || a.name.toLowerCase().includes(q) || a.id.includes(q)) && (f.cls === 'all' || (f.cls === 'g') === a.green) && (f.veh === 'all' || a.v === f.veh) && (f.st === 'all' || a.status === f.st));
+}
+function filterBar(id) {
+  const l = L(), f = S.f;
+  const seg = (k, opts) => `<div class="seg" role="group">${opts.map(([v, t]) => `<button type="button" data-f="${k}" data-v="${v}" aria-pressed="${f[k] === v}">${t}</button>`).join('')}</div>`;
+  return `<div class="filters"><input type="search" id="${id}" placeholder="${l.search}" value="${esc(f.q)}" aria-label="${l.search}">
+    ${seg('cls', [['all', l.all], ['g', l.green], ['r', l.red]])}${seg('veh', [['all', l.all], ['C', l.cars], ['M', l.motos]])}
+    <select id="${id}st" aria-label="${l.status}"><option value="all">${l.status}: ${l.all}</option>${Object.entries(l.st).map(([k, t]) => `<option value="${k}" ${f.st === k ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
+}
+function wireFilters(v, id) {
+  const inp = v.querySelector('#' + id); if (inp) { inp.oninput = () => { S.f.q = inp.value; clearTimeout(inp._t); inp._t = setTimeout(() => { renderView(); const n = $('#' + id); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 200); }; }
+  v.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.f[b.dataset.f] = b.dataset.v; renderView(); });
+  const st = v.querySelector('#' + id + 'st'); if (st) st.onchange = () => { S.f.st = st.value; renderView(); };
+}
+function viewRank(v, M) {
+  const l = L(), fd = M.C.fleetDt, [sk, sd] = S.sort.rank;
+  const cols = [{ h: l.rank, k: 'rank' }, { h: l.driver, k: 'name' }, { h: l.vehicle, k: 'v' }, { h: l.cls, k: 'green' }, { h: l.score, k: 'score' }, { h: l.status }, { h: l.roster, k: 'roster' }, { h: l.active, k: 'active' }, { h: l.absent, k: 'absent' }, { h: l.delivered, k: 'delivered' }, { h: l.proj, k: '_proj' }, { h: l.last7, k: 'last7' }, { h: l.online, k: 'online' }, { h: l.hrsDay, k: 'hrsDay' }, { h: l.adh, k: 'adh' }, { h: l.perRoster, k: 'perRoster' }, { h: l.perHr, k: 'perHr' }, { h: l.ontime, k: 'ontime' }, { h: l.avgdt, k: 'avgdt' }, { h: l.over55, k: 'over55' }, { h: l.overdue, k: 'overdue' }, { h: l.sev, k: 'sev' }, { h: l.rejected, k: 'rejected' }, { h: l.assess }];
+  const rows = sortRows(filtered(M), a => sk === 'green' ? +a.green : sk === '_proj' ? a.fc.proj : a[sk], sd);
+  v.innerHTML = filterBar('q1') + `<div class="tblwrap"><table>${thead(cols, 'rank')}<tbody>${rows.map(a => `<tr class="click" data-drv="${a.id}">
+    <td>${a.rank}</td><td class="name ${a.green ? 'g' : 'r'}">${esc(a.name)}</td><td><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span></td><td>${clsPill(a.green)}</td><td>${fmt(a.score, 1)}</td><td>${l.st[a.status]}</td>
+    <td>${a.roster}</td><td>${a.active}</td><td class="${a.absent >= 4 ? 'r' : ''}">${a.absent}</td><td><b>${fmt(a.delivered)}</b></td><td>${fcCell(a, M)}</td><td>${fmt(a.last7)}</td><td>${fmt(a.online, 1)}</td><td>${fmt(a.hrsDay, 1)}</td>${adhCell(a.adh)}<td>${fmt(a.perRoster, 1)}</td><td>${fmt(a.perHr, 2)}</td>
+    <td class="${a.ontime != null && a.ontime < .93 ? 'r' : ''}">${pct(a.ontime)}</td>${dtCell(a.avgdt, fd)}<td>${pct(a.over55)}</td><td>${a.overdue}</td><td>${a.sev}</td><td>${a.rejected}</td><td class="note">${esc(noteText(a.note))}</td></tr>`).join('')}</tbody></table></div>
+    <p class="muted">${fill(LANG === 'ar' ? 'أخضر = درجة ≥ 50 و ≥ {v} طلب لكل يوم في القائمة. زمن التوصيل: أخضر ≤ متوسط الأسطول ({d} دقيقة).' : 'GREEN = score ≥ 50 and ≥ {v} orders per roster day. Delivery time: green ≤ fleet average ({d} min).', { v: fmt(M.C.volBar, 1), d: fmt(fd, 1) })}</p>`;
+  wireSort(v, 'rank'); wireFilters(v, 'q1');
+}
+function viewDt(v, M) {
+  const l = L(), fd = M.C.fleetDt, [sk, sd] = S.sort.dt;
+  const base = filtered(M).filter(a => a.delivered > 0);
+  const chartSet = [...base].filter(a => a.delivered >= 20).sort((a, b) => a.avgdt - b.avgdt);
+  const cols = [{ h: '#', k: 'avgdt' }, { h: l.driver, k: 'name' }, { h: l.vehicle, k: 'v' }, { h: l.delivered, k: 'delivered' }, { h: l.avgdt, k: 'avgdt' }, { h: l.dtVsFleet, k: 'avgdt' }, { h: l.over55, k: 'over55' }, { h: l.ontime, k: 'ontime' }, { h: l.overdue, k: 'overdue' }, { h: l.sev, k: 'sev' }, { h: l.repDt + (M.prevEnd ? ` (1–${KE.dd(M.prevEnd)})` : '') }, { h: l.newDt + (M.prevEnd ? ` (${rangeLabel(M.newDays)})` : '') }];
+  const rows = sortRows(base, a => a[sk], sd);
+  const order = new Map([...base].sort((a, b) => a.avgdt - b.avgdt).map((a, i) => [a.id, i + 1]));
+  v.innerHTML = filterBar('q2') + `<div class="card" style="margin-bottom:14px"><h3>${l.tabs.dt}<span class="sub">${LANG === 'ar' ? 'السائقون اللي عندهم 20 طلب أو أكتر — الخط = متوسط الأسطول' : 'Drivers with 20+ orders — line = fleet average'} (${fmt(fd, 1)} ${l.min})</span></h3>
+    <div class="chart" style="height:${Math.max(240, chartSet.length * 18 + 40)}px"><canvas id="cDt" role="img" aria-label="${l.tabs.dt}"></canvas></div></div>
+    <div class="tblwrap"><table>${thead(cols, 'dt')}<tbody>${rows.map(a => `<tr class="click" data-drv="${a.id}"><td>${order.get(a.id)}</td><td class="name ${a.avgdt <= fd ? 'g' : 'r'}">${esc(a.name)}</td><td><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span></td><td>${fmt(a.delivered)}</td>${dtCell(a.avgdt, fd)}
+    <td class="${a.avgdt <= fd ? 'g' : 'r'}"><span class="num">${sgn(a.avgdt - fd)}</span></td><td>${pct(a.over55)}</td><td class="${a.ontime < .93 ? 'r' : ''}">${pct(a.ontime)}</td><td>${a.overdue}</td><td class="${a.sev >= 3 ? 'r' : ''}">${a.sev}</td>${dtCell(a.cmp.repDt, fd)}${dtCell(a.cmp.nDt != null ? a.cmp.nDt : (a.n && a.n.avgdt), fd)}</tr>`).join('')}</tbody></table></div>`;
+  const fleetLine = { id: 'fl', afterDraw(c) { const x = c.scales.x.getPixelForValue(fd); const { top, bottom } = c.chartArea; const g = c.ctx; g.save(); g.strokeStyle = css('--ink'); g.setLineDash([5, 4]); g.beginPath(); g.moveTo(x, top); g.lineTo(x, bottom); g.stroke(); g.restore(); } };
+  mkChart($('#cDt'), { type: 'bar', plugins: [fleetLine], data: { labels: chartSet.map(a => a.name), datasets: [{ data: chartSet.map(a => +a.avgdt.toFixed(1)), backgroundColor: chartSet.map(a => a.avgdt <= fd ? css('--good') : css('--bad')), borderRadius: 3, barThickness: 12 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw} ${l.min}` } } },
+      onClick: (e, els) => { if (els[0]) openDriver(chartSet[els[0].index].id); },
+      scales: { x: { min: 25, reverse: LANG === 'ar', grid: { color: css('--line') }, title: { display: true, text: l.avgdt } }, y: { position: LANG === 'ar' ? 'right' : 'left', grid: { display: false }, ticks: { font: { size: 11 } } } } } });
+  wireSort(v, 'dt'); wireFilters(v, 'q2');
+}
+const vOrder = { up: 0, flat: 1, down: 2, newin: 3, stillstopped: 4, noact: 5, na: 6 };
+function verdictPill(vd) { const c = vd === 'up' ? 'g' : (vd === 'down' || vd === 'stillstopped') ? 'r' : vd === 'newin' ? 'y' : 'n'; return `<span class="pill ${c}">${L().vd[vd]}</span>`; }
+function viewProg(v, M) {
+  const l = L();
+  if (!M.prevEnd) { v.innerHTML = `<div class="empty"><p>${l.noPrev}</p></div>`; return; }
+  const [sk, sd] = S.sort.prog;
+  const key = a => sk === '_v' ? vOrder[a.cmp.verdict] * 1000 - (a.cmp.pts || 0) * 100 + a.rank / 100 : sk === 'name' ? a.name : sk === 'rank' ? a.rank : a.cmp[sk];
+  const rows = sortRows(filtered(M), key, sd);
+  const cnt = {}; M.C.list.forEach(a => cnt[a.cmp.verdict] = (cnt[a.cmp.verdict] || 0) + 1);
+  const cols = [{ h: l.driver, k: 'name' }, { h: l.vehicle }, { h: l.pRank, k: 'pRank' }, { h: l.cRank, k: 'rank' }, { h: l.pCls }, { h: l.cCls }, { h: l.pScore, k: 'pScore' }, { h: l.cScore }, { h: l.pPer, k: 'pPer' }, { h: l.nPer, k: 'nPer' }, { h: l.dPer, k: 'dPer' }, { h: l.pDt2, k: 'pDt' }, { h: l.nDt2, k: 'nDt' }, { h: l.dDt, k: 'dDt' }, { h: l.verdict, k: '_v' }];
+  const fd = M.C.fleetDt;
+  v.innerHTML = `<div class="grid kpis six" style="margin-bottom:12px">${['up', 'flat', 'down', 'stillstopped', 'newin', 'noact'].map(k => `<div class="card kpi"><div class="lbl">${l.vd[k]}</div><div class="val">${cnt[k] || 0}</div></div>`).join('')}</div>
+  <p class="muted" style="margin-top:0">${esc(fill(l.progNote, { new: `${rangeLabel(M.newDays)} ${MONTHS[LANG][M.month % 100 - 1]} — ${facts(M).newDowNames(LANG)}`, a: fmt(M.baseDt, 1), b: fmt(M.newDt, 1) }))}</p>` + filterBar('q3') +
+  `<div class="tblwrap"><table>${thead(cols, 'prog')}<tbody>${rows.map(a => { const c = a.cmp; return `<tr class="click" data-drv="${a.id}"><td class="name">${esc(a.name)}</td><td><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span></td><td>${c.pRank || '—'}</td><td>${a.rank}</td><td>${c.pGreen == null ? '—' : clsPill(c.pGreen)}</td><td>${clsPill(a.green)}</td><td>${fmt(c.pScore, 1)}</td><td>${fmt(a.score, 1)}</td>
+    <td>${fmt(c.pPer, 1)}</td><td>${fmt(c.nPer, 1)}</td><td class="${c.dPer == null ? '' : c.dPer >= .1 ? 'g' : c.dPer <= -.1 ? 'r' : ''}"><span class="num">${c.dPer == null ? '—' : sgn(c.dPer * 100, 0) + '%'}</span></td>
+    ${dtCell(c.pDt, fd)}${dtCell(c.nDt, fd)}<td class="${c.dDt == null ? '' : c.dDt <= -1.5 ? 'g' : c.dDt >= 1.5 ? 'r' : ''}"><span class="num">${c.dDt == null ? '—' : sgn(c.dDt)}</span></td><td>${verdictPill(c.verdict)}</td></tr>`; }).join('')}</tbody></table></div>`;
+  wireSort(v, 'prog'); wireFilters(v, 'q3');
+}
+function adhCell(x) { return x == null ? '<td>—</td>' : `<td class="${x >= .9 ? 'g' : x < .75 ? 'r' : ''}">${pct(x)}</td>`; }
+function viewMatrix(v, M) {
+  const l = L(), mode = S.mxMode || 'o';
+  const rows = filtered(M);
+  const R = new Map(); for (const r of M.rows) { if (!R.has(r.id)) R.set(r.id, new Map()); R.get(r.id).set(r.d, r); }
+  const cell = (a, k) => { const r = R.get(a.id) && R.get(a.id).get(k); if (!r) return '<td class="c"></td>';
+    if (mode === 'o') { const x = r.dl; return `<td class="c ${x < S.cfg.absMin ? 'ab' : x < 10 ? 'lo' : x > 15 ? 'hi' : ''}">${x}</td>`; }
+    if (mode === 'h') { const x = r.on || 0; return `<td class="c ${x >= 10 ? 'hi' : x < 6 ? 'lo' : ''}">${x ? fmt(x, 1) : '0'}</td>`; }
+    if (r.sch !== 1) return '<td class="c"></td>'; if (!r.sl) return `<td class="c muted">${l.pending}</td>`;
+    return `<td class="c ${r.sq === r.sl ? 'hi' : r.sq === 0 ? 'lo' : 'pt'}"><span class="num">${r.sq}/${r.sl}</span></td>`; };
+  const tot = a => { if (mode === 'o') return fmt(a.delivered); if (mode === 'h') return fmt(a.online, 0); return a.adh == null ? '—' : pct(a.adh); };
+  const dayTot = x => mode === 'o' ? x.orders : mode === 'h' ? fmt(x.online, 0) : x.shr ? pct(x.qhr / x.shr) : '';
+  const note = mode === 'o' ? fill(l.mxNote, { abs: S.cfg.absMin }) : mode === 'h' ? l.mxNoteH : l.mxNoteS;
+  v.innerHTML = `<div class="filters"><span class="muted">${l.mxMode}</span><div class="seg" role="group">${[['o', l.mxOrders], ['h', l.mxHours], ['s', l.mxSched]].map(([k, t]) => `<button type="button" data-mx="${k}" aria-pressed="${mode === k}">${t}</button>`).join('')}</div></div>` + filterBar('q4') + `<div class="tblwrap"><table class="mx"><thead><tr><th class="stick">${l.driver}</th><th>${l.cls}</th>${M.dates.map(k => `<th class="${M.prevEnd && k > M.prevEnd ? 'newd' : ''}">${dHead(k)}</th>`).join('')}<th>${l.total}</th></tr></thead><tbody>
+  ${rows.map(a => `<tr class="click" data-drv="${a.id}"><td class="stick name">${esc(a.name)}</td><td>${clsPill(a.green)}</td>${M.dates.map(k => cell(a, k)).join('')}<td><b>${tot(a)}</b></td></tr>`).join('')}
+  <tr><td class="stick"><b>${l.total}</b></td><td></td>${M.daily.map(x => `<td class="c"><b>${dayTot(x)}</b></td>`).join('')}<td><b>${mode === 'o' ? fmt(M.totals.orders) : mode === 'h' ? fmt(M.totals.online, 0) : pct(M.K.adh)}</b></td></tr></tbody></table></div><p class="muted">${note}</p>`;
+  v.querySelectorAll('[data-mx]').forEach(b => b.onclick = () => { S.mxMode = b.dataset.mx; renderView(); });
+  wireFilters(v, 'q4');
+}
+function viewMoto(v, M) {
+  const l = L(), V = M.veh, fd = M.C.fleetDt;
+  const ms = M.C.list.filter(a => a.v === 'M').sort((a, b) => (a.avgdt || 99) - (b.avgdt || 99));
+  const rowsCmp = [[l.ordersTot, fmt(V.moto.orders), fmt(V.cars.orders)], [l.onlineTot, fmt(V.moto.online), fmt(V.cars.online)], [l.perDay, fmt(V.moto.perDay, 1), fmt(V.cars.perDay, 1)], [l.perHr, fmt(V.moto.perHr, 2), fmt(V.cars.perHr, 2)], [l.avgdt, fmt(V.moto.dt, 1), fmt(V.cars.dt, 1)], [l.ontime, pct(V.moto.ot), pct(V.cars.ot)], [l.overdueRate, pct(V.moto.overdue, 1), pct(V.cars.overdue, 1)]];
+  v.innerHTML = `<div class="grid two"><div class="card"><h3>${l.motoVsCar}</h3><div class="tblwrap"><table><thead><tr><th>${l.metric}</th><th>${l.motos} (${V.moto.n})</th><th>${l.cars} (${V.cars.n})</th>${V.motoNew ? `<th>${l.motos} — ${l.newPeriod}</th>` : ''}</tr></thead><tbody>
+    ${rowsCmp.map((r, i) => `<tr><td style="text-align:start">${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td>${V.motoNew ? `<td>${i === 3 ? fmt(V.motoNew.perHr, 2) : i === 4 ? fmt(V.motoNew.dt, 1) : i === 6 ? pct(V.motoNew.overdue, 1) : ''}</td>` : ''}</tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h3>${l.chScatter}</h3><div class="chart" style="height:260px"><canvas id="cMoto"></canvas></div></div></div>
+    <div class="tblwrap" style="margin-top:14px"><table><thead><tr><th>${l.driver}</th><th>${l.status}</th><th>${l.delivered}</th><th>${l.avgdt}</th><th>${l.dtVsFleet}</th><th>${l.over55}</th><th>${l.ontime}</th><th>${l.overdue}</th><th>${l.sev}</th><th>${l.newDt}</th><th>${l.perRoster}</th><th>${l.perHr}</th><th>${l.overdueRate}</th></tr></thead><tbody>
+    ${ms.map(a => `<tr class="click" data-drv="${a.id}"><td class="name ${a.avgdt != null && a.avgdt <= fd ? 'g' : 'r'}">${esc(a.name)}</td><td>${l.st[a.status]}</td><td>${fmt(a.delivered)}</td>${dtCell(a.avgdt, fd)}<td><span class="num">${a.avgdt == null ? '—' : sgn(a.avgdt - fd)}</span></td><td>${pct(a.over55)}</td><td class="${a.ontime != null && a.ontime < .93 ? 'r' : ''}">${pct(a.ontime)}</td><td>${a.overdue}</td><td>${a.sev}</td>${dtCell(a.n && a.n.avgdt, fd)}
+      <td class="${a.perRoster >= M.C.volBar ? 'g' : 'r'}">${fmt(a.perRoster, 1)}</td><td class="${(a.perHr || 0) >= .85 ? 'g' : 'r'}">${fmt(a.perHr, 2)}</td><td class="${a.delivered && a.overdue / a.delivered <= .05 ? 'g' : 'r'}">${a.delivered ? pct(a.overdue / a.delivered) : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+  mkChart($('#cMoto'), { type: 'bar', data: { labels: [l.perDay, l.perHr + ' ×10', l.ontime + ' %', l.overdueRate + ' %'], datasets: [
+    { label: l.motos, data: [V.moto.perDay, V.moto.perHr * 10, V.moto.ot * 100, V.moto.overdue * 100], backgroundColor: css('--moto'), borderRadius: 3 },
+    { label: l.cars, data: [V.cars.perDay, V.cars.perHr * 10, V.cars.ot * 100, V.cars.overdue * 100], backgroundColor: css('--car'), borderRadius: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { x: { reverse: LANG === 'ar', grid: { display: false } }, y: { beginAtZero: true, position: LANG === 'ar' ? 'right' : 'left', grid: { color: css('--line') } } } } });
+}
+function viewMsg(v, M) {
+  const l = L();
+  const card = g => { const lg = S.msgLang[g]; const txt = messages(M, g, lg); return `<div class="card"><h3>${g === 'cars' ? l.msgCars : l.msgMoto}</h3>
+    <div class="msgbar"><div class="seg" role="group">${[['ar', l.arabic], ['en', l.english]].map(([k, t]) => `<button type="button" data-ml="${g}" data-v="${k}" aria-pressed="${lg === k}">${t}</button>`).join('')}</div>
+    <button class="btn" type="button" data-copy="${g}">${l.copy}</button></div><div class="msg" id="msg_${g}" dir="${lg === 'ar' ? 'rtl' : 'ltr'}">${esc(txt)}</div></div>`; };
+  v.innerHTML = `<p class="muted" style="margin-top:0">${l.msgHint}</p><div class="grid two">${card('cars')}${card('moto')}</div>`;
+  v.querySelectorAll('[data-ml]').forEach(b => b.onclick = () => { S.msgLang[b.dataset.ml] = b.dataset.v; renderView(); });
+  v.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => {
+    const el = $('#msg_' + b.dataset.copy), txt = el.textContent;
+    const sel = () => { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+    try { navigator.clipboard.writeText(txt).then(() => toast(l.copied), sel); } catch (e) { sel(); }
+  });
+}
+
+/* ---------- driver drawer ---------- */
+function openDriver(id) {
+  const M = S.M, a = M && M.C.byId.get(id); if (!a) return;
+  const l = L(), fd = M.C.fleetDt; const m = M.matrix.get(id) || new Map();
+  const rows = M.rows.filter(r => r.id === id).sort((x, y) => x.d - y.d);
+  const lay = $('#layer');
+  const st = (lbl, val) => `<div class="stat"><span>${lbl}</span><b>${val}</b></div>`;
+  lay.innerHTML = `<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(a.name)}"><header><span class="av ${a.v}">${initials(a.name)}</span><h2>${esc(a.name)}</h2><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span>${clsPill(a.green)}<button class="btn x" type="button" id="dClose">${l.close}</button></header>
+    <div class="muted" style="margin-bottom:10px"><span class="num">${a.id}</span> · ${l.st[a.status]} · ${l.rank} ${a.rank} · ${l.joined} ${dLabel(a.joined)}${a.lastDeliv ? ` · ${l.lastDeliv} ${dLabel(a.lastDeliv)}` : ''}</div>
+    <div class="stats">${st(l.score, fmt(a.score, 1))}${st(l.delivered, fmt(a.delivered))}${st(l.perRoster, fmt(a.perRoster, 1))}${st(l.perHr, fmt(a.perHr, 2))}${st(l.avgdt, `<span style="color:${a.avgdt != null && a.avgdt <= fd ? 'var(--good)' : 'var(--bad)'}">${fmt(a.avgdt, 1)}</span>`)}${st(l.ontime, pct(a.ontime))}${st(l.rejected, a.rejected)}${st(l.online, fmt(a.online, 0))}${st(l.hrsDay, fmt(a.hrsDay, 1))}${st(l.adh, a.adh == null ? '—' : `<span style="color:${a.adh >= .9 ? 'var(--good)' : a.adh < .75 ? 'var(--bad)' : 'var(--warn)'}">${pct(a.adh)}</span>`)}${st(l.fullDays, a.schDays ? `${a.fullDays}/${a.schDays}` : '—')}${st(l.peak, fmt(a.pk, 1))}</div>
+    ${M.FC.remaining.length && !['left','zero'].includes(a.status) ? `<div class="card" style="margin-bottom:12px"><h3>${l.proj}: <span class="num">${fmt(a.fc.proj)}</span> ${tsPill(a.fc.tStatus)} <span class="sub">${l.target} ${a.fc.target}</span></h3><div class="muted">${l.projRange}: <b class="num">${fmt(a.fc.projLo)}–${fmt(a.fc.projHi)}</b> · ${l.rate}: <b class="num">${fmt(a.fc.rate, 1)}</b> · ${l.pAtt}: <b class="num">${pct(a.fc.p)}</b><br>${l.need}: <b class="num">${a.fc.tStatus === 'done' ? '✓' : fmt(a.fc.need, 1)}</b> · ${l.pay}: <b class="num">${fmt(a.fc.pay, 1)}</b> · ${l.absent}: <b class="num">${a.absent}</b></div></div>` : ''}
+    ${M.prevEnd ? `<div class="card" style="margin-bottom:12px"><h3>${l.verdict}: ${verdictPill(a.cmp.verdict)}</h3><div class="muted">${l.pPer}: <b class="num">${fmt(a.cmp.pPer, 1)}</b> → ${l.nPer}: <b class="num">${fmt(a.cmp.nPer, 1)}</b><br>${l.pDt2}: <b class="num">${fmt(a.cmp.pDt, 1)}</b> → <b class="num">${fmt(a.cmp.nDt, 1)}</b> · ${l.pRank}: <b class="num">${a.cmp.pRank || '—'}</b></div></div>` : ''}
+    <div class="card" style="margin-bottom:12px"><h3>${l.dOrders} · ${l.dDtL}</h3><div class="chart" style="height:230px"><canvas id="cDrv"></canvas></div></div>
+    <div class="card"><h3>${l.note}</h3><p style="margin:0">${esc(noteText(a.note))}</p></div></aside>`;
+  const close = () => { lay.innerHTML = ''; document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey); $('#scrim').onclick = close; $('#dClose').onclick = close; $('#dClose').focus();
+  if (window.Chart) { chartBase(); const c = new Chart($('#cDrv'), { type: 'bar', data: { labels: M.dates.map(k => dHead(k)), datasets: [
+    { type: 'bar', data: M.dates.map(k => m.has(k) ? m.get(k) : null), backgroundColor: M.dates.map(k => { const x = m.get(k); return x == null ? 'transparent' : x < 10 ? css('--bad') : x > 15 ? css('--good') : css('--accent'); }), borderRadius: 3, yAxisID: 'y', order: 2 },
+    { type: 'line', data: M.dates.map(k => { const r = rows.find(x => x.d === k); return r && r.dt ? +r.dt.toFixed(1) : null; }), borderColor: css('--brand-2'), backgroundColor: css('--brand-2'), spanGaps: true, pointRadius: 2, yAxisID: 'y2', order: 1 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { reverse: LANG === 'ar', grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 70 } }, y: { beginAtZero: true, position: LANG === 'ar' ? 'right' : 'left' }, y2: { position: LANG === 'ar' ? 'left' : 'right', grid: { display: false } } } } }); charts.push(c); }
+}
+
+/* ---------- forecast ---------- */
+const TS_CLS = { done: 'g', ontrack: 'g', close: 'y', off: 'r' };
+const tsPill = s => `<span class="pill ${TS_CLS[s]}">${L().ts[s]}</span>`;
+function fcCell(a, M) { if (!M.FC.remaining.length || ['left', 'zero'].includes(a.status)) return fmt(a.delivered); return `<b>${fmt(a.fc.proj)}</b>`; }
+function bar(v, max, cls) { const w = Math.max(0, Math.min(100, v / max * 100)); return `<span class="bar"><i class="${cls}" style="width:${w}%"></i></span>`; }
+function viewForecast(v, M) {
+  const l = L(), F = M.FC, cfg = M.cfg;
+  const [sk, sd] = S.sort.fc || ['_proj', -1];
+  const list = filtered(M).filter(a => a.status !== 'left');
+  const key = a => sk === 'name' ? a.name : sk === '_proj' ? a.fc.proj : sk === '_ts' ? ({ done: 0, ontrack: 1, close: 2, off: 3 })[a.fc.tStatus] : sk === 'delivered' ? a.delivered : a.fc[sk];
+  const rows = sortRows(list, key, sd);
+  const tc = F.targetCounts;
+  const tiles = [
+    [l.actual, fmt(F.actual), `${l.remDays}: <span class="num">${F.remaining.length}</span>`],
+    [l.kFc, F.remaining.length ? fmt(F.projected) : fmt(F.actual), F.remaining.length ? `<span class="chip n">${fmt(F.low)}–${fmt(F.high)}</span>` : l.monthDone],
+    [l.bottomUp, fmt(F.bottomUp), `<span>${l.topDown}: ${fmt(F.projected)}</span>`],
+    [l.accuracy, pct(F.accuracy), `<span>${l.accS}</span>`],
+    [l.trend, `${F.trend >= 1 ? '▲' : '▼'} ${sgn((F.trend - 1) * 100, 1)}%`, ''],
+    [l.target, `${tc.C.hit + tc.M.hit} <small>+${tc.C.close + tc.M.close}</small>`, `<span>${LANG === 'ar' ? 'سيارات' : 'Cars'} ${cfg.targetC} · ${LANG === 'ar' ? 'موتوسيكل' : 'Moto'} ${cfg.targetM}</span>`]
+  ];
+  v.innerHTML = `<div class="grid kpis six">${tiles.map(t => `<div class="card kpi"><div class="lbl">${t[0]}</div><div class="val">${t[1]}</div><div class="cmp">${t[2]}</div></div>`).join('')}</div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h3>${l.fcFleet}<span class="sub">${l.fcFleetS}</span></h3><div class="chart" style="height:300px"><canvas id="cFc" role="img" aria-label="${l.fcFleet}"></canvas></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>${l.actual}</span><span><i style="background:var(--new)"></i>${l.predicted}</span><span><i style="background:var(--brand-2)"></i>${LANG === 'ar' ? 'اختبار رجعي' : 'Backtest'}</span></div></div>
+    <div class="card"><h3>${l.fcCum}<span class="sub">${monthName(M.month)}</span></h3><div class="chart" style="height:300px"><canvas id="cCum" role="img" aria-label="${l.fcCum}"></canvas></div></div>
+  </div>
+  <h3 class="sec">${fill(l.fcDrv, { c: cfg.targetC, m: cfg.targetM })}</h3><p class="muted" style="margin-top:0">${l.fcNote}</p>` + filterBar('q5') +
+  `<div class="tblwrap"><table>${thead([{ h: l.driver, k: 'name' }, { h: l.vehicle }, { h: l.status }, { h: l.delivered, k: 'delivered' }, { h: l.rate, k: 'rate' }, { h: l.pAtt, k: 'p' }, { h: l.proj, k: '_proj' }, { h: l.projRange }, { h: l.target, k: '_ts' }, { h: l.need, k: 'need' }, { h: l.payNow, k: 'payNow' }, { h: l.pay, k: 'pay' }], 'fc')}<tbody>
+  ${rows.map(a => { const f = a.fc; const tgt = f.target, done = Math.min(1, a.delivered / tgt); return `<tr class="click" data-drv="${a.id}"><td class="name">${esc(a.name)}</td><td><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span></td><td>${l.st[a.status]}</td>
+    <td><b>${fmt(a.delivered)}</b> ${bar(a.delivered, tgt, done >= 1 ? 'g' : 'a')}</td><td>${fmt(f.rate, 1)}</td><td>${pct(f.p)}</td><td><b>${fmt(f.proj)}</b> ${bar(f.proj, tgt, f.proj >= tgt ? 'g' : f.projHi >= tgt ? 'y' : 'r')}</td><td><span class="num">${fmt(f.projLo)}–${fmt(f.projHi)}</span></td>
+    <td><span class="num" style="color:var(--ink-3);font-size:11.5px">${tgt}</span> ${tsPill(f.tStatus)}</td><td class="${f.tStatus === 'off' ? 'r' : ''}">${f.need == null ? '—' : f.tStatus === 'done' ? '✓' : fmt(f.need, 1)}</td><td>${fmt(f.payNow, 1)}</td><td class="${f.pay > cfg.basePay ? 'g' : ''}"><b>${fmt(f.pay, 1)}</b></td></tr>`; }).join('')}</tbody></table></div>`;
+  if (!S.sort.fc) S.sort.fc = ['_proj', -1];
+  wireSort(v, 'fc'); wireFilters(v, 'q5');
+  // daily chart: actual, backtest prediction, forecast with band
+  const allK = M.dates.concat(F.remaining), bt = new Map(F.backtest.map(x => [x.k, x.pred])), act = new Map(M.daily.map(x => [x.k, x.orders])), fut = new Map(F.remDays.map(x => [x.k, x.v]));
+  const half = 1.28 * F.sd;
+  mkChart($('#cFc'), { type: 'bar', data: { labels: allK.map(k => dHead(k)), datasets: [
+    { type: 'bar', label: l.actual, data: allK.map(k => act.get(k) ?? null), backgroundColor: css('--accent'), borderRadius: 3, order: 3 },
+    { type: 'bar', label: l.predicted, data: allK.map(k => fut.has(k) ? Math.round(fut.get(k)) : null), backgroundColor: css('--new'), borderColor: css('--warn'), borderWidth: 1.5, borderDash: [4, 3], borderRadius: 3, order: 3 },
+    { type: 'line', label: LANG === 'ar' ? 'اختبار رجعي' : 'Backtest', data: allK.map(k => bt.has(k) ? Math.round(bt.get(k)) : null), borderColor: css('--brand-2'), borderDash: [5, 4], pointRadius: 2, backgroundColor: css('--brand-2'), spanGaps: false, order: 1 }] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: { filter: i => i.dataset.label !== 'hi' && i.dataset.label !== 'lo' } },
+      scales: { x: { stacked: true, reverse: LANG === 'ar', grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 60 } }, y: { beginAtZero: true, position: LANG === 'ar' ? 'right' : 'left', grid: { color: css('--line') } } } } });
+  // cumulative
+  let c = 0; const cumA = allK.map(k => act.has(k) ? (c += act.get(k)) : null);
+  let cf = F.actual; const cumF = allK.map(k => k === M.end ? F.actual : fut.has(k) ? (cf += fut.get(k)) : null);
+  const n = F.remaining.length; let i0 = 0;
+  const cumHi = allK.map(k => { if (k === M.end) return F.actual; if (!fut.has(k)) return null; i0++; return cumF[allK.indexOf(k)] + 1.28 * F.sd * Math.sqrt(i0); });
+  i0 = 0; const cumLo = allK.map(k => { if (k === M.end) return F.actual; if (!fut.has(k)) return null; i0++; return cumF[allK.indexOf(k)] - 1.28 * F.sd * Math.sqrt(i0); });
+  mkChart($('#cCum'), { type: 'line', data: { labels: allK.map(k => dHead(k)), datasets: [
+    { label: l.actual, data: cumA, borderColor: css('--accent'), backgroundColor: css('--accent-soft'), fill: true, pointRadius: 0, borderWidth: 2.5 },
+    { label: 'hi', data: cumHi, borderColor: 'transparent', pointRadius: 0, fill: '+1', backgroundColor: css('--new-bg') },
+    { label: 'lo', data: cumLo, borderColor: 'transparent', pointRadius: 0 },
+    { label: l.predicted, data: cumF, borderColor: css('--warn'), borderDash: [6, 4], pointRadius: allK.map(k => k === allK[allK.length - 1] ? 5 : 0), pointBackgroundColor: css('--warn'), borderWidth: 2.5 }] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: { filter: i => i.dataset.label !== 'hi' && i.dataset.label !== 'lo', callbacks: { label: x => `${x.dataset.label}: ${fmt(x.raw)}` } } },
+      scales: { x: { reverse: LANG === 'ar', grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 60 } }, y: { beginAtZero: true, position: LANG === 'ar' ? 'right' : 'left', grid: { color: css('--line') }, ticks: { callback: x => fmt(x) } } } } });
+}
+
+/* ---------- attendance ---------- */
+function viewAttendance(v, M) {
+  const l = L(), A = M.ATT, abs = M.cfg.absMin;
+  const last = A.lastDay; const absIds = last ? last.ids : [];
+  const heavy = A.ranked.filter(x => x.absent >= 4).length;
+  const tiles = [
+    [l.kAbs, pct(A.rate, 1), `<span>${fill(l.attChartS, { abs })}</span>`],
+    [l.absentees, last ? `${last.absent} <small style="font-size:13px;color:var(--ink-3)">/ ${last.roster}</small>` : '—', last ? `<span>${dLabel(last.k)}</span>` : ''],
+    [l.present, fmt(A.days.reduce((s, x) => s + x.present, 0) / (A.days.length || 1), 1), `<span>${LANG === 'ar' ? 'متوسط يومي' : 'daily average'}</span>`],
+    [LANG === 'ar' ? 'غابوا 4 أيام أو أكتر' : '4+ absent days', heavy, `<span>${LANG === 'ar' ? 'السائقون الشغالون بس' : 'working drivers only'}</span>`]
+  ];
+  const rows = filtered(M).filter(a => a.status !== 'left').sort((a, b) => (['normal', 'new'].includes(b.status) - ['normal', 'new'].includes(a.status)) || b.absent - a.absent || a.attend - b.attend);
+  const rowsByDriver = new Map(); for (const r of M.rows) { if (r.dl < abs) { if (!rowsByDriver.has(r.id)) rowsByDriver.set(r.id, []); rowsByDriver.get(r.id).push(r.d); } }
+  v.innerHTML = `<div class="grid kpis" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))">${tiles.map(t => `<div class="card kpi"><div class="lbl">${t[0]}</div><div class="val">${t[1]}</div><div class="cmp">${t[2]}</div></div>`).join('')}</div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h3>${l.attChart}<span class="sub">${fill(l.attChartS, { abs })}</span></h3><div class="chart" style="height:280px"><canvas id="cAtt" role="img" aria-label="${l.attChart}"></canvas></div>
+      <div class="legend"><span><i style="background:var(--good)"></i>${l.present}</span><span><i style="background:var(--bad)"></i>${l.absentL}</span></div></div>
+    <div class="card"><h3>${l.absentees}${last ? ` <span class="sub">${dLabel(last.k)}</span>` : ''}</h3><div class="chips">${absIds.length ? absIds.map(id => { const a = M.C.byId.get(id); const r = M.rows.find(x => x.id === id && x.d === last.k); return `<button class="dchip" type="button" data-drv="${id}"><b>${esc(a.name)}</b><span class="num">${r ? r.dl : 0}</span></button>`; }).join('') : `<span class="muted">${l.none2}</span>`}</div></div>
+  </div>
+  <h3 class="sec">${l.absRank}</h3>` + filterBar('q6') + `<div class="tblwrap"><table><thead><tr><th>${l.driver}</th><th>${l.vehicle}</th><th>${l.status}</th><th>${l.roster}</th><th>${l.active}</th><th>${l.absent}</th><th>${l.attend}</th><th>${l.absDays}</th><th>${l.delivered}</th></tr></thead><tbody>
+  ${rows.map(a => `<tr class="click" data-drv="${a.id}"><td class="name">${esc(a.name)}</td><td><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span></td><td>${l.st[a.status]}</td><td>${a.roster}</td><td>${a.active}</td><td class="${a.absent >= 4 ? 'r' : a.absent === 0 ? 'g' : ''}">${a.absent}</td><td>${pct(a.attend)} ${bar(a.attend || 0, 1, (a.attend || 0) >= .85 ? 'g' : (a.attend || 0) >= .7 ? 'y' : 'r')}</td><td style="white-space:normal;text-align:start;min-width:200px"><span class="num">${(rowsByDriver.get(a.id) || []).sort((x, y) => x - y).map(k => KE.dd(k)).join(' · ') || '—'}</span></td><td>${fmt(a.delivered)}</td></tr>`).join('')}</tbody></table></div>`;
+  v.insertAdjacentHTML('beforeend', schedSection(M));
+  wireFilters(v, 'q6');
+  if (M.K.adh != null) mkChart($('#cAdh'), { type: 'bar', data: { labels: M.daily.filter(x => x.shr).map(x => dHead(x.k)), datasets: [{ data: M.daily.filter(x => x.shr).map(x => +(x.qhr / x.shr * 100).toFixed(1)), backgroundColor: M.daily.filter(x => x.shr).map(x => x.qhr / x.shr >= .9 ? css('--good') : x.qhr / x.shr < .75 ? css('--bad') : css('--warn')), borderRadius: 4, maxBarThickness: 26 }] },
+    options: chartOpts({ y: { min: 0, max: 100, position: LANG === 'ar' ? 'right' : 'left', grid: { color: css('--line') }, border: { display: false }, ticks: { callback: x => x + '%' } } }) });
+  mkChart($('#cAtt'), { type: 'bar', data: { labels: A.days.map(x => dHead(x.k)), datasets: [
+    { label: l.present, data: A.days.map(x => x.present), backgroundColor: css('--good'), borderRadius: 2 },
+    { label: l.absentL, data: A.days.map(x => x.absent), backgroundColor: css('--bad'), borderRadius: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { stacked: true, reverse: LANG === 'ar', grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 60 } }, y: { stacked: true, beginAtZero: true, position: LANG === 'ar' ? 'right' : 'left', grid: { color: css('--line') } } } } });
+}
+
+function schedSection(M) {
+  const l = L();
+  if (M.K.adh == null) return `<h3 class="sec">${l.schedT}</h3><div class="card"><p class="muted" style="margin:0">${l.noSched}</p></div>`;
+  const list = filtered(M).filter(a => a.schDays > 0).sort((a, b) => (a.adh ?? 2) - (b.adh ?? 2));
+  return `<h3 class="sec">${l.schedT} <span class="pill ${M.K.adh >= .9 ? 'g' : M.K.adh < .75 ? 'r' : 'y'}">${pct(M.K.adh)}</span></h3><p class="muted" style="margin-top:0">${l.schedS}</p>
+  <div class="card" style="margin-bottom:14px"><h3>${l.adhChart}</h3><div class="chart" style="height:220px"><canvas id="cAdh" role="img" aria-label="${l.adhChart}"></canvas></div></div>
+  <div class="tblwrap"><table><thead><tr><th>${l.driver}</th><th>${l.vehicle}</th><th>${l.schDays}</th><th>${l.shr}</th><th>${l.qhr}</th><th>${l.son}</th><th>${l.adh}</th><th>${l.fullDays}</th><th>${l.missDays}</th><th>${l.online}</th><th>${l.hrsDay}</th></tr></thead><tbody>
+  ${list.map(a => `<tr class="click" data-drv="${a.id}"><td class="name">${esc(a.name)}</td><td><span class="veh ${a.v}">${a.v === 'M' ? l.moto : l.car}</span></td><td>${a.schDays}</td><td>${fmt(a.shr, 0)}</td><td>${fmt(a.qhr, 0)}</td><td>${fmt(a.son, 1)}</td>${adhCell(a.adh)}<td class="${a.fullDays === a.schDays ? 'g' : ''}">${a.fullDays}</td><td class="${a.missDays >= 3 ? 'r' : ''}">${a.missDays}</td><td>${fmt(a.online, 0)}</td><td>${fmt(a.hrsDay, 1)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+/* ---------- settings ---------- */
+function openSettings() {
+  const l = L(), c = S.cfg, lay = $('#layer');
+  const f = (id, lbl, v, step) => `<label class="setf"><span>${lbl}</span><input id="${id}" type="number" step="${step}" min="0" value="${v}"></label>`;
+  lay.innerHTML = `<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${l.settings}" style="width:min(420px,100%)"><header><h2 style="font-family:var(--f-head)">${l.settings}</h2><button class="btn x" type="button" id="dClose">${l.close}</button></header>
+    <div class="card setgrid">${f('sAbs', l.setAbs, c.absMin, 1)}${f('sTC', l.setTargetC, c.targetC, 10)}${f('sTM', l.setTargetM, c.targetM, 10)}${f('sB', l.setBase, c.basePay, 1)}${f('sTP', l.setTPay, c.targetPay, 1)}${f('sP', l.setPer, c.perOrder, 0.05)}
+    <div style="display:flex;gap:8px"><button class="btn primary" type="button" id="sSave" style="background:var(--brand);color:var(--brand-ink)">${l.save}</button><button class="btn" type="button" id="sCancel">${l.cancel}</button></div></div></aside>`;
+  const close = () => { lay.innerHTML = ''; };
+  $('#scrim').onclick = close; $('#dClose').onclick = close; $('#sCancel').onclick = close;
+  $('#sSave').onclick = async () => {
+    const num = (id, d) => { const x = parseFloat($('#' + id).value); return isFinite(x) && x >= 0 ? x : d; };
+    const nc = { absMin: Math.max(1, Math.round(num('sAbs', 4))), targetC: Math.round(num('sTC', 370)), targetM: Math.round(num('sTM', 400)), basePay: num('sB', 130), targetPay: num('sTP', 150), perOrder: num('sP', 0.4) };
+    S.cfg = Object.assign({}, CFG0, nc); close(); recompute();
+    if (S.db) { try { await S.db.doc('meta/settings').set(nc); toast(l.saved); } catch (e) { toast(fill(l.impFail, { m: e.message || e.code })); } } else toast(l.saved);
+  };
+}
+
+/* ---------- daily report: image + message ---------- */
+function dayName(k, lang) { return DAYS_L[lang][KE.dow(k)]; }
+function dayMessage(R, M, lang) {
+  const ar = lang === 'ar', o = [], cfg = M.cfg;
+  const ch = R.sameDowAvg ? (R.orders - R.sameDowAvg) / R.sameDowAvg : null;
+  o.push(ar ? `*تقرير يوم ${dayName(R.k, 'ar')} ${dLabel(R.k, 'ar')}*` : `*Daily report — ${dayName(R.k, 'en')} ${dLabel(R.k, 'en', true)}*`, '');
+  o.push(ar ? `إجمالي الأوردرات: *${fmt(R.orders)}* (سيارات ${fmt(R.C.orders)} · موتوسيكل ${fmt(R.M.orders)})` : `Total orders: *${fmt(R.orders)}* (cars ${fmt(R.C.orders)} · motorcycles ${fmt(R.M.orders)})`);
+  if (ch != null) o.push(ar ? `مقارنة بمتوسط أيام ${dayName(R.k, 'ar')}: ${fmt(R.sameDowAvg)} (${ch >= 0 ? 'زيادة' : 'أقل بـ'} ${fmt(Math.abs(ch) * 100, 0)}%)` : `vs average ${dayName(R.k, 'en')}: ${fmt(R.sameDowAvg)} (${ch >= 0 ? '▲' : '▼'} ${sgn(ch * 100, 0)}%)`);
+  o.push(ar ? `متوسط التوصيل: ${fmt(R.dt, 1)} د · الالتزام بالوقت: ${pct(R.ot)} · الحضور: ${R.present} من ${R.list.length}` : `Avg delivery: ${fmt(R.dt, 1)} min · On-time: ${pct(R.ot)} · Present: ${R.present} of ${R.list.length}`);
+  if (R.adh != null) o.push(ar ? `الالتزام بجدول الورديات: ${pct(R.adh)} · ${R.schedFull} من ${R.schedN} ملتزمين بالكامل` : `Shift schedule adherence: ${pct(R.adh)} · ${R.schedFull} of ${R.schedN} fully compliant`);
+  if (R.best) o.push(ar ? `الأعلى: *${R.best.name}* (${R.best.dl} أوردر)${R.fastest ? ` · الأسرع: *${R.fastest.name}* (${fmt(R.fastest.dt, 1)} د)` : ''}` : `Top: *${R.best.name}* (${R.best.dl} orders)${R.fastest ? ` · Fastest: *${R.fastest.name}* (${fmt(R.fastest.dt, 1)} min)` : ''}`);
+  const line = (x, i) => { const mt = x.target ? `${ar ? 'الشهر' : 'month'} ${x.mtd}/${x.target}${x.mtd >= x.target ? ' ✓' : ''}` : '';
+    if (x.absent) return ar ? `${i + 1}. ${x.name} — ${x.dl} أوردر (غياب) · ${mt}` : `${i + 1}. ${x.name} — ${x.dl} orders (absent) · ${mt}`;
+    const hs = ar ? `${fmt(x.on, 1)} س` : `${fmt(x.on, 1)} h`; const sc = x.sch === 1 && x.sl ? (ar ? ` · جدول ${x.sq}/${x.sl}` : ` · schedule ${x.sq}/${x.sl}`) : '';
+    return ar ? `${i + 1}. ${x.name} — ${x.dl} أوردر · ${fmt(x.dt, 1)} د · ${hs}${sc} · ${mt}` : `${i + 1}. ${x.name} — ${x.dl} orders · ${fmt(x.dt, 1)} min · ${hs}${sc} · ${mt}`; };
+  for (const v of ['C', 'M']) {
+    const g = R.list.filter(x => x.v === v); if (!g.length) continue;
+    o.push('', ar ? `*${v === 'C' ? 'السيارات' : 'الموتوسيكل'} (هدف الشهر ${v === 'C' ? cfg.targetC : cfg.targetM}):*` : `*${v === 'C' ? 'Cars' : 'Motorcycles'} (monthly target ${v === 'C' ? cfg.targetC : cfg.targetM}):*`);
+    g.forEach((x, i) => o.push(line(x, i)));
+  }
+  if (R.absent.length) o.push('', ar ? `*غياب (أقل من ${cfg.absMin} أوردرات):* ${R.absent.map(x => `${x.name} (${x.dl})`).join('، ')}` : `*Absent (under ${cfg.absMin} orders):* ${R.absent.map(x => `${x.name} (${x.dl})`).join(', ')}`);
+  o.push('', ar ? `أي يوم أقل من ${cfg.absMin} أوردرات بيتحسب غياب. يلا نكمّل.` : `Any day under ${cfg.absMin} orders counts as an absence. Let's keep going.`);
+  return o.join('\n');
+}
+async function drawDayCard(R, M, lang) {
+  const ar = lang === 'ar', cfg = M.cfg;
+  try { await Promise.all(['400', '600', '700'].map(w => document.fonts.load(`${w} 20px "IBM Plex Sans Arabic"`))); await document.fonts.load('800 20px "Noto Kufi Arabic"'); } catch (e) { }
+  const FF = '"IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif', FD = '"Noto Kufi Arabic", "IBM Plex Sans Arabic", sans-serif';
+  const W = 1080, P = 44, RH = 40;
+  const cars = R.list.filter(x => x.v === 'C'), motos = R.list.filter(x => x.v === 'M');
+  const H = 210 + 24 + 2 * 112 + 14 + 24 + 52 + [cars, motos].filter(g => g.length).reduce((s, g) => s + 60 + 34 + g.length * RH + 20, 0) + 70 + 70;
+  const cv = document.createElement('canvas'); const sc = 2; cv.width = W * sc; cv.height = H * sc; cv.style.width = '100%'; cv.style.maxWidth = W + 'px';
+  const g = cv.getContext('2d'); g.scale(sc, sc); g.direction = ar ? 'rtl' : 'ltr';
+  const X = x => ar ? W - x : x; // logical → physical
+  const C = { ink: '#0e2630', ink2: '#4b6570', ink3: '#8399a2', line: '#e0e7eb', bg: '#f4f7f9', brand: '#004e6d', brand2: '#9a232e', good: '#127a45', goodBg: '#e1f3e8', bad: '#b42f3a', badBg: '#fbe6e8', absBg: '#f5bcc1', absInk: '#8a1c25', acc: '#0b6b90', soft: '#e8eef1' };
+  const txt = (s, x, y, o = {}) => { g.font = `${o.w || 400} ${o.s || 16}px ${o.f || FF}`; g.fillStyle = o.c || C.ink; const d0 = g.direction; let al = o.a || 'start'; if (o.ltr && ar) { g.direction = 'ltr'; al = al === 'start' ? 'right' : al === 'end' ? 'left' : al; } g.textAlign = al; g.textBaseline = o.b || 'alphabetic'; g.fillText(s, o.raw ? x : X(x), y); g.direction = d0; };
+  const rect = (x, y, w, h, c, r = 0) => { const px = ar ? W - x - w : x; g.fillStyle = c; g.beginPath(); g.roundRect ? g.roundRect(px, y, w, h, r) : g.rect(px, y, w, h); g.fill(); };
+  // background
+  g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+  // header
+  const grd = g.createLinearGradient(0, 0, W, 210); grd.addColorStop(0, '#023a51'); grd.addColorStop(1, '#004e6d'); g.fillStyle = grd; g.fillRect(0, 0, W, 210);
+  // brand mark
+  g.lineWidth = 5; g.strokeStyle = '#e9f4f8'; const mx = ar ? W - P - 34 : P; g.beginPath(); g.roundRect(mx, 44, 34, 28, 14); g.stroke(); g.strokeStyle = '#ff6b75'; g.beginPath(); g.roundRect(mx + (ar ? -20 : 20), 44, 34, 28, 14); g.stroke();
+  txt(ar ? 'شركة السلاسل' : 'Al-Salasil', P + 70, 66, { w: 700, s: 22, c: '#ffffff', f: FD });
+  txt(ar ? 'أداء سائقي كيتا' : 'Keeta driver performance', W - P, 66, { s: 16, c: '#a9c9d6', a: 'end' });
+  txt(ar ? `تقرير يوم ${dayName(R.k, 'ar')} ${dLabel(R.k, 'ar')} ${Math.floor(R.k / 10000)}` : `Daily report — ${dayName(R.k, 'en')} ${dLabel(R.k, 'en', true)} ${Math.floor(R.k / 10000)}`, P, 140, { w: 800, s: 40, c: '#ffffff', f: FD });
+  const ch = R.sameDowAvg ? (R.orders - R.sameDowAvg) / R.sameDowAvg : null;
+  txt(ar ? `مقارنة بمتوسط أيام ${dayName(R.k, 'ar')} في الشهر: ${fmt(R.sameDowAvg)} طلب` : `vs this month's average ${dayName(R.k, 'en')}: ${fmt(R.sameDowAvg)} orders`, P, 180, { s: 17, c: '#c9e1ea' });
+  // KPI boxes
+  let y = 234; const bw = (W - 2 * P - 2 * 16) / 3;
+  const kpis = [[ar ? 'إجمالي الطلبات' : 'Total orders', fmt(R.orders), ch != null ? `${ch >= 0 ? '▲' : '▼'} ${sgn(ch * 100, 0)}%` : '', ch == null ? C.ink3 : ch >= 0 ? C.good : C.bad],
+    [ar ? 'السيارات' : 'Cars', fmt(R.C.orders), ar ? `${R.C.drivers} سائق حاضر` : `${R.C.drivers} present`, C.ink3],
+    [ar ? 'الموتوسيكل' : 'Motorcycles', fmt(R.M.orders), ar ? `${R.M.drivers} سائق حاضر` : `${R.M.drivers} present`, C.ink3],
+    [ar ? 'متوسط زمن التوصيل' : 'Avg delivery time', `${fmt(R.dt, 1)}`, ar ? 'دقيقة' : 'min', C.ink3],
+    R.adh != null ? [ar ? 'الالتزام بالجدول' : 'Schedule adherence', pct(R.adh), ar ? `${R.schedFull}/${R.schedN} كامل` : `${R.schedFull}/${R.schedN} full`, R.adh >= .9 ? C.good : C.bad] : [ar ? 'الالتزام بالوقت' : 'On-time', pct(R.ot), ar ? `متأخر جداً ${R.sev}` : `severely late ${R.sev}`, R.ot >= .95 ? C.good : C.bad],
+    [ar ? 'الحضور' : 'Attendance', `${R.present}/${R.list.length}`, ar ? `غياب ${R.absent.length}` : `absent ${R.absent.length}`, R.absent.length ? C.bad : C.good]];
+  kpis.forEach((k, i) => { const cx = P + (i % 3) * (bw + 16), cy = y + Math.floor(i / 3) * 112; rect(cx, cy, bw, 98, '#ffffff', 14);
+    txt(k[0], cx + 18, cy + 30, { s: 15, w: 600, c: C.ink2 }); txt(k[1], cx + 18, cy + 72, { s: 34, w: 700 }); txt(k[2], cx + bw - 18, cy + 72, { s: 15, w: 600, c: k[3], a: 'end', ltr: /^[▲▼+\-\d]/.test(k[2]) }); });
+  y += 2 * 112 + 14;
+  // highlights
+  rect(P, y, W - 2 * P, 44, '#ffffff', 12);
+  const hl = (R.best ? (ar ? `الأعلى: ${R.best.name} (${R.best.dl})` : `Top: ${R.best.name} (${R.best.dl})`) : '') + (R.fastest ? (ar ? `   ·   الأسرع: ${R.fastest.name} (${fmt(R.fastest.dt, 1)} د)` : `   ·   Fastest: ${R.fastest.name} (${fmt(R.fastest.dt, 1)} min)`) : '');
+  txt(hl, P + 18, y + 29, { s: 17, w: 600, c: C.brand });
+  y += 44 + 24;
+  // tables
+  const cols = { n: 18, name: 56, ord: 400, dt: 495, ot: 585, hr: 668, sc: 752, mon: 836 };
+  const section = (title, list, tgt) => {
+    txt(title, P, y + 30, { w: 700, s: 22, f: FD }); txt(ar ? `هدف الشهر ${tgt}` : `monthly target ${tgt}`, W - P, y + 30, { s: 15, c: C.ink3, a: 'end' }); y += 48;
+    rect(P, y, W - 2 * P, 34, C.soft, 10);
+    const hy = y + 23, hs = { s: 14, w: 700, c: C.ink2 };
+    txt('#', P + cols.n, hy, hs); txt(ar ? 'السائق' : 'Driver', P + cols.name, hy, hs); txt(ar ? 'طلبات اليوم' : 'Orders', P + cols.ord, hy, Object.assign({ a: 'center' }, hs)); txt(ar ? 'زمن التوصيل' : 'Delivery', P + cols.dt, hy, Object.assign({ a: 'center' }, hs)); txt(ar ? 'الالتزام' : 'On-time', P + cols.ot, hy, Object.assign({ a: 'center' }, hs)); txt(ar ? 'ساعات' : 'Hours', P + cols.hr, hy, Object.assign({ a: 'center' }, hs)); txt(ar ? 'الجدول' : 'Schedule', P + cols.sc, hy, Object.assign({ a: 'center' }, hs)); txt(ar ? 'الشهر/الهدف' : 'Month/target', P + cols.mon, hy, hs);
+    y += 34;
+    list.forEach((x, i) => {
+      rect(P, y, W - 2 * P, RH, i % 2 ? '#fbfcfd' : '#ffffff');
+      const cy = y + 26;
+      txt(String(i + 1), P + cols.n, cy, { s: 15, c: C.ink3 });
+      txt(x.name, P + cols.name, cy, { s: 17, w: 600 });
+      const oc = x.absent ? [C.absBg, C.absInk] : x.dl < 10 ? [C.badBg, C.bad] : x.dl > 15 ? [C.goodBg, C.good] : [null, C.ink];
+      if (oc[0]) rect(P + cols.ord - 42, y + 6, 84, RH - 12, oc[0], 8);
+      txt(String(x.dl) + (x.absent ? (ar ? ' غ' : ' A') : ''), P + cols.ord, cy, { s: 18, w: 700, c: oc[1], a: 'center' });
+      txt(x.dt != null && x.dl ? fmt(x.dt, 1) : '—', P + cols.dt, cy, { s: 17, w: 600, c: x.dt == null || !x.dl ? C.ink3 : x.dt <= R.dt ? C.good : C.bad, a: 'center' });
+      txt(x.ot != null && x.dl ? pct(x.ot) : '—', P + cols.ot, cy, { s: 16, c: x.ot != null && x.ot < .93 && x.dl ? C.bad : C.ink2, a: 'center' });
+      txt(fmt(x.on || 0, 1), P + cols.hr, cy, { s: 16, w: 600, c: (x.on || 0) >= 10 ? C.good : (x.on || 0) < 6 ? C.bad : C.ink2, a: 'center' });
+      if (x.sch === 1 && x.sl) { const ok = x.sq === x.sl, none = x.sq === 0; rect(P + cols.sc - 30, y + 8, 60, RH - 16, ok ? C.goodBg : none ? C.badBg : '#fdf1d8', 8); txt(`${x.sq}/${x.sl}`, P + cols.sc, cy, { s: 15, w: 700, c: ok ? C.good : none ? C.bad : '#9a6400', a: 'center', ltr: true }); } else txt('—', P + cols.sc, cy, { s: 15, c: C.ink3, a: 'center' });
+      const bwid = 66, pr = Math.min(1, x.mtd / (x.target || 1)); rect(P + cols.mon, y + 16, bwid, 8, C.soft, 4); rect(P + cols.mon, y + 16, bwid * pr, 8, pr >= 1 ? C.good : x.ts === 'ontrack' || x.ts === 'close' ? '#c9871a' : C.acc, 4);
+      txt(`${x.mtd}/${x.target || '—'}`, P + cols.mon + bwid + 10, cy, { s: 15, w: 600, c: pr >= 1 ? C.good : C.ink2, ltr: true });
+      y += RH;
+    });
+    y += 20;
+  };
+  if (cars.length) section(ar ? `السيارات (${cars.length})` : `Cars (${cars.length})`, cars, cfg.targetC);
+  if (motos.length) section(ar ? `الموتوسيكل (${motos.length})` : `Motorcycles (${motos.length})`, motos, cfg.targetM);
+  // absence + legend
+  rect(P, y, W - 2 * P, 56, '#ffffff', 12);
+  txt(R.absent.length ? (ar ? `غياب (أقل من ${cfg.absMin} طلبات): ${R.absent.map(x => x.name).join('، ')}` : `Absent (under ${cfg.absMin} orders): ${R.absent.map(x => x.name).join(', ')}`) : (ar ? 'مافيش غياب النهارده' : 'No absences today'), P + 18, y + 35, { s: 16, w: 600, c: R.absent.length ? C.absInk : C.good });
+  y += 70;
+  txt(ar ? `أخضر = أكثر من 15 · وردي = غياب · زمن أخضر = أسرع من متوسط اليوم (${fmt(R.dt, 1)} د) · الجدول = فترات ملتزم فيها/فترات الجدول` : `Green = over 15 · Pink = absence · Green time = faster than the day's average (${fmt(R.dt, 1)} min) · Schedule = qualified/scheduled slots`, P, y + 20, { s: 14, c: C.ink3 });
+  txt(ar ? 'رادار السلاسل' : 'Al-Salasil Radar', W - P, y + 20, { s: 14, w: 700, c: C.brand, a: 'end' });
+  return cv;
+}
+function viewDay(v, M) {
+  const l = L(), ar = LANG === 'ar';
+  if (!S.dayK || !M.dates.includes(S.dayK) || S.dayAuto !== false) S.dayK = M.end;
+  const R = KE.dayReport(M, S.dayK); const lg = S.dayLang || LANG;
+  v.innerHTML = `<div class="filters"><label class="fld"><span>${l.dayPick}</span><select id="dayK">${M.dates.slice().reverse().map(k => `<option value="${k}" ${k === S.dayK ? 'selected' : ''}>${dayName(k, LANG)} ${dLabel(k)}</option>`).join('')}</select></label>
+    <div class="seg" role="group">${[['ar', 'عربي'], ['en', 'English']].map(([k, t]) => `<button type="button" data-dl="${k}" aria-pressed="${lg === k}">${t}</button>`).join('')}</div>
+    <button class="btn primary" type="button" id="dlImg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg>${l.dlImg}</button>
+    <button class="btn" type="button" id="cpMsg">${l.copy} ${l.dayMsg}</button></div>
+  <div class="grid kpis six" style="margin-bottom:14px">${[[l.kOrders, fmt(R.orders)], [l.carsTot, fmt(R.C.orders)], [l.motoTot, fmt(R.M.orders)], [l.kDt, fmt(R.dt, 1)], R.adh != null ? [l.adh, pct(R.adh)] : [l.kOt, pct(R.ot)], [ar ? 'الحضور' : 'Present', `${R.present}/${R.list.length}`]].map(t => `<div class="card kpi"><div class="lbl">${t[0]}</div><div class="val">${t[1]}</div></div>`).join('')}</div>
+  <div class="grid two" style="align-items:start"><div class="card"><h3>${l.dayImg}</h3><div id="cardHost" style="display:grid;justify-items:center"></div></div>
+    <div class="card"><h3>${l.dayMsg}</h3><div class="msg" id="dayMsgBox" dir="${lg === 'ar' ? 'rtl' : 'ltr'}">${esc(dayMessage(R, M, lg))}</div></div></div>`;
+  $('#dayK').onchange = e => { S.dayK = +e.target.value; S.dayAuto = false; renderView(); };
+  v.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => { S.dayLang = b.dataset.dl; renderView(); });
+  let cv = null;
+  drawDayCard(R, M, lg).then(c => { cv = c; const h = $('#cardHost'); if (h) { h.innerHTML = ''; c.style.borderRadius = '10px'; c.style.border = '1px solid var(--line)'; h.appendChild(c); } });
+  $('#cpMsg').onclick = () => { const el = $('#dayMsgBox'), t = el.textContent; const sel = () => { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }; try { navigator.clipboard.writeText(t).then(() => toast(l.copied), sel); } catch (e) { sel(); } };
+  $('#dlImg').onclick = async () => {
+    if (!S.dl) { toast(l.expNo, 4500); return; }
+    const c = cv || await drawDayCard(R, M, lg);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    const name = lg === 'ar' ? `تقرير_يوم_${KE.dd(R.k)}_${MONTHS.ar[Math.floor(R.k / 100) % 100 - 1]}.png` : `Daily_report_${KE.dd(R.k)}_${MON3[Math.floor(R.k / 100) % 100 - 1]}.png`;
+    try { await S.dl.save({ filename: name, data: blob }); toast(l.imgOk); } catch (e) { toast(e && e.code === 'declined' ? l.expDecl : l.expNo); }
+  };
+}
+
+/* ---------- Excel export (same sheets as the manual reports) ---------- */
+function buildWorkbook(M, lang) {
+  const ar = lang === 'ar', l = T[lang], fd = M.C.fleetDt;
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Al-Salasil Radar';
+  const F = 'Arial', HEAD = 'FF1F3864', GF = 'FFC6EFCE', RF = 'FFFFC7CE', YF = 'FFFFEB9C', GT = 'FF006100', RT = 'FF9C0006';
+  const border = { top: { style: 'thin', color: { argb: 'FFBFBFBF' } }, bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } }, left: { style: 'thin', color: { argb: 'FFBFBFBF' } }, right: { style: 'thin', color: { argb: 'FFBFBFBF' } } };
+  const sheet = (name, frozen) => wb.addWorksheet(name, { views: [{ rightToLeft: ar, state: 'frozen', xSplit: frozen ? frozen[0] : 0, ySplit: frozen ? frozen[1] : 0 }] });
+  const title = (ws, t, sub, span = 10) => { ws.getCell('A1').value = t; ws.getCell('A1').font = { name: F, size: 15, bold: true, color: { argb: 'FF004E6D' } }; if (sub) { ws.mergeCells(2, 1, 2, span); const c = ws.getCell('A2'); c.value = sub; c.font = { name: F, size: 10, italic: true, color: { argb: 'FF555555' } }; c.alignment = { wrapText: true, vertical: 'top' }; ws.getRow(2).height = 46; } };
+  const header = (ws, r, cols) => { cols.forEach((h, i) => { const c = ws.getCell(r, i + 1); c.value = h; c.font = { name: F, bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD } }; c.border = border; c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; }); ws.getRow(r).height = 36; };
+  const put = (ws, r, ci, v, fmtStr, wrap) => { const c = ws.getCell(r, ci); c.value = v == null || (typeof v === 'number' && !isFinite(v)) ? null : v; c.font = { name: F }; c.border = border; c.alignment = { horizontal: wrap ? (ar ? 'right' : 'left') : 'center', vertical: 'middle', wrapText: !!wrap }; if (fmtStr) c.numFmt = fmtStr; return c; };
+  const paint = (c, good) => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: good ? GF : RF } }; c.font = { name: F, bold: true, color: { argb: good ? GT : RT } }; };
+  const widths = (ws, w) => w.forEach((x, i) => ws.getColumn(i + 1).width = x);
+  const veh = a => a.v === 'M' ? l.moto : l.car;
+  const period = `1–${KE.dd(M.end)} ${monthName(M.month, lang)}`;
+
+  // Summary
+  const S1 = sheet(ar ? 'الملخص' : 'Summary');
+  title(S1, (ar ? 'تحليل أداء سائقي كيتا — ' : 'Keeta Driver Performance — ') + period, (ar ? `المصدر: تقرير الأداء اليومي من كيتا (${M.rows.length} صف، ${M.C.list.length} سائق، ${M.dates.length} يوم).` : `Source: Keeta courier daily performance export (${M.rows.length} rows, ${M.C.list.length} drivers, ${M.dates.length} days).`) + (M.prevEnd ? (ar ? ` المقارنة مع ${dLabel(M.prevEnd, 'ar')}.` : ` Compared with ${dLabel(M.prevEnd, 'en', true)}.`) : ''), 5);
+  let r = 4; header(S1, r, [ar ? 'المؤشر' : 'KPI', ar ? `الآن (1–${KE.dd(M.end)})` : `Now (1–${KE.dd(M.end)})`, M.prevEnd ? (ar ? `السابق (1–${KE.dd(M.prevEnd)})` : `Previous (1–${KE.dd(M.prevEnd)})`) : '']); r++;
+  const K = M.K, P = M.KP || {};
+  [[l.kOrders, K.orders, P.orders, '#,##0'], [l.carsTot, K.cars, P.cars, '#,##0'], [l.motoTot, K.motos, P.motos, '#,##0'], [l.kPerDay, K.perDay, P.perDay, '0.0'], [l.kSame + (ar ? ' (مقابل نفس الأيام قبل كده)' : ' (vs same weekdays before)'), M.sameDow.now, M.sameDow.before, '0.0'], [l.kPerHr, K.perHr, P.perHr, '0.00'], [l.kDt, K.dt, P.dt, '0.0'], [l.kOt, K.ot, P.ot, '0.0%'], [l.adh, K.adh, P.adh, '0.0%'], [l.kSev, K.sev, P.sev, '0'], [l.kGreen, K.green, P.green, '0'], [ar ? 'سائقون حمر' : 'RED drivers', K.red, P.red, '0'], [l.kShare, K.greenShare, P.greenShare, '0%']]
+    .forEach(x => { put(S1, r, 1, x[0], null, true); put(S1, r, 2, x[1], x[3]); put(S1, r, 3, M.prevEnd ? x[2] : null, x[3]); r++; });
+  const Fc = facts(M);
+  const block = (t, arr, cols, get, fmts, good) => { if (!arr.length) return; r++; const c = S1.getCell(r, 1); c.value = t; c.font = { name: F, bold: true, size: 12, color: { argb: good ? GT : RT } }; r++; header(S1, r, cols); r++; arr.forEach(a => { get(a).forEach((v, i) => { const cc = put(S1, r, i + 1, v, fmts[i], i === cols.length - 1); if (i === 0) paint(cc, good); }); r++; }); };
+  block(l.top5, Fc.top, [l.driver, l.delivered, l.score, l.avgdt, l.note], a => [a.name, a.delivered, a.score, a.avgdt, noteText(a.note, lang)], [null, '0', '0.0', '0.0', null], true);
+  block(l.bot5, Fc.bottom, [l.driver, l.delivered, l.score, l.avgdt, l.note], a => [a.name, a.delivered, a.score, a.avgdt, noteText(a.note, lang)], [null, '0', '0.0', '0.0', null], false);
+  block(l.fast5, Fc.fast5, [l.driver, l.delivered, l.avgdt, l.over55, l.note], a => [a.name, a.delivered, a.avgdt, a.over55, `${l.ontime} ${pct(a.ontime)}`], [null, '0', '0.0', '0%', null], true);
+  block(l.slow5, Fc.slow5, [l.driver, l.delivered, l.avgdt, l.over55, l.note], a => [a.name, a.delivered, a.avgdt, a.over55, `${l.ontime} ${pct(a.ontime)}`], [null, '0', '0.0', '0%', null], false);
+  if (M.prevEnd) {
+    const chg = a => `${fmt(a.cmp.pPer, 1)} → ${fmt(a.cmp.nPer, 1)} · ${fmt(a.cmp.pDt, 1)} → ${fmt(a.cmp.nDt, 1)} ${l.min}`;
+    block(l.improved, Fc.up.slice(0, 10), [l.driver, l.pRank, l.cRank, l.note], a => [a.name, a.cmp.pRank, a.rank, chg(a)], [null, '0', '0', null], true);
+    block(l.declined, Fc.down.slice(0, 10), [l.driver, l.pRank, l.cRank, l.note], a => [a.name, a.cmp.pRank, a.rank, chg(a)], [null, '0', '0', null], false);
+  }
+  r += 2; S1.getCell(r, 1).value = l.insights; S1.getCell(r, 1).font = { name: F, bold: true, size: 12, color: { argb: 'FF004E6D' } }; r++;
+  insights(M, lang).forEach((x, i) => { S1.mergeCells(r, 1, r, 5); const c = S1.getCell(r, 1); c.value = `${i + 1}. ${x.t}`; c.font = { name: F, size: 10 }; c.alignment = { wrapText: true, vertical: 'top', horizontal: ar ? 'right' : 'left' }; S1.getRow(r).height = Math.min(90, 16 + Math.ceil(x.t.length / 110) * 15); r++; });
+  widths(S1, [36, 16, 16, 16, 80]);
+
+  // Ranking
+  const S2 = sheet(ar ? 'ترتيب السائقين' : 'Driver Ranking', [2, 4]);
+  title(S2, (ar ? 'ترتيب السائقين — ' : 'Driver Ranking — ') + period, ar ? `أخضر = درجة ≥ 50 و ≥ ${fmt(M.C.volBar, 1)} طلب لكل يوم في القائمة. زمن التوصيل: أخضر ≤ متوسط الأسطول (${fmt(fd, 1)} دقيقة).` : `GREEN = score ≥ 50 and ≥ ${fmt(M.C.volBar, 1)} orders per roster day. Delivery time: green ≤ fleet average (${fmt(fd, 1)} min).`, 21);
+  header(S2, 4, [l.rank, l.driver, l.id, l.vehicle, l.cls, l.score, l.status, l.roster, l.active, l.absent, l.delivered, l.proj, l.last7, l.online, l.hrsDay, l.adh, l.perRoster, l.perHr, l.ontime, l.avgdt, l.over55, l.overdue, l.sev, l.rejected, l.assess]);
+  M.C.list.forEach((a, i) => { const rr = 5 + i; const vals = [a.rank, a.name, a.id, veh(a), a.green ? l.green : l.red, a.score, l.st[a.status], a.roster, a.active, a.absent, a.delivered, M.FC.remaining.length ? Math.round(a.fc.proj) : a.delivered, a.last7, a.online, a.hrsDay, a.adh, a.perRoster, a.perHr, a.ontime, a.avgdt, a.over55, a.overdue, a.sev, a.rejected, noteText(a.note, lang)];
+    const f = [null, null, '@', null, null, '0.0', null, '0', '0', '0', '0', '0', '0', '0.0', '0.0', '0%', '0.0', '0.00', '0%', '0.0', '0%', '0', '0', '0', null];
+    vals.forEach((v, j) => put(S2, rr, j + 1, v, f[j], j === 24)); [1, 2, 5].forEach(j => paint(S2.getCell(rr, j), a.green)); if (a.avgdt != null) paint(S2.getCell(rr, 20), a.avgdt <= fd); if (a.ontime != null && a.ontime < .93) paint(S2.getCell(rr, 19), false); if (a.absent >= 4) paint(S2.getCell(rr, 10), false); if (a.adh != null && (a.adh >= .9 || a.adh < .75)) paint(S2.getCell(rr, 16), a.adh >= .9); });
+  widths(S2, [7, 22, 19, 11, 9, 8, 15, 9, 8, 9, 10, 12, 9, 10, 9, 12, 11, 9, 10, 12, 10, 8, 9, 8, 70]);
+
+  // Delivery time
+  const S3 = sheet(ar ? 'زمن التوصيل' : 'Delivery Time', [2, 4]);
+  title(S3, ar ? 'زمن التوصيل لكل سائق — من الأسرع للأبطأ' : 'Delivery Time per Driver — Fastest to Slowest', ar ? `متوسط الأسطول = ${fmt(fd, 1)} دقيقة. أخضر = أسرع من أو يساوي المتوسط، أحمر = أبطأ.` : `Fleet average = ${fmt(fd, 1)} min. GREEN = at or faster than average, RED = slower.`, 11);
+  header(S3, 4, ['#', l.driver, l.vehicle, l.delivered, l.avgdt, l.dtVsFleet, l.over55, l.ontime, l.overdue, l.sev, l.repDt + (M.prevEnd ? ` (1–${KE.dd(M.prevEnd)})` : ''), l.newDt + (M.prevEnd ? ` (${rangeLabel(M.newDays)})` : '')]);
+  M.C.list.filter(a => a.delivered > 0).sort((a, b) => a.avgdt - b.avgdt).forEach((a, i) => { const rr = 5 + i; const nd = a.cmp.nDt != null ? a.cmp.nDt : (a.n && a.n.avgdt);
+    [i + 1, a.name, veh(a), a.delivered, a.avgdt, a.avgdt - fd, a.over55, a.ontime, a.overdue, a.sev, a.cmp.repDt, nd].forEach((v, j) => put(S3, rr, j + 1, v, [null, null, null, '0', '0.0', '+0.0;-0.0;0.0', '0%', '0%', '0', '0', '0.0', '0.0'][j]));
+    [2, 5, 6].forEach(j => paint(S3.getCell(rr, j), a.avgdt <= fd)); if (a.cmp.repDt != null) paint(S3.getCell(rr, 11), a.cmp.repDt <= fd); if (nd != null) paint(S3.getCell(rr, 12), nd <= fd); if (a.ontime < .93) paint(S3.getCell(rr, 8), false); });
+  widths(S3, [5, 22, 11, 10, 13, 14, 10, 10, 8, 9, 18, 18]);
+
+  // Progress
+  if (M.prevEnd) {
+    const S4 = sheet(ar ? 'المقارنة مع السابق' : 'vs Previous Report', [1, 4]);
+    title(S4, ar ? `مين اتطور ومين تراجع — مقارنة بـ ${dLabel(M.prevEnd, 'ar')}` : `Who Improved and Who Declined — vs ${dLabel(M.prevEnd, 'en', true)}`, fill(l.progNote, { new: `${rangeLabel(M.newDays)} — ${Fc.newDowNames(lang)}`, a: fmt(M.baseDt, 1), b: fmt(M.newDt, 1) }), 15);
+    header(S4, 4, [l.driver, l.vehicle, l.pRank, l.cRank, l.pCls, l.cCls, l.pScore, l.cScore, l.pPer, l.nPer, l.dPer, l.pDt2, l.nDt2, l.dDt, l.verdict]);
+    [...M.C.list].sort((a, b) => (vOrder[a.cmp.verdict] - vOrder[b.cmp.verdict]) || ((b.cmp.pts || 0) - (a.cmp.pts || 0)) || a.rank - b.rank).forEach((a, i) => { const rr = 5 + i, c = a.cmp;
+      [a.name, veh(a), c.pRank, a.rank, c.pGreen == null ? null : c.pGreen ? l.green : l.red, a.green ? l.green : l.red, c.pScore, a.score, c.pPer, c.nPer, c.dPer, c.pDt, c.nDt, c.dDt, l.vd[c.verdict]].forEach((v, j) => put(S4, rr, j + 1, v, [null, null, '0', '0', null, null, '0.0', '0.0', '0.0', '0.0', '+0%;-0%;0%', '0.0', '0.0', '+0.0;-0.0;0.0', null][j]));
+      if (c.pGreen != null) paint(S4.getCell(rr, 5), c.pGreen); paint(S4.getCell(rr, 6), a.green);
+      if (c.dPer != null && Math.abs(c.dPer) >= .1) paint(S4.getCell(rr, 11), c.dPer > 0); if (c.dDt != null && Math.abs(c.dDt) >= 1.5) paint(S4.getCell(rr, 14), c.dDt < 0);
+      if (c.verdict === 'up' || c.verdict === 'down' || c.verdict === 'stillstopped') paint(S4.getCell(rr, 15), c.verdict === 'up'); });
+    widths(S4, [22, 11, 9, 9, 10, 10, 9, 9, 14, 14, 10, 14, 14, 16, 24]);
+  }
+
+  // Matrix
+  const S5 = sheet(ar ? 'المصفوفة اليومية' : 'Daily Matrix', [2, 3]);
+  S5.getCell('A1').value = ar ? 'الطلبات المُوصَّلة لكل سائق يومياً' : 'Delivered orders per driver per day'; S5.getCell('A1').font = { name: F, size: 15, bold: true, color: { argb: 'FF004E6D' } };
+  header(S5, 3, [l.driver, l.cls, ...M.dates.map(k => dHead(k, lang)), l.total]);
+  M.dates.forEach((k, j) => { if (M.prevEnd && k > M.prevEnd) { const c = S5.getCell(3, j + 3); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: YF } }; c.font = { name: F, bold: true, color: { argb: 'FF000000' } }; } });
+  M.C.list.forEach((a, i) => { const rr = 4 + i, m = M.matrix.get(a.id) || new Map(); paint(put(S5, rr, 1, a.name), a.green); put(S5, rr, 2, a.green ? l.green : l.red);
+    M.dates.forEach((k, j) => { const x = m.get(k); const c = put(S5, rr, j + 3, x == null ? null : x, '0'); if (x != null && x < M.cfg.absMin) { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5BCC1' } }; c.font = { name: F, bold: true, strike: true, color: { argb: 'FF8A1C25' } }; } else if (x != null && x < 10) paint(c, false); else if (x != null && x > 15) paint(c, true); });
+    put(S5, rr, M.dates.length + 3, a.delivered, '0').font = { name: F, bold: true }; });
+  const tr = 4 + M.C.list.length; put(S5, tr, 1, l.total).font = { name: F, bold: true }; M.daily.forEach((x, j) => put(S5, tr, j + 3, x.orders, '0').font = { name: F, bold: true }); put(S5, tr, M.dates.length + 3, M.totals.orders, '0').font = { name: F, bold: true };
+  S5.getCell(tr + 2, 1).value = fill(l.mxNote, { abs: M.cfg.absMin }); S5.getCell(tr + 2, 1).font = { name: F, italic: true };
+  widths(S5, [22, 8, ...M.dates.map(() => 8), 10]);
+
+  // Forecast
+  const FCs = M.FC;
+  const S8 = sheet(ar ? 'التوقعات' : 'Forecast', [1, 4]);
+  title(S8, (ar ? 'توقعات نهاية الشهر — ' : 'Month-end Forecast — ') + monthName(M.month, lang), (FCs.remaining.length ? (ar ? `الفعلي ${fmt(FCs.actual)} طلب حتى ${dLabel(M.end, 'ar')}. التوقع ${fmt(FCs.projected)} (المدى ${fmt(FCs.low)}–${fmt(FCs.high)})، مجموع توقعات السائقين ${fmt(FCs.bottomUp)}، دقة التوقع اليومي ${pct(FCs.accuracy)}. ` : `Actual ${fmt(FCs.actual)} orders to ${dLabel(M.end, 'en', true)}. Forecast ${fmt(FCs.projected)} (range ${fmt(FCs.low)}–${fmt(FCs.high)}), sum of driver forecasts ${fmt(FCs.bottomUp)}, daily accuracy ${pct(FCs.accuracy)}. `) : l.monthDone + ' ') + l.fcNote, 12);
+  header(S8, 4, [l.driver, l.vehicle, l.status, l.delivered, l.rate, l.pAtt, l.proj, ar ? 'الأدنى' : 'Low', ar ? 'الأعلى' : 'High', l.target, l.need, l.payNow, l.pay]);
+  M.C.list.filter(a => a.status !== 'left').sort((a, b) => b.fc.proj - a.fc.proj).forEach((a, i) => { const rr = 5 + i, f = a.fc;
+    [a.name, veh(a), l.st[a.status], a.delivered, f.rate, f.p, f.proj, f.projLo, f.projHi, `${f.target} · ${l.ts[f.tStatus]}`, f.tStatus === 'done' ? 0 : f.need, f.payNow, f.pay].forEach((v, j) => put(S8, rr, j + 1, v, [null, null, null, '0', '0.0', '0%', '0', '0', '0', null, '0.0', '0.0', '0.0'][j]));
+    if (f.tStatus !== 'close') paint(S8.getCell(rr, 10), f.tStatus !== 'off'); else { const c = S8.getCell(rr, 10); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: YF } }; } });
+  let r8 = 6 + M.C.list.length; header(S8, r8, [ar ? 'اليوم' : 'Day', l.predicted, ar ? 'الأدنى' : 'Low', ar ? 'الأعلى' : 'High']); r8++;
+  FCs.remDays.forEach(x => { put(S8, r8, 1, dHead(x.k, lang)); put(S8, r8, 2, x.v, '0'); put(S8, r8, 3, x.v - 1.28 * FCs.sd, '0'); put(S8, r8, 4, x.v + 1.28 * FCs.sd, '0'); r8++; });
+  widths(S8, [22, 11, 15, 10, 12, 11, 12, 9, 9, 12, 11, 14, 14]);
+  // Attendance
+  const S9 = sheet(ar ? 'الحضور والغياب' : 'Attendance', [1, 4]);
+  title(S9, ar ? 'الحضور والغياب' : 'Attendance', fill(l.attChartS, { abs: M.cfg.absMin }) + (ar ? ` · نسبة الغياب ${pct(M.ATT.rate, 1)}` : ` · absence rate ${pct(M.ATT.rate, 1)}`), 8);
+  header(S9, 4, [l.driver, l.vehicle, l.status, l.roster, l.active, l.absent, l.attend, l.absDays, l.schDays, l.shr, l.qhr, l.adh, l.fullDays, l.missDays, l.online, l.hrsDay]);
+  const abByDrv = new Map(); for (const x of M.rows) if (x.dl < M.cfg.absMin) { if (!abByDrv.has(x.id)) abByDrv.set(x.id, []); abByDrv.get(x.id).push(KE.dd(x.d)); }
+  M.C.list.filter(a => a.status !== 'left').sort((a, b) => b.absent - a.absent).forEach((a, i) => { const rr = 5 + i;
+    [a.name, veh(a), l.st[a.status], a.roster, a.active, a.absent, a.attend, (abByDrv.get(a.id) || []).sort((x, y) => x - y).join(', '), a.schDays, a.shr, a.qhr, a.adh, a.fullDays, a.missDays, a.online, a.hrsDay].forEach((v, j) => put(S9, rr, j + 1, v, [null, null, null, '0', '0', '0', '0%', null, '0', '0', '0', '0%', '0', '0', '0', '0.0'][j], j === 7)); if (a.adh != null && (a.adh >= .9 || a.adh < .75)) paint(S9.getCell(rr, 12), a.adh >= .9);
+    if (a.absent >= 4) paint(S9.getCell(rr, 6), false); else if (a.absent === 0) paint(S9.getCell(rr, 6), true); });
+  widths(S9, [22, 11, 15, 10, 9, 10, 11, 40, 10, 11, 11, 11, 12, 12, 11, 10]);
+
+  // Motorcycles
+  const S6 = sheet(ar ? 'الموتوسيكل' : 'Motorcycles', [2, 4]);
+  title(S6, (ar ? 'سائقو الموتوسيكل — ' : 'Motorcycle Riders — ') + period, ar ? `متوسط الأسطول = ${fmt(fd, 1)} دقيقة.` : `Fleet average = ${fmt(fd, 1)} min.`, 12);
+  header(S6, 4, [l.driver, l.status, l.delivered, l.avgdt, l.dtVsFleet, l.over55, l.ontime, l.overdue, l.sev, l.newDt, l.perRoster, l.perHr, l.overdueRate]);
+  const ms = M.C.list.filter(a => a.v === 'M').sort((a, b) => (a.avgdt || 99) - (b.avgdt || 99));
+  ms.forEach((a, i) => { const rr = 5 + i; const nd = a.n && a.n.avgdt; const od = a.delivered ? a.overdue / a.delivered : null;
+    [a.name, l.st[a.status], a.delivered, a.avgdt, a.avgdt == null ? null : a.avgdt - fd, a.over55, a.ontime, a.overdue, a.sev, nd, a.perRoster, a.perHr, od].forEach((v, j) => put(S6, rr, j + 1, v, [null, null, '0', '0.0', '+0.0;-0.0;0.0', '0%', '0%', '0', '0', '0.0', '0.0', '0.00', '0%'][j]));
+    if (a.avgdt != null) { [1, 4, 5].forEach(j => paint(S6.getCell(rr, j), a.avgdt <= fd)); } if (nd != null) paint(S6.getCell(rr, 10), nd <= fd); if (a.ontime != null && a.ontime < .93) paint(S6.getCell(rr, 7), false);
+    paint(S6.getCell(rr, 11), a.perRoster >= M.C.volBar); paint(S6.getCell(rr, 12), (a.perHr || 0) >= .85); if (od != null) paint(S6.getCell(rr, 13), od <= .05); });
+  let r6 = 6 + ms.length; S6.getCell(r6, 1).value = l.motoVsCar; S6.getCell(r6, 1).font = { name: F, bold: true, size: 12, color: { argb: 'FF004E6D' } }; r6++;
+  const V = M.veh; header(S6, r6, [l.metric, `${l.motos} (${V.moto.n})`, `${l.cars} (${V.cars.n})`]); r6++;
+  [[l.ordersTot, V.moto.orders, V.cars.orders, '#,##0'], [l.onlineTot, V.moto.online, V.cars.online, '#,##0'], [l.perDay, V.moto.perDay, V.cars.perDay, '0.0'], [l.perHr, V.moto.perHr, V.cars.perHr, '0.00'], [l.avgdt, V.moto.dt, V.cars.dt, '0.0'], [l.ontime, V.moto.ot, V.cars.ot, '0%'], [l.overdueRate, V.moto.overdue, V.cars.overdue, '0%']].forEach(x => { put(S6, r6, 1, x[0], null, true); put(S6, r6, 2, x[1], x[3]); put(S6, r6, 3, x[2], x[3]); r6++; });
+  widths(S6, [22, 15, 10, 13, 14, 10, 10, 8, 9, 15, 13, 12, 12]);
+
+  // Messages
+  const S7 = sheet(ar ? 'رسائل الجروبات' : 'Group Messages');
+  [[l.msgCars + ' — عربي', messages(M, 'cars', 'ar')], [l.msgCars + ' — English', messages(M, 'cars', 'en')], [l.msgMoto + ' — عربي', messages(M, 'moto', 'ar')], [l.msgMoto + ' — English', messages(M, 'moto', 'en')]].forEach((x, i) => {
+    const col = i + 1; const h = S7.getCell(1, col); h.value = x[0]; h.font = { name: F, bold: true, color: { argb: 'FFFFFFFF' } }; h.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD } }; h.alignment = { horizontal: 'center' };
+    const c = S7.getCell(2, col); c.value = x[1]; c.font = { name: F, size: 10 }; c.alignment = { wrapText: true, vertical: 'top', horizontal: i % 2 === 0 ? 'right' : 'left', readingOrder: i % 2 === 0 ? 'rtl' : 'ltr' }; S7.getColumn(col).width = 60; });
+  S7.getRow(2).height = 409;
+  return wb;
+}
+async function exportXlsx() {
+  const M = S.M; if (!M) return;
+  if (!S.dl) { toast(L().expNo, 4500); return; }
+  try { if (!window.ExcelJS) { toast(L().loadingLib, 1500); await loadScript(LIB.excel); } } catch (e) { toast(L().expNo); return; }
+  const wb = buildWorkbook(M, LANG);
+  const buf = await wb.xlsx.writeBuffer();
+  const name = LANG === 'ar' ? `تحليل_أداء_السائقين_كيتا_1-${KE.dd(M.end)}_${MONTHS.ar[M.month % 100 - 1]}_${Math.floor(M.month / 100)}.xlsx` : `Keeta_Driver_Performance_1-${KE.dd(M.end)}_${MON3[M.month % 100 - 1]}_${Math.floor(M.month / 100)}.xlsx`;
+  try { await S.dl.save({ filename: name, data: new Blob([buf]) }); toast(L().expOk); }
+  catch (e) { toast(e && e.code === 'declined' ? L().expDecl : L().expNo); }
+}
+
+boot();
+</script>
+
+</body></html>
