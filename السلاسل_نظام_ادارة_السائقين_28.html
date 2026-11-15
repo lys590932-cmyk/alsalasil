@@ -19579,11 +19579,65 @@ function columns(){
 }
 
 /* ── رفع دفعة واحدة: أسرع بكتير من نداء لكل سائق ── */
+/* ══ سحب ودمج قبل أي رفع (أُضيف 2026-11-15) ══
+   المشكلة: ARK كان بيرفع كل السائقين من الجهاز (بعد 12 ثانية من الفتح، وكل ربع ساعة،
+   وبعد أي حفظ) من غير ما يقرا السحابة الأول — فأي تعديل اتعمل على السحابة من جهاز تاني
+   أو من Claude كان بيترجع للقديم.
+   الحل: دمج ثلاثي. بنحفظ آخر نسخة اترفعت (sl_drv_synced). عند السحب:
+     - الحقل اللي ماتغيّرش محلياً من آخر رفع  ← ياخد قيمة السحابة.
+     - الحقل اللي اتعدّل محلياً ولسه مترفعش    ← يفضل المحلي.
+   أول مرة (مفيش نسخة محفوظة) السحابة هي اللي بتكسب. */
+var SK_SYNCED = 'sl_drv_synced';
+var MF = [['name','name'],['partner','partner'],['sim','sim'],['car','car'],['license','license'],
+          ['civil','civil'],['device','device'],['petrol','petrol'],['nationality','nationality'],
+          ['health','health'],['startDate','start_date'],['civil_expiry','civil_expiry'],['health_expiry','health_expiry']];
+function _nv(v){ return v == null ? '' : String(v); }
+function snapLoad(){ try{ return JSON.parse(localStorage.getItem(SK_SYNCED) || 'null'); }catch(e){ return null; } }
+function snapSave(){
+  try{
+    var o = {};
+    DRV.forEach(function(d){ var r = {}; MF.forEach(function(f){ r[f[0]] = _nv(d[f[0]]); }); o[d.id] = r; });
+    localStorage.setItem(SK_SYNCED, JSON.stringify(o));
+  }catch(e){}
+}
+DS.pulled = null;
+function pullMerge(){
+  if(typeof DRV === 'undefined' || !Array.isArray(DRV)) return Promise.resolve(0);
+  return ARKSB.fetch(SUPA_URL + '/rest/v1/drivers?select=*&limit=2000', { headers:H() })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(rows){
+      if(!rows) return 0;
+      var snap = snapLoad(), changed = 0, editId = (typeof editing !== 'undefined' && editing) ? selId : null;
+      var byId = {}; rows.forEach(function(x){ byId[x.id] = x; });
+      DRV.forEach(function(d){
+        var c = byId[d.id]; if(!c || d.id === editId) return;
+        var base = snap && snap[d.id];
+        MF.forEach(function(f){
+          var loc = _nv(d[f[0]]), cl = _nv(c[f[1]]);
+          if(loc === cl) return;
+          if(f[0] === 'name' && !cl) return;
+          var localEdited = base ? (loc !== _nv(base[f[0]])) : false;
+          if(!localEdited){ d[f[0]] = (f[0]==='civil_expiry'||f[0]==='health_expiry') ? (c[f[1]]||'') : c[f[1]] == null ? '' : c[f[1]]; changed++; }
+        });
+      });
+      DS.pulled = new Date();
+      if(changed){
+        try{ saveLS(SK_D, DRV); }catch(e){}
+        try{ if(typeof renderList === 'function') renderList(); }catch(e){}
+        try{ if(selId && !editing && typeof renderDetail === 'function') renderDetail(); }catch(e){}
+        console.log('[ARKDRV] اتسحب من السحابة: ' + changed + ' حقل');
+      }
+      return changed;
+    })
+    .catch(function(e){ console.warn('[ARKDRV] pull failed', e); return 0; });
+}
+DS.pullMerge = pullMerge;
+
 function pushAll(silent){
   if(DS.busy){ DS.pending = true; return Promise.resolve(); }
   if(typeof DRV === 'undefined' || !Array.isArray(DRV) || !DRV.length) return Promise.resolve();
   DS.busy = true;
-  return columns().then(function(cols){ return doPush(cols, silent); });
+  return pullMerge().then(function(){ return columns(); }).then(function(cols){ return doPush(cols, silent); });
 }
 
 function doPush(cols, silent){
@@ -19641,7 +19695,7 @@ function doPush(cols, silent){
   })).then(function(){
     return hasActive ? prune(rows.map(function(x){ return x.id; })) : 0;
   }).then(function(gone){
-    DS.last = new Date(); DS.err = null;
+    DS.last = new Date(); DS.err = null; snapSave();
     if(!silent && typeof toast === 'function')
       toast('السائقون اترفعوا — ' + rows.length + ' سائق' +
             (gone ? ' · ' + gone + ' اتعلّم كغير نشط' : ''), 's');
@@ -19712,6 +19766,16 @@ window.drvSyncPaint = function(){
   }
 };
 
+/* سحب أول ما ARK يفتح — عشان الشاشة تعرض آخر بيانات السحابة */
+setTimeout(function(){ pullMerge(); }, 2500);
+/* لما ترجع للتبويب بعد غياب، اسحب الجديد */
+document.addEventListener('visibilitychange', function(){ if(!document.hidden && !DS.busy) pullMerge(); });
+/* زر «مزامنة السائقين» القديم بيرفع من غير ما يسحب — نخليه يسحب الأول */
+if(typeof window.syncDriversToSupabase === 'function'){
+  var _sds = window.syncDriversToSupabase;
+  window.syncDriversToSupabase = function(){ var a = arguments, me = this;
+    return pullMerge().then(function(){ return _sds.apply(me, a); }); };
+}
 /* رفع أول ما ARK يفتح — عشان أي تعديل اتعمل والنت مقطوع يلحق يروح */
 setTimeout(function(){ pushAll(true); }, 12000);
 /* وكل ربع ساعة — شبكة أمان */
