@@ -23750,5 +23750,138 @@ else setTimeout(radarInit, 300);
 })();
 </script>
 
+
+<script>
+/* ══════════ صيانة الزيت (ARK_OIL) ══════════
+   المصدر: v_oil_status في Supabase — بتحسب الكيلومترات من آخر تغيير زيت
+   من عداد جهاز التتبع (vehicle_odometer، بيتسحب يومياً من ES Track)،
+   ولو التتبع مش شغّال من قراءة العداد في سجل الوقود. السائق بيسجّل
+   التغيير وصورة الورقة من فلاي، والإدارة بتراجع الصورة هنا. */
+(function(){
+const ARK_OIL = { status:[], pending:[], loaded:false };
+window.ARK_OIL = ARK_OIL;
+const H = () => ({ 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Content-Type':'application/json' });
+const e = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const km = n => (n==null||isNaN(n)) ? '—' : Math.round(n).toLocaleString('en-US');
+
+async function loadOil(){
+  try{
+    const [a,b] = await Promise.all([
+      fetch(SUPA_URL+'/rest/v1/v_oil_status?select=*', { headers:H() }).then(r=>r.ok?r.json():[]),
+      fetch(SUPA_URL+'/rest/v1/oil_changes?status=eq.pending&order=created_at.desc', { headers:H() }).then(r=>r.ok?r.json():[])
+    ]);
+    ARK_OIL.status = Array.isArray(a)?a:[]; ARK_OIL.pending = Array.isArray(b)?b:[]; ARK_OIL.loaded = true;
+    try{ refreshAlertBadge(); }catch(x){}
+    const m = document.getElementById('opsCenterModal');
+    if(typeof PROFIT_TAB!=='undefined' && PROFIT_TAB==='alerts' && m && m.style.display!=='none' && document.getElementById('oilPanel')){
+      const body = document.getElementById('opsTabBody'); if(body) body.innerHTML = renderAlertsTab();
+    }
+  }catch(x){ console.warn('[oil] load', x); }
+}
+window.loadOilStatus = loadOil;
+
+/* التنبيهات العامة: نضيف تنبيهات الزيت على نفس القائمة */
+const _ca = computeAlerts;
+computeAlerts = function(){
+  const A = _ca();
+  ARK_OIL.status.forEach(o => {
+    const who = (o.driver_id||'')+' — '+(o.driver_name||'')+' · '+(o.car_plate||'');
+    if(o.status==='due') A.push({ sev:'high', type:'تغيير زيت متأخر', who, detail:'عدّى المعاد بـ '+km(-o.km_left)+' كم (آخر تغيير '+o.change_date+')', act:'oil' });
+    else if(o.status==='soon') A.push({ sev:'med', type:'تغيير زيت قريب', who, detail:'فاضل '+km(o.km_left)+' كم', act:'oil' });
+    else if(o.status==='no_record') A.push({ sev:'low', type:'تغيير زيت غير مسجّل', who, detail:'السائق لسه ماسجّلش آخر تغيير زيت على فلاي', act:'oil' });
+  });
+  ARK_OIL.pending.forEach(p => A.push({ sev:'med', type:'تغيير زيت محتاج مراجعة', who:(p.driver_id||'')+' — '+(p.driver_name||'')+' · '+(p.car_plate||''), detail:'بتاريخ '+p.change_date+' — راجع الصورة في لوحة الزيت', act:'oil' }));
+  const rank = { high:0, med:1, low:2 };
+  return A.sort((x,y) => rank[x.sev]-rank[y.sev]);
+};
+
+function oilPanel(){
+  const S = ARK_OIL.status, P = ARK_OIL.pending;
+  const C = { due:['#ef4444','متأخر'], soon:['#f59e0b','قريب'], ok:['#10b981','تمام'], unknown:['#64748b','مش محسوب'], no_record:['#8b5cf6','غير مسجّل'] };
+  const cnt = k => S.filter(o=>o.status===k).length;
+  let h = '<div id="oilPanel" style="margin-bottom:18px;border:1px solid var(--br);border-radius:14px;padding:14px;background:var(--s1)">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+    + '<div style="font-weight:900;font-size:14px">🛢️ صيانة الزيت <span style="font-size:11px;color:var(--muted);font-weight:700">— كل '+km((S[0]||{}).interval_km||5000)+' كم، تنبيه قبل '+km((S[0]||{}).warn_km||500)+' كم</span></div>'
+    + '<div style="display:flex;gap:6px"><button class="btn btn-c" onclick="oilAddForm()"><i class="ti ti-plus"></i> تسجيل تغيير</button>'
+    + '<button class="btn btn-c" onclick="loadOilStatus()"><i class="ti ti-refresh"></i></button></div></div>';
+  if(!ARK_OIL.loaded) return h + '<div style="padding:16px;text-align:center;color:var(--muted)">جارٍ التحميل…</div></div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
+  ['due','soon','ok','unknown','no_record'].forEach(k => h += '<div style="flex:1;min-width:86px;background:var(--s2);border:1px solid '+C[k][0]+'55;border-radius:10px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:900;color:'+C[k][0]+'">'+cnt(k)+'</div><div style="font-size:10.5px;color:var(--muted);font-weight:700">'+C[k][1]+'</div></div>');
+  h += '</div>';
+  if(P.length){
+    h += '<div style="font-size:12px;font-weight:800;margin:6px 0 8px;color:#f59e0b">محتاج مراجعة ('+P.length+')</div><table class="rep-table" style="width:100%"><thead><tr><th>السائق</th><th>العربية</th><th>التاريخ</th><th>العداد</th><th>الفلتر</th><th>الصورة</th><th></th></tr></thead><tbody>';
+    P.forEach(p => {
+      h += '<tr><td style="text-align:right">'+e(p.driver_id)+' — '+e(p.driver_name)+'</td><td>'+e(p.car_plate)+'</td><td>'+e(p.change_date)+'</td><td>'+km(p.odometer_km)+'</td><td>'+(p.filter_changed?'✅':'—')+'</td>'
+        + '<td>'+(p.photo_url?'<a href="'+e(p.photo_url)+'" target="_blank" style="color:var(--blue);font-weight:800">عرض 📷</a>':'—')+'</td>'
+        + '<td style="white-space:nowrap"><button class="btn btn-c" style="color:#10b981" onclick="oilDecide('+p.id+',\'approved\')">✔ اعتماد</button> <button class="btn btn-c" style="color:#ef4444" onclick="oilDecide('+p.id+',\'rejected\')">✖ رفض</button></td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+  const order = { due:0, soon:1, unknown:2, no_record:3, ok:4 };
+  const L = S.slice().sort((a,b)=>(order[a.status]-order[b.status]) || ((a.km_left??1e9)-(b.km_left??1e9)));
+  h += '<details'+(cnt('due')+cnt('soon')?' open':'')+' style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:800">كل العربيات ('+S.length+')</summary>'
+    + '<table class="rep-table" style="width:100%;margin-top:8px"><thead><tr><th>العربية</th><th>السائق</th><th>آخر تغيير</th><th>مشي من وقتها</th><th>فاضل</th><th>الفلتر</th><th>الحالة</th></tr></thead><tbody>';
+  L.forEach(o => {
+    const c = C[o.status]||C.unknown;
+    h += '<tr><td style="font-weight:800">'+e(o.car_plate)+'</td><td style="text-align:right">'+e(o.driver_id)+' — '+e(o.driver_name)+'</td>'
+      + '<td>'+(o.change_date?e(o.change_date)+(o.photo_url?' <a href="'+e(o.photo_url)+'" target="_blank">📷</a>':''):'—')+'</td>'
+      + '<td>'+(o.km_since!=null?km(o.km_since)+' كم'+(o.km_source==='fuel_log'?' <span title="من عداد سجل الوقود" style="color:var(--muted)">⛽</span>':''):'—')+'</td>'
+      + '<td style="font-weight:800;color:'+c[0]+'">'+(o.km_left!=null?km(o.km_left)+' كم':'—')+'</td>'
+      + '<td style="font-size:11px">'+(o.filter_date?e(o.filter_date)+(o.filter_km_since!=null?' ('+km(o.filter_km_since)+' كم)':''):'—')+'</td>'
+      + '<td><span style="background:'+c[0]+'22;color:'+c[0]+';border-radius:7px;padding:2px 8px;font-size:11px;font-weight:800">'+c[1]+'</span></td></tr>';
+  });
+  h += '</tbody></table></details></div>';
+  return h;
+}
+
+const _rat = renderAlertsTab;
+renderAlertsTab = function(){ return oilPanel() + _rat(); };
+
+window.oilDecide = async function(id, status){
+  if(status==='rejected' && !confirm('رفض تغيير الزيت ده؟ مش هيتحسب.')) return;
+  const by = (typeof ARK_USER!=='undefined' && ARK_USER) ? (ARK_USER.email||ARK_USER.name) : 'ARK';
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/oil_changes?id=eq.'+id, { method:'PATCH', headers:Object.assign(H(),{'Prefer':'return=minimal'}),
+      body: JSON.stringify({ status, decided_at:new Date().toISOString(), decided_by:by }) });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    toast(status==='approved'?'تم اعتماد تغيير الزيت ✅':'تم الرفض','s');
+    try{ audit('oil_'+status, 'oil_change', String(id), null, {status}); }catch(x){}
+    await loadOil();
+  }catch(x){ toast('تعذّر الحفظ: '+x.message,'e'); }
+};
+
+window.oilAddForm = function(){
+  const cars = ARK_OIL.status.map(o => '<option value="'+e(o.car_plate)+'|'+e(o.driver_id)+'|'+e(o.driver_name)+'">'+e(o.car_plate)+' — '+e(o.driver_name)+'</option>').join('');
+  const d = document.createElement('div'); d.id='oilAddDlg';
+  d.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center';
+  const I='width:100%;padding:9px;border-radius:9px;border:1px solid var(--br);background:var(--s2);color:var(--text);font-family:inherit;font-weight:700;box-sizing:border-box;margin:4px 0 10px';
+  d.innerHTML='<div style="background:var(--s1);border:1px solid var(--br);border-radius:14px;padding:18px;width:min(420px,92vw);direction:rtl">'
+    +'<div style="font-weight:900;margin-bottom:12px">🛢️ تسجيل تغيير زيت</div>'
+    +'<label style="font-size:12px;font-weight:800">العربية</label><select id="oaCar" style="'+I+'">'+cars+'</select>'
+    +'<label style="font-size:12px;font-weight:800">التاريخ</label><input id="oaDate" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="'+I+'">'
+    +'<label style="font-size:12px;font-weight:800">قراءة العداد (كم)</label><input id="oaOdo" type="number" style="'+I+'">'
+    +'<label style="font-size:12px;font-weight:800"><input id="oaF" type="checkbox" checked> اتغيّر الفلتر</label>'
+    +'<div style="display:flex;gap:8px;margin-top:14px"><button class="btn" style="flex:2" onclick="oilAddSave()">حفظ</button><button class="btn btn-c" style="flex:1" onclick="document.getElementById(\'oilAddDlg\').remove()">إلغاء</button></div></div>';
+  document.body.appendChild(d);
+};
+window.oilAddSave = async function(){
+  const [plate,did,dname] = (document.getElementById('oaCar').value||'').split('|');
+  const date = document.getElementById('oaDate').value, odo = parseFloat(document.getElementById('oaOdo').value)||null;
+  if(!plate||!date){ toast('اختار العربية والتاريخ','e'); return; }
+  const by = (typeof ARK_USER!=='undefined' && ARK_USER) ? (ARK_USER.email||ARK_USER.name) : 'ARK';
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/oil_changes', { method:'POST', headers:Object.assign(H(),{'Prefer':'return=minimal'}),
+      body: JSON.stringify({ car_plate:plate, driver_id:did||null, driver_name:dname||null, change_date:date, odometer_km:odo,
+        filter_changed:document.getElementById('oaF').checked, source:'ark', status:'approved', decided_at:new Date().toISOString(), decided_by:by }) });
+    if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,80));
+    document.getElementById('oilAddDlg').remove(); toast('تم تسجيل تغيير الزيت ✅','s'); await loadOil();
+  }catch(x){ toast('تعذّر الحفظ: '+x.message,'e'); }
+};
+
+function boot(){ setTimeout(loadOil, 4000); setInterval(loadOil, 15*60*1000); }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+
 </body>
 </html>

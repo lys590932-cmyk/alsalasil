@@ -3991,6 +3991,79 @@ function submitMaint(){
   .catch(function(e){ sheetBusy(false); toast('خطأ: '+e.message,'err'); });
 }
 
+
+/* ═══════════ 6) تغيير الزيت ═══════════
+   السائق يسجّل آخر تغيير زيت + صورة ورقة/ستيكر التغيير.
+   الكيلومترات من وقتها بتتحسب في السحابة (v_oil_status) من عداد جهاز التتبع،
+   ولو التتبع مش شغّال من قراءة العداد في سجل الوقود. */
+var MY_OIL=null, MY_OIL_LOG=[];
+function _plateKey(p){ return String(p||'').replace(/\D/g,''); }
+function loadMyOil(){
+  if(!DRIVER) return Promise.resolve(null);
+  var pk=_plateKey(DRIVER.car);
+  var a = pk.length>=6 ? sb('v_oil_status?plate_key=eq.'+pk+'&limit=1').then(function(r){ MY_OIL=(r&&r[0])||null; }).catch(function(){ MY_OIL=null; }) : Promise.resolve(MY_OIL=null);
+  var b = sb('oil_changes?driver_id=eq.'+encodeURIComponent(DRIVER.id)+'&order=change_date.desc&limit=5')
+    .then(function(r){ MY_OIL_LOG=r||[]; }).catch(function(){ MY_OIL_LOG=[]; });
+  return Promise.all([a,b]).then(function(){ return MY_OIL; });
+}
+function oilCardHTML(){
+  if(!DRIVER || _plateKey(DRIVER.car).length<6) return '';
+  var ar=LANG==='ar', o=MY_OIL, st=o?o.status:'no_record';
+  var C={ok:'#10b981',soon:'#f59e0b',due:'#ef4444',unknown:'#64748b',no_record:'#8b5cf6'}[st]||'#64748b';
+  var title, sub='';
+  if(st==='no_record'){
+    title = ar?'سجّل آخر مرة غيّرت فيها الزيت':'Log your last oil change';
+    sub = ar?'اكتب التاريخ والعداد وصوّر ورقة/ستيكر تغيير الزيت':'Enter the date, odometer and a photo of the oil sticker/receipt';
+  } else {
+    title = (ar?'آخر تغيير زيت: ':'Last oil change: ')+fmtDate(o.change_date);
+    if(st==='unknown') sub = ar?'جاري حساب الكيلومترات من جهاز التتبع':'Calculating km from the tracker';
+    else if(st==='due') sub = (ar?'⚠️ عدّى معاد التغيير بـ ':'⚠️ Overdue by ')+Math.abs(Math.round(o.km_left))+' km — '+(ar?'غيّر الزيت فوراً':'change oil now');
+    else sub = (ar?'مشيت ':'Driven ')+Math.round(o.km_since)+' km · '+(ar?'فاضل ':'left ')+Math.round(o.km_left)+' km';
+    if(o.change_status==='pending') sub += ar?' · في انتظار مراجعة الإدارة':' · awaiting review';
+  }
+  return '<button onclick="openOilForm()" style="width:100%;background:var(--s2);border:1px solid '+C+';border-radius:15px;padding:13px 14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;margin:4px 0 11px;color:var(--text)">'+
+    '<span style="font-size:25px">🛢️</span>'+
+    '<div style="flex:1;text-align:'+(ar?'right':'left')+'"><div style="font-size:13.5px;font-weight:900;color:'+C+'">'+title+'</div>'+
+    '<div style="font-size:11px;color:var(--muted2);margin-top:3px">'+sub+'</div></div>'+
+    '<span style="font-size:11px;font-weight:800;color:'+C+'">'+(ar?'تسجيل تغيير':'Log change')+'</span></button>';
+}
+function openOilForm(){
+  var ar=LANG==='ar';
+  var body='<div style="padding:2px">'+
+    '<div style="font-size:11.5px;color:var(--muted2);padding:9px 11px;background:var(--s2);border-radius:9px;margin-bottom:12px">ℹ️ '+
+    (ar?'سجّل آخر مرة غيّرت فيها الزيت. السيستم هيحسب الكيلومترات لوحده وينبّهك قبل المعاد.':'Log your last oil change. The system counts km automatically and reminds you before the next one.')+'</div>'+
+    fRow(ar?'📅 تاريخ تغيير الزيت *':'📅 Oil change date *','<input id="oc-date" type="date" max="'+todayStr()+'" value="'+todayStr()+'" style="'+INP+'">')+
+    fRow(ar?'🔢 قراءة العداد وقت التغيير (كم) *':'🔢 Odometer at change (km) *','<input id="oc-odo" type="number" inputmode="numeric" placeholder="'+(ar?'مثال: 125400':'e.g. 125400')+'" style="'+INP+'">')+
+    fRow(ar?'🧰 غيّرت فلتر الزيت؟':'🧰 Oil filter changed?','<select id="oc-filter" style="'+INP+'"><option value="1">'+(ar?'أيوه، اتغيّر':'Yes')+'</option><option value="0">'+(ar?'لا':'No')+'</option></select>')+
+    fRow(ar?'📷 صورة ورقة / ستيكر تغيير الزيت *':'📷 Photo of oil change sticker / receipt *',
+      '<label style="display:block;cursor:pointer"><input type="file" accept="image/*" capture="environment" style="display:none" onchange="pickPhoto(\'oil\',this)">'+
+      '<div id="prev_oil" style="height:120px;border-radius:11px;border:2px dashed var(--br);display:flex;align-items:center;justify-content:center;background:var(--s2)">'+
+      '<i class="ti ti-camera-plus" style="font-size:30px;color:var(--muted2)"></i></div></label>')+
+    fRow(ar?'📝 ملاحظة':'📝 Note','<input id="oc-note" type="text" placeholder="'+(ar?'اسم المحل أو نوع الزيت (اختياري)':'Shop or oil type (optional)')+'" style="'+INP+'">')+
+  '</div>';
+  openSheet(ar?'🛢️ تغيير الزيت':'🛢️ Oil change', body, submitOil);
+}
+function submitOil(){
+  var ar=LANG==='ar', d=val('oc-date'), odo=parseInt(val('oc-odo'),10);
+  if(!d){ toast(ar?'حدد تاريخ التغيير':'Select the date','err'); return; }
+  if(d>todayStr()){ toast(ar?'التاريخ لازم يكون النهارده أو قبل كده':'Date cannot be in the future','err'); return; }
+  if(!odo||odo<100){ toast(ar?'اكتب قراءة العداد':'Enter the odometer','err'); return; }
+  if(!_pendingPhotos.oil){ toast(ar?'صوّر ورقة تغيير الزيت':'Take a photo of the oil sticker','err'); return; }
+  if(!DRIVER.car){ toast(ar?'مفيش عربية مسجلة عليك — كلّم الإدارة':'No car assigned — contact admin','err'); return; }
+  sheetBusy(true);
+  uploadImage(_pendingPhotos.oil,'oil').then(function(url){
+    return sb('oil_changes',{method:'POST',headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({driver_id:DRIVER.id, driver_name:DRIVER.name, car_plate:DRIVER.car,
+        change_date:d, odometer_km:odo, filter_changed:val('oc-filter')==='1',
+        photo_url:url, note:val('oc-note')||null, source:'fly', status:'pending'})});
+  }).then(function(){
+    _pendingPhotos.oil=null; closeSheet();
+    toast(ar?'تم تسجيل تغيير الزيت ✅':'Oil change saved ✅','ok');
+    return loadMyOil();
+  }).then(function(){ renderCurrentTab(); })
+  .catch(function(e){ sheetBusy(false); toast('خطأ: '+e.message,'err'); });
+}
+
 /* ═══════════ شاشة الخدمات ═══════════ */
 function renderServices(){
   var el=$('scrServices'); if(!el) return;
@@ -4020,6 +4093,9 @@ function renderServices(){
     svcBtn('⛽', LANG==='ar'?'تسجيل وقود':'Log fuel', '#f59e0b', 'openFuelForm()')+
     svcBtn('🔧', LANG==='ar'?'بلاغ عطل':'Report issue', '#ef4444', 'openMaintForm()')+
   '</div>';
+
+  // تغيير الزيت
+  h+=oilCardHTML();
 
   // حالة الإشعارات
   var nc = notifSetupCardHTML() || notifOkBadgeHTML();
@@ -4149,7 +4225,7 @@ function sheetBusy(on){
 
 /* ═══════════ التحميل والتحديث ═══════════ */
 function refreshServices(){
-  return Promise.all([loadMyRequests(), loadMyFuel(), loadMyMaint(), loadMyAccidents()])
+  return Promise.all([loadMyRequests(), loadMyFuel(), loadMyMaint(), loadMyAccidents(), loadMyOil()])
     .then(function(){ renderCurrentTab(); updateServicesBadge(); });
 }
 function updateServicesBadge(){
@@ -4162,7 +4238,7 @@ function updateServicesBadge(){
 function loadControlData(){
   if(!DRIVER) return Promise.resolve();
   return Promise.all([
-    loadTodayPhoto(), loadMyViolations(), loadMyRequests(), loadMyFuel(), loadMyMaint()
+    loadTodayPhoto(), loadMyViolations(), loadMyRequests(), loadMyFuel(), loadMyMaint(), loadMyOil()
   ]).then(function(){
     updateServicesBadge();
     renderCurrentTab();
