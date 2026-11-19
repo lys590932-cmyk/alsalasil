@@ -2068,6 +2068,7 @@ body::after{
     <button class="tools-btn" onclick="toggleTools(event)"><i class="ti ti-layout-grid"></i> <span>الأدوات</span><i class="ti ti-chevron-down"></i></button>
     <div class="tools-menu" id="toolsMenu" onclick="event.stopPropagation()">
       <h6>التشغيل اليومي</h6>
+      <button class="tbtn" onclick="openOpsCenter('alerts')" id="oilTopBtn" title="تغيير الزيت"><span>🛢️ الزيت</span><span id="oilTopBadge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-right:4px;font-weight:800"></span></button>
       <button class="tbtn" onclick="openOpsCenter('profit')" id="opsCenterBtn" title="الربحية والتنبيهات والتدقيق"><i class="ti ti-dashboard"></i> <span>مركز التشغيل</span><span id="opsAlertBadge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-right:auto;font-weight:800"></span></button>
       <button class="tbtn" onclick="openScheduleModal()"><i class="ti ti-calendar-week"></i> <span data-i18n="btn_schedule">الجدول</span></button>
       <button class="tbtn" onclick="openSendMsgModal()"><i class="ti ti-message-circle"></i> <span data-i18n="btn_send_msg">إرسال رسالة</span></button>
@@ -23772,6 +23773,7 @@ async function loadOil(){
     ]);
     ARK_OIL.status = Array.isArray(a)?a:[]; ARK_OIL.pending = Array.isArray(b)?b:[]; ARK_OIL.loaded = true;
     try{ refreshAlertBadge(); }catch(x){}
+    try{ const n=ARK_OIL.status.filter(o=>o.status==='due'||o.status==='soon').length+ARK_OIL.pending.length; const bd=document.getElementById('oilTopBadge'); if(bd){ bd.textContent=n; bd.style.display=n?'':'none'; } }catch(x){}
     const m = document.getElementById('opsCenterModal');
     if(typeof PROFIT_TAB!=='undefined' && PROFIT_TAB==='alerts' && m && m.style.display!=='none' && document.getElementById('oilPanel')){
       const body = document.getElementById('opsTabBody'); if(body) body.innerHTML = renderAlertsTab();
@@ -23797,40 +23799,47 @@ computeAlerts = function(){
 
 function oilPanel(){
   const S = ARK_OIL.status, P = ARK_OIL.pending;
-  const C = { due:['#ef4444','متأخر'], soon:['#f59e0b','قريب'], ok:['#10b981','تمام'], unknown:['#64748b','مش محسوب'], no_record:['#8b5cf6','غير مسجّل'] };
-  const cnt = k => S.filter(o=>o.status===k).length;
+  const iv = (S[0]||{}).interval_km || 5000;
+  const pl = v => e(String(v||'').replace(/\s+/g,'').replace(/^\/+/,''));
+  const nm = o => e(o.driver_name||'')+' <span style="color:var(--muted);font-weight:600">('+pl(o.car_plate)+')</span>';
+  const fd = d => { if(!d) return ''; const x=new Date(d); return x.getDate()+' '+['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][x.getMonth()]; };
+  const box = (color, icon, title, items, open) => !items.length ? '' :
+    '<details'+(open?' open':'')+' style="border:1px solid '+color+'55;border-radius:12px;margin-bottom:10px;background:var(--s2)">'
+    + '<summary style="cursor:pointer;padding:11px 14px;font-weight:900;font-size:13.5px;color:'+color+'">'+icon+' '+title+' — '+items.length+'</summary>'
+    + '<div style="padding:0 14px 10px">'+items.join('')+'</div></details>';
+  const line = (main, sub, extra) => '<div style="padding:9px 0;border-top:1px solid var(--br);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    + '<div style="flex:1;min-width:220px"><div style="font-weight:800;font-size:13px">'+main+'</div>'+(sub?'<div style="font-size:11.5px;color:var(--muted);margin-top:2px">'+sub+'</div>':'')+'</div>'+(extra||'')+'</div>';
+
   let h = '<div id="oilPanel" style="margin-bottom:18px;border:1px solid var(--br);border-radius:14px;padding:14px;background:var(--s1)">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
-    + '<div style="font-weight:900;font-size:14px">🛢️ صيانة الزيت <span style="font-size:11px;color:var(--muted);font-weight:700">— كل '+km((S[0]||{}).interval_km||5000)+' كم، تنبيه قبل '+km((S[0]||{}).warn_km||500)+' كم</span></div>'
-    + '<div style="display:flex;gap:6px"><button class="btn btn-c" onclick="oilAddForm()"><i class="ti ti-plus"></i> تسجيل تغيير</button>'
-    + '<button class="btn btn-c" onclick="loadOilStatus()"><i class="ti ti-refresh"></i></button></div></div>';
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
+    + '<div style="font-weight:900;font-size:15px">🛢️ تغيير الزيت</div>'
+    + '<div style="display:flex;gap:6px"><button class="btn btn-c" onclick="oilAddForm()">➕ سجّل تغيير زيت</button>'
+    + '<button class="btn btn-c" onclick="loadOilStatus()" title="تحديث">🔄</button></div></div>'
+    + '<div style="font-size:12px;color:var(--muted);background:var(--s2);border-radius:10px;padding:9px 12px;margin-bottom:12px;line-height:1.8">'
+    + 'الفكرة ببساطة: السواق بيسجّل من فلاي إمتى غيّر الزيت ويصوّر الورقة ← إنت بتوافق على الصورة هنا ← '
+    + 'السيستم بيعدّ الكيلومترات من جهاز التتبع لوحده، ولما العربية تقرّب من '+iv.toLocaleString('en-US')+' كم بيطلعلك تنبيه.</div>';
   if(!ARK_OIL.loaded) return h + '<div style="padding:16px;text-align:center;color:var(--muted)">جارٍ التحميل…</div></div>';
-  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
-  ['due','soon','ok','unknown','no_record'].forEach(k => h += '<div style="flex:1;min-width:86px;background:var(--s2);border:1px solid '+C[k][0]+'55;border-radius:10px;padding:8px;text-align:center"><div style="font-size:20px;font-weight:900;color:'+C[k][0]+'">'+cnt(k)+'</div><div style="font-size:10.5px;color:var(--muted);font-weight:700">'+C[k][1]+'</div></div>');
+
+  const due = S.filter(o=>o.status==='due').sort((a,b)=>a.km_left-b.km_left);
+  const soon = S.filter(o=>o.status==='soon').sort((a,b)=>a.km_left-b.km_left);
+  const ok = S.filter(o=>o.status==='ok').sort((a,b)=>a.km_left-b.km_left);
+  const none = S.filter(o=>o.status==='no_record');
+  const unk = S.filter(o=>o.status==='unknown');
+
+  h += box('#ef4444','🔴','لازم يغيّر الزيت دلوقتي', due.map(o=>line(nm(o),
+        'عدّى المعاد بـ '+km(-o.km_left)+' كم — آخر تغيير '+fd(o.change_date))), true);
+  h += box('#f59e0b','🟡','قرّب معاد التغيير', soon.map(o=>line(nm(o),
+        'فاضله '+km(o.km_left)+' كم بس — آخر تغيير '+fd(o.change_date))), true);
+  h += box('#3b82f6','📷','محتاج توافق على الصورة', P.map(p=>line(e(p.driver_name||'')+' <span style="color:var(--muted);font-weight:600">('+pl(p.car_plate)+')</span>',
+        'غيّر الزيت يوم '+fd(p.change_date)+' — العداد '+km(p.odometer_km)+' كم'+(p.filter_changed?' — وغيّر الفلتر':''),
+        (p.photo_url?'<a href="'+e(p.photo_url)+'" target="_blank" class="btn btn-c">📷 الصورة</a>':'<span style="color:#ef4444;font-size:11px">مفيش صورة</span>')
+        +'<button class="btn btn-c" style="color:#10b981;font-weight:800" onclick="oilDecide('+p.id+',\'approved\')">✔ موافق</button>'
+        +'<button class="btn btn-c" style="color:#ef4444" onclick="oilDecide('+p.id+',\'rejected\')">✖ مرفوض</button>')), true);
+  h += box('#8b5cf6','⚪','السواق لسه ماسجّلش آخر تغيير زيت', none.map(o=>line(nm(o),'')), false);
+  h += box('#64748b','❔','مش عارفين نحسب (جهاز التتبع واقف)', unk.map(o=>line(nm(o),'آخر تغيير '+fd(o.change_date)+' — محتاج السواق يكتب العداد في سجل الوقود')), false);
+  h += box('#10b981','🟢','تمام', ok.map(o=>line(nm(o),'فاضله '+km(o.km_left)+' كم')), false);
+  if(!S.length) h += '<div style="padding:14px;text-align:center;color:var(--muted)">مفيش عربيات</div>';
   h += '</div>';
-  if(P.length){
-    h += '<div style="font-size:12px;font-weight:800;margin:6px 0 8px;color:#f59e0b">محتاج مراجعة ('+P.length+')</div><table class="rep-table" style="width:100%"><thead><tr><th>السائق</th><th>العربية</th><th>التاريخ</th><th>العداد</th><th>الفلتر</th><th>الصورة</th><th></th></tr></thead><tbody>';
-    P.forEach(p => {
-      h += '<tr><td style="text-align:right">'+e(p.driver_id)+' — '+e(p.driver_name)+'</td><td>'+e(p.car_plate)+'</td><td>'+e(p.change_date)+'</td><td>'+km(p.odometer_km)+'</td><td>'+(p.filter_changed?'✅':'—')+'</td>'
-        + '<td>'+(p.photo_url?'<a href="'+e(p.photo_url)+'" target="_blank" style="color:var(--blue);font-weight:800">عرض 📷</a>':'—')+'</td>'
-        + '<td style="white-space:nowrap"><button class="btn btn-c" style="color:#10b981" onclick="oilDecide('+p.id+',\'approved\')">✔ اعتماد</button> <button class="btn btn-c" style="color:#ef4444" onclick="oilDecide('+p.id+',\'rejected\')">✖ رفض</button></td></tr>';
-    });
-    h += '</tbody></table>';
-  }
-  const order = { due:0, soon:1, unknown:2, no_record:3, ok:4 };
-  const L = S.slice().sort((a,b)=>(order[a.status]-order[b.status]) || ((a.km_left??1e9)-(b.km_left??1e9)));
-  h += '<details'+(cnt('due')+cnt('soon')?' open':'')+' style="margin-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:800">كل العربيات ('+S.length+')</summary>'
-    + '<table class="rep-table" style="width:100%;margin-top:8px"><thead><tr><th>العربية</th><th>السائق</th><th>آخر تغيير</th><th>مشي من وقتها</th><th>فاضل</th><th>الفلتر</th><th>الحالة</th></tr></thead><tbody>';
-  L.forEach(o => {
-    const c = C[o.status]||C.unknown;
-    h += '<tr><td style="font-weight:800">'+e(o.car_plate)+'</td><td style="text-align:right">'+e(o.driver_id)+' — '+e(o.driver_name)+'</td>'
-      + '<td>'+(o.change_date?e(o.change_date)+(o.photo_url?' <a href="'+e(o.photo_url)+'" target="_blank">📷</a>':''):'—')+'</td>'
-      + '<td>'+(o.km_since!=null?km(o.km_since)+' كم'+(o.km_source==='fuel_log'?' <span title="من عداد سجل الوقود" style="color:var(--muted)">⛽</span>':''):'—')+'</td>'
-      + '<td style="font-weight:800;color:'+c[0]+'">'+(o.km_left!=null?km(o.km_left)+' كم':'—')+'</td>'
-      + '<td style="font-size:11px">'+(o.filter_date?e(o.filter_date)+(o.filter_km_since!=null?' ('+km(o.filter_km_since)+' كم)':''):'—')+'</td>'
-      + '<td><span style="background:'+c[0]+'22;color:'+c[0]+';border-radius:7px;padding:2px 8px;font-size:11px;font-weight:800">'+c[1]+'</span></td></tr>';
-  });
-  h += '</tbody></table></details></div>';
   return h;
 }
 
