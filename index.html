@@ -5146,6 +5146,7 @@ var RATE_MONTH = [];     // تقارير الشهر الحالي للسائق
 var RATE_TEAM  = [];     // تجميع الشهر لكل سائقي نفس الشريك
 var MY_AWARDS  = [];     // الأوسمة اللي اتمنحت
 var RATE_READY = false;
+var MY_UTR     = null;   // {utr, orders, hours} من بيانات كيتا للشهر الحالي
 var _celQueue  = [];
 
 var RATE_DEFAULTS = {
@@ -5210,7 +5211,10 @@ async function fetchRating(silent){
       .then(function(r){ if(r) RATE_MONTH = r; }).catch(function(){}),
 
     sb('driver_awards?driver_id=eq.'+id+'&select=*&order=created_at.desc&limit=60')
-      .then(function(r){ if(r) MY_AWARDS = r; }).catch(function(){})
+      .then(function(r){ if(r) MY_AWARDS = r; }).catch(function(){}),
+
+    sb('v_driver_utr?driver_id=eq.'+id+'&period=eq.'+per+'&select=utr,orders,hours')
+      .then(function(r){ MY_UTR = (r && r[0]) ? r[0] : null; }).catch(function(){})
   ];
 
   if(partner){
@@ -5261,7 +5265,21 @@ function computeRating(){
   var dedPart  = dedCount===0 ? 1 : Math.max(0, 1 - dedCount*0.34);
   var disScore = cfg.w_discipline*0.6*repRatio + cfg.w_discipline*0.4*dedPart;
 
-  var score = Math.round((outScore + comScore + disScore)*10)/10;
+  // ── الـUTR (طلبات كيتا ÷ ساعات الأونلاين) — أوزان: إنتاج ٣٥ + UTR ٢٥ + التزام ٢٥ + انضباط ١٥ ──
+  var useUtr = (cfg.w_utr !== undefined && cfg.w_utr !== null);
+  var utrVal = (MY_UTR && MY_UTR.utr !== null && MY_UTR.utr !== undefined) ? Number(MY_UTR.utr) : null;
+  var utrScore = null, W2 = { o:35, u:25, c:25, d:15 };
+  if(useUtr){
+    outScore = (cfg.w_output ? outScore/cfg.w_output : 0)*W2.o;
+    comScore = (cfg.w_commit ? comScore/cfg.w_commit : 0)*W2.c;
+    disScore = (cfg.w_discipline ? disScore/cfg.w_discipline : 0)*W2.d;
+    if(utrVal !== null){
+      utrScore = Math.min(W2.u, (utrVal/(Number(cfg.utr_target)||1))*W2.u);
+    }
+  }
+  var score = (useUtr && utrScore === null)
+    ? Math.round((outScore + comScore + disScore)*100/(W2.o+W2.c+W2.d)*10)/10
+    : Math.round((outScore + comScore + disScore + (utrScore||0))*10)/10;
   if(score>100) score = 100;
   var stars = score>=90?5 : score>=75?4 : score>=60?3 : score>=45?2 : 1;
 
@@ -5314,16 +5332,21 @@ function computeRating(){
     dedCount:dedCount, rank:rank, teamCount:teamCount,
     rows:rows, earned:earned, todayOrders: todayRow ? (parseInt(todayRow.orders_count)||0) : null,
     axes:[
-      { key:'output', ar:'الإنتاج', en:'Output', got:Math.round(outScore*10)/10, max:cfg.w_output, color:'#1c5878',
+      { key:'output', ar:'الإنتاج', en:'Output', got:Math.round(outScore*10)/10, max:(useUtr?W2.o:cfg.w_output), color:'#1c5878',
         subAr:'متوسطك <em>'+avg.toFixed(1)+'</em> أوردر في اليوم — الهدف <em>'+cfg.daily_target+'</em>',
         subEn:'You average <em>'+avg.toFixed(1)+'</em> orders/day — target <em>'+cfg.daily_target+'</em>' },
-      { key:'commit', ar:'الالتزام', en:'Commitment', got:Math.round(comScore*10)/10, max:cfg.w_commit, color:'#0f766e',
+      { key:'commit', ar:'الالتزام', en:'Commitment', got:Math.round(comScore*10)/10, max:(useUtr?W2.c:cfg.w_commit), color:'#0f766e',
         subAr:'اشتغلت <em>'+loggedDays+'</em> يوم من <em>'+expected+'</em> متوقعين لحد النهارده',
         subEn:'You worked <em>'+loggedDays+'</em> of <em>'+expected+'</em> expected days so far' },
-      { key:'discipline', ar:'الانضباط', en:'Discipline', got:Math.round(disScore*10)/10, max:cfg.w_discipline, color:'#b45309',
+      { key:'discipline', ar:'الانضباط', en:'Discipline', got:Math.round(disScore*10)/10, max:(useUtr?W2.d:cfg.w_discipline), color:'#b45309',
         subAr:'أرسلت التقرير <em>'+loggedDays+'</em> يوم من <em>'+elapsed+'</em> — والخصومات <em>'+dedCount+'</em>',
         subEn:'Reported on <em>'+loggedDays+'</em> of <em>'+elapsed+'</em> days — deductions <em>'+dedCount+'</em>' }
-    ]
+    ].concat((useUtr && utrVal !== null) ? [
+      { key:'utr', ar:'الـUTR', en:'UTR', got:Math.round(utrScore*10)/10, max:W2.u, color:'#7c3aed',
+        subAr:'<em>'+utrVal.toFixed(2)+'</em> طلب لكل ساعة أونلاين ('+MY_UTR.orders+' طلب في '+Math.round(MY_UTR.hours)+' ساعة) — الهدف <em>'+(Number(cfg.utr_target)||1).toFixed(1)+'</em>. متفضلش أونلاين وانت في السكن.',
+        subEn:'<em>'+utrVal.toFixed(2)+'</em> orders per online hour ('+MY_UTR.orders+' orders in '+Math.round(MY_UTR.hours)+' h) — target <em>'+(Number(cfg.utr_target)||1).toFixed(1)+'</em>. Don\'t stay online at your accommodation.' }
+    ] : []),
+    utr: utrVal
   };
 }
 
