@@ -2174,7 +2174,7 @@ function renderShell() {
   $('#app').innerHTML = `<nav class="rail" id="rail"></nav><aside class="side" id="side"></aside><main class="main" id="main"></main><nav class="bnav" id="bnav"></nav>`;
 }
 const NAV = () => [
-  ['chats', 'chat', t('chats')], ['anns', 'ann', t('anns')], ['calls', 'phone', t('calls')], ['people', 'users', t('people')],
+  ['chats', 'chat', t('chats')], ...(typeof isExternal === 'function' && isExternal() ? [] : [['work', 'grid', t('work')]]), ['anns', 'ann', t('anns')], ['people', 'users', t('people')], ['calls', 'phone', t('calls')],
   ...(S.me?.role === 'admin' ? [['admin', 'shield', t('admin')]] : []),
 ];
 function navBadge(v) {
@@ -4031,6 +4031,647 @@ const Call = {
     }
   },
 };
+/* ═══════════════════════════════════════════════════════════════
+   كونكت 2.0 — إضافات على طريقة Daxiang
+   كود لكل حساب · جروبات الشركات الشريكة · مساحة العمل · لاحقاً / منشن / Threads / تصنيفات
+   ═══════════════════════════════════════════════════════════════ */
+CFG.version = '2.0.0';
+Object.assign(IC, {
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  bookmark: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+  at: '<circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/>',
+  thread: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/>',
+  tag: '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
+  building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>',
+  idcard: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/>',
+  extlink: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+});
+DEPTS.push('partners');
+Object.assign(T.ar, {
+  d_partners: 'شركات شريكة', work: 'مساحة العمل', workP: 'كل أنظمة السلاسل في مكان واحد — بدخول واحد',
+  fMentions: 'منشن', fLater: 'لاحقاً', fThreads: 'Threads', fLabels: 'التصنيفات',
+  later: 'احفظ لبعدين', unlater: 'شيل من «لاحقاً»', laterDone: 'تم', savedLater: 'اتحفظت في «لاحقاً»',
+  noLater: 'مفيش رسائل محفوظة', noLaterP: 'اضغط على أي رسالة ← «احفظ لبعدين» عشان ترجعلها',
+  noMentions: 'محدش عمل لك منشن', noThreads: 'مفيش Threads لسه', noThreadsP: 'رد على أي رسالة وهتظهر هنا',
+  thread: 'Thread', viewThread: 'افتح الـ Thread', replyThread: 'رد في Thread', replies: 'ردود', reply1: 'رد',
+  threadReply: 'اكتب ردك…', lastReply: 'آخر رد',
+  labels: 'التصنيفات', newLabel: 'تصنيف جديد', labelName: 'اسم التصنيف', manageLabels: 'تعديل التصنيفات', delLabel: 'مسح التصنيف',
+  myId: 'كود حسابي', idCopied: 'الكود اتنسخ', addContact: 'إضافة جهة اتصال', addContactP: 'اكتب كود الحساب (زي SA10044 أو CX100102) أو رقم الموبايل',
+  find: 'بحث', notFound: 'مفيش حد بالكود ده', directory: 'دليل الشركة',
+  acctType: 'نوع الحساب', tStaff: 'موظف', tDriver: 'سائق', tPartner: 'شركة شريكة',
+  drvCode: 'كود السائق', drvCodeHint: 'زي SA10044', simLabel: 'رقم الخط المسجّل في الشركة', simHint: 'نفس الرقم اللي في ملفك في ARK',
+  company: 'اسم الشركة', companyHint: 'اكتب اسم شركتك بالظبط', partnerNote: 'حساب الشركات بيتراجع من الإدارة وبعدها بتدخل جروب شركتك.',
+  errDriver: 'الكود ورقم الخط مش متطابقين مع ملفك في الشركة. اتأكد منهم أو كلّم المشرف.', errDriverTaken: 'الكود ده متسجّل بحساب تاني. كلّم الإدارة.',
+  orgs: 'الشركات الشريكة', orgReq: 'طالب ينضم كـ', approveOrg: 'اعتماد وربطه بالشركة', addOrg: 'إضافة شركة', orgName: 'اسم الشركة',
+  orgMembers: 'عضو', openGroup: 'افتح الجروب', noOrgs: 'مفيش شركات لسه', orgDone: 'اتربط بالشركة واتضاف للجروب',
+  noApps: 'مفيش أنظمة متاحة لحسابك', open: 'فتح', convOpts: 'خيارات المحادثة',
+});
+Object.assign(T.en, {
+  d_partners: 'Partner companies', work: 'Workspace', workP: 'All Al-Salasil systems in one place',
+  fMentions: 'Mentions', fLater: 'Later', fThreads: 'Threads', fLabels: 'Labels',
+  later: 'Save for later', unlater: 'Remove from Later', laterDone: 'Done', savedLater: 'Saved to Later',
+  noLater: 'Nothing saved', noLaterP: 'Tap any message → “Save for later” to come back to it',
+  noMentions: 'No mentions yet', noThreads: 'No threads yet', noThreadsP: 'Reply to any message and it shows up here',
+  thread: 'Thread', viewThread: 'View thread', replyThread: 'Reply in thread', replies: 'replies', reply1: 'reply',
+  threadReply: 'Write a reply…', lastReply: 'Last reply',
+  labels: 'Labels', newLabel: 'New label', labelName: 'Label name', manageLabels: 'Edit labels', delLabel: 'Delete label',
+  myId: 'My account ID', idCopied: 'ID copied', addContact: 'Add contact', addContactP: 'Type an account ID (e.g. SA10044 or CX100102) or a mobile number',
+  find: 'Find', notFound: 'No one with that ID', directory: 'Company directory',
+  acctType: 'Account type', tStaff: 'Staff', tDriver: 'Driver', tPartner: 'Partner company',
+  drvCode: 'Driver code', drvCodeHint: 'e.g. SA10044', simLabel: 'Company SIM number', simHint: 'The number on your file in ARK',
+  company: 'Company name', companyHint: 'Type your company name exactly', partnerNote: 'Partner accounts are reviewed by management, then added to your company group.',
+  errDriver: 'Driver code and SIM number don’t match your company file. Check them or ask your supervisor.', errDriverTaken: 'This driver code is already linked to another account. Contact management.',
+  orgs: 'Partner companies', orgReq: 'Wants to join as', approveOrg: 'Approve & link to company', addOrg: 'Add company', orgName: 'Company name',
+  orgMembers: 'members', openGroup: 'Open group', noOrgs: 'No companies yet', orgDone: 'Linked to the company and added to its group',
+  noApps: 'No systems available for your account', open: 'Open', convOpts: 'Chat options',
+});
+const isExternal = () => S.me && (S.me.dept === 'partners' || !!S.me.org_id);
+Object.assign(S, { later: new Map(), labels: [], convLabels: new Map(), mentionsList: null, threadsList: null, thc: new Map(), apps: null, orgs: [], extrasAt: 0 });
+
+/* ─────────── backend ─────────── */
+Object.assign(SupaBackend.prototype, {
+  async join(p) {
+    const { data, error } = await this.sb.rpc('cx_join_v2', { p_code: p.code || '', p_name: p.name || '', p_dept: p.dept || 'operations', p_phone: p.phone || null, p_title: p.title || null,
+      p_lang: LANG, p_driver_code: p.driver_code || null, p_org: p.org || null });
+    this.err(error); return data;
+  },
+  async find(q) { const { data, error } = await this.sb.rpc('cx_find', { p_q: q }); this.err(error); return data || []; },
+  async orgs() { const { data } = await this.sb.from('cx_orgs').select('*').order('name'); return data || []; },
+  async assignOrg(u, name) { const { data, error } = await this.sb.rpc('cx_assign_org', { p_user: u || null, p_org_name: name }); this.err(error); return data; },
+  async byIds(ids) { if (!ids.length) return []; const { data } = await this.sb.from('cx_messages').select('*').in('id', ids); return data || []; },
+  async laterList() {
+    const { data, error } = await this.sb.from('cx_later').select('*').eq('user_id', this.uid).eq('done', false).order('created_at', { ascending: false }).limit(200); this.err(error);
+    const ms = await this.byIds((data || []).map(r => r.message_id)); const by = new Map(ms.map(m => [m.id, m]));
+    return (data || []).map(r => ({ ...r, msg: by.get(r.message_id) })).filter(r => r.msg);
+  },
+  async addLater(m) { const { error } = await this.sb.from('cx_later').upsert({ user_id: this.uid, message_id: m.id, conversation_id: m.conversation_id, done: false }, { onConflict: 'user_id,message_id' }); this.err(error); },
+  async delLater(mid) { const { error } = await this.sb.from('cx_later').delete().eq('user_id', this.uid).eq('message_id', mid); this.err(error); },
+  async labels() { const { data } = await this.sb.from('cx_labels').select('*').eq('user_id', this.uid).order('created_at'); return data || []; },
+  async convLabels() { const { data } = await this.sb.from('cx_conv_labels').select('*').eq('user_id', this.uid); return data || []; },
+  async addLabel(name, color) { const { data, error } = await this.sb.from('cx_labels').insert({ user_id: this.uid, name, color }).select().single(); this.err(error); return data; },
+  async delLabel(id) { const { error } = await this.sb.from('cx_labels').delete().eq('id', id); this.err(error); },
+  async setConvLabel(conv, label, on) {
+    if (on) { const { error } = await this.sb.from('cx_conv_labels').upsert({ user_id: this.uid, conversation_id: conv, label_id: label }); this.err(error); }
+    else { const { error } = await this.sb.from('cx_conv_labels').delete().eq('user_id', this.uid).eq('conversation_id', conv).eq('label_id', label); this.err(error); }
+  },
+  async mentionsList() { const { data, error } = await this.sb.rpc('cx_my_mentions', { p_limit: 80 }); this.err(error); return data || []; },
+  async threadCounts(ids) { if (!ids.length) return []; const { data } = await this.sb.rpc('cx_thread_counts', { p_ids: ids }); return data || []; },
+  async threadsList() { const { data, error } = await this.sb.rpc('cx_my_threads', { p_limit: 60 }); this.err(error); return data || []; },
+  async thread(root) { const { data, error } = await this.sb.from('cx_messages').select('*').eq('reply_to', root).order('created_at').limit(300); this.err(error); return data || []; },
+  async apps() { const { data } = await this.sb.from('cx_apps').select('*').eq('active', true).order('sort'); return data || []; },
+});
+Object.assign(DemoBackend.prototype, {
+  _x() {
+    if (this.x) return this.x;
+    this.mem.forEach((m, i) => m.cx_code = m.cx_code || (m.dept === 'drivers' ? 'SA100' + (40 + i) : 'CX1001' + String(i).padStart(2, '0')));
+    this.mem.push({ user_id: 'u-kashif', display_name: 'Kashif Mohammad', dept: 'partners', role: 'member', title: 'Partner manager', status: 'pending', lang: 'en', org_request: 'Caboria', created_at: new Date(Date.now() - 9e5).toISOString(), cx_code: 'CX100150' });
+    const L = [{ id: 'l1', name: 'كيتا', color: '#0f7a6b' }, { id: 'l2', name: 'عاجل', color: '#9a232e' }];
+    this.x = { later: [], labels: L, convLabels: [{ conversation_id: 'c-ops', label_id: 'l1' }, { conversation_id: 'c-dm3', label_id: 'l2' }], orgs: [{ id: 'o1', name: 'Homi', group_conv: null }],
+      apps: [['fly', 'فلاي', 'FLY', 'تقارير السائق والرسائل', 'index.html', '🛵', '#004e6d', ['admin', 'manager', 'member'], ['drivers', 'operations', 'management']], ['ark', 'ARK — إدارة السائقين', 'ARK', 'السائقين والرواتب', 'ark.html', '🗂️', '#9a232e', ['admin'], ['*']],
+        ['radar', 'رادار كيتا', 'Keeta Radar', 'أداء كيتا اليومي', 'radar.html', '📡', '#0f7a6b', ['admin', 'manager'], ['*']], ['custody', 'العهدة', 'Custody', 'العهد والمصروفات', 'custody.html', '💼', '#c2410c', ['admin', 'manager'], ['*']]]
+        .map(([id, name, name_en, description, url, icon, color, roles, depts]) => ({ id, name, name_en, description, url, icon, color, roles, depts })) };
+    const ops = this.msgs.filter(m => m.conversation_id === 'c-ops');
+    if (ops[1]) [['u-khaled', 'تمام، Ravi وصل السالمية'], ['u-ali', 'ممتاز 👍 ابعتلي التحديث بعد ساعة']].forEach(([u, b], k) => this.msgs.push({ id: uid(), conversation_id: 'c-ops', sender_id: u, kind: 'text', body: b, attachments: [], reply_to: ops[1].id, mentions: [], priority: 'normal', created_at: new Date(Date.now() - (150 - k * 10) * 60000).toISOString() }));
+    this.msgs.sort((a, b) => a.created_at < b.created_at ? -1 : 1);
+    return this.x;
+  },
+  async find(q) { this._x(); q = String(q).trim().toUpperCase(); return this.mem.filter(m => m.status === 'active' && m.user_id !== this.uidMe && (m.cx_code || '').toUpperCase() === q); },
+  async orgs() { return this._x().orgs.map(o => ({ ...o })); },
+  async assignOrg(u, name) {
+    const X = this._x(); let o = X.orgs.find(x => x.name.toLowerCase() === name.trim().toLowerCase());
+    if (!o) { o = { id: 'o' + uid().slice(0, 4), name: name.trim(), group_conv: null }; X.orgs.push(o); }
+    if (!o.group_conv) o.group_conv = await this.createConv({ kind: 'group', name: 'السلاسل × ' + o.name, emoji: '🤝', color: '#0e7490', members: [] });
+    if (u) { const m = this.mem.find(x => x.user_id === u); Object.assign(m, { org_id: o.id, dept: 'partners', status: 'active' }); this.parts[o.group_conv][u] = { user_id: u, role: 'member', can_post: true, last_read_at: new Date().toISOString() }; this.emit('member', 'UPDATE', { ...m }); }
+    return { ...o };
+  },
+  async byIds(ids) { return this.msgs.filter(m => ids.includes(m.id)).map(m => ({ ...m })); },
+  async laterList() { const X = this._x(); return X.later.filter(r => !r.done).map(r => ({ ...r, msg: this.msgs.find(m => m.id === r.message_id) })).filter(r => r.msg); },
+  async addLater(m) { const X = this._x(); if (!X.later.some(r => r.message_id === m.id)) X.later.unshift({ message_id: m.id, conversation_id: m.conversation_id, done: false, created_at: new Date().toISOString() }); },
+  async delLater(mid) { const X = this._x(); X.later = X.later.filter(r => r.message_id !== mid); },
+  async labels() { return this._x().labels.map(l => ({ ...l })); },
+  async convLabels() { return this._x().convLabels.map(l => ({ ...l })); },
+  async addLabel(name, color) { const l = { id: 'l' + uid().slice(0, 6), name, color }; this._x().labels.push(l); return { ...l }; },
+  async delLabel(id) { const X = this._x(); X.labels = X.labels.filter(l => l.id !== id); X.convLabels = X.convLabels.filter(l => l.label_id !== id); },
+  async setConvLabel(conv, label, on) { const X = this._x(); X.convLabels = X.convLabels.filter(l => !(l.conversation_id === conv && l.label_id === label)); if (on) X.convLabels.push({ conversation_id: conv, label_id: label }); },
+  async mentionsList() { return this.msgs.filter(m => (m.mentions || []).includes(this.uidMe) && this.parts[m.conversation_id]?.[this.uidMe]).reverse().map(m => ({ ...m })); },
+  async threadCounts(ids) { const o = new Map(); this.msgs.filter(m => m.reply_to && ids.includes(m.reply_to) && !m.deleted_at).forEach(m => { const x = o.get(m.reply_to) || { root: m.reply_to, replies: 0, last_at: m.created_at }; x.replies++; if (m.created_at > x.last_at) x.last_at = m.created_at; o.set(m.reply_to, x); }); return [...o.values()]; },
+  async threadsList() {
+    this._x(); const me = this.uidMe, roots = new Map();
+    this.msgs.filter(m => m.reply_to && !m.deleted_at).forEach(m => { const r = roots.get(m.reply_to) || []; r.push(m); roots.set(m.reply_to, r); });
+    return [...roots].map(([rid, rs]) => { const o = this.msgs.find(m => m.id === rid); if (!o || !this.parts[o.conversation_id]?.[me]) return null; if (o.sender_id !== me && !rs.some(r => r.sender_id === me)) return null; const l = rs[rs.length - 1];
+      return { root_id: rid, conversation_id: o.conversation_id, root_sender: o.sender_id, root_body: o.body, root_kind: o.kind, root_at: o.created_at, replies: rs.length, last_at: l.created_at, last_sender: l.sender_id, last_body: l.body }; })
+      .filter(Boolean).sort((a, b) => a.last_at < b.last_at ? 1 : -1);
+  },
+  async thread(root) { return this.msgs.filter(m => m.reply_to === root).map(m => ({ ...m })); },
+  async apps() { return this._x().apps.map(a => ({ ...a })); },
+});
+if (DEMO) { const _mm = DemoBackend.prototype.members; DemoBackend.prototype.members = async function () { this._x(); return _mm.call(this); }; }
+
+/* ─────────── helpers ─────────── */
+const LABEL_COLORS = ['#0f7a6b', '#9a232e', '#b8860b', '#1d4ed8', '#6b4fbb', '#c2410c', '#0e7490', '#be185d'];
+const copyText = (s, msg) => navigator.clipboard?.writeText(s).then(() => toast(msg || t('copied'))).catch(() => toast(s, 'info'));
+const codeChip = m => m?.cx_code ? `<span class="cx-id" data-copy="${esc(m.cx_code)}" title="${t('myId')}">${ic('idcard', 'ico-s')}<b dir="ltr">${esc(m.cx_code)}</b></span>` : '';
+function bindCopy(root) { $$('[data-copy]', root).forEach(b => b.onclick = e => { e.stopPropagation(); copyText(b.dataset.copy, t('idCopied')); }); }
+async function loadExtras(force) {
+  if (!force && Date.now() - S.extrasAt < 15000) return; S.extrasAt = Date.now();
+  const [lt, lb, cl] = await Promise.all([B.laterList().catch(() => []), B.labels().catch(() => []), B.convLabels().catch(() => [])]);
+  S.later = new Map(lt.map(r => [r.message_id, r])); S.labels = lb;
+  S.convLabels = new Map(); cl.forEach(r => { if (!S.convLabels.has(r.conversation_id)) S.convLabels.set(r.conversation_id, new Set()); S.convLabels.get(r.conversation_id).add(r.label_id); });
+}
+async function toggleLater(m) {
+  if (!m) return;
+  if (S.later.has(m.id)) { S.later.delete(m.id); B.delLater(m.id).catch(e => toast(errMsg(e), 'err')); toast(t('laterDone')); }
+  else { S.later.set(m.id, { message_id: m.id, conversation_id: m.conversation_id, msg: m, created_at: new Date().toISOString() }); B.addLater(m).then(() => toast(t('savedLater'))).catch(e => toast(errMsg(e), 'err')); }
+  if (S.view === 'chats') renderSide();
+}
+
+/* ─────────── errors ─────────── */
+const _errMsg = errMsg;
+errMsg = function (e) {
+  const m = String(e?.message || e || '');
+  if (/driver_not_matched/.test(m)) return t('errDriver');
+  if (/driver_taken/.test(m)) return t('errDriverTaken');
+  if (/user_not_found/.test(m)) return t('notFound');
+  return _errMsg(e);
+};
+
+/* ─────────── registration: staff / driver / partner ─────────── */
+const _showAuth = showAuth;
+showAuth = function (mode) {
+  _showAuth(mode);
+  const a = $('#auth'), form = $('#authForm', a); if (!form || !$('[name=name]', form)) return; // login screen
+  let type = store.get('regType', 'staff');
+  const seg = h(`<div class="field cx-type"><label>${t('acctType')}</label><div class="tabs">${[['staff', 'tStaff'], ['driver', 'tDriver'], ['partner', 'tPartner']].map(([k, l]) => `<button type="button" data-ty="${k}">${t(l)}</button>`).join('')}</div></div>`);
+  form.prepend(seg);
+  const idF = $('[name=id]', form).closest('.field'), phF = $('[name=phone]', form).closest('.field'), codeF = $('[name=code]', form).closest('.field');
+  const deptF = $('[name=dept]', form).closest('.field'), titleF = $('[name=title]', form).closest('.field');
+  const drv = h(`<div class="field cx-x" data-for="driver"><label>${t('drvCode')} <span style="opacity:.6;font-weight:400">· ${t('drvCodeHint')}</span></label><input class="input ltr" name="driver_code" maxlength="12" style="text-transform:uppercase;letter-spacing:1px"></div>`);
+  const org = h(`<div class="field cx-x" data-for="partner"><label>${t('company')} <span style="opacity:.6;font-weight:400">· ${t('companyHint')}</span></label><input class="input" name="org" maxlength="60"></div>`);
+  const note = h(`<p class="cx-x cx-note" data-for="partner">${ic('info', 'ico-s')} ${t('partnerNote')}</p>`);
+  idF.after(drv); $('[name=name]', form).closest('.field').after(org); form.querySelector('#authErr').before(note);
+  const idLbl = $('label', idF), idTxt = idLbl.textContent;
+  const apply = () => {
+    store.set('regType', type);
+    $$('[data-ty]', seg).forEach(b => b.classList.toggle('on', b.dataset.ty === type));
+    $$('.cx-x', form).forEach(x => x.style.display = x.dataset.for === type ? '' : 'none');
+    deptF.style.display = type === 'staff' ? '' : 'none';
+    codeF.style.display = type === 'staff' ? '' : 'none';
+    phF.style.display = type === 'driver' ? 'none' : '';
+    titleF.style.display = type === 'driver' ? 'none' : '';
+    idLbl.innerHTML = type === 'driver' ? `${t('simLabel')} <span style="opacity:.6;font-weight:400">· ${t('simHint')}</span>` : esc(idTxt);
+    $('[name=id]', form).setAttribute('inputmode', type === 'driver' ? 'tel' : 'email');
+  };
+  $$('[data-ty]', seg).forEach(b => b.onclick = () => { type = b.dataset.ty; apply(); });
+  apply();
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(form)); const err = $('#authErr'); err.innerHTML = '';
+    const showErr = m => err.innerHTML = `<div class="auth-err">${esc(m)}</div>`;
+    if ((f.name || '').trim().length < 2) return showErr(t('errName'));
+    if ((f.pw || '').length < 6) return showErr(t('errWeak'));
+    if (type === 'driver' && (!(f.driver_code || '').trim() || (f.id || '').replace(/\D/g, '').length < 8)) return showErr(t('errDriver'));
+    if (type === 'partner' && (f.org || '').trim().length < 2) return showErr(t('companyHint'));
+    const btn = $('#authBtn'); btn.disabled = true; btn.innerHTML = '<i class="spin"></i>';
+    const meta = { name: f.name.trim(), dept: type === 'driver' ? 'drivers' : type === 'partner' ? 'partners' : f.dept, title: type === 'driver' ? 'Driver' : f.title,
+      phone: type === 'driver' ? f.id.trim() : f.phone, code: type === 'staff' ? (f.code || '').trim().toUpperCase() : '',
+      driver_code: type === 'driver' ? f.driver_code.trim().toUpperCase() : '', org: type === 'partner' ? f.org.trim() : '' };
+    try {
+      const r = await B.signUp(f.id, f.pw, meta);
+      if (r.needsConfirm) { btn.disabled = false; btn.textContent = t('create'); return showErr(t('errConfirm')); }
+      try { S.me = await B.join(meta); } catch (e2) { btn.disabled = false; btn.textContent = t('create'); return showComplete(errMsg(e2), meta); }
+      await afterLogin();
+    } catch (ex) { btn.disabled = false; btn.textContent = t('create'); showErr(errMsg(ex)); }
+  };
+};
+const _showComplete = showComplete;
+showComplete = function (error, pre = {}) {
+  _showComplete(error, pre);
+  const meta = { ...(B.user?.user_metadata || {}), ...pre };
+  const form = $('#cForm'); if (!form) return;
+  const extra = h(`<div style="display:grid;gap:12px"><div class="field"><label>${t('drvCode')} <span style="opacity:.6;font-weight:400">· ${t('tDriver')}</span></label><input class="input ltr" name="driver_code" value="${esc(meta.driver_code || '')}" style="text-transform:uppercase"></div>
+    <div class="field"><label>${t('simLabel')}</label><input class="input ltr" name="phone" value="${esc(meta.phone || '')}" inputmode="tel"></div>
+    <div class="field"><label>${t('company')} <span style="opacity:.6;font-weight:400">· ${t('tPartner')}</span></label><input class="input" name="org" value="${esc(meta.org || '')}"></div></div>`);
+  $('#cErr', form).before(extra);
+  form.onsubmit = async e => {
+    e.preventDefault(); const f = Object.fromEntries(new FormData(form));
+    if ((f.name || '').trim().length < 2) return $('#cErr').innerHTML = `<div class="auth-err">${t('errName')}</div>`;
+    const btn = $('button.btn', form); btn.disabled = true; btn.innerHTML = '<i class="spin"></i>';
+    try { S.me = await B.join({ ...f, code: (f.code || '').trim().toUpperCase(), driver_code: (f.driver_code || '').trim().toUpperCase(), org: (f.org || '').trim() }); await afterLogin(); }
+    catch (ex) { btn.disabled = false; btn.textContent = t('cont'); $('#cErr').innerHTML = `<div class="auth-err">${esc(errMsg(ex))}</div>`; }
+  };
+};
+
+/* ─────────── start: load later / labels ─────────── */
+const _startApp = startApp;
+startApp = async function () {
+  await loadExtras(true).catch(() => {});
+  await _startApp();
+  renderRail(); renderSide();
+};
+const _loadInbox = loadInbox;
+loadInbox = async function () { await _loadInbox(); if (isExternal()) S.discover = []; loadExtras().then(() => { if (S.view === 'chats') renderSide(); }).catch(() => {}); };
+
+/* ─────────── pages ─────────── */
+const _renderPage = renderPage;
+renderPage = function (v) {
+  const main = $('#main'); main.className = 'page';
+  if (v === 'work') return pageWork(main);
+  return _renderPage(v);
+};
+async function pageWork(main) {
+  main.innerHTML = `<div class="page-h"><div><h1>${t('work')}</h1><p class="muted" style="margin-top:4px">${t('workP')}</p></div></div><div class="page-b scroll" id="wkb"><div style="text-align:center;padding:40px"><i class="spin" style="color:var(--muted)"></i></div></div>`;
+  if (!S.apps) S.apps = await B.apps().catch(() => []);
+  const me = S.me, mine = S.apps.filter(a => (a.roles || []).includes(me.role) && ((a.depts || []).includes('*') || (a.depts || []).includes(me.dept) || me.role === 'admin'));
+  const box = $('#wkb'); if (!box) return;
+  box.innerHTML = `<div class="ws-me">${avHTML(me, 52)}<div class="grow"><b>${esc(me.display_name)}</b><small class="muted">${esc([me.title, deptName(me.dept)].filter(Boolean).join(' · '))}</small></div>${codeChip(me)}</div>`
+    + (mine.length ? `<div class="ws-grid">${mine.map((a, i) => `<a class="ws-app" href="${esc(a.url)}" target="_blank" rel="noopener" style="--c:${esc(a.color || '#004e6d')};animation-delay:${i * 35}ms"><span class="ws-ic">${esc(a.icon || '▦')}</span><b>${esc(LANG === 'en' && a.name_en ? a.name_en : a.name)}</b><small>${esc(a.description || '')}</small><i class="ws-go">${ic('extlink')}</i></a>`).join('')}</div>`
+      : `<div class="empty"><div class="art">${ic('grid')}</div><h3>${t('noApps')}</h3></div>`);
+  bindCopy(box); hydrate(box);
+}
+
+/* People = Contacts: add by ID + directory */
+pagePeople = function (main) {
+  const st = { q: '', d: 'all' };
+  const depts = isExternal() ? [] : DEPTS.filter(d => d !== 'partners' || [...S.members.values()].some(m => m.dept === 'partners' && m.status === 'active'));
+  main.innerHTML = `<div class="page-h"><h1>${t('people')}</h1><div class="search" style="margin:0;width:min(320px,100%)">${ic('search')}<input id="ppq" placeholder="${t('searchPeople')}"></div></div>
+    <div class="page-b scroll" id="ppw">
+      <div class="panel add-c"><div class="panel-h">${ic('userPlus')}<h3>${t('addContact')}</h3>${codeChip(S.me)}</div>
+        <p class="muted" style="font-size:13.5px;margin:-4px 0 10px">${t('addContactP')}</p>
+        <form class="row" id="acF" style="gap:8px"><input class="input ltr" id="acQ" placeholder="SA10044" style="flex:1;text-transform:uppercase" autocomplete="off"><button class="btn btn-primary">${ic('search')}${t('find')}</button></form>
+        <div id="acR"></div></div>
+      <h3 class="dir-h">${t('directory')}</h3>
+      <div class="filters" style="padding:0 0 12px">${depts.length ? ['all', ...depts].map(d => `<button class="chip ${d === 'all' ? 'on' : ''}" data-d="${d}">${d === 'all' ? t('all') : deptName(d)}</button>`).join('') : ''}</div>
+      <div id="ppb"></div></div>`;
+  const openDm = (u, a = 'm') => B.openDM(u).then(async id => { if (!S.conv.has(id)) await loadInbox(); a === 'm' ? openConv(id) : Call.start(id, a); }).catch(er => toast(errMsg(er), 'err'));
+  const draw = () => {
+    const q = st.q;
+    const ms = [...S.members.values()].filter(m => m.status === 'active' && (st.d === 'all' || m.dept === st.d) && (m.display_name.toLowerCase().includes(q) || (m.cx_code || '').toLowerCase().includes(q)))
+      .sort((a, b) => (S.online.has(b.user_id) - S.online.has(a.user_id)) || a.display_name.localeCompare(b.display_name));
+    $('#ppb').innerHTML = `<div class="cards">${ms.map((m, i) => `<div class="pcard" data-u="${m.user_id}" style="--c:${m.color || colorFor(m.user_id)};animation-delay:${Math.min(i, 20) * 25}ms">${avHTML(m, 68, { dot: true })}<b>${esc(m.display_name)}${m.user_id === S.me.user_id ? ` (${t('you')})` : ''}</b><small>${esc(m.title || '')}</small><small><span class="tag" style="margin-top:6px">${deptName(m.dept)}</span></small>${m.cx_code ? `<small class="muted" dir="ltr" style="font-size:11.5px;letter-spacing:.5px">${esc(m.cx_code)}</small>` : ''}
+      ${m.user_id === S.me.user_id ? '' : `<div class="acts"><button class="ibtn sm" data-a="m" title="${t('message')}">${ic('chat')}</button><button class="ibtn sm" data-a="audio">${ic('phone')}</button><button class="ibtn sm" data-a="video">${ic('video')}</button></div>`}</div>`).join('')}</div>`;
+    $$('#ppb .pcard').forEach(c => c.onclick = e => { const a = e.target.closest('[data-a]'); const u = c.dataset.u; if (!a) return openProfile(u); e.stopPropagation(); openDm(u, a.dataset.a); });
+    hydrate($('#ppb'));
+  };
+  $('#ppq').oninput = e => { st.q = e.target.value.toLowerCase(); draw(); };
+  $$('[data-d]', main).forEach(b => b.onclick = () => { st.d = b.dataset.d; $$('[data-d]', main).forEach(x => x.classList.toggle('on', x === b)); draw(); });
+  $('#acF').onsubmit = async e => {
+    e.preventDefault(); const q = $('#acQ').value.trim(); const box = $('#acR'); if (q.length < 4) return;
+    box.innerHTML = '<div style="padding:12px;text-align:center"><i class="spin" style="color:var(--muted)"></i></div>';
+    const rs = await B.find(q).catch(er => { toast(errMsg(er), 'err'); return []; });
+    rs.forEach(m => S.members.set(m.user_id, { ...(S.members.get(m.user_id) || {}), ...m }));
+    box.innerHTML = rs.length ? rs.map(m => `<div class="trow ac-hit" data-u="${m.user_id}">${avHTML(m, 44, { dot: true })}<div class="who"><b>${esc(m.display_name)}</b><small>${esc([m.title, deptName(m.dept)].filter(Boolean).join(' · '))} · <span dir="ltr">${esc(m.cx_code || '')}</span></small></div><button class="btn btn-primary btn-sm" data-a="m">${ic('chat')}${t('message')}</button></div>`).join('')
+      : `<div class="empty" style="padding:18px">${t('notFound')}</div>`;
+    $$('.ac-hit', box).forEach(r => { $('[data-a]', r).onclick = () => openDm(r.dataset.u); $('.av', r).onclick = () => openProfile(r.dataset.u); });
+    hydrate(box);
+  };
+  bindCopy(main); draw();
+};
+
+/* profile + settings: show account ID */
+const _openProfile = openProfile;
+openProfile = function (u) {
+  _openProfile(u); if (u === S.me.user_id) return;
+  const ov = $$('.ov').pop(), m = memberOf(u); if (!ov || !m.cx_code) return;
+  const p = $('.modal-b p.muted', ov); p && p.insertAdjacentHTML('afterend', `<div style="margin-top:8px">${codeChip(m)}</div>`); bindCopy(ov);
+};
+const _openSettings = openSettings;
+openSettings = function () {
+  _openSettings();
+  const ov = $$('.ov').pop(); if (!ov || !S.me.cx_code) return;
+  const top = $('#avC', ov)?.parentElement; top && top.insertAdjacentHTML('beforeend', `<div style="margin-top:10px"><small class="muted" style="display:block;margin-bottom:4px">${t('myId')}</small>${codeChip(S.me)}</div>`); bindCopy(ov);
+};
+
+/* admin: partner approvals + companies */
+const _pageAdmin = pageAdmin;
+pageAdmin = async function (main) {
+  await _pageAdmin(main);
+  if (S.me.role !== 'admin') return;
+  S.orgs = await B.orgs().catch(() => []);
+  const deco = () => {
+    const adb = $('#adb'); if (!adb || adb.dataset.cx2 === '1') return; adb.dataset.cx2 = '1';
+    $$('.trow[data-u]', adb).forEach(r => {
+      const m = memberOf(r.dataset.u);
+      if (m.status !== 'pending' || !(m.org_request || m.dept === 'partners')) return;
+      const sel = $('select[data-f=dept]', r); sel && (sel.style.display = 'none');
+      const ok = $('[data-a=ok]', r); ok && (ok.style.display = 'none');
+      $('.who small', r)?.insertAdjacentHTML('beforeend', ` · <b style="color:var(--brand2)">${ic('building', 'ico-s')} ${t('orgReq')} ${esc(m.org_request || '')}</b>`);
+      const box = h(`<div class="row" style="gap:6px"><input class="input" list="cxOrgs" value="${esc(m.org_request || '')}" style="width:150px;height:34px"><button class="btn btn-ok btn-sm">${ic('check')}${t('approveOrg')}</button></div>`);
+      ok ? ok.before(box) : r.appendChild(box);
+      $('button', box).onclick = async () => { const name = $('input', box).value.trim(); if (name.length < 2) return; try { await B.assignOrg(m.user_id, name); toast(t('orgDone')); S.orgs = await B.orgs().catch(() => S.orgs); const ms = await B.members().catch(() => []); ms.forEach(x => S.members.set(x.user_id, x)); await loadInbox(); renderRail(); pageAdmin(main); } catch (e) { toast(errMsg(e), 'err'); } };
+    });
+    $$('.trow[data-u]', adb).forEach(r => { const m = memberOf(r.dataset.u); if (m.cx_code && !$('.cx-id', r)) $('.who small', r)?.insertAdjacentHTML('beforeend', ` · <span dir="ltr">${esc(m.cx_code)}</span>`); });
+    const cnt = id => [...S.members.values()].filter(m => m.org_id === id && m.status === 'active').length;
+    const panel = h(`<div class="panel"><div class="panel-h">${ic('building')}<h3>${t('orgs')}</h3><span class="muted" style="font-size:13px">${S.orgs.length}</span><span class="grow"></span><button class="btn btn-ghost btn-sm" id="addOrg">${ic('plus')}${t('addOrg')}</button></div>
+      <datalist id="cxOrgs">${S.orgs.map(o => `<option value="${esc(o.name)}">`).join('')}</datalist>
+      ${S.orgs.length ? S.orgs.map(o => `<div class="trow"><div class="av sq emoji" style="--s:40px;background:#0e749022">🤝</div><div class="who"><b>${esc(o.name)}</b><small>${cnt(o.id)} ${t('orgMembers')}</small></div>${o.group_conv ? `<button class="btn btn-ghost btn-sm" data-g="${o.group_conv}">${ic('chat')}${t('openGroup')}</button>` : ''}</div>`).join('') : `<div class="empty" style="padding:22px">${t('noOrgs')}</div>`}</div>`);
+    const pend = $$('.panel', adb)[1]; pend ? pend.after(panel) : adb.appendChild(panel);
+    $$('[data-g]', panel).forEach(b => b.onclick = async () => { if (!S.conv.has(b.dataset.g)) await loadInbox(); go('chats'); openConv(b.dataset.g); });
+    $('#addOrg', panel).onclick = () => {
+      const ov = modal(t('addOrg'), `<div class="field"><label>${t('orgName')}</label><input class="input" id="onm" maxlength="60"></div>`, { foot: `<button class="btn btn-ghost" data-x>${t('cancel')}</button><button class="btn btn-primary" id="onOk">${t('save')}</button>` });
+      $('.modal-f [data-x]', ov).onclick = ov.close; setTimeout(() => $('#onm', ov).focus(), 50);
+      $('#onOk', ov).onclick = async () => { const n = $('#onm', ov).value.trim(); if (n.length < 2) return; try { await B.assignOrg(null, n); ov.close(); toast(t('done')); await loadInbox(); pageAdmin(main); } catch (e) { toast(errMsg(e), 'err'); } };
+    };
+    hydrate(panel);
+  };
+  deco();
+  const adb = $('#adb'); if (adb) new MutationObserver(() => { if (adb.dataset.cx2 !== '1' || !$('#addOrg', adb)) { adb.dataset.cx2 = ''; deco(); } }).observe(adb, { childList: true });
+};
+
+/* ─────────── sidebar: Daxiang-style tabs ─────────── */
+const FILTERS = () => [['all', t('all')], ['unread', t('unread')], ['mentions', t('fMentions')], ['later', t('fLater')], ['threads', t('fThreads')], ['dm', t('dms')], ['group', t('groups')], ['channel', t('channels')],
+  ...S.labels.map(l => ['lbl:' + l.id, l.name, l.color])];
+const _convMatches = convMatches;
+convMatches = function (c) {
+  if (S.view === 'chats' && S.filter.startsWith('lbl:')) {
+    const q = S.q.trim().toLowerCase(); if (q && !convName(c).toLowerCase().includes(q)) return false;
+    return S.convLabels.get(c.id)?.has(S.filter.slice(4)) || false;
+  }
+  return _convMatches(c);
+};
+function chipCount(f) {
+  if (f === 'unread') return S.inbox.filter(c => !c.muted && (c.unread > 0 || c.pending_acks > 0)).length;
+  if (f === 'mentions') return S.inbox.reduce((a, c) => a + (c.mentions || 0), 0);
+  if (f === 'later') return S.later.size;
+  return 0;
+}
+function miHTML(m, extra = '', i = 0) {
+  const c = S.conv.get(m.conversation_id), who = memberOf(m.sender_id);
+  return `<div class="ci mi" data-c="${m.conversation_id}" data-mid="${m.id}" style="animation-delay:${Math.min(i, 12) * 22}ms">${avHTML(who, 44)}
+    <div class="meta"><div class="l1"><span class="nm" dir="auto">${esc(who.display_name)}<span class="mi-in"> · ${esc(convName(c) || '')}</span></span><span class="tm">${fmtShort(m.created_at)}</span></div>
+    <div class="l2"><span class="pv mi-pv" dir="auto">${esc(msgSummary(m))}</span></div>${extra}</div></div>`;
+}
+async function msgListBody() {
+  const f = S.filter, q = S.q.trim().toLowerCase();
+  const match = m => !q || (m.body || '').toLowerCase().includes(q) || memberOf(m.sender_id).display_name.toLowerCase().includes(q);
+  if (f === 'later') {
+    const rows = [...S.later.values()].filter(r => r.msg && S.conv.has(r.conversation_id) && match(r.msg));
+    return rows.length ? rows.map((r, i) => miHTML(r.msg, `<button class="ibtn sm mi-done" data-done="${r.message_id}" title="${t('laterDone')}">${ic('check')}</button>`, i)).join('')
+      : `<div class="empty"><div class="art">${ic('bookmark')}</div><h3>${t('noLater')}</h3><p>${t('noLaterP')}</p></div>`;
+  }
+  if (f === 'mentions') {
+    if (!S.mentionsList || Date.now() - S.mentionsList.at > 30000) S.mentionsList = { at: Date.now(), rows: await B.mentionsList().catch(() => []) };
+    const rows = S.mentionsList.rows.filter(m => S.conv.has(m.conversation_id) && match(m));
+    return rows.length ? rows.map((m, i) => miHTML(m, '', i)).join('') : `<div class="empty"><div class="art">${ic('at')}</div><h3>${t('noMentions')}</h3></div>`;
+  }
+  if (f === 'threads') {
+    if (!S.threadsList || Date.now() - S.threadsList.at > 20000) S.threadsList = { at: Date.now(), rows: await B.threadsList().catch(() => []) };
+    const rows = S.threadsList.rows.filter(r => S.conv.has(r.conversation_id) && (!q || (r.root_body || '').toLowerCase().includes(q)));
+    return rows.length ? rows.map((r, i) => `<div class="ci mi th" data-th="${r.root_id}" data-c="${r.conversation_id}" style="animation-delay:${Math.min(i, 12) * 22}ms">${convAvHTML(S.conv.get(r.conversation_id), 44, false)}
+      <div class="meta"><div class="l1"><span class="nm" dir="auto">${esc(convName(S.conv.get(r.conversation_id)))}</span><span class="tm">${fmtShort(r.last_at)}</span></div>
+      <div class="l2"><span class="pv" dir="auto"><b>${esc(memberOf(r.root_sender).display_name.split(' ')[0])}:</b> ${esc((r.root_body || '').slice(0, 90) || '📎')}</span></div>
+      <div class="th-meta">${ic('thread', 'ico-s')} ${r.replies} ${r.replies === 1 ? t('reply1') : t('replies')} · ${esc(memberOf(r.last_sender).display_name.split(' ')[0])}: ${esc((r.last_body || '').slice(0, 50))}</div></div></div>`).join('')
+      : `<div class="empty"><div class="art">${ic('thread')}</div><h3>${t('noThreads')}</h3><p>${t('noThreadsP')}</p></div>`;
+  }
+  return '';
+}
+const MSG_FILTERS = new Set(['later', 'mentions', 'threads']);
+const _renderSide = renderSide;
+renderSide = function () {
+  if (S.view !== 'chats') return _renderSide();
+  const keepX = $('#side .filters')?.scrollLeft || 0;
+  if (!FILTERS().some(([f]) => f === S.filter)) S.filter = 'all';
+  const isMsg = MSG_FILTERS.has(S.filter);
+  if (!isMsg) {
+    const was = S.filter, lbl = was.startsWith('lbl:'); if (lbl) S.filter = '__lbl';
+    _renderSide();
+    S.filter = was;
+    if (lbl) { const list = S.inbox.filter(convMatches); $('#sideList').innerHTML = list.length ? list.map(ciHTML).join('') : `<div class="empty"><div class="art">${ic('tag')}</div><h3>${t('noResults')}</h3></div>`; bindSideItems(); }
+  } else {
+    _renderSide();
+    const sl = $('#sideList'); sl.innerHTML = `<div style="text-align:center;padding:30px"><i class="spin" style="color:var(--muted)"></i></div>`;
+    const tok = (S._mlTok = (S._mlTok || 0) + 1);
+    msgListBody().then(html => { if (tok !== S._mlTok || !$('#sideList')) return; $('#sideList').innerHTML = html; bindMsgItems(); hydrate($('#sideList')); });
+  }
+  // replace filter chips
+  const fl = $('#side .filters');
+  if (fl) {
+    fl.innerHTML = FILTERS().map(([f, l, col]) => { const n = chipCount(f); return `<button class="chip ${S.filter === f ? 'on' : ''}" data-f="${f}" ${col ? `style="--lc:${col}"` : ''}>${col ? '<i class="ldot"></i>' : ''}${esc(l)}${n ? `<span class="cnum">${n > 99 ? '99+' : n}</span>` : ''}</button>`; }).join('')
+      + `<button class="chip" id="lblAdd" title="${t('manageLabels')}">${ic('tag', 'ico-s')}+</button>`;
+    $$('.chip[data-f]', fl).forEach(b => b.onclick = () => { S.filter = b.dataset.f; if (b.dataset.f === 'mentions') S.mentionsList = null; if (b.dataset.f === 'threads') S.threadsList = null; renderSide(); });
+    $('#lblAdd').onclick = () => labelsModal();
+    fl.scrollLeft = keepX;
+  }
+  bindSideItems();
+};
+function bindSideItems() {
+  $$('#sideList .ci[data-c]:not(.mi)').forEach(el => {
+    el.onclick = () => openConv(el.dataset.c);
+    el.oncontextmenu = e => { e.preventDefault(); convMenu(el.dataset.c, e.clientX, e.clientY); };
+    let lp; el.addEventListener('touchstart', () => { lp = setTimeout(() => { navigator.vibrate?.(12); convMenu(el.dataset.c); lp = null; }, 520); }, { passive: true });
+    el.addEventListener('touchmove', () => clearTimeout(lp), { passive: true }); el.addEventListener('touchend', () => clearTimeout(lp));
+    const ls = S.convLabels.get(el.dataset.c);
+    if (ls && ls.size && !$('.lbls', el)) $('.l1 .nm', el)?.insertAdjacentHTML('beforeend', `<span class="lbls">${[...ls].map(id => S.labels.find(l => l.id === id)).filter(Boolean).map(l => `<i style="background:${l.color || 'var(--muted)'}" title="${esc(l.name)}"></i>`).join('')}</span>`);
+  });
+}
+function bindMsgItems() {
+  $$('#sideList .mi').forEach(el => {
+    el.onclick = e => {
+      const d = e.target.closest('[data-done]'); if (d) { e.stopPropagation(); const r = S.later.get(d.dataset.done); toggleLater(r?.msg || { id: d.dataset.done }); return; }
+      if (el.dataset.th) return openThread(el.dataset.th, el.dataset.c);
+      openConv(el.dataset.c, { jumpTo: el.dataset.mid }).then(() => setTimeout(() => jumpToMsg(el.dataset.mid), 350));
+    };
+  });
+}
+function convMenu(cid, x, y) {
+  const c = S.conv.get(cid); if (!c) return;
+  const mine = S.convLabels.get(cid) || new Set();
+  const html = `<div class="menu-t">${esc(convName(c))}</div>
+    <button class="menu-it" data-k="pin">${ic('pin')}${c.pinned ? t('unpinChat') : t('pinChat')}</button>
+    <button class="menu-it" data-k="mute">${ic(c.muted ? 'bell' : 'bellOff')}${c.muted ? t('unmute') : t('mute')}</button>
+    <div class="menu-t">${t('labels')}</div>
+    ${S.labels.map(l => `<button class="menu-it" data-l="${l.id}"><i class="ldot" style="--lc:${l.color}"></i>${esc(l.name)}<span class="grow"></span>${mine.has(l.id) ? ic('check') : ''}</button>`).join('')}
+    <button class="menu-it" data-k="lbl">${ic('plus')}${t('newLabel')}</button>`;
+  const pick = (root, close) => {
+    $$('[data-k]', root).forEach(b => b.onclick = async () => {
+      close(); const k = b.dataset.k;
+      if (k === 'pin') { c.pinned = !c.pinned; await B.setPart(cid, { pinned: c.pinned }).catch(() => {}); S.inbox.sort((a, b2) => (b2.pinned - a.pinned) || (a.last_message_at < b2.last_message_at ? 1 : -1)); renderSide(); }
+      if (k === 'mute') { c.muted = !c.muted; await B.setPart(cid, { muted: c.muted }).catch(() => {}); renderSide(); }
+      if (k === 'lbl') labelsModal(cid);
+    });
+    $$('[data-l]', root).forEach(b => b.onclick = () => { close(); setLabel(cid, b.dataset.l, !mine.has(b.dataset.l)); });
+  };
+  if (S.mobile || x == null) sheet(html, pick); else popover(html, x, y, pick);
+}
+async function setLabel(cid, lid, on) {
+  if (!S.convLabels.has(cid)) S.convLabels.set(cid, new Set());
+  on ? S.convLabels.get(cid).add(lid) : S.convLabels.get(cid).delete(lid);
+  renderSide(); if (S.infoOpen && S.cur === cid) renderInfo();
+  try { await B.setConvLabel(cid, lid, on); } catch (e) { toast(errMsg(e), 'err'); }
+}
+function labelsModal(forConv) {
+  let col = LABEL_COLORS[S.labels.length % LABEL_COLORS.length];
+  const ov = modal(t('labels'), `<div id="lbL"></div>
+    <div class="field" style="margin-top:14px"><label>${t('newLabel')}</label><div class="row" style="gap:8px"><input class="input" id="lbN" maxlength="24" placeholder="${t('labelName')}" style="flex:1"><button class="btn btn-primary" id="lbA">${ic('plus')}</button></div>
+    <div class="row lb-cols" style="gap:6px;margin-top:10px">${LABEL_COLORS.map(c => `<button type="button" data-col="${c}" style="--lc:${c}" class="${c === col ? 'on' : ''}"></button>`).join('')}</div></div>`);
+  const drawL = () => {
+    const mine = forConv ? (S.convLabels.get(forConv) || new Set()) : null;
+    $('#lbL', ov).innerHTML = S.labels.length ? S.labels.map(l => `<div class="trow" data-l="${l.id}"><i class="ldot" style="--lc:${l.color}"></i><b class="grow">${esc(l.name)}</b>
+      ${forConv ? `<span class="switch ${mine.has(l.id) ? 'on' : ''}" data-tg="1" style="cursor:pointer"></span>` : ''}<button class="ibtn sm" data-del="1" title="${t('delLabel')}">${ic('trash')}</button></div>`).join('') : `<p class="muted">${t('noResults')}</p>`;
+    $$('[data-l]', ov).forEach(r => {
+      const id = r.dataset.l;
+      $('[data-tg]', r) && ($('[data-tg]', r).onclick = () => { setLabel(forConv, id, !(S.convLabels.get(forConv)?.has(id))); drawL(); });
+      $('[data-del]', r).onclick = () => confirmBox(t('delLabel'), S.labels.find(l => l.id === id)?.name || '', t('del'), async () => { await B.delLabel(id).catch(e => toast(errMsg(e), 'err')); S.labels = S.labels.filter(l => l.id !== id); S.convLabels.forEach(s => s.delete(id)); if (S.filter === 'lbl:' + id) S.filter = 'all'; drawL(); renderSide(); });
+    });
+  };
+  $$('[data-col]', ov).forEach(b => b.onclick = () => { col = b.dataset.col; $$('[data-col]', ov).forEach(x => x.classList.toggle('on', x === b)); });
+  $('#lbA', ov).onclick = async () => {
+    const n = $('#lbN', ov).value.trim(); if (!n) return;
+    try { const l = await B.addLabel(n, col); S.labels.push(l); $('#lbN', ov).value = ''; if (forConv) await setLabel(forConv, l.id, true); drawL(); renderSide(); } catch (e) { toast(errMsg(e), 'err'); }
+  };
+  $('#lbN', ov).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#lbA', ov).click(); } };
+  drawL();
+}
+
+/* conversation info: labels row */
+const _renderInfo = renderInfo;
+renderInfo = async function () {
+  await _renderInfo();
+  const c = curConv(), el = $('#info'); if (!c || !el) return;
+  const pin = $('#iPin', el); if (!pin || $('#iLbl', el)) return;
+  const ls = [...(S.convLabels.get(c.id) || [])].map(id => S.labels.find(l => l.id === id)).filter(Boolean);
+  pin.insertAdjacentHTML('afterend', `<div class="set-row" id="iLbl"><div class="ico">${ic('tag')}</div><span class="grow">${t('labels')}${ls.length ? `<small class="muted" style="display:block;font-size:12px">${ls.map(l => esc(l.name)).join(' · ')}</small>` : ''}</span></div>`);
+  $('#iLbl', el).onclick = () => labelsModal(c.id);
+};
+
+/* ─────────── message menu: Later + Thread ─────────── */
+msgMenu = function (id, x, y) {
+  const ch = chatOf(S.cur), m = ch.byId.get(id), c = curConv(); if (!m || m.deleted_at || m._status) return;
+  const own = m.sender_id === S.me.user_id, adm = amConvAdmin(c), root = m.reply_to || id, n = (S.thc.get(root)?.n) || 0;
+  const items = [
+    ['reply', 'reply', t('reply')],
+    ['thread', 'thread', n && !m.reply_to ? `${t('viewThread')} (${n})` : m.reply_to ? t('viewThread') : t('replyThread')],
+    ['later', 'bookmark', S.later.has(id) ? t('unlater') : t('later')],
+    m.body ? ['copy', 'copy', t('copy')] : null,
+    own && m.body && m.kind === 'text' ? ['edit', 'edit', t('edit')] : null,
+    adm ? ['pin', 'pin', m.pinned ? t('unpin') : t('pin')] : null,
+    m.requires_ack ? ['ackrep', 'eye', t('ackReport')] : null,
+    (own || adm) ? ['del', 'trash', t('del'), 'danger'] : null,
+  ].filter(Boolean);
+  const html = `<div class="quick-react">${QUICK.map(e => `<button data-e="${e}">${e}</button>`).join('')}<button data-e="+">${ic('plus')}</button></div>
+    ${items.map(([k, i, l, cls]) => `<button class="menu-it ${cls || ''}" data-k="${k}">${ic(i)}${l}</button>`).join('')}`;
+  const done = k => {
+    if (k === 'reply') startReply(id);
+    if (k === 'thread') openThread(root, m.conversation_id);
+    if (k === 'later') toggleLater(m);
+    if (k === 'copy') navigator.clipboard?.writeText(m.body).then(() => toast(t('copied')));
+    if (k === 'edit') startEdit(id);
+    if (k === 'pin') B.updateMessage(id, { pinned: !m.pinned }).then(r => { applyMsgUpdate(r); B.pinned(S.cur).then(p => { chatOf(S.cur).pinned = p; renderPinBar(); }); }).catch(e => toast(errMsg(e), 'err'));
+    if (k === 'ackrep') ackReport(id);
+    if (k === 'del') confirmBox(t('delQ'), t('delP'), t('del'), () => B.updateMessage(id, { deleted_at: new Date().toISOString() }).then(applyMsgUpdate).catch(e => toast(errMsg(e), 'err')));
+  };
+  const pick = (r, close) => {
+    $$('[data-e]', r).forEach(b => b.onclick = () => { close(); if (b.dataset.e === '+') emojiPicker(null, e => toggleReact(id, e)); else toggleReact(id, b.dataset.e); });
+    $$('[data-k]', r).forEach(b => b.onclick = () => { close(); done(b.dataset.k); });
+  };
+  if (S.mobile || x == null) sheet(html, pick); else popover(html, x, y, pick);
+};
+
+/* ─────────── threads ─────────── */
+function threadLinkHTML(id) {
+  const x = S.thc.get(id); if (!x || !x.n) return '';
+  return `<button class="th-link" data-thr="${id}">${ic('thread', 'ico-s')}<b>${x.n} ${x.n === 1 ? t('reply1') : t('replies')}</b><span>${t('lastReply')} ${fmtShort(x.last)}</span></button>`;
+}
+function decoThread(id) {
+  const el = $(`#msgsIn [data-m="${id}"]`); if (!el) return;
+  $('.th-link', el)?.remove();
+  const html = threadLinkHTML(id); if (!html) return;
+  const col = $('.col', el) || el; col.insertAdjacentHTML('beforeend', html);
+  $('.th-link', col).onclick = e => { e.stopPropagation(); openThread(id, S.cur); };
+}
+async function refreshThreadCounts() {
+  const c = curConv(); if (!c) return; const ch = chatOf(c.id);
+  const local = new Map();
+  ch.list.forEach(m => { if (m.reply_to && !m.deleted_at) { const x = local.get(m.reply_to) || { n: 0, last: m.created_at }; x.n++; if (m.created_at > x.last) x.last = m.created_at; local.set(m.reply_to, x); } });
+  local.forEach((v, k) => S.thc.set(k, v));
+  ch.list.forEach(m => decoThread(m.id));
+  const ids = ch.list.filter(m => !m.reply_to && !m._status && m.kind !== 'system' && /^[0-9a-f-]{36}$/i.test(m.id)).map(m => m.id).slice(-120);
+  const rs = await B.threadCounts(ids).catch(() => []);
+  if (S.cur !== c.id) return;
+  rs.forEach(r => { const l = S.thc.get(r.root); if (!l || r.replies > l.n) S.thc.set(r.root, { n: r.replies, last: r.last_at }); decoThread(r.root); });
+}
+const _rebuildMsgs = rebuildMsgs;
+rebuildMsgs = function (...a) { _rebuildMsgs(...a); refreshThreadCounts(); };
+const _patchMsg = patchMsg;
+patchMsg = function (id) { _patchMsg(id); decoThread(id); };
+const _appendMsg = appendMsg;
+appendMsg = function (m, anim) {
+  _appendMsg(m, anim);
+  if (m.reply_to) { const x = S.thc.get(m.reply_to) || { n: 0, last: m.created_at }; if (!m._counted) { x.n++; m._counted = true; } x.last = m.created_at; S.thc.set(m.reply_to, x); decoThread(m.reply_to); }
+};
+const _rtIns = RT.msgInsert;
+RT.msgInsert = async function (m) {
+  await _rtIns.call(RT, m);
+  if (m.reply_to) { if (S.threadsList) S.threadsList = null; if (S._thrOpen === m.reply_to) S._thrDraw && S._thrDraw(); }
+  if ((m.mentions || []).includes(S.me?.user_id)) S.mentionsList = null;
+};
+async function openThread(rootId, convId) {
+  let root = chatOf(convId).byId.get(rootId) || await B.message(rootId);
+  if (!root) return;
+  const c = S.conv.get(root.conversation_id);
+  const ov = modal(`${ic('thread', 'ico-s')} ${t('thread')} · ${esc(convName(c))}`, `<div class="thr" id="thrL"><div style="text-align:center;padding:30px"><i class="spin" style="color:var(--muted)"></i></div></div>`,
+    { wide: true, cls: 'thr-modal', onClose: () => { S._thrOpen = null; S._thrDraw = null; },
+      foot: c?.can_post === false ? '' : `<div class="thr-comp"><textarea class="input" id="thrT" rows="1" placeholder="${t('threadReply')}" dir="auto"></textarea><button class="btn btn-primary" id="thrS">${ic('send')}</button></div>` });
+  const item = m => { const w = memberOf(m.sender_id); return `<div class="thr-m ${m.id === root.id ? 'root' : ''}" data-tm="${m.id}">${avHTML(w, 36)}<div class="grow" style="min-width:0"><div class="thr-h"><b>${esc(w.display_name)}</b><span class="muted">${dayKey(m.created_at) === dayKey(Date.now()) ? fmtTime(m.created_at) : fmtShort(m.created_at) + ' · ' + fmtTime(m.created_at)}</span></div>
+      <div class="thr-b" dir="auto">${m.deleted_at ? `<i class="muted">${t('deleted')}</i>` : m.body ? fmtText(m.body, m.mentions) : esc(msgSummary(m))}</div></div></div>`; };
+  const draw = async () => {
+    const rs = await B.thread(root.id).catch(() => []);
+    const L = $('#thrL', ov); if (!L) return;
+    L.innerHTML = item(root) + `<div class="thr-sep">${rs.length} ${rs.length === 1 ? t('reply1') : t('replies')}</div>` + rs.map(item).join('');
+    $$('.mention', L).forEach(b => b.onclick = () => openProfile(b.dataset.uid));
+    hydrate(L); L.parentElement.scrollTop = L.parentElement.scrollHeight;
+    S.thc.set(root.id, { n: rs.length, last: rs.length ? rs[rs.length - 1].created_at : root.created_at }); if (S.cur === root.conversation_id) decoThread(root.id);
+  };
+  S._thrOpen = root.id; S._thrDraw = draw; draw();
+  const tx = $('#thrT', ov), sb = $('#thrS', ov);
+  if (tx) {
+    tx.oninput = () => autoGrow(tx);
+    tx.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !S.mobile) { e.preventDefault(); sb.click(); } };
+    sb.onclick = async () => {
+      const body = tx.value.trim(); if (!body) return; tx.value = ''; autoGrow(tx); sb.disabled = true;
+      try {
+        const row = await B.send({ conversation_id: root.conversation_id, body, reply_to: root.id, client_id: uid(), mentions: [] });
+        const ch = S.chats.get(root.conversation_id);
+        if (row && ch && ch.loaded && !ch.byId.has(row.id)) { ch.list.push(row); ch.byId.set(row.id, row); if (S.cur === row.conversation_id) appendMsg(row, true); }
+        if (row) bumpInbox(row);
+        await draw(); S.threadsList = null;
+      } catch (e) { toast(errMsg(e), 'err'); tx.value = body; }
+      sb.disabled = false; tx.focus();
+    };
+    setTimeout(() => tx.focus(), 80);
+  }
+}
+
+/* ─────────── styles ─────────── */
+document.head.insertAdjacentHTML('beforeend', `<style id="cx2css">
+.cx-id{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:var(--brand-soft);color:var(--brand2);font-size:12.5px;cursor:pointer;user-select:all;border:1px solid transparent}
+.cx-id:hover{border-color:var(--brand2)} .cx-id b{letter-spacing:.6px;font-weight:700}
+.cx-type .tabs{display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);margin:0}
+.cx-type .tabs button{color:#9dbdc9;background:transparent;box-shadow:none} .cx-type .tabs button.on{background:linear-gradient(135deg,#0a8bb8,#004e6d);color:#fff;box-shadow:0 6px 16px -8px #0a8bb8} .cx-note{font-size:12.5px;color:#9dbdc9;display:flex;gap:6px;align-items:flex-start;line-height:1.5}
+.ldot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--lc,var(--muted));flex:0 0 auto}
+.filters .chip{position:relative;overflow:hidden;isolation:isolate;flex:0 0 auto} .filters .chip .ldot{margin-inline-end:2px} .filters .chip .cnum{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;display:inline-grid;place-items:center;font-weight:700}
+.filters .chip.on .cnum{background:#fff;color:var(--accent)} #lblAdd{opacity:.75}
+.lbls{display:inline-flex;gap:3px;margin-inline-start:6px;vertical-align:middle} .lbls i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.ci.mi .mi-in{color:var(--muted);font-weight:400;font-size:12.5px} .ci.mi .meta{position:relative} .mi-done{position:absolute;inset-inline-end:0;bottom:-4px}
+.ci.mi .mi-pv{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .th-meta{font-size:12px;color:var(--brand2);margin-top:3px;display:flex;gap:4px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-t{font-size:11.5px;color:var(--muted);padding:8px 12px 4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.lb-cols button{width:26px;height:26px;border-radius:50%;background:var(--lc);border:2px solid transparent;cursor:pointer} .lb-cols button.on{border-color:var(--text);box-shadow:0 0 0 2px var(--panel) inset}
+.th-link{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:4px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:12.5px;color:var(--brand2);cursor:pointer;max-width:100%}
+.th-link span{color:var(--muted);font-size:11.5px} .th-link:hover{border-color:var(--brand2)} .m.own .th-link{align-self:flex-end}
+.thr{display:flex;flex-direction:column;gap:2px} .thr-m{display:flex;gap:10px;padding:10px 6px;border-radius:12px} .thr-m.root{background:var(--panel2);margin-bottom:4px}
+.thr-h{display:flex;gap:8px;align-items:baseline;font-size:13.5px} .thr-h .muted{font-size:11.5px} .thr-b{font-size:14.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;margin-top:2px}
+.thr-sep{font-size:12px;color:var(--muted);padding:6px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.thr-modal .modal-f{display:block} .thr-comp{display:flex;gap:8px;width:100%;align-items:flex-end} .thr-comp textarea{flex:1 1 auto;resize:none;min-height:44px;max-height:160px}
+.thr-comp .btn{flex:0 0 48px;width:48px;height:44px;padding:0;display:grid;place-items:center}
+.ws-me{display:flex;align-items:center;gap:14px;padding:16px;border-radius:18px;background:var(--panel);border:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+.ws-me b{display:block;font-size:16px} .ws-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.ws-app{position:relative;display:flex;flex-direction:column;gap:6px;padding:18px;border-radius:18px;background:var(--panel);border:1px solid var(--line);text-decoration:none;color:inherit;animation:rise .4s var(--ease) both;transition:transform .2s,border-color .2s,box-shadow .2s}
+.ws-app:hover{transform:translateY(-2px);border-color:var(--c);box-shadow:0 10px 28px -14px var(--c)}
+.ws-ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:color-mix(in srgb,var(--c) 16%,transparent);margin-bottom:4px}
+.ws-app b{font-size:15.5px} .ws-app small{color:var(--muted);font-size:12.5px;line-height:1.45} .ws-go{position:absolute;top:14px;inset-inline-end:14px;color:var(--muted);opacity:.6} .ws-go svg{width:16px;height:16px}
+.add-c .panel-h .cx-id{margin-inline-start:auto} .dir-h{font-family:var(--font-d);font-size:17px;margin:18px 0 10px}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+</style>`);
+
 boot();
 </script>
 </body>
