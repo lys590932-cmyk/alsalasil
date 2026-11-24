@@ -791,6 +791,7 @@ var I18N = {
     err_no_code:'من فضلك ادخل كود الموظف',
     err_bad_phone:'من فضلك ادخل رقم هاتف صحيح',
     err_not_found:'كود الموظف غير موجود — تأكد من الكود أو تواصل مع الإدارة',
+    err_blocked:'حسابك موقوف من الإدارة — مينفعش تستخدم التطبيق. تواصل مع الإدارة.',
     err_phone_mismatch:'رقم الهاتف لا يطابق المسجّل لهذا الكود',
     err_server:'تعذّر الاتصال بالخادم — تأكد من الإنترنت وحاول مرة أخرى',
     offline:'لا يوجد اتصال بالإنترنت — يتم عرض آخر بيانات محفوظة',
@@ -982,6 +983,7 @@ var I18N = {
     err_no_code:'Please enter your employee code',
     err_bad_phone:'Please enter a valid phone number',
     err_not_found:'Employee code not found — check the code or contact management',
+    err_blocked:'Your account has been suspended by management. You cannot use the app — contact management.',
     err_phone_mismatch:'The phone number does not match the one registered for this code',
     err_server:'Could not connect to the server — check your internet and try again',
     offline:'No internet connection — showing last saved data',
@@ -1368,13 +1370,16 @@ function doLogin(){
       showLoginErr(t('err_phone_mismatch'));
       return;
     }
-    DRIVER = d;
-    if($('inpRemember').checked){
-      localStorage.setItem(SK_SESSION, JSON.stringify({id:d.id, phone:enteredPhone}));
-    }else{
-      localStorage.removeItem(SK_SESSION);
-    }
-    enterApp(false);
+    return flyBlocked(d.id).then(function(bl){
+      if(bl){ showLoginErr(t('err_blocked')); return; }
+      DRIVER = d;
+      if($('inpRemember').checked){
+        localStorage.setItem(SK_SESSION, JSON.stringify({id:d.id, phone:enteredPhone}));
+      }else{
+        localStorage.removeItem(SK_SESSION);
+      }
+      enterApp(false);
+    });
   }).catch(function(err){
     console.error(err);
     showLoginErr(t('err_server'));
@@ -1384,6 +1389,22 @@ function doLogin(){
   });
 }
 
+/* إيقاف حساب سائق من الإدارة (جدول fly_blocks) */
+function flyBlocked(id){
+  return sb('fly_blocks?driver_id=eq.'+encodeURIComponent(id)+'&select=driver_id')
+    .then(function(r){ return !!(r && r.length); }).catch(function(){ return false; });
+}
+function forceBlockedOut(){
+  try{ stopLiveTracking(); }catch(e){}
+  try{ dropPushSubscription(); }catch(e){}
+  localStorage.removeItem(SK_SESSION);
+  localStorage.removeItem(SK_CACHE);
+  DRIVER=null; CLOCKINS=[]; DEDUCTIONS=[]; SCHEDULES=[]; NOTIFS=[];
+  $('appScreen').classList.add('hide');
+  $('loginScreen').classList.remove('hide');
+  showLoginErr(t('err_blocked'));
+  window.scrollTo(0,0);
+}
 function tryAutoLogin(){
   var sess=null;
   try{ sess=JSON.parse(localStorage.getItem(SK_SESSION)||'null'); }catch(e){}
@@ -1404,7 +1425,9 @@ function tryAutoLogin(){
     shownFromCache = true;
   }
 
-  sb('drivers?id=eq.'+encodeURIComponent(sess.id)+'&select=*').then(function(rows){
+  Promise.all([sb('drivers?id=eq.'+encodeURIComponent(sess.id)+'&select=*'), flyBlocked(sess.id)]).then(function(res){
+    var rows=res[0];
+    if(res[1]){ forceBlockedOut(); return; }
     if(rows && rows.length){
       DRIVER = rows[0];
       if(!shownFromCache){ enterApp(false); }
@@ -1469,6 +1492,7 @@ function renderAppBar(){
 function refreshAll(){
   if(!DRIVER) return;
   var id = encodeURIComponent(DRIVER.id);
+  flyBlocked(DRIVER.id).then(function(bl){ if(bl && DRIVER) forceBlockedOut(); });
   Promise.all([
     sb('clockin?driver_id=eq.'+id+'&order=created_at.desc&limit=60').catch(function(){return null;}),
     sb('deductions?driver_id=eq.'+id+'&order=date.desc&limit=200').catch(function(){return null;}),
