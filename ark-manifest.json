@@ -1,0 +1,34 @@
+{
+ "id": "ark-salasil",
+ "name": "AL-SALASIL ARK — نظام إدارة السائقين",
+ "short_name": "ARK",
+ "description": "نظام إدارة السائقين — شركة السلاسل",
+ "start_url": "./%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D8%B3%D9%84_%D9%86%D8%B8%D8%A7%D9%85_%D8%A7%D8%AF%D8%A7%D8%B1%D8%A9_%D8%A7%D9%84%D8%B3%D8%A7%D8%A6%D9%82%D9%8A%D9%86_28.html",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "any",
+ "dir": "rtl",
+ "lang": "ar",
+ "background_color": "#f4f6fb",
+ "theme_color": "#1c5878",
+ "icons": [
+  {
+   "src": "ark-icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "ark-icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "ark-icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
