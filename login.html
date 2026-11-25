@@ -3,271 +3,334 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تسجيل الدخول — شركة السلاسل</title>
+<title>تسجيل الدخول — شركة {{NAME_AR}}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{
-    font-family:'Cairo',sans-serif;
-    min-height:100vh;
-    background:linear-gradient(135deg,#0f3a52 0%,#1c5878 50%,#0f3a52 100%);
-    display:flex;align-items:center;justify-content:center;
-    padding:20px;color:#0f172a;
-    background-attachment:fixed;
-  }
-  body::before{
-    content:'';position:fixed;inset:0;
-    background-image:
-      radial-gradient(circle at 20% 20%, rgba(194,148,73,0.15) 0%, transparent 40%),
-      radial-gradient(circle at 80% 80%, rgba(194,148,73,0.1) 0%, transparent 40%);
-    pointer-events:none;
-  }
-  .container{
-    width:100%;max-width:440px;
-    background:#fff;border-radius:24px;
-    box-shadow:0 30px 80px rgba(0,0,0,0.25);
-    overflow:hidden;position:relative;z-index:1;
-  }
-  .header{
-    background:linear-gradient(135deg,#0f3a52,#1c5878);
-    color:#fff;padding:40px 30px 32px;text-align:center;
-    border-bottom:5px solid #c29449;
-    position:relative;
-  }
-  .header::after{
-    content:'';position:absolute;bottom:-3px;left:0;right:0;height:6px;
-    background:linear-gradient(90deg,transparent,#c29449,transparent);
-  }
-  .logo-circle{
-    width:80px;height:80px;border-radius:50%;
-    background:linear-gradient(135deg,#c29449,#e6b95d);
-    margin:0 auto 16px;
-    display:flex;align-items:center;justify-content:center;
-    box-shadow:0 8px 24px rgba(194,148,73,0.4);
-    font-size:34px;font-weight:900;color:#0f3a52;
-  }
-  .header h1{font-size:26px;font-weight:900;margin-bottom:6px;letter-spacing:0.5px}
-  .header .subtitle{font-size:13px;color:#e2e8f0;font-weight:500}
-  .header .en{font-size:11px;color:#c29449;font-weight:700;margin-top:8px;letter-spacing:2px}
-  .form{padding:36px 32px}
-  .form h2{font-size:20px;font-weight:800;color:#0f3a52;margin-bottom:6px;text-align:center}
-  .form .welcome{font-size:13px;color:#64748b;text-align:center;margin-bottom:26px}
-  .field{margin-bottom:18px}
-  .field label{
-    display:block;font-size:12px;font-weight:700;color:#475569;
-    margin-bottom:6px;padding-right:2px;
-  }
-  .input-wrap{position:relative}
-  .input-wrap input{
-    width:100%;padding:14px 44px 14px 14px;
-    font-family:'Cairo';font-size:14px;font-weight:600;
-    border:2px solid #e2e8f0;border-radius:12px;
-    background:#f8fafc;color:#0f172a;
-    transition:all 0.2s;direction:ltr;text-align:right;
-  }
-  .input-wrap input:focus{
-    outline:none;border-color:#c29449;background:#fff;
-    box-shadow:0 0 0 3px rgba(194,148,73,0.15);
-  }
-  .input-wrap .icon{
-    position:absolute;right:14px;top:50%;transform:translateY(-50%);
-    font-size:18px;color:#94a3b8;pointer-events:none;
-  }
-  .input-wrap input:focus + .icon{color:#c29449}
-  .options{
-    display:flex;justify-content:space-between;align-items:center;
-    margin-bottom:22px;font-size:12px;
-  }
-  .remember{display:flex;align-items:center;gap:6px;color:#64748b;cursor:pointer;font-weight:600}
-  .remember input{width:16px;height:16px;accent-color:#c29449;cursor:pointer}
-  .forgot{color:#c29449;text-decoration:none;font-weight:700}
-  .forgot:hover{color:#0f3a52}
-  .btn{
-    width:100%;padding:15px;
-    background:linear-gradient(135deg,#0f3a52,#1c5878);
-    color:#fff;border:none;border-radius:12px;
-    font-family:'Cairo';font-size:15px;font-weight:800;
-    cursor:pointer;transition:all 0.2s;
-    box-shadow:0 6px 16px rgba(15,58,82,0.25);
-    display:flex;align-items:center;justify-content:center;gap:8px;
-  }
-  .btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(15,58,82,0.35)}
-  .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
-  .btn .spin{
-    width:16px;height:16px;border:2.5px solid rgba(255,255,255,0.3);
-    border-top-color:#fff;border-radius:50%;
-    animation:spin 0.7s linear infinite;display:none;
-  }
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .btn.loading .spin{display:inline-block}
-  .btn.loading .btn-text{opacity:0.7}
-  .alert{
-    padding:12px 14px;border-radius:10px;font-size:13px;font-weight:600;
-    margin-bottom:16px;display:none;text-align:center;
-  }
-  .alert.on{display:block;animation:fadeIn 0.3s}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-  .alert.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
-  .alert.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}
-  .footer{
-    padding:16px;background:#f8fafc;text-align:center;
-    font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;
-  }
-  .footer .company{color:#0f3a52;font-weight:800;margin-bottom:3px;font-size:12px}
-  .roles-hint{
-    display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
-    margin-top:10px;
-  }
-  .role-badge{
-    padding:3px 8px;background:#fdf6e9;color:#b45309;
-    border-radius:12px;font-size:10px;font-weight:700;
-  }
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#0f3a52; --blue:#1c5878; --teal:#0d9488; --gold:#c29449;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+body{
+  font-family:'Cairo',sans-serif; min-height:100vh; color:#0f172a;
+  background:linear-gradient(135deg,#0b2b3d 0%,#12475f 48%,#0d4a49 100%);
+  background-attachment:fixed;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  overflow:hidden;
+}
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(194,148,73,.18) 0%, transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(45,212,191,.14) 0%, transparent 44%);
+}
+/* جسيمات خفيفة في الخلفية */
+.orb{ position:fixed; border-radius:50%; filter:blur(58px); opacity:.30; pointer-events:none }
+.orb1{ width:400px;height:400px; background:#0d9488; top:-130px; right:-110px; animation:drift 17s ease-in-out infinite }
+.orb2{ width:340px;height:340px; background:#c29449; bottom:-110px; left:-90px; animation:drift 21s ease-in-out infinite reverse }
+@keyframes drift{ 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(34px,-30px) scale(1.1)} }
+
+.container{
+  width:100%; max-width:440px; background:#fff; border-radius:24px;
+  box-shadow:0 34px 90px rgba(0,0,0,.34); overflow:hidden;
+  position:relative; z-index:1;
+  animation:riseIn .6s var(--ease) both;
+}
+@keyframes riseIn{ from{opacity:0; transform:translateY(26px) scale(.97)} to{opacity:1; transform:none} }
+
+.header{
+  background:linear-gradient(135deg,var(--navy),var(--blue));
+  color:#fff; padding:34px 30px 28px; text-align:center;
+  border-bottom:5px solid var(--gold); position:relative; overflow:hidden;
+}
+.header::after{
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(360px 180px at 50% -40%, rgba(255,255,255,.16), transparent 70%);
+}
+.logo-circle{
+  width:74px;height:74px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold),#e6b95d);
+  margin:0 auto 14px; display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 26px rgba(194,148,73,.45);
+  font-size:31px;font-weight:900;color:var(--navy); position:relative;
+  animation:logoIn .7s var(--ease) .1s both;
+}
+@keyframes logoIn{ from{opacity:0;transform:scale(.5) rotate(-22deg)} to{opacity:1;transform:none} }
+.header h1{font-size:24px;font-weight:900;margin-bottom:5px;position:relative}
+.header .subtitle{font-size:12.5px;color:#dbe6ec;font-weight:500;position:relative}
+.header .en{font-size:10.5px;color:var(--gold);font-weight:700;margin-top:8px;letter-spacing:2.4px;position:relative}
+
+.form{padding:30px 30px 26px}
+.form h2{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:5px;text-align:center}
+.form .welcome{font-size:12.5px;color:#64748b;text-align:center;margin-bottom:22px;line-height:1.7}
+
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px}
+.input-wrap{position:relative}
+.input-wrap input{
+  width:100%; padding:13px 42px 13px 42px;
+  font-family:'Cairo';font-size:14px;font-weight:600;
+  border:2px solid #e2e8f0;border-radius:12px;background:#f8fafc;
+  transition:border-color .2s, background .2s, box-shadow .2s;
+}
+.input-wrap input:focus{
+  outline:none;border-color:var(--blue);background:#fff;
+  box-shadow:0 0 0 4px rgba(28,88,120,.12);
+}
+.input-wrap .icon{
+  position:absolute;top:50%;right:13px;transform:translateY(-50%);
+  font-size:17px;color:#94a3b8;pointer-events:none;
+}
+.input-wrap .toggle{
+  position:absolute;top:50%;left:8px;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:#94a3b8;font-size:17px;
+  padding:6px;border-radius:8px;transition:color .2s,background .2s;
+}
+.input-wrap .toggle:hover{color:var(--blue);background:#f1f5f9}
+
+.btn{
+  width:100%;padding:14px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--blue),var(--teal));
+  color:#fff;font-family:'Cairo';font-size:15px;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  box-shadow:0 8px 22px rgba(28,88,120,.30);
+  transition:transform .2s var(--ease), box-shadow .2s, filter .2s;
+  margin-top:6px;
+}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 30px rgba(28,88,120,.38);filter:brightness(1.06)}
+.btn:active:not(:disabled){transform:translateY(0) scale(.99)}
+.btn:disabled{opacity:.62;cursor:not-allowed}
+.btn .spin{
+  width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);
+  border-top-color:#fff;border-radius:50%;display:none;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn.loading .spin{display:block}
+.btn.loading .btn-text{opacity:.75}
+
+.alert{
+  display:none;padding:12px 14px;border-radius:11px;font-size:12.5px;
+  line-height:1.85;margin-bottom:14px;white-space:pre-wrap;
+  animation:shake .4s ease both;
+}
+@keyframes shake{ 0%,100%{transform:translateX(0)} 22%{transform:translateX(-6px)} 62%{transform:translateX(5px)} }
+.alert.on{display:block}
+.alert.err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.alert.ok{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;animation:none}
+
+.hint{
+  margin-top:16px;padding:11px 13px;border-radius:11px;background:#f1f5f9;
+  font-size:11px;color:#64748b;line-height:1.85;
+}
+.hint b{color:var(--navy)}
+.footer{
+  padding:15px;text-align:center;background:#f8fafc;border-top:1px solid #e2e8f0;
+  font-size:10.5px;color:#94a3b8;line-height:1.8;
+}
+.footer .company{font-weight:700;color:#64748b;font-size:11px}
+
+/* شاشة التحقق الأولى */
+.boot{
+  position:fixed;inset:0;z-index:20;
+  background:linear-gradient(135deg,#0b2b3d,#12475f);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;
+  transition:opacity .4s ease, visibility .4s;
+}
+.boot.gone{opacity:0;visibility:hidden}
+.boot .ring{
+  width:46px;height:46px;border:3px solid rgba(255,255,255,.2);
+  border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;
+}
+.boot span{font-size:12.5px;opacity:.72;font-weight:600}
+</style>
+
+<!-- ARK-WATERMARK : علامة {{NAME_AR}} المائية -->
+<style id="ark-watermark-style">
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url('ark-watermark.png');
+  background-repeat:no-repeat;
+  background-position:center center;
+  background-size:min(38vw,420px) auto;
+  opacity:.05;
+  pointer-events:none;
+  user-select:none;
+  z-index:99990;
+}
+@media (max-width:760px){ body::after{ background-size:min(62vw,300px) auto; opacity:.04 } }
+@media print{ body::after{ display:none !important } }
 </style>
 </head>
 <body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="boot" id="boot"><div class="ring"></div><span>بيتحقق من الجلسة…</span></div>
+
 <div class="container">
   <div class="header">
-    <div class="logo-circle">س</div>
-    <h1>شركة السلاسل</h1>
+    <div class="logo-circle">{{MONO_AR}}</div>
+    <h1>شركة {{NAME_AR}}</h1>
     <div class="subtitle">لتوصيل الطلبات الاستهلاكية</div>
-    <div class="en">AL-SALASIL · MANAGEMENT SYSTEM</div>
+    <div class="en">{{NAME_EN_UP}} · MANAGEMENT SYSTEM</div>
   </div>
 
-  <form class="form" id="loginForm">
+  <form class="form" id="loginForm" autocomplete="on">
     <h2>تسجيل الدخول</h2>
-    <div class="welcome">مرحباً بعودتك — أدخل بياناتك للمتابعة</div>
+    <div class="welcome">النظام مقفول — الدخول للموظفين المصرّح لهم فقط</div>
 
     <div class="alert err" id="alert-err"></div>
     <div class="alert ok" id="alert-ok"></div>
 
     <div class="field">
-      <label>البريد الإلكتروني</label>
+      <label for="email">البريد الإلكتروني</label>
       <div class="input-wrap">
-        <input type="email" id="email" required autocomplete="email" placeholder="you@example.com">
-        <span class="icon">✉️</span>
+        <input type="email" id="email" required autocomplete="username" placeholder="you@example.com">
+        <span class="icon"><i class="ti ti-mail"></i></span>
       </div>
     </div>
 
     <div class="field">
-      <label>كلمة السر</label>
+      <label for="pass">كلمة المرور</label>
       <div class="input-wrap">
-        <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
-        <span class="icon">🔒</span>
+        <input type="password" id="pass" required autocomplete="current-password" placeholder="••••••••">
+        <span class="icon"><i class="ti ti-lock"></i></span>
+        <button type="button" class="toggle" id="tgl" aria-label="إظهار كلمة المرور"><i class="ti ti-eye"></i></button>
       </div>
-    </div>
-
-    <div class="options">
-      <label class="remember">
-        <input type="checkbox" id="remember" checked>
-        تذكرني
-      </label>
-      <a href="#" class="forgot" id="forgotBtn">نسيت كلمة السر؟</a>
     </div>
 
     <button type="submit" class="btn" id="loginBtn">
       <span class="spin"></span>
-      <span class="btn-text">دخول للنظام</span>
+      <span class="btn-text"><i class="ti ti-login-2"></i> دخول</span>
     </button>
 
-    <div class="roles-hint">
-      <span class="role-badge">المدير العام</span>
-      <span class="role-badge">المحاسبة</span>
-      <span class="role-badge">HR</span>
-      <span class="role-badge">العمليات</span>
-      <span class="role-badge">سوبر فايزر</span>
+    <div class="hint">
+      <b>نسيت كلمة المرور؟</b> كلّم مدير النظام يعيد ضبطها من لوحة Supabase.<br>
+      محاولات الدخول بتتسجّل، والجلسة بتقفل تلقائياً بعد فترة خمول.
     </div>
   </form>
 
   <div class="footer">
-    <div class="company">شركة السلاسل لتوصيل الطلبات الاستهلاكية</div>
-    <div>© 2026 · Kuwait — نظام إدارة داخلي</div>
+    <div class="company">{{LEGAL_AR}}</div>
+    <div>الكويت · جميع الحقوق محفوظة</div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPA_URL = 'https://pqpowedqewjgkrzvmgyv.supabase.co';
-const SUPA_KEY = 'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT';
-const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage }
-});
+const SUPA_URL  = '{{SUPA_URL}}';
+const SUPA_KEY  = '{{SUPA_KEY}}';
+const APP_PAGE  = 'ark.html';
 
 const $ = id => document.getElementById(id);
-function alertErr(msg){ $('alert-ok').classList.remove('on'); const e=$('alert-err'); e.textContent=msg; e.classList.add('on'); }
-function alertOk(msg){ $('alert-err').classList.remove('on'); const e=$('alert-ok'); e.textContent=msg; e.classList.add('on'); }
-function hideAlerts(){ $('alert-err').classList.remove('on'); $('alert-ok').classList.remove('on'); }
+const errBox = $('alert-err'), okBox = $('alert-ok');
+function showErr(m){ errBox.textContent = m; errBox.classList.add('on'); okBox.classList.remove('on');
+  errBox.style.animation='none'; void errBox.offsetWidth; errBox.style.animation=''; }
+function showOk(m){ okBox.innerHTML = m; okBox.classList.add('on'); errBox.classList.remove('on'); }
+function hideAlerts(){ errBox.classList.remove('on'); okBox.classList.remove('on'); }
 
-// Check if already logged in
-supabase.auth.getSession().then(({data:{session}}) => {
-  if (session) {
-    window.location.href = 'السلاسل_نظام_ادارة_السائقين_28.html';
+/* إظهار/إخفاء كلمة المرور */
+$('tgl').onclick = () => {
+  const p = $('pass');
+  p.type = p.type === 'password' ? 'text' : 'password';
+  $('tgl').innerHTML = '<i class="ti ti-eye' + (p.type === 'text' ? '-off' : '') + '"></i>';
+};
+
+/* ترجمة أخطاء Supabase لعربي مفهوم */
+function explain(e){
+  const m = (e && e.message || '').toLowerCase();
+  if(m.includes('invalid login credentials')) return 'الإيميل أو كلمة المرور غلط.\nلو متأكد منهم، يمكن الحساب لسه ماتعملش — كلّم مدير النظام.';
+  if(m.includes('email not confirmed'))       return 'الحساب موجود بس الإيميل لسه مأكّدش.\nمدير النظام يقدر يأكّده من Supabase ← Authentication ← Users.';
+  if(m.includes('too many requests') || m.includes('rate limit')) return 'محاولات كتير في وقت قصير. استنى دقيقة وجرّب تاني.';
+  if(m.includes('failed to fetch') || m.includes('networkerror'))
+    return 'مفيش اتصال بالسيرفر.\nاتأكد إن النت شغال، ولو فاتح الملف من قرصك جرّب تشغّله من سيرفر محلي.';
+  return 'حصل خطأ: ' + (e && e.message || 'غير معروف');
+}
+
+let sb = null;
+
+/* بيجيب بروفايل المستخدم ويتأكد إنه نشط، وبعدين يدخّله */
+async function proceed(session, viaLogin){
+  const { data: profile, error } = await sb
+    .from('profiles')
+    .select('full_name, full_name_ar, role, is_active')
+    .eq('id', session.user.id)
+    .maybeSingle();
+
+  if(error){
+    showErr('الدخول تم، لكن مقدرتش أقرأ بيانات الصلاحيات.\n' + error.message
+      + '\n\nغالباً جدول profiles لسه ماتعملش — شغّل salasil-auth-setup.sql.');
+    await sb.auth.signOut();
+    return false;
   }
-});
+  if(!profile){
+    showErr('الحساب موجود لكن مالوش صلاحيات في النظام.\nمدير النظام لازم يضيفه لجدول profiles.');
+    await sb.auth.signOut();
+    return false;
+  }
+  if(profile.is_active === false){
+    showErr('الحساب موقوف. كلّم مدير النظام.');
+    await sb.auth.signOut();
+    return false;
+  }
 
-// Handle login
-$('loginForm').addEventListener('submit', async (e) => {
+  const name = profile.full_name_ar || profile.full_name || session.user.email;
+  // نسيب اسم ودور المستخدم للنظام يقرأهم ويعرض شاشة الترحيب
+  try{
+    localStorage.setItem('ark_session_user', JSON.stringify({
+      id: session.user.id, email: session.user.email,
+      name: name, nameEn: profile.full_name || '', role: profile.role, at: Date.now()
+    }));
+    if(viaLogin) localStorage.setItem('ark_show_welcome', '1');
+  }catch(e){}
+
+  try{ await sb.from('profiles').update({ last_login_at: new Date().toISOString() }).eq('id', session.user.id); }catch(e){}
+
+  showOk('أهلاً <b>' + name + '</b> — جاري الدخول…');
+  setTimeout(() => { window.location.href = APP_PAGE; }, viaLogin ? 700 : 250);
+  return true;
+}
+
+/* تحقق مبدئي: لو فيه جلسة شغالة ندخل على طول */
+(async () => {
+  try{
+    sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+      auth:{ persistSession:true, autoRefreshToken:true, storage:window.localStorage, detectSessionInUrl:true }
+    });
+    const { data:{ session } } = await sb.auth.getSession();
+    if(session){ const gone = await proceed(session, false); if(gone) return; }
+  }catch(e){
+    showErr('فشل تحميل النظام: ' + (e.message || e));
+  }
+  $('boot').classList.add('gone');
+  setTimeout(() => $('email').focus(), 420);
+})();
+
+/* الدخول بكلمة المرور */
+$('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   hideAlerts();
   const btn = $('loginBtn');
-  const email = $('email').value.trim();
-  const password = $('password').value;
+  const email = $('email').value.trim(), pass = $('pass').value;
 
-  btn.classList.add('loading');
-  btn.disabled = true;
+  if(!email){ showErr('اكتب البريد الإلكتروني'); return; }
+  if(!pass){ showErr('اكتب كلمة المرور'); return; }
+  if(!sb){ showErr('النظام لسه بيحمّل — جرّب بعد ثانية'); return; }
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-
-    // Fetch profile
-    const { data: profile, error: pErr } = await supabase
-      .from('profiles')
-      .select('full_name, full_name_ar, role, is_active')
-      .eq('id', data.user.id)
-      .single();
-
-    if (pErr) throw new Error('لا يمكن قراءة بيانات المستخدم');
-    if (!profile.is_active) {
-      await supabase.auth.signOut();
-      throw new Error('حسابك غير مفعّل — تواصل مع الإدارة');
-    }
-
-    // Update last login
-    await supabase.from('profiles').update({ last_login_at: new Date().toISOString() }).eq('id', data.user.id);
-
-    const displayName = profile.full_name_ar || profile.full_name;
-    alertOk('أهلاً ' + displayName + ' · جاري التحويل...');
-
-    setTimeout(() => {
-      window.location.href = 'السلاسل_نظام_ادارة_السائقين_28.html';
-    }, 900);
-
-  } catch (err) {
-    let msg = err.message || 'فشل تسجيل الدخول';
-    if (msg.includes('Invalid login')) msg = 'الإيميل أو كلمة السر غير صحيحة';
-    else if (msg.includes('Email not confirmed')) msg = 'يرجى تفعيل البريد الإلكتروني أولاً';
-    alertErr('❌  ' + msg);
-    btn.classList.remove('loading');
-    btn.disabled = false;
-  }
-});
-
-// Forgot password
-$('forgotBtn').addEventListener('click', async (e) => {
-  e.preventDefault();
-  const email = $('email').value.trim();
-  if (!email) { alertErr('اكتب بريدك الإلكتروني أولاً'); $('email').focus(); return; }
-  hideAlerts();
-
-  try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/login.html'
-    });
-    if (error) throw error;
-    alertOk('✅ تم إرسال رابط إعادة تعيين كلمة السر إلى بريدك');
-  } catch (err) {
-    alertErr('❌ ' + (err.message || 'فشل الإرسال'));
+  btn.classList.add('loading'); btn.disabled = true;
+  try{
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if(error) throw error;
+    const ok = await proceed(data.session, true);
+    if(!ok){ btn.classList.remove('loading'); btn.disabled = false; }
+  }catch(err){
+    showErr(explain(err));
+    btn.classList.remove('loading'); btn.disabled = false;
+    $('pass').value = ''; $('pass').focus();
   }
 });
 </script>
