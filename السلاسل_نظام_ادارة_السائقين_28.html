@@ -3419,7 +3419,7 @@ const ROLE_PERMS = {
   accountant: { view:['dash','acc','reports','dreports','drivers','profit'], edit:['acc'], delete:false, salaries:true,  audit:true,  sync:false },
   hr:         { view:['dash','drivers','att','apps','vio','profit'],         edit:['drivers','att','apps'], delete:false, salaries:true,  audit:false, sync:false },
   operations: { view:['dash','drivers','att','clockin','livemap','orders','dreports','profit'], edit:['att','clockin','orders','dreports'], delete:false, salaries:false, audit:false, sync:false },
-  supervisor: { view:['dash','drivers','att','clockin','livemap'],           edit:['att','clockin'], delete:false, salaries:false, audit:false, sync:false }
+  supervisor: { view:['dash','drivers','att','clockin','livemap','orders','dreports'], edit:['att','clockin'], delete:false, salaries:false, audit:false, sync:false }
 };
 
 function currentPerms(){ return ROLE_PERMS[ARK_ROLE] || ROLE_PERMS.supervisor; }
@@ -13909,6 +13909,26 @@ function arkApplyRole(){
   (hideFor[r] || []).forEach(id => {
     const el = document.getElementById(id); if(el) el.style.display = 'none';
   });
+  // نوفمبر 2026: أي تبويب مش في صلاحيات الدور (ROLE_PERMS) يختفي — مش بس المحاسبة
+  if(r && r !== 'admin' && typeof ROLE_PERMS !== 'undefined'){
+    const P = ROLE_PERMS[r] || ROLE_PERMS.supervisor;
+    const canView = v => P.view === '*' || P.view.indexOf(v) >= 0;
+    const hideNav = () => {
+      document.querySelectorAll('.nav-tab').forEach(el => {
+        const m = String(el.getAttribute('onclick')||'').match(/setMainView\('([a-z]+)'\)/);
+        const v = m ? m[1] : (el.id === 'nav-radar' ? 'radar' : null);
+        if(v && !canView(v)) el.style.display = 'none';
+        if(!v && /window\.open/.test(el.getAttribute('onclick')||'')) el.style.display = 'none';
+      });
+      document.querySelectorAll('#mBnav button[data-v]').forEach(b => { const v=b.dataset.v; if(v!=='__menu' && !canView(v)) b.style.display='none'; });
+    };
+    hideNav(); setTimeout(hideNav, 1500); setTimeout(hideNav, 5000);
+    if(!window.__arkViewGuard && typeof window.setMainView === 'function'){
+      window.__arkViewGuard = true;
+      const _sv = window.setMainView;
+      window.setMainView = function(v){ if(v && !canView(v)){ try{ toast && toast('مش مسموح لدورك'); }catch(e){} return _sv.call(this,'drivers'); } return _sv.apply(this, arguments); };
+    }
+  }
   if(r !== 'admin' && r !== 'accountant'){
     const b = document.getElementById('opsCenterBtn');
     if(b) b.style.display = 'none';
