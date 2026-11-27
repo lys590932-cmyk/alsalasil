@@ -4127,9 +4127,8 @@ function renderServices(){
   h+='<div id="accQueueBar" style="display:none;margin-bottom:11px"></div>';
 
   // أزرار الإجراءات
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">'+
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px">'+
     svcBtn('🏖️', LANG==='ar'?'طلب إجازة':'Leave', '#3b82f6', 'openLeaveForm()')+
-    svcBtn('💰', LANG==='ar'?'طلب سلفة':'Advance', '#10b981', 'openAdvanceForm()')+
     svcBtn('⛽', LANG==='ar'?'تسجيل وقود':'Log fuel', '#f59e0b', 'openFuelForm()')+
     svcBtn('🔧', LANG==='ar'?'بلاغ عطل':'Report issue', '#ef4444', 'openMaintForm()')+
   '</div>';
@@ -4146,9 +4145,10 @@ function renderServices(){
   if(docs) h+=docs;
 
   // طلباتي
-  if(MY_REQUESTS.length){
+  var _myReqs=(MY_REQUESTS||[]).filter(function(r){ return r.req_type!=='advance'; });
+  if(_myReqs.length){
     h+='<div class="sec-title">'+(LANG==='ar'?'طلباتي':'My requests')+'</div><div class="card">';
-    MY_REQUESTS.slice(0,10).forEach(function(r){
+    _myReqs.slice(0,10).forEach(function(r){
       var isLeave=r.req_type==='leave';
       var stC=r.status==='approved'?'#10b981':(r.status==='rejected'?'#ef4444':'#f59e0b');
       var stT=r.status==='approved'?(LANG==='ar'?'موافق ✅':'Approved'):(r.status==='rejected'?(LANG==='ar'?'مرفوض ❌':'Rejected'):(LANG==='ar'?'قيد المراجعة ⏳':'Pending'));
