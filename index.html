@@ -2372,12 +2372,29 @@ function renderHome(){
 
   try{ html += rateCardHTML(); }catch(e){ console.warn('rate card', e); }
 
-  html+='<div class="qgrid">'+
-    '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
-      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(16,185,129,.14)"><i class="ti ti-wallet" style="color:var(--green2)"></i></div><div class="qstat-lbl">'+t('net_salary_month')+'</div></div>'+
-      '<div class="qstat-val" style="color:var(--green2)">'+fmtKD(net)+'</div>'+
-      '<div class="qstat-sub">'+MONTHS[LANG][m-1]+' '+y+' • '+t('kwd')+'</div>'+
-    '</div>'+
+  var _isKeeta = /keeta|كيتا/i.test(String(DRIVER.partner||''));
+  var _firstCard;
+  if(_isKeeta){
+    var _ko = (MY_UTR && MY_UTR.orders!=null) ? Number(MY_UTR.orders) : null;
+    var _kd = (MY_UTR && MY_UTR.days!=null) ? Number(MY_UTR.days) : null;
+    var _ku = (MY_UTR && MY_UTR.utr!=null) ? Number(MY_UTR.utr) : null;
+    _firstCard =
+    '<div class="qstat">'+
+      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(245,158,11,.14)"><i class="ti ti-package" style="color:var(--amber2)"></i></div><div class="qstat-lbl">'+(LANG==='en'?'Keeta orders this month':'طلبات كيتا هذا الشهر')+'</div></div>'+
+      '<div class="qstat-val" style="color:var(--amber2)">'+(_ko===null?(RATE_READY?'0':'…'):_ko)+'</div>'+
+      '<div class="qstat-sub">'+MONTHS[LANG][m-1]+' '+y+(_kd?(' • '+_kd+(LANG==='en'?' days':' يوم')):'')+(_ku!==null?(' • UTR '+_ku.toFixed(2)):'')+'</div>'+
+    '</div>';
+  }else{
+    var _rm = (RATE_MONTH||[]);
+    var _ro = _rm.reduce(function(s,r){ return s+(parseInt(r.orders_count)||0); },0);
+    _firstCard =
+    '<div class="qstat" onclick="switchTab(\'report\')" style="cursor:pointer">'+
+      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(245,158,11,.14)"><i class="ti ti-package" style="color:var(--amber2)"></i></div><div class="qstat-lbl">'+(LANG==='en'?'Orders this month':'طلبات هذا الشهر')+'</div></div>'+
+      '<div class="qstat-val" style="color:var(--amber2)">'+(RATE_READY||_rm.length?_ro:'…')+'</div>'+
+      '<div class="qstat-sub">'+MONTHS[LANG][m-1]+' '+y+(_rm.length?(' • '+_rm.length+(LANG==='en'?' days':' يوم')):'')+'</div>'+
+    '</div>';
+  }
+  html+='<div class="qgrid">'+ _firstCard +
     '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
       '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(239,68,68,.14)"><i class="ti ti-receipt-2" style="color:var(--red2)"></i></div><div class="qstat-lbl">'+t('month_deductions')+'</div></div>'+
       '<div class="qstat-val" style="color:'+(totalDed>0?'var(--red2)':'var(--text)')+'">'+fmtKD(totalDed)+'</div>'+
@@ -5237,7 +5254,7 @@ async function fetchRating(silent){
     sb('driver_awards?driver_id=eq.'+id+'&select=*&order=created_at.desc&limit=60')
       .then(function(r){ if(r) MY_AWARDS = r; }).catch(function(){}),
 
-    sb('v_driver_utr?driver_id=eq.'+id+'&period=eq.'+per+'&select=utr,orders,hours')
+    sb('v_driver_utr?driver_id=eq.'+id+'&period=eq.'+per+'&select=utr,orders,hours,days')
       .then(function(r){ MY_UTR = (r && r[0]) ? r[0] : null; }).catch(function(){})
   ];
 
