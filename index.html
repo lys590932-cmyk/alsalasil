@@ -714,7 +714,7 @@ body::after{
       <i class="ti ti-package"></i><span>أوردرات</span>
       <span id="ordersBadge" style="display:none;position:absolute;top:4px;right:18px;background:#ef4444;color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;font-weight:800;padding:0 4px">0</span>
     </button>
-    <button class="navbtn" id="navSalary" onclick="switchTab('salary')">
+    <button class="navbtn" id="navSalary" onclick="switchTab('salary')" style="display:none">
       <i class="ti ti-wallet"></i><span data-i18n="nav_salary">راتبي</span>
     </button>
     <button class="navbtn" id="navServices" onclick="switchTab('services')" style="position:relative">
@@ -1589,13 +1589,6 @@ function computeNotifs(){
 
   var m=now.getMonth()+1, y=now.getFullYear();
   var monthDed=deductionsOf(m,y);
-  if(monthDed.length){
-    var total=monthDed.reduce(function(s,d){ return s+(parseFloat(d.amount)||0); },0);
-    NOTIFS.push({ic:'ti-receipt-2',color:'var(--red2)',bg:'rgba(239,68,68,.14)',
-      title:t('ntf_ded_t',monthDed.length),
-      desc:t('ntf_ded_d',MONTHS[LANG][m-1],fmtKD(total)),
-      time:MONTHS[LANG][m-1]+' '+y});
-  }
 
   var up=upcomingShifts();
   if(up.length){
@@ -2395,11 +2388,17 @@ function renderHome(){
     '</div>';
   }
   html+='<div class="qgrid">'+ _firstCard +
-    '<div class="qstat" onclick="switchTab(\'salary\')" style="cursor:pointer">'+
-      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(239,68,68,.14)"><i class="ti ti-receipt-2" style="color:var(--red2)"></i></div><div class="qstat-lbl">'+t('month_deductions')+'</div></div>'+
-      '<div class="qstat-val" style="color:'+(totalDed>0?'var(--red2)':'var(--text)')+'">'+fmtKD(totalDed)+'</div>'+
-      '<div class="qstat-sub">'+t('n_deductions',monthDed.length)+'</div>'+
-    '</div>'+
+    (function(){
+      var _o=0,_d=0;
+      if(_isKeeta){ _o=(MY_UTR&&MY_UTR.orders!=null)?Number(MY_UTR.orders):0; _d=(MY_UTR&&MY_UTR.days!=null)?Number(MY_UTR.days):0; }
+      else { var _r=(RATE_MONTH||[]); _d=_r.length; _o=_r.reduce(function(s,r){ return s+(parseInt(r.orders_count)||0); },0); }
+      var _avg=_d?(_o/_d):0;
+      return '<div class="qstat">'+
+      '<div class="qstat-top"><div class="qstat-ic" style="background:rgba(59,130,246,.14)"><i class="ti ti-chart-bar" style="color:var(--blue2)"></i></div><div class="qstat-lbl">'+(LANG==='en'?'Daily average':'متوسطك اليومي')+'</div></div>'+
+      '<div class="qstat-val" style="color:var(--blue2)">'+(_d?_avg.toFixed(1):'—')+'</div>'+
+      '<div class="qstat-sub">'+(LANG==='en'?'orders / day':'طلب في اليوم')+'</div>'+
+      '</div>';
+    })()+
   '</div>';
 
   html+='<div class="sec-title">'+t('today_shift')+'</div>';
@@ -8469,7 +8468,7 @@ M.counts = function(root){ (root||document).querySelectorAll('.qstat-val,.sal-ne
 M.animate = function(scr){ if(!scr) return; M.stagger(scr); M.counts(scr); var d = scr.querySelector('.fm-days'); if(d){ d.classList.remove('fm-go'); void d.offsetWidth; d.classList.add('fm-go'); } };
 
 /* ─────────────────────────── ترتيب الشاشات + الكبسولة ─────────────────────────── */
-var ORDER = ['home','attendance','report','orders','salary','services','profile'];
+var ORDER = ['home','attendance','report','orders','services','profile'];
 var NAVID = {home:'navHome',attendance:'navAttendance',report:'navReport',orders:'navOrders',salary:'navSalary',services:'navServices',profile:'navProfile'};
 var SCRID = {home:'scrHome',attendance:'scrAttendance',report:'scrReport',orders:'scrOrders',salary:'scrSalary',services:'scrServices',profile:'scrProfile'};
 var pill = null;
