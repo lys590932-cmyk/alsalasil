@@ -8736,13 +8736,17 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
 
   FF.load = function(force){
     if(typeof DRIVER==='undefined' || !DRIVER || !DRIVER.id) return Promise.resolve();
-    if(!force && Date.now()-FF.at < 60000) return Promise.resolve();
+    if(!force && Date.now()-FF.at < 20000) return Promise.resolve();
     FF.at = Date.now();
     var id = encodeURIComponent(DRIVER.id);
-    return Promise.all([
-      sb('traffic_fines?driver_id=eq.'+id+'&charge_status=eq.charged&select=id,plate,fine_at,amount,description,location,ack_at,appeal_text,appeal_at&order=fine_at.desc&limit=100'),
-      sb('v_fine_balances?driver_id=eq.'+id+'&select=balance,cap')
-    ]).then(function(r){ FF.rows=r[0]||[]; FF.bal=(r[1]&&r[1][0])||null; FF.paint(); })
+    /* مفتاح من الإدارة: fine_config.fly_enabled = false بيخفي الكارت عند كل السواقين */
+    return sb('fine_config?k=eq.fly_enabled&select=v').then(function(c){
+      if(c && c[0] && c[0].v === false){ FF.rows=[]; FF.bal=null; FF.paint(); return; }
+      return Promise.all([
+        sb('traffic_fines?driver_id=eq.'+id+'&charge_status=eq.charged&select=id,plate,fine_at,amount,description,location,ack_at,appeal_text,appeal_at&order=fine_at.desc&limit=100'),
+        sb('v_fine_balances?driver_id=eq.'+id+'&select=balance,cap')
+      ]).then(function(r){ FF.rows=r[0]||[]; FF.bal=(r[1]&&r[1][0])||null; FF.paint(); });
+    })
       .catch(function(){ /* بدون نت: نسيب آخر نسخة */ });
   };
 
