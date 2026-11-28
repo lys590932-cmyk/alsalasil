@@ -24100,7 +24100,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 
   var ST = {
     pending:{t:'جديدة — لسه متحمّلتش',c:'#f59e0b'}, charged:{t:'على السواق',c:'#ef4444'},
-    legacy:{t:'قديمة (من الشيت)',c:'#64748b'}, waived:{t:'اتعفى منها',c:'#10b981'}, company:{t:'على الشركة',c:'#0ea5e9'}
+    legacy:{t:'قديمة (من الشيت)',c:'#64748b'}, deleted:{t:'اتمسحت',c:'#94a3b8'}, waived:{t:'اتعفى منها',c:'#10b981'}, company:{t:'على الشركة',c:'#0ea5e9'}
   };
   var MT = { custody:['سجل العهدة','#10b981'], gps:['جهاز التتبع','#8b5cf6'], owner:['صاحب العربية حالياً','#f59e0b'],
              manual:['تحديد يدوي','#0ea5e9'], unassigned:['مش متحددة','#ef4444'] };
@@ -24121,6 +24121,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
       .catch(function(e){ F.err=String(e.message||e); paint(); });
   }
   F.reload = load;
+  function live(){ return F.fines.filter(function(f){return f.charge_status!=='deleted';}); }
 
   /* ── الواجهة ───────────────────────────────────────────── */
   var css = '<style id="fines-css">'+
@@ -24168,13 +24169,13 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 
   /* ── 1) نظرة عامة ─────────────────────────────────────── */
   function vDash(){
-    var open=F.fines.filter(function(f){return f.moi_status==='open';});
+    var LV=live(); var open=LV.filter(function(f){return f.moi_status==='open';});
     var openAmt=open.reduce(function(s,f){return s+(+f.amount);},0);
     var bal=F.bal.reduce(function(s,b){return s+Math.max(0,+b.balance);},0);
-    var una=F.fines.filter(function(f){return f.assign_method==='unassigned' && f.charge_status!=='waived' && f.charge_status!=='company';});
-    var appeals=F.fines.filter(function(f){return f.appeal_text && f.charge_status==='charged';});
-    var pend=F.fines.filter(function(f){return f.charge_status==='pending';});
-    var gone=F.fines.filter(function(f){return f.moi_status==='gone';});
+    var una=LV.filter(function(f){return f.assign_method==='unassigned' && f.charge_status!=='waived' && f.charge_status!=='company';});
+    var appeals=LV.filter(function(f){return f.appeal_text && f.charge_status==='charged';});
+    var pend=LV.filter(function(f){return f.charge_status==='pending';});
+    var gone=LV.filter(function(f){return f.moi_status==='gone';});
     var planTot=F.plan.reduce(function(s,p){return s+(+p.plan);},0);
     var h='<div class="fn-kpis">'+
       k(open.length,'مخالفة مفتوحة في الداخلية','#ef4444')+k(kd(openAmt)+' د.ك','مستحق للداخلية على الشركة','#ef4444')+
@@ -24185,13 +24186,13 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
     if(una.length) acts.push('🔴 <b>'+una.length+'</b> مخالفة لوحتها مش متسجلة على سواق — حددها من «المخالفات».');
     if(pend.length) acts.push('🟠 <b>'+pend.length+'</b> مخالفة جديدة مستنية تتحمّل على السواق.');
     if(appeals.length) acts.push('🟣 <b>'+appeals.length+'</b> سواق معترض على مخالفة — راجع وقرر.');
-    var owner=F.fines.filter(function(f){return f.assign_method==='owner'&&f.charge_status!=='legacy';});
+    var owner=LV.filter(function(f){return f.assign_method==='owner'&&f.charge_status!=='legacy';});
     if(owner.length) acts.push('🟡 <b>'+owner.length+'</b> مخالفة اتحددت على «صاحب العربية حالياً» بس — اتأكد إنه كان سايقها وقتها.');
-    var rep={}; F.fines.forEach(function(f){ if(f.driver_id && f.charge_status!=='legacy'){ var d=new Date(f.fine_at); if(Date.now()-d<30*86400000){ rep[f.driver_id]=(rep[f.driver_id]||0)+1; } } });
+    var rep={}; LV.forEach(function(f){ if(f.driver_id && f.charge_status!=='legacy'){ var d=new Date(f.fine_at); if(Date.now()-d<30*86400000){ rep[f.driver_id]=(rep[f.driver_id]||0)+1; } } });
     Object.keys(rep).forEach(function(id){ if(rep[id]>=3) acts.push('⚠️ <b>'+esc(drvName(id))+'</b> عليه '+rep[id]+' مخالفات في آخر 30 يوم — محتاج إنذار.'); });
     h+='<div class="fn-card"><h3>⚡ محتاج منك</h3>'+(acts.length?acts.map(function(a){return '<div style="padding:5px 0;font-size:12.5px">'+a+'</div>';}).join(''):'<div style="color:var(--muted);font-size:12.5px">مفيش حاجة مستنياك ✅</div>')+'</div>';
     // أكثر السواقين / أنواع / أماكن / شهور
-    var all=F.fines.filter(function(f){return f.moi_status==='open';});
+    var all=LV.filter(function(f){return f.moi_status==='open';});
     h+='<div class="fn-row2">'+rank('🏆 أكتر السواقين مخالفات (المفتوحة)',all,function(f){return f.driver_id?drvName(f.driver_id):'مش متحدد';})+
        rank('📋 أكتر أنواع المخالفات',all,function(f){return f.description||'-';})+'</div>';
     h+='<div class="fn-row2">'+rank('📍 أماكن بتتكرر فيها المخالفات',all.filter(function(f){return f.location;}),function(f){return f.location;})+
@@ -24215,11 +24216,12 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
   /* ── 2) المخالفات ─────────────────────────────────────── */
   function drvOptions(sel){
     var list=(typeof DRV!=='undefined'?DRV:[]).slice().sort(function(a,b){return a.name.localeCompare(b.name);});
-    return '<option value="">— اختار السواق —</option>'+list.map(function(d){return '<option value="'+d.id+'"'+(d.id===sel?' selected':'')+'>'+esc(d.name)+' ('+d.id+')</option>';}).join('');
+    var extra=(sel && !list.some(function(d){return d.id===sel;}))?'<option value="'+sel+'" selected>'+esc(drvName(sel))+' ('+sel+')</option>':'';
+    return '<option value="">— اختار السواق —</option>'+extra+list.map(function(d){return '<option value="'+d.id+'"'+(d.id===sel?' selected':'')+'>'+esc(d.name)+' ('+d.id+')</option>';}).join('');
   }
   function vList(){
-    var flt=[['action','محتاجة إجراء'],['new','جديدة'],['charged','على السواقين'],['unassigned','مش متحددة'],['appeal','اعتراضات'],['legacy','قديمة'],['open','كل المفتوحة'],['gone','اتدفعت'],['all','الكل']];
-    var rows=F.fines.filter(function(f){
+    var flt=[['action','محتاجة إجراء'],['new','جديدة'],['charged','على السواقين'],['unassigned','مش متحددة'],['appeal','اعتراضات'],['legacy','قديمة'],['open','كل المفتوحة'],['gone','اتدفعت'],['deleted','محذوفة'],['all','الكل']];
+    var rows=(F.filter==='deleted'?F.fines.filter(function(f){return f.charge_status==='deleted';}):live()).filter(function(f){
       switch(F.filter){
         case 'action': return f.charge_status==='pending'||(f.assign_method==='unassigned'&&f.charge_status!=='waived'&&f.charge_status!=='company')||(f.appeal_text&&f.charge_status==='charged');
         case 'new': return f.charge_status==='pending'; case 'charged': return f.charge_status==='charged';
@@ -24261,10 +24263,12 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
   }
   function actBtns(f){
     var b='';
+    if(f.charge_status==='deleted') return '<button class="fn-btn g" onclick="FINES.act(\''+f.id+'\',\'restore\')">استرجاع</button>';
     if(f.charge_status==='pending'||f.charge_status==='legacy') b+='<button class="fn-btn p" title="حمّلها على السواق وابعتله إشعار" onclick="FINES.act(\''+f.id+'\',\'charge\')">تحميل</button> ';
     if(f.charge_status!=='waived'&&f.charge_status!=='company') b+='<button class="fn-btn" title="إعفاء السواق" onclick="FINES.act(\''+f.id+'\',\'waive\')">إعفاء</button> <button class="fn-btn" title="الشركة تتحملها" onclick="FINES.act(\''+f.id+'\',\'company\')">على الشركة</button> ';
     else b+='<button class="fn-btn" onclick="FINES.act(\''+f.id+'\',\'charge\')">رجّعها على السواق</button> ';
-    if(f.assign_method==='manual') b+='<button class="fn-btn" title="رجّع التحديد التلقائي" onclick="FINES.act(\''+f.id+'\',\'auto\')">تلقائي</button>';
+    if(f.assign_method==='manual') b+='<button class="fn-btn" title="رجّع التحديد التلقائي" onclick="FINES.act(\''+f.id+'\',\'auto\')">تلقائي</button> ';
+    b+='<button class="fn-btn" style="color:#ef4444;border-color:#fecaca" title="مسح المخالفة من النظام ومن رصيد السواق" onclick="FINES.act(\''+f.id+'\',\'delete\')"><i class="ti ti-trash"></i> مسح</button>';
     return b;
   }
   F.assign=function(id,drv){
@@ -24274,9 +24278,9 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
     rpc('fine_admin',{p_id:id,p_action:'assign',p_driver:drv,p_note:'تحديد يدوي من ARK'}).then(function(){ toastx('اتحددت على '+drvName(drv)); load(); }).catch(function(e){ toastx(e.message,'e'); });
   };
   F.act=function(id,a){
-    var lbl={charge:'تحميلها على السواق (ويوصله إشعار)',waive:'إعفاء السواق منها',company:'الشركة تتحملها',auto:'رجوع للتحديد التلقائي'}[a];
+    var lbl={charge:'تحميلها على السواق (ويوصله إشعار)',waive:'إعفاء السواق منها',company:'الشركة تتحملها',auto:'رجوع للتحديد التلقائي',delete:'مسح المخالفة من النظام ومن رصيد السواق (تقدر تسترجعها من «محذوفة»)',restore:'استرجاع المخالفة'}[a];
     if(!confirm(lbl+'؟')) return;
-    var note=(a==='waive'||a==='company')?prompt('سبب (اختياري):')||null:null;
+    var note=(a==='waive'||a==='company'||a==='delete')?prompt('سبب (اختياري):')||null:null;
     rpc('fine_admin',{p_id:id,p_action:a,p_note:note}).then(function(){ toastx('تم ✅'); load(); }).catch(function(e){ toastx(e.message,'e'); });
   };
   F.addManual=function(){
@@ -24310,7 +24314,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
     return h;
   }
   function drvHistory(id){
-    var fs=F.fines.filter(function(f){return f.driver_id===id;});
+    var fs=live().filter(function(f){return f.driver_id===id;});
     var lg=F.ledger.filter(function(l){return l.driver_id===id;}).sort(function(a,b){return String(b.period).localeCompare(String(a.period));});
     var kn={charge:'مخالفة',deduction:'خصم من المرتب',waive:'إعفاء',adjust:'تسوية',legacy_deduction:'خصم (الشيت القديم)'};
     return '<div class="fn-row2"><div><b style="font-size:12px">المخالفات</b>'+(fs.length?fs.map(function(f){return '<div style="font-size:11.5px;padding:3px 0">'+dt(f.fine_at)+' · '+esc(f.plate)+' · '+esc(f.description||'')+' · <b>'+kd(f.amount)+'</b> · '+((ST[f.charge_status]||{}).t||'')+'</div>';}).join(''):'<div style="font-size:11.5px;color:var(--muted)">—</div>')+'</div>'+
@@ -24384,7 +24388,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
       '<div style="font-size:11.5px;color:var(--muted);margin-top:6px">النقل بيحدّث عربية السواق في ARK ويسجل التاريخ، فأي مخالفة بعده تروح للسواق الجديد وأي مخالفة قبله تفضل على القديم. (حدّث كمان خانة العربية في ملف السواق في ARK.)</div></div>';
     h+='<div class="fn-card fn-scroll" style="padding:6px"><h3 style="padding:6px">🚗 مين ماسك إيه دلوقتي ('+cur.length+')</h3><table class="fn-tbl"><thead><tr><th>اللوحة</th><th>السواق</th><th>من</th><th>مخالفات العربية</th></tr></thead><tbody>'+
       cur.sort(function(a,b){return a.plate.localeCompare(b.plate);}).map(function(c){
-        var fs=F.fines.filter(function(f){return f.plate===c.plate&&f.moi_status==='open';});
+        var fs=live().filter(function(f){return f.plate===c.plate&&f.moi_status==='open';});
         return '<tr><td class="fn-mono">'+esc(c.plate)+'</td><td>'+esc(drvName(c.driver_id))+' <span style="font-size:10.5px;color:var(--muted)">'+c.driver_id+'</span></td><td class="fn-mono">'+String(c.from_at).slice(0,10)+'</td><td class="fn-mono">'+(fs.length?fs.length+' · '+kd(fs.reduce(function(s,f){return s+(+f.amount);},0)):'-')+'</td></tr>';
       }).join('')+'</tbody></table></div>';
     var past=F.custody.filter(function(c){return c.to_at;});
