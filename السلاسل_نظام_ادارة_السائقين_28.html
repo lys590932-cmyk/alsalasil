@@ -24072,5 +24072,342 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 </script>
 <!-- ══════════ /ARK-MOBILE ══════════ -->
 
+<script id="ark-fines-v1">
+/* ═══════════════════════════════════════════════════════════════════
+   مركز المخالفات المرورية — ARK (v1, 28/11/2026)
+   المصدر: Supabase (traffic_fines / fine_ledger / vehicle_custody)
+   بيستبدل شاشة «المخالفات» القديمة. الخصم الشهري بيتسجل في المسيّر
+   كبند VIOLATION (source=fines) عشان يدخل محرك الرواتب زي أي خصم.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+  var F = { tab:'dash', fines:[], bal:[], ledger:[], custody:[], sync:null, plan:[], planEdit:{},
+            filter:'action', q:'', period:null, loading:false, err:'', openDrv:null };
+  window.FINES = F;
+  var MON = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  function U(){ return (typeof SUPA_URL!=='undefined'?SUPA_URL:'https://pqpowedqewjgkrzvmgyv.supabase.co'); }
+  function K(){ return (typeof SUPA_KEY!=='undefined'?SUPA_KEY:'sb_publishable_EX532ME5SLrt26Gp3YkRXQ_rt9-oaRT'); }
+  function H(x){ var h={apikey:K(),Authorization:'Bearer '+K(),'Content-Type':'application/json'}; for(var k in (x||{})) h[k]=x[k]; return h; }
+  function get(path){ return fetch(U()+'/rest/v1/'+path,{headers:H()}).then(function(r){ if(!r.ok) return r.text().then(function(t){throw new Error(r.status+' '+t.slice(0,140));}); return r.json(); }); }
+  function rpc(fn,body){ return fetch(U()+'/rest/v1/rpc/'+fn,{method:'POST',headers:H(),body:JSON.stringify(body||{})}).then(function(r){ if(!r.ok) return r.text().then(function(t){throw new Error(r.status+' '+t.slice(0,160));}); return r.json(); }); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function kd(n){ return (Math.round((+n||0)*1000)/1000).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:3}); }
+  function per(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+  function perLbl(p){ var a=String(p).split('-'); return MON[(+a[1])-1]+' '+a[0]; }
+  function dt(s){ if(!s) return '-'; var d=new Date(s); var k=new Date(d.getTime()+3*3600000); return k.toISOString().slice(0,16).replace('T',' '); }
+  function drvName(id){ var d=(typeof DRV!=='undefined'?DRV:[]).find(function(x){return x.id===id;}); if(d) return d.name; var b=F.bal.find(function(x){return x.driver_id===id;}); return b&&b.name?b.name:(id||'—'); }
+  function toastx(m,t){ try{ toast(m,t||'s'); }catch(e){ alert(m); } }
+  if(!F.period){ var n=new Date(); F.period=per(n); }
+
+  var ST = {
+    pending:{t:'جديدة — لسه متحمّلتش',c:'#f59e0b'}, charged:{t:'على السواق',c:'#ef4444'},
+    legacy:{t:'قديمة (من الشيت)',c:'#64748b'}, waived:{t:'اتعفى منها',c:'#10b981'}, company:{t:'على الشركة',c:'#0ea5e9'}
+  };
+  var MT = { custody:['سجل العهدة','#10b981'], gps:['جهاز التتبع','#8b5cf6'], owner:['صاحب العربية حالياً','#f59e0b'],
+             manual:['تحديد يدوي','#0ea5e9'], unassigned:['مش متحددة','#ef4444'] };
+
+  function load(){
+    F.loading=true; F.err=''; paint();
+    return Promise.all([
+      get('traffic_fines?select=*&order=fine_at.desc&limit=2000'),
+      get('v_fine_balances?select=*'),
+      get('fine_ledger?select=*&order=created_at.desc&limit=5000'),
+      get('vehicle_custody?select=*&order=from_at.desc&limit=2000'),
+      get('fine_sync_log?select=*&order=at.desc&limit=1')
+    ]).then(function(a){ F.fines=a[0]; F.bal=a[1]; F.ledger=a[2]; F.custody=a[3]; F.sync=a[4][0]||null; F.loading=false; return loadPlan(); })
+      .catch(function(e){ F.loading=false; F.err=String(e.message||e); paint(); });
+  }
+  function loadPlan(){
+    return rpc('fines_plan',{p_period:F.period}).then(function(r){ F.plan=r||[]; F.planEdit={}; paint(); })
+      .catch(function(e){ F.err=String(e.message||e); paint(); });
+  }
+  F.reload = load;
+
+  /* ── الواجهة ───────────────────────────────────────────── */
+  var css = '<style id="fines-css">'+
+   '.fn-wrap{font-family:Cairo,sans-serif}.fn-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}'+
+   '.fn-tab{padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-weight:700;font-size:12.5px;color:var(--text)}'+
+   '.fn-tab.on{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;border-color:#b91c1c}'+
+   '.fn-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}'+
+   '.fn-k{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px}'+
+   '.fn-k b{display:block;font-size:22px;font-weight:900;font-family:JetBrains Mono,monospace}.fn-k span{font-size:11.5px;color:var(--muted)}'+
+   '.fn-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px}'+
+   '.fn-card h3{font-size:13.5px;font-weight:900;margin:0 0 10px;display:flex;align-items:center;gap:6px}'+
+   '.fn-tbl{width:100%;border-collapse:collapse;font-size:12px}.fn-tbl th{text-align:right;color:var(--muted);font-weight:700;padding:7px 6px;border-bottom:1px solid var(--border);white-space:nowrap}'+
+   '.fn-tbl td{padding:7px 6px;border-bottom:1px solid var(--border);vertical-align:middle}.fn-tbl tr:hover td{background:var(--surface2)}'+
+   '.fn-b{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;color:#fff;white-space:nowrap}'+
+   '.fn-in{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;color:var(--text);font-family:inherit;font-size:12px;outline:none}'+
+   '.fn-btn{border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:8px;padding:5px 9px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}'+
+   '.fn-btn.p{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;border:0}.fn-btn.g{background:#10b981;color:#fff;border:0}'+
+   '.fn-bar{height:10px;border-radius:6px;background:linear-gradient(90deg,#ef4444,#f59e0b)}.fn-mono{font-family:JetBrains Mono,monospace}'+
+   '.fn-scroll{overflow-x:auto}.fn-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.fn-row2{grid-template-columns:1fr}}'+
+   '</style>';
+
+  function paint(){
+    var el=document.getElementById('vio-content'); if(!el) return;
+    var tabs=[['dash','📊 نظرة عامة'],['list','🚨 المخالفات'],['drivers','👤 السواقين والأرصدة'],['month','💰 خصم الشهر'],['cars','🚗 العربيات والعهدة']];
+    var h=css+'<div class="fn-wrap">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
+       '<h2 style="font-size:17px;font-weight:900;display:flex;align-items:center;gap:8px;margin:0"><i class="ti ti-traffic-lights" style="color:#ef4444"></i> مركز المخالفات المرورية</h2>'+
+       '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+syncChip()+
+       '<button class="fn-btn" onclick="FINES.reload()"><i class="ti ti-refresh"></i> تحديث</button>'+
+       '<a class="fn-btn" href="https://www.moi.gov.kw/main/eservices/gdt/violation-enquiry" target="_blank" style="text-decoration:none">🔗 موقع الداخلية</a></div></div>';
+    h+='<div class="fn-tabs">'+tabs.map(function(t){return '<span class="fn-tab'+(F.tab===t[0]?' on':'')+'" onclick="FINES.go(\''+t[0]+'\')">'+t[1]+'</span>';}).join('')+'</div>';
+    if(F.err) h+='<div class="fn-card" style="border-color:#ef4444;color:#ef4444">⚠️ '+esc(F.err)+'</div>';
+    if(F.loading && !F.fines.length) h+='<div style="padding:40px;text-align:center;color:var(--muted)">جاري التحميل…</div>';
+    else h+=({dash:vDash,list:vList,drivers:vDrivers,month:vMonth,cars:vCars}[F.tab]||vDash)();
+    h+='</div>';
+    el.innerHTML=h;
+  }
+  F.go=function(t){ F.tab=t; paint(); };
+  function syncChip(){
+    if(!F.sync) return '';
+    var r=F.sync.result||{}; var ago=Math.round((Date.now()-new Date(F.sync.at))/3600000);
+    return '<span class="fn-b" style="background:'+(ago>36?'#ef4444':'#10b981')+'">آخر مزامنة مع الداخلية: '+(ago<1?'من شوية':('من '+ago+' ساعة'))+
+      (r.new?(' · '+r.new+' جديدة'):'')+'</span>';
+  }
+
+  /* ── 1) نظرة عامة ─────────────────────────────────────── */
+  function vDash(){
+    var open=F.fines.filter(function(f){return f.moi_status==='open';});
+    var openAmt=open.reduce(function(s,f){return s+(+f.amount);},0);
+    var bal=F.bal.reduce(function(s,b){return s+Math.max(0,+b.balance);},0);
+    var una=F.fines.filter(function(f){return f.assign_method==='unassigned' && f.charge_status!=='waived' && f.charge_status!=='company';});
+    var appeals=F.fines.filter(function(f){return f.appeal_text && f.charge_status==='charged';});
+    var pend=F.fines.filter(function(f){return f.charge_status==='pending';});
+    var gone=F.fines.filter(function(f){return f.moi_status==='gone';});
+    var planTot=F.plan.reduce(function(s,p){return s+(+p.plan);},0);
+    var h='<div class="fn-kpis">'+
+      k(open.length,'مخالفة مفتوحة في الداخلية','#ef4444')+k(kd(openAmt)+' د.ك','مستحق للداخلية على الشركة','#ef4444')+
+      k(kd(bal)+' د.ك','رصيد على السواقين لسه هيتخصم','#f59e0b')+k(kd(planTot)+' د.ك','خصم '+perLbl(F.period),'#0ea5e9')+
+      k(una.length,'مخالفة مش معروف سواقها','#ef4444')+k(appeals.length,'اعتراض من سواق','#8b5cf6')+'</div>';
+    // تنبيهات تحتاج إجراء
+    var acts=[];
+    if(una.length) acts.push('🔴 <b>'+una.length+'</b> مخالفة لوحتها مش متسجلة على سواق — حددها من «المخالفات».');
+    if(pend.length) acts.push('🟠 <b>'+pend.length+'</b> مخالفة جديدة مستنية تتحمّل على السواق.');
+    if(appeals.length) acts.push('🟣 <b>'+appeals.length+'</b> سواق معترض على مخالفة — راجع وقرر.');
+    var owner=F.fines.filter(function(f){return f.assign_method==='owner'&&f.charge_status!=='legacy';});
+    if(owner.length) acts.push('🟡 <b>'+owner.length+'</b> مخالفة اتحددت على «صاحب العربية حالياً» بس — اتأكد إنه كان سايقها وقتها.');
+    var rep={}; F.fines.forEach(function(f){ if(f.driver_id && f.charge_status!=='legacy'){ var d=new Date(f.fine_at); if(Date.now()-d<30*86400000){ rep[f.driver_id]=(rep[f.driver_id]||0)+1; } } });
+    Object.keys(rep).forEach(function(id){ if(rep[id]>=3) acts.push('⚠️ <b>'+esc(drvName(id))+'</b> عليه '+rep[id]+' مخالفات في آخر 30 يوم — محتاج إنذار.'); });
+    h+='<div class="fn-card"><h3>⚡ محتاج منك</h3>'+(acts.length?acts.map(function(a){return '<div style="padding:5px 0;font-size:12.5px">'+a+'</div>';}).join(''):'<div style="color:var(--muted);font-size:12.5px">مفيش حاجة مستنياك ✅</div>')+'</div>';
+    // أكثر السواقين / أنواع / أماكن / شهور
+    var all=F.fines.filter(function(f){return f.moi_status==='open';});
+    h+='<div class="fn-row2">'+rank('🏆 أكتر السواقين مخالفات (المفتوحة)',all,function(f){return f.driver_id?drvName(f.driver_id):'مش متحدد';})+
+       rank('📋 أكتر أنواع المخالفات',all,function(f){return f.description||'-';})+'</div>';
+    h+='<div class="fn-row2">'+rank('📍 أماكن بتتكرر فيها المخالفات',all.filter(function(f){return f.location;}),function(f){return f.location;})+
+       rank('📅 المخالفات حسب الشهر',all,function(f){var d=new Date(f.fine_at);return perLbl(per(d));},true)+'</div>';
+    if(gone.length) h+='<div class="fn-card"><h3>✅ اختفت من موقع الداخلية (اتدفعت)</h3><div style="font-size:12px;color:var(--muted)">'+gone.length+' مخالفة بـ '+kd(gone.reduce(function(s,f){return s+(+f.amount);},0))+' د.ك</div></div>';
+    return h;
+    function k(v,l,c){ return '<div class="fn-k"><b style="color:'+c+'">'+v+'</b><span>'+l+'</span></div>'; }
+  }
+  function rank(title,rows,keyFn,keepOrder){
+    var m={}; rows.forEach(function(f){ var k=keyFn(f); m[k]=m[k]||{n:0,a:0}; m[k].n++; m[k].a+=(+f.amount); });
+    var arr=Object.keys(m).map(function(k){return [k,m[k]];});
+    if(!keepOrder) arr.sort(function(a,b){return b[1].a-a[1].a;}); arr=arr.slice(0,8);
+    var mx=Math.max.apply(null,arr.map(function(x){return x[1].a;}).concat([1]));
+    return '<div class="fn-card"><h3>'+title+'</h3>'+(arr.length?arr.map(function(x){
+      return '<div style="display:grid;grid-template-columns:150px 1fr 90px;gap:8px;align-items:center;margin:5px 0;font-size:12px">'+
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(x[0])+'">'+esc(x[0])+'</span>'+
+        '<div style="background:var(--surface2);border-radius:6px"><div class="fn-bar" style="width:'+Math.max(4,x[1].a/mx*100)+'%"></div></div>'+
+        '<span class="fn-mono" style="text-align:left">'+x[1].n+' · '+kd(x[1].a)+'</span></div>';}).join(''):'<div style="color:var(--muted);font-size:12px">لا يوجد</div>')+'</div>';
+  }
+
+  /* ── 2) المخالفات ─────────────────────────────────────── */
+  function drvOptions(sel){
+    var list=(typeof DRV!=='undefined'?DRV:[]).slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+    return '<option value="">— اختار السواق —</option>'+list.map(function(d){return '<option value="'+d.id+'"'+(d.id===sel?' selected':'')+'>'+esc(d.name)+' ('+d.id+')</option>';}).join('');
+  }
+  function vList(){
+    var flt=[['action','محتاجة إجراء'],['new','جديدة'],['charged','على السواقين'],['unassigned','مش متحددة'],['appeal','اعتراضات'],['legacy','قديمة'],['open','كل المفتوحة'],['gone','اتدفعت'],['all','الكل']];
+    var rows=F.fines.filter(function(f){
+      switch(F.filter){
+        case 'action': return f.charge_status==='pending'||(f.assign_method==='unassigned'&&f.charge_status!=='waived'&&f.charge_status!=='company')||(f.appeal_text&&f.charge_status==='charged');
+        case 'new': return f.charge_status==='pending'; case 'charged': return f.charge_status==='charged';
+        case 'unassigned': return f.assign_method==='unassigned'; case 'appeal': return !!f.appeal_text;
+        case 'legacy': return f.charge_status==='legacy'; case 'open': return f.moi_status==='open'; case 'gone': return f.moi_status==='gone';
+        default: return true; }
+    });
+    if(F.q){ var q=F.q.toLowerCase(); rows=rows.filter(function(f){ return (f.id+' '+f.plate+' '+drvName(f.driver_id)+' '+(f.description||'')+' '+(f.location||'')).toLowerCase().indexOf(q)>=0; }); }
+    var tot=rows.reduce(function(s,f){return s+(+f.amount);},0);
+    var h='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">'+
+      flt.map(function(x){return '<span class="fn-tab'+(F.filter===x[0]?' on':'')+'" style="padding:5px 10px;font-size:11.5px" onclick="FINES.filter=\''+x[0]+'\';FINES.go(\'list\')">'+x[1]+'</span>';}).join('')+
+      '<input class="fn-in" placeholder="🔎 رقم / لوحة / سواق / مكان" value="'+esc(F.q)+'" oninput="FINES.q=this.value;clearTimeout(window._fnq);window._fnq=setTimeout(function(){FINES.go(\'list\')},350)" style="min-width:220px"></div>';
+    h+='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+rows.length+' مخالفة · '+kd(tot)+' د.ك</div>';
+    h+='<div class="fn-card fn-scroll" style="padding:6px"><table class="fn-tbl"><thead><tr><th>رقم</th><th>التاريخ</th><th>اللوحة</th><th>المخالفة</th><th>المكان</th><th>المبلغ</th><th>السواق</th><th>اتحدد عن طريق</th><th>الحالة</th><th></th></tr></thead><tbody>';
+    rows.forEach(function(f){
+      var st=ST[f.charge_status]||{t:f.charge_status,c:'#64748b'}; var mt=MT[f.assign_method]||['-','#64748b'];
+      h+='<tr><td class="fn-mono">'+esc(f.id)+(f.source==='manual'?' <span class="fn-b" style="background:#64748b">يدوي</span>':'')+'</td>'+
+        '<td class="fn-mono" style="white-space:nowrap">'+dt(f.fine_at)+'</td><td class="fn-mono">'+esc(f.plate)+'</td>'+
+        '<td>'+esc(f.description||'-')+'</td><td style="font-size:11px;color:var(--muted)">'+esc(f.location||'')+'</td>'+
+        '<td class="fn-mono" style="font-weight:800;color:#ef4444">'+kd(f.amount)+'</td>'+
+        '<td><select class="fn-in" style="max-width:190px" onchange="FINES.assign(\''+f.id+'\',this.value)">'+drvOptions(f.driver_id)+'</select>'+
+          (f.appeal_text?'<div style="font-size:11px;color:#8b5cf6;margin-top:3px">🟣 اعتراض: '+esc(f.appeal_text)+'</div>':'')+
+          (f.ack_at?'<div style="font-size:10.5px;color:#10b981;margin-top:2px">✔ السواق أكّد</div>':'')+'</td>'+
+        '<td><span class="fn-b" style="background:'+mt[1]+'" title="'+esc(f.assign_note||'')+'">'+mt[0]+'</span></td>'+
+        '<td><span class="fn-b" style="background:'+st.c+'">'+st.t+'</span>'+(f.moi_status==='gone'?' <span class="fn-b" style="background:#10b981">اتدفعت للداخلية</span>':'')+'</td>'+
+        '<td style="white-space:nowrap">'+actBtns(f)+'</td></tr>';
+    });
+    h+='</tbody></table>'+(rows.length?'':'<div style="padding:24px;text-align:center;color:var(--muted)">مفيش مخالفات هنا ✅</div>')+'</div>';
+    // إضافة يدوي
+    h+='<div class="fn-card"><h3>➕ تسجيل مخالفة يدوي (مش من موقع الداخلية)</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;align-items:end">'+
+      fld('رقم المخالفة (اختياري)','<input id="fnm-id" class="fn-in">')+fld('اللوحة','<input id="fnm-plate" class="fn-in" placeholder="72235/23">')+
+      fld('التاريخ والوقت','<input id="fnm-at" type="datetime-local" class="fn-in">')+fld('المبلغ (د.ك)','<input id="fnm-amt" type="number" step="0.001" class="fn-in">')+
+      fld('نوع المخالفة','<input id="fnm-desc" class="fn-in">')+fld('المكان','<input id="fnm-loc" class="fn-in">')+
+      fld('السواق (فاضي = تلقائي)','<select id="fnm-drv" class="fn-in">'+drvOptions('')+'</select>')+
+      '<button class="fn-btn p" onclick="FINES.addManual()" style="height:32px">تسجيل</button></div></div>';
+    h+='<div style="display:flex;gap:8px"><button class="fn-btn" onclick="FINES.exportXlsx()"><i class="ti ti-table-export"></i> تصدير Excel</button></div>';
+    return h;
+    function fld(l,i){ return '<label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)">'+l+i+'</label>'; }
+  }
+  function actBtns(f){
+    var b='';
+    if(f.charge_status==='pending'||f.charge_status==='legacy') b+='<button class="fn-btn p" title="حمّلها على السواق وابعتله إشعار" onclick="FINES.act(\''+f.id+'\',\'charge\')">تحميل</button> ';
+    if(f.charge_status!=='waived'&&f.charge_status!=='company') b+='<button class="fn-btn" title="إعفاء السواق" onclick="FINES.act(\''+f.id+'\',\'waive\')">إعفاء</button> <button class="fn-btn" title="الشركة تتحملها" onclick="FINES.act(\''+f.id+'\',\'company\')">على الشركة</button> ';
+    else b+='<button class="fn-btn" onclick="FINES.act(\''+f.id+'\',\'charge\')">رجّعها على السواق</button> ';
+    if(f.assign_method==='manual') b+='<button class="fn-btn" title="رجّع التحديد التلقائي" onclick="FINES.act(\''+f.id+'\',\'auto\')">تلقائي</button>';
+    return b;
+  }
+  F.assign=function(id,drv){
+    if(!drv) return;
+    var f=F.fines.find(function(x){return x.id===id;});
+    if(!confirm('تحديد المخالفة '+id+' على '+drvName(drv)+'؟'+(f&&f.charge_status!=='legacy'?'\nهتتحمّل عليه ويوصله إشعار على FLY.':''))) { paint(); return; }
+    rpc('fine_admin',{p_id:id,p_action:'assign',p_driver:drv,p_note:'تحديد يدوي من ARK'}).then(function(){ toastx('اتحددت على '+drvName(drv)); load(); }).catch(function(e){ toastx(e.message,'e'); });
+  };
+  F.act=function(id,a){
+    var lbl={charge:'تحميلها على السواق (ويوصله إشعار)',waive:'إعفاء السواق منها',company:'الشركة تتحملها',auto:'رجوع للتحديد التلقائي'}[a];
+    if(!confirm(lbl+'؟')) return;
+    var note=(a==='waive'||a==='company')?prompt('سبب (اختياري):')||null:null;
+    rpc('fine_admin',{p_id:id,p_action:a,p_note:note}).then(function(){ toastx('تم ✅'); load(); }).catch(function(e){ toastx(e.message,'e'); });
+  };
+  F.addManual=function(){
+    var g=function(i){var e=document.getElementById(i);return e?e.value.trim():'';};
+    if(!g('fnm-plate')||!g('fnm-at')||!(+g('fnm-amt'))){ toastx('اللوحة والتاريخ والمبلغ مطلوبين','e'); return; }
+    rpc('fine_add_manual',{p_id:g('fnm-id')||null,p_plate:g('fnm-plate'),p_at:g('fnm-at').replace('T',' ')+':00',p_amount:+g('fnm-amt'),p_desc:g('fnm-desc')||'مخالفة',p_location:g('fnm-loc')||null,p_driver:g('fnm-drv')||null})
+      .then(function(r){ toastx('اتسجلت المخالفة '+(r&&r.id||'')); load(); }).catch(function(e){ toastx(e.message,'e'); });
+  };
+  F.exportXlsx=function(){
+    var rows=[['رقم','التاريخ','اللوحة','المخالفة','المكان','المبلغ','السواق','كود','الحالة','الداخلية']];
+    F.fines.forEach(function(f){ rows.push([f.id,dt(f.fine_at),f.plate,f.description||'',f.location||'',+f.amount,f.driver_id?drvName(f.driver_id):'',f.driver_id||'',(ST[f.charge_status]||{}).t||f.charge_status,f.moi_status==='open'?'مفتوحة':'اتدفعت']); });
+    if(typeof XLSX!=='undefined'){ var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'المخالفات'); XLSX.writeFile(wb,'مخالفات_السلاسل_'+per()+'.xlsx'); }
+    else { var csv='﻿'+rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n'); var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='مخالفات_السلاسل.csv'; a.click(); }
+  };
+
+  /* ── 3) السواقين والأرصدة ─────────────────────────────── */
+  function vDrivers(){
+    var list=F.bal.slice().sort(function(a,b){return (+b.balance)-(+a.balance)||(+b.fines_count)-(+a.fines_count);});
+    var h='<div class="fn-card fn-scroll" style="padding:6px"><table class="fn-tbl"><thead><tr><th>السواق</th><th>العربية</th><th>المخالفات</th><th>اتحمّل عليه</th><th>اتخصم (النظام)</th><th>اتخصم (الشيت القديم)</th><th>رصيد سابق</th><th>الرصيد الباقي</th><th>السقف الشهري</th><th></th></tr></thead><tbody>';
+    list.forEach(function(b){
+      h+='<tr><td><b>'+esc(b.name||b.driver_id)+'</b><div style="font-size:10.5px;color:var(--muted)">'+b.driver_id+(b.partner?' · '+b.partner:'')+'</div></td>'+
+        '<td class="fn-mono">'+esc(b.car||'')+'</td><td class="fn-mono">'+b.fines_count+(+b.pending_count?' <span class="fn-b" style="background:#f59e0b">'+b.pending_count+' جديدة</span>':'')+'</td>'+
+        '<td class="fn-mono">'+kd(b.charged)+'</td><td class="fn-mono">'+kd(b.deducted)+'</td><td class="fn-mono" style="color:var(--muted)">'+kd(b.legacy_deducted)+'</td>'+
+        '<td><input class="fn-in fn-mono" style="width:80px" type="number" step="0.001" value="'+(+b.opening_balance||0)+'" onchange="FINES.setDrv(\''+b.driver_id+'\',\'opening_balance\',this.value)"></td>'+
+        '<td class="fn-mono" style="font-weight:900;color:'+((+b.balance)>0?'#ef4444':'#10b981')+'">'+kd(b.balance)+'</td>'+
+        '<td><input class="fn-in fn-mono" style="width:70px" type="number" step="1" value="'+(+b.cap)+'" onchange="FINES.setDrv(\''+b.driver_id+'\',\'monthly_cap\',this.value)"></td>'+
+        '<td><button class="fn-btn" onclick="FINES.openDrv=(FINES.openDrv===\''+b.driver_id+'\'?null:\''+b.driver_id+'\');FINES.go(\'drivers\')">'+(F.openDrv===b.driver_id?'إخفاء':'السجل')+'</button></td></tr>';
+      if(F.openDrv===b.driver_id) h+='<tr><td colspan="10" style="background:var(--surface2)">'+drvHistory(b.driver_id)+'</td></tr>';
+    });
+    h+='</tbody></table></div><div style="font-size:11.5px;color:var(--muted)">«رصيد سابق» = أي مبلغ لسه عليه من قبل النظام (من الشيت القديم) لو عايز يتخصم. «السقف الشهري» = أقصى خصم في الشهر، والباقي بيترحّل لوحده للشهر اللي بعده.</div>';
+    return h;
+  }
+  function drvHistory(id){
+    var fs=F.fines.filter(function(f){return f.driver_id===id;});
+    var lg=F.ledger.filter(function(l){return l.driver_id===id;}).sort(function(a,b){return String(b.period).localeCompare(String(a.period));});
+    var kn={charge:'مخالفة',deduction:'خصم من المرتب',waive:'إعفاء',adjust:'تسوية',legacy_deduction:'خصم (الشيت القديم)'};
+    return '<div class="fn-row2"><div><b style="font-size:12px">المخالفات</b>'+(fs.length?fs.map(function(f){return '<div style="font-size:11.5px;padding:3px 0">'+dt(f.fine_at)+' · '+esc(f.plate)+' · '+esc(f.description||'')+' · <b>'+kd(f.amount)+'</b> · '+((ST[f.charge_status]||{}).t||'')+'</div>';}).join(''):'<div style="font-size:11.5px;color:var(--muted)">—</div>')+'</div>'+
+      '<div><b style="font-size:12px">حركة الرصيد</b>'+(lg.length?lg.map(function(l){return '<div style="font-size:11.5px;padding:3px 0">'+(l.period?perLbl(l.period):'')+' · '+(kn[l.kind]||l.kind)+' · <b class="fn-mono" style="color:'+((+l.amount)>0?'#ef4444':'#10b981')+'">'+((+l.amount)>0?'+':'')+kd(l.amount)+'</b></div>';}).join(''):'<div style="font-size:11.5px;color:var(--muted)">—</div>')+'</div></div>';
+  }
+  F.setDrv=function(id,field,val){
+    var body={driver_id:id,updated_at:new Date().toISOString()}; body[field]=val===''?null:+val;
+    fetch(U()+'/rest/v1/fine_settings?on_conflict=driver_id',{method:'POST',headers:H({Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify([body])})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); toastx('اتحفظ'); load(); }).catch(function(e){ toastx('فشل الحفظ: '+e.message,'e'); });
+  };
+
+  /* ── 4) خصم الشهر ─────────────────────────────────────── */
+  function vMonth(){
+    var opts=''; var n=new Date(); for(var i=-2;i<=3;i++){ var d=new Date(n.getFullYear(),n.getMonth()+i,1); var p=per(d); opts+='<option value="'+p+'"'+(p===F.period?' selected':'')+'>'+perLbl(p)+'</option>'; }
+    var posted=F.ledger.filter(function(l){return l.kind==='deduction'&&l.period===F.period;});
+    var tot=0;
+    var h='<div class="fn-card"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+
+      '<b style="font-size:13px">شهر المرتب:</b><select class="fn-in" onchange="FINES.period=this.value;FINES.reloadPlan()">'+opts+'</select>'+
+      (posted.length?'<span class="fn-b" style="background:#10b981">اترحّل قبل كده: '+posted.length+' سواق · '+kd(-posted.reduce(function(s,l){return s+(+l.amount);},0))+' د.ك</span>':'<span class="fn-b" style="background:#f59e0b">لسه ماترحّلش</span>')+
+      '</div><div style="font-size:11.5px;color:var(--muted);margin-top:6px">الخصم = الرصيد الباقي لحد السقف الشهري لكل سواق. تقدر تعدّل أي رقم قبل الترحيل. الترحيل بيضيف بند «خصم مخالفات» في مسيّر الشهر (ولو اترحّل قبل كده بيتحدّث مكانه).</div></div>';
+    h+='<div class="fn-card fn-scroll" style="padding:6px"><table class="fn-tbl"><thead><tr><th>السواق</th><th>الشريك</th><th>الرصيد</th><th>السقف</th><th>خصم الشهر</th><th>هيفضل عليه</th></tr></thead><tbody>';
+    F.plan.forEach(function(p){
+      var v=F.planEdit[p.driver_id]!=null?F.planEdit[p.driver_id]:+p.plan; tot+=(+v)||0;
+      h+='<tr><td><b>'+esc(p.name||p.driver_id)+'</b> <span style="font-size:10.5px;color:var(--muted)">'+p.driver_id+'</span></td><td>'+esc(p.partner||'')+'</td>'+
+        '<td class="fn-mono">'+kd(p.balance)+'</td><td class="fn-mono">'+kd(p.cap)+'</td>'+
+        '<td><input class="fn-in fn-mono" style="width:90px" type="number" step="0.001" min="0" value="'+v+'" onchange="FINES.planEdit[\''+p.driver_id+'\']=+this.value;FINES.go(\'month\')"></td>'+
+        '<td class="fn-mono" style="color:var(--muted)">'+kd(Math.max(0,(+p.balance)-((+v)||0)))+'</td></tr>';
+    });
+    h+='</tbody><tfoot><tr><td colspan="4"><b>الإجمالي</b></td><td class="fn-mono" style="font-weight:900;color:#ef4444">'+kd(tot)+'</td><td></td></tr></tfoot></table>'+
+      (F.plan.length?'':'<div style="padding:24px;text-align:center;color:var(--muted)">مفيش أرصدة مخالفات على حد للشهر ده ✅</div>')+'</div>';
+    h+='<button class="fn-btn p" style="padding:9px 16px;font-size:13px" onclick="FINES.postMonth()"><i class="ti ti-file-invoice"></i> ترحيل خصم '+perLbl(F.period)+' للمسيّر</button>';
+    return h;
+  }
+  F.reloadPlan=function(){ loadPlan(); };
+  F.postMonth=function(){
+    var p=F.period, pp=p.split('-'), y=+pp[0], m=+pp[1];
+    if(typeof payIsFrozen==='function' && payIsFrozen(m,y)){ toastx('مسيّر '+perLbl(p)+' مقفول — افتحه الأول','e'); return; }
+    var rows=F.plan.map(function(x){ var v=F.planEdit[x.driver_id]!=null?F.planEdit[x.driver_id]:+x.plan; return {driver_id:x.driver_id,amount:Math.round((+v||0)*1000)/1000}; }).filter(function(x){return x.amount>0;});
+    var tot=rows.reduce(function(s,x){return s+x.amount;},0);
+    if(!confirm('ترحيل خصم مخالفات '+perLbl(p)+'\n'+rows.length+' سواق · '+kd(tot)+' د.ك\n\nهيتسجل كبند «خصم مخالفات» في مسيّر الشهر.')) return;
+    // 1) بنود المسيّر (محلياً + سحابة) — نشيل بنود نفس الشهر من نفس المصدر الأول
+    try{
+      if(typeof PAY_INPUTS!=='undefined'){
+        var old=PAY_INPUTS.filter(function(i){return i.source==='fines'&&i.period===p;});
+        old.forEach(function(i){ try{ fetch(U()+'/rest/v1/payroll_inputs?id=eq.'+encodeURIComponent(i.id),{method:'DELETE',headers:H()}); }catch(e){} });
+        PAY_INPUTS=PAY_INPUTS.filter(function(i){return !(i.source==='fines'&&i.period===p);});
+        var by=(window.ARK_USER&&ARK_USER.email)||'ARK';
+        rows.forEach(function(x){
+          var inp={id:'FINES-'+p+'-'+x.driver_id,driver_id:x.driver_id,period:p,component_code:'VIOLATION',qty:0,amount:x.amount,
+                   reason:'قسط مخالفات مرور — '+perLbl(p),ref_date:p+'-01',source:'fines',source_ref:'FINES-'+p,created_by:by,created_at:new Date().toISOString()};
+          PAY_INPUTS.push(inp); try{ paySyncInput(inp); }catch(e){}
+        });
+        if(typeof payInpSave==='function') payInpSave();
+        try{ audit('create','fines_month',p,null,{rows:rows.length,total:tot}); }catch(e){}
+      } else { toastx('محرك المسيّر مش موجود في النسخة دي من ARK','e'); return; }
+    }catch(e){ toastx('فشل تسجيل بنود المسيّر: '+e.message,'e'); return; }
+    // 2) دفتر المخالفات
+    rpc('fines_post_month',{p_period:p,p_rows:rows,p_by:(window.ARK_USER&&ARK_USER.email)||'ARK'}).then(function(r){
+      toastx('اترحّل ✅ '+r.drivers+' سواق · '+kd(r.total)+' د.ك على مسيّر '+perLbl(p)); load();
+    }).catch(function(e){ toastx('بنود المسيّر اتسجلت بس الدفتر فشل: '+e.message,'e'); });
+  };
+
+  /* ── 5) العربيات والعهدة ──────────────────────────────── */
+  function vCars(){
+    var cur=F.custody.filter(function(c){return !c.to_at;});
+    var h='<div class="fn-card"><h3>🔁 نقل عربية لسواق تاني</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end">'+
+      '<label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)">اللوحة<input id="fnc-plate" class="fn-in" placeholder="35076/24"></label>'+
+      '<label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)">السواق الجديد<select id="fnc-drv" class="fn-in">'+drvOptions('')+'</select></label>'+
+      '<label style="display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)">من تاريخ<input id="fnc-at" type="datetime-local" class="fn-in"></label>'+
+      '<button class="fn-btn p" style="height:32px" onclick="FINES.transfer()">نقل</button></div>'+
+      '<div style="font-size:11.5px;color:var(--muted);margin-top:6px">النقل بيحدّث عربية السواق في ARK ويسجل التاريخ، فأي مخالفة بعده تروح للسواق الجديد وأي مخالفة قبله تفضل على القديم. (حدّث كمان خانة العربية في ملف السواق في ARK.)</div></div>';
+    h+='<div class="fn-card fn-scroll" style="padding:6px"><h3 style="padding:6px">🚗 مين ماسك إيه دلوقتي ('+cur.length+')</h3><table class="fn-tbl"><thead><tr><th>اللوحة</th><th>السواق</th><th>من</th><th>مخالفات العربية</th></tr></thead><tbody>'+
+      cur.sort(function(a,b){return a.plate.localeCompare(b.plate);}).map(function(c){
+        var fs=F.fines.filter(function(f){return f.plate===c.plate&&f.moi_status==='open';});
+        return '<tr><td class="fn-mono">'+esc(c.plate)+'</td><td>'+esc(drvName(c.driver_id))+' <span style="font-size:10.5px;color:var(--muted)">'+c.driver_id+'</span></td><td class="fn-mono">'+String(c.from_at).slice(0,10)+'</td><td class="fn-mono">'+(fs.length?fs.length+' · '+kd(fs.reduce(function(s,f){return s+(+f.amount);},0)):'-')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    var past=F.custody.filter(function(c){return c.to_at;});
+    if(past.length) h+='<div class="fn-card fn-scroll" style="padding:6px"><h3 style="padding:6px">📜 سجل النقل</h3><table class="fn-tbl"><thead><tr><th>اللوحة</th><th>السواق</th><th>من</th><th>لحد</th></tr></thead><tbody>'+
+      past.map(function(c){return '<tr><td class="fn-mono">'+esc(c.plate)+'</td><td>'+esc(drvName(c.driver_id))+'</td><td class="fn-mono">'+String(c.from_at).slice(0,10)+'</td><td class="fn-mono">'+String(c.to_at).slice(0,10)+'</td></tr>';}).join('')+'</tbody></table></div>';
+    return h;
+  }
+  F.transfer=function(){
+    var pl=(document.getElementById('fnc-plate')||{}).value, dv=(document.getElementById('fnc-drv')||{}).value, at=(document.getElementById('fnc-at')||{}).value;
+    if(!pl||!dv){ toastx('اللوحة والسواق مطلوبين','e'); return; }
+    if(!confirm('نقل العربية '+pl+' لـ '+drvName(dv)+'؟')) return;
+    rpc('custody_transfer',{p_plate:pl,p_driver:dv,p_at:at?new Date(at).toISOString():new Date().toISOString(),p_note:'نقل من ARK'}).then(function(){
+      try{ var parts=String(pl).match(/\d+/g)||[]; if(parts.length>=2){ var big=parts[0].length>=parts[1].length?parts[0]:parts[1], sm=big===parts[0]?parts[1]:parts[0];
+             var key=big+'/'+sm; DRV.forEach(function(x){ var p=String(x.car||'').match(/\d+/g)||[]; if(p.length>=2){ var b2=p[0].length>=p[1].length?p[0]:p[1], s2=b2===p[0]?p[1]:p[0]; if(b2+'/'+s2===key && x.id!==dv) x.car=''; } });
+             var d=DRV.find(function(x){return x.id===dv;}); if(d) d.car=sm+'/'+big; if(typeof save==='function') save(); } }catch(e){}
+      toastx('اتنقلت ✅'); load();
+    }).catch(function(e){ toastx(e.message,'e'); });
+  };
+
+  /* ── ربط الشاشة ───────────────────────────────────────── */
+  window.renderVio = function(){ paint(); if(!F.fines.length && !F.loading) load(); else if(Date.now()-(F._t||0)>120000){ F._t=Date.now(); load(); } };
+})();
+
+</script>
 </body>
 </html>

@@ -8723,5 +8723,85 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
 })();
 
 </script>
+<script id="fly-fines-v1">
+/* ═══ مخالفاتي — FLY (v1, 28/11/2026) ═══
+   كارت في صفحة «خدمات»: مخالفات المرور اللي على السواق، الرصيد،
+   قسط الشهر، وتأكيد أو اعتراض على كل مخالفة. */
+(function(){
+  var FF = window.FLY_FINES = { rows:[], bal:null, at:0, busy:false };
+  function ar(){ return (typeof LANG!=='undefined' && LANG==='ar'); }
+  function kd(n){ return (Math.round((+n||0)*1000)/1000).toFixed(3); }
+  function e(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function dt(s){ if(!s) return '-'; var d=new Date(new Date(s).getTime()+3*3600000); return d.toISOString().slice(0,16).replace('T',' '); }
+
+  FF.load = function(force){
+    if(typeof DRIVER==='undefined' || !DRIVER || !DRIVER.id) return Promise.resolve();
+    if(!force && Date.now()-FF.at < 60000) return Promise.resolve();
+    FF.at = Date.now();
+    var id = encodeURIComponent(DRIVER.id);
+    return Promise.all([
+      sb('traffic_fines?driver_id=eq.'+id+'&charge_status=eq.charged&select=id,plate,fine_at,amount,description,location,ack_at,appeal_text,appeal_at&order=fine_at.desc&limit=100'),
+      sb('v_fine_balances?driver_id=eq.'+id+'&select=balance,cap')
+    ]).then(function(r){ FF.rows=r[0]||[]; FF.bal=(r[1]&&r[1][0])||null; FF.paint(); })
+      .catch(function(){ /* بدون نت: نسيب آخر نسخة */ });
+  };
+
+  FF.html = function(){
+    var bal = FF.bal ? Math.max(0,+FF.bal.balance) : 0, cap = FF.bal ? +FF.bal.cap : 50;
+    if(!FF.rows.length && bal<=0) return '';
+    var inst = Math.min(bal, cap);
+    var h = '<div id="flyFinesCard" style="background:var(--s1);border:1px solid var(--br);border-radius:16px;padding:14px;margin-bottom:12px">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">'+
+         '<div style="font-weight:900;font-size:15px">🚦 '+(ar()?'مخالفاتي':'My traffic fines')+'</div>'+
+         '<span style="font-size:11px;color:var(--muted)">'+FF.rows.length+' '+(ar()?'مخالفة':'fine'+(FF.rows.length===1?'':'s'))+'</span></div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+         '<div style="background:rgba(239,68,68,.10);border-radius:12px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:900;color:#ef4444">'+kd(bal)+'</div><div style="font-size:11px;color:var(--muted)">'+(ar()?'الباقي عليك (د.ك)':'Remaining (KD)')+'</div></div>'+
+         '<div style="background:rgba(245,158,11,.12);border-radius:12px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:900;color:#f59e0b">'+kd(inst)+'</div><div style="font-size:11px;color:var(--muted)">'+(ar()?'قسط الشهر ده':'This month\'s installment')+'</div></div></div>';
+    FF.rows.forEach(function(f){
+      h += '<div style="border-top:1px solid var(--br);padding:9px 2px">'+
+        '<div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:13px">'+e(f.description||'Traffic fine')+'</b><b style="color:#ef4444;white-space:nowrap">'+kd(f.amount)+' KD</b></div>'+
+        '<div style="font-size:11.5px;color:var(--muted);margin-top:3px">'+dt(f.fine_at)+' · 🚗 '+e(f.plate)+(f.location?' · 📍 '+e(f.location):'')+' · #'+e(f.id)+'</div>';
+      if(f.appeal_text) h += '<div style="font-size:11.5px;color:#8b5cf6;margin-top:5px">✋ '+(ar()?'اعتراضك':'Your objection')+': '+e(f.appeal_text)+' — '+(ar()?'الإدارة هتراجعه':'management will review')+'</div>';
+      else if(f.ack_at) h += '<div style="font-size:11.5px;color:#10b981;margin-top:5px">✔ '+(ar()?'أكّدتها':'Confirmed')+'</div>';
+      else h += '<div style="display:flex;gap:6px;margin-top:7px">'+
+        '<button onclick="FLY_FINES.ack(\''+e(f.id)+'\')" style="flex:1;background:#10b981;color:#fff;border:0;border-radius:10px;padding:8px;font-weight:800;font-family:inherit;cursor:pointer">✔ '+(ar()?'تمام، أنا':'OK, it was me')+'</button>'+
+        '<button onclick="FLY_FINES.appeal(\''+e(f.id)+'\')" style="flex:1;background:var(--s2);color:var(--text);border:1px solid var(--br);border-radius:10px;padding:8px;font-weight:800;font-family:inherit;cursor:pointer">✋ '+(ar()?'اعتراض':'Object')+'</button></div>';
+      h += '</div>';
+    });
+    h += '<div style="font-size:10.5px;color:var(--muted);margin-top:6px">'+(ar()?'المخالفات بتتخصم على أقساط شهرية من مرتبك. لو مش انت اللي كنت سايق، دوس «اعتراض» واكتب السبب.':'Fines are deducted in monthly installments from your salary. If you were not driving, tap "Object" and write why.')+'</div>';
+    return h + '</div>';
+  };
+
+  FF.paint = function(){
+    var host = document.getElementById('scrServices'); if(!host || host.classList.contains('hide')) return;
+    var old = document.getElementById('flyFinesCard'); var html = FF.html();
+    if(old){ if(html){ old.outerHTML = html; } else old.remove(); return; }
+    if(!html) return;
+    var wrap = document.createElement('div'); wrap.innerHTML = html;
+    var anchor = host.querySelector('button[onclick="openAccident()"]');
+    if(anchor && anchor.nextSibling) host.insertBefore(wrap.firstChild, anchor.nextSibling); else host.appendChild(wrap.firstChild);
+  };
+
+  FF.ack = function(id){
+    sb('rpc/fine_ack',{method:'POST',body:JSON.stringify({p_id:id,p_driver:DRIVER.id,p_appeal:null})})
+      .then(function(){ try{ toast(ar()?'تم ✅':'Done ✅','ok'); }catch(x){} FF.load(true); })
+      .catch(function(err){ try{ toast(err.message,'err'); }catch(x){} });
+  };
+  FF.appeal = function(id){
+    var txt = prompt(ar()?'اكتب سبب الاعتراض (مثلاً: مكنتش سايق العربية دي اليوم ده)':'Why do you object? (e.g. I was not driving this car that day)');
+    if(!txt || !txt.trim()) return;
+    sb('rpc/fine_ack',{method:'POST',body:JSON.stringify({p_id:id,p_driver:DRIVER.id,p_appeal:txt.trim()})})
+      .then(function(){ try{ toast(ar()?'اتبعت للإدارة ✅':'Sent to management ✅','ok'); }catch(x){} FF.load(true); })
+      .catch(function(err){ try{ toast(err.message,'err'); }catch(x){} });
+  };
+
+  /* نربط على شاشة الخدمات من غير ما نغيّر كودها */
+  if(typeof renderServices === 'function'){
+    var _rs = renderServices;
+    window.renderServices = renderServices = function(){ var r=_rs.apply(this, arguments); try{ FF.paint(); FF.load(false); }catch(x){} return r; };
+  }
+})();
+
+</script>
 </body>
 </html>
